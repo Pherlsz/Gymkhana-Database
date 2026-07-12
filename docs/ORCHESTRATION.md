@@ -1,292 +1,249 @@
 # Gymkhana Database — Documento de Orquestração
 
-> **Planning version:** Stage 4  
+> **Planning version:** Stage 5  
 > **Última sincronização:** 2026-07-12  
-> **Etapa atual:** Etapa 4 concluída  
+> **Etapa atual:** Etapa 5 concluída  
 > **Fonte principal de verdade:** `Pherlsz/Gymkhana-Database`  
 > **Repositórios relacionados:** `Pherlsz/Gymkhana-UI` e `Pherlsz/Gymkhana-Core`
 
-Este documento registra as decisões aprovadas para o rebuild do Gymkhana Database. Ele deve ser atualizado ao final de cada etapa de planejamento antes do início da etapa seguinte.
+Este documento consolida as decisões aprovadas nas Etapas 1 a 5 do rebuild. Ele deve ser atualizado ao final de cada etapa antes do início da próxima.
 
-## 1. Objetivo do rebuild
+## 1. Objetivo e princípios
 
-Reconstruir o Gymkhana Database como uma aplicação privada, leve, extensível e segura para centralizar pessoas, documentos, contas, anexos, imports, integrações com Google Forms, inspeção de duplicatas, Search, OCR e AI Chat.
+Reconstruir o Gymkhana Database como uma aplicação privada, leve, extensível e segura para centralizar Profiles, documentos, contas, anexos, imports, Google Forms, duplicatas, Search, OCR e AI Chat.
 
-O produto deve permitir consultar qualquer dado estruturado cadastrado, sem depender de listas rígidas de perguntas pré-configuradas. A IA atua como camada de interpretação e consulta, não como acesso direto ao banco.
+Princípios obrigatórios:
 
-Princípios aprovados:
-
-- simplicidade antes de abstração preventiva;
 - modelo centrado em `Profile`;
-- nenhuma preparação inicial para multi-organização;
-- sem microserviços na primeira versão;
-- sem ORM;
-- sem dependência de um provedor específico dentro do domínio;
-- nenhuma atualização de versão apenas por ser mais nova;
-- dependências somente quando trouxerem benefício concreto;
-- nenhum release com vulnerabilidade conhecida e aplicável;
-- URLs devem preservar filtros, paginação, ordenação, agrupamentos e estado navegável;
-- performance deve ser resolvida com modelagem, SQL, índices, streaming e processamento em lotes.
+- instalação única, sem multi-organização inicial;
+- simplicidade antes de abstração preventiva;
+- monólito modular, sem microserviços iniciais;
+- SQL explícito e sem ORM;
+- domínio desacoplado de provedores e packages de infraestrutura;
+- nenhum update de versão apenas por ser mais recente;
+- releases bloqueados por vulnerabilidades conhecidas e aplicáveis;
+- performance resolvida com modelagem, índices, streaming e lotes;
+- filtros, paginação, ordenação e agrupamentos refletidos na URL;
+- nenhuma limitação artificial sobre o total de registros;
+- operação privada, responsiva, acessível e instalável como PWA sem dados offline.
 
-## 2. Escopo funcional aprovado
+## 2. Idioma de engenharia
 
-### 2.1 Profiles
+Para os três repositórios:
 
-A entidade principal é uma pessoa física. Não haverá documentos, contas ou registros customizados órfãos.
+- código, nomes técnicos, commits, PRs, changelogs, releases, workflows e mensagens de CI em inglês;
+- títulos e descrições de PR em inglês;
+- mensagens de commit em inglês;
+- comentários técnicos preferencialmente em inglês;
+- textos exibidos ao usuário permanecem em português (`pt-BR`).
 
-Campos nativos previstos em `profiles`:
+Documentação:
 
-- `id` UUIDv7;
+- `Gymkhana-UI` e `Gymkhana-Core`: toda documentação técnica em inglês;
+- `Gymkhana-Database`: o documento de produto/orquestração pode permanecer em português;
+- OpenAPI, nomes de schemas e documentação de código em inglês.
+
+## 3. Escopo funcional aprovado
+
+### 3.1 Profiles
+
+Somente pessoas físicas inicialmente. Não haverá documentos, contas ou registros customizados órfãos.
+
+Campos principais:
+
+- UUIDv7;
 - nome completo e nome social;
-- CPF opcional e globalmente único quando preenchido;
-- nascimento e falecimento;
+- CPF opcional e único quando informado;
+- datas de nascimento e falecimento;
 - nacionalidade e naturalidade;
-- nome da mãe e do pai;
-- estado civil;
-- profissão;
+- nomes da mãe e do pai;
+- estado civil e profissão;
 - equipe de gincana atual;
 - clube de futebol e categoria de associação;
 - telefone fixo, celular e e-mail;
 - endereço estruturado;
 - observações;
-- `version` para controle de concorrência;
+- versão para concorrência otimista;
 - datas técnicas.
 
 Regras:
 
-- somente pessoas físicas na primeira versão;
-- CPF armazenado apenas com dígitos e formatado no frontend;
-- telefones normalizados como texto para preservar zeros e códigos internacionais;
+- CPF, telefones e números de documentos são armazenados como texto;
+- CPF canônico somente com dígitos e máscara no frontend;
 - e-mail em minúsculas;
-- endereço direto no Profile;
-- pais armazenados como nomes opcionais, sem relacionamento entre Profiles;
-- no máximo uma equipe de gincana atual por Profile, sem histórico;
-- `death_date`, `notes`, `version`, `created_at` e `updated_at` não aparecem por padrão em tabelas nem exports.
+- pais são nomes opcionais, não relacionamentos;
+- no máximo uma equipe de gincana atual, sem histórico;
+- campos técnicos e internos não aparecem por padrão em tabelas ou exports.
 
-### 2.2 Equipes e vínculos de futebol
+### 3.2 Equipes e futebol
 
-`gymkhana_teams` contém equipes de gincana administráveis, com `name` e `active`.
+`gymkhana_teams` é administrável e contém `name` e `active`.
 
-Os campos antigos foram interpretados assim:
+No Profile:
 
-- `team`: equipe de gincana;
-- `club_membership`: Internacional, Grêmio ou Outro;
-- `membership_type`: Cartão, Sócio ou Outro.
+- clube: `INTERNACIONAL`, `GREMIO` ou `OTHER`;
+- categoria: `CARD`, `MEMBER` ou `OTHER`;
+- campos complementares quando `OTHER`.
 
-Não haverá tabela de clubes de futebol inicialmente. Os valores controlados ficam diretamente no Profile, com campo complementar para `OTHER`.
+Não haverá tabela de clubes de futebol inicialmente.
 
-### 2.3 Documentos
+### 3.3 Documentos
 
-Estratégia híbrida:
+Modelo híbrido:
 
-- tabela comum `documents`;
-- tabelas de detalhe somente para famílias com campos próprios;
-- tipos customizados usam campos customizados tipados.
+- `documents` para campos comuns;
+- tabelas de detalhe para famílias específicas;
+- campos customizados tipados para extensões.
 
-Campos comuns:
+Campos comuns incluem Profile, tipo, número canônico, emissor, local de emissão, emissão, validade, formato, notas e versão.
 
-- `profile_id`;
-- `document_type_id`;
-- número canônico;
-- órgão emissor;
-- estado, país e local de emissão;
-- emissão e validade;
-- formato `PHYSICAL`, `DIGITAL` ou `NOT_INFORMED`;
-- observações;
-- versão e datas técnicas.
+Formato:
 
-O número será uma única representação canônica em texto, preservando zeros à esquerda, removendo separadores visuais e usando letras maiúsculas quando aplicável. Máscaras ficam no frontend.
+- `PHYSICAL`;
+- `DIGITAL`;
+- `NOT_INFORMED`.
 
 Tipos oficiais iniciais:
 
-- CIN;
-- RG;
-- comprovante de CPF;
-- CNH;
-- CTPS;
-- passaporte;
-- título de eleitor;
-- carteira estudantil;
-- conselhos profissionais;
-- cartão SUS;
-- Cartão Cidadão;
-- certidão de nascimento;
-- certidão de casamento;
+- CIN, RG, comprovante de CPF, CNH, CTPS, passaporte;
+- título de eleitor, carteira estudantil e conselhos profissionais;
+- SUS, Cartão Cidadão;
+- certidões de nascimento e casamento;
 - Outro.
 
-Detalhes específicos aprovados:
+Detalhes aprovados:
 
 - CIN e RG são distintos;
-- CIN normalmente deve corresponder ao CPF do Profile; divergência gera revisão;
-- comprovante de CPF usa `documents.number` e verifica o CPF do Profile;
-- CNH: categoria, primeira habilitação, local de emissão e campos de segurança opcionais;
-- CTPS: modelo físico ou digital, série, UF e PIS/PASEP;
-- título de eleitor: zona, seção, UF e município;
+- CIN normalmente corresponde ao CPF do Profile; divergência gera revisão;
+- comprovante de CPF usa o número comum;
+- CNH: categoria, primeira habilitação e local;
+- CTPS: física ou digital, série, UF e PIS/PASEP;
+- título: zona, seção, UF e município;
 - passaporte: tipo, nacionalidade e local de nascimento;
-- conselho profissional: conselho, UF, categoria ou especialidade;
-- carteira estudantil: instituição, curso, nível, matrícula e período;
-- SUS e Cartão Cidadão não precisam de tabela de detalhe;
+- conselho: conselho, UF e categoria/especialidade;
+- estudante: instituição, curso, nível, matrícula e período;
 - certidões compartilham `certificate_details`;
-- tipo Outro usa `custom_label`.
+- `OTHER` usa `custom_label`.
 
-Não haverá aviso automático de documento próximo do vencimento. Quando necessário, a aplicação apenas deriva válido ou vencido.
+Sem alerta de “próximo do vencimento”; o sistema deriva válido ou vencido quando necessário.
 
-### 2.4 Tipos de documentos e contas
+### 3.4 Contas
 
-`document_types` e `bill_types` são tabelas administráveis.
+`bills` é vinculada ao Profile, mas preserva titular e endereço impressos separadamente.
+
+Campos incluem tipo, titular, fornecedor, número da conta/cliente, competência, emissão, vencimento, valor, endereço impresso, notas e versão.
+
+- dinheiro: `NUMERIC(14,2)`;
+- competência: `YEAR_MONTH`, persistida no primeiro dia do mês e exibida como `MM/AAAA`;
+- esse formatador não se aplica a datas completas.
+
+Tipos iniciais:
+
+- energia: número da fatura e roteiro de leitura; conta representa UC;
+- água: fatura, leituras, categoria, hidrômetro, localização e arrecadação; conta representa imóvel;
+- internet: código de faturamento; conta representa cliente.
+
+### 3.5 Tipos administráveis
+
+`document_types` e `bill_types` são tabelas, não enums PostgreSQL.
 
 Tipos de sistema:
 
 - não podem ser excluídos;
-- podem ser desativados, renomeados para exibição, reordenados e receber campos customizados.
+- podem ser desativados, relabelados, reordenados e receber campos customizados.
 
 Tipos customizados:
 
-- podem ser criados pelo Admin;
-- possuem chave técnica estável;
-- podem ser desativados antes da exclusão definitiva;
-- exclusão definitiva exige contagem de impacto e confirmação reforçada.
+- chaves técnicas estáveis;
+- desativação antes de exclusão;
+- exclusão definitiva com contagem de impacto e confirmação reforçada.
 
-### 2.5 Contas
+### 3.6 Uso ativo
 
-`bills` representa contas vinculadas a um Profile, mantendo separadamente o titular e endereço impressos na conta.
+Não haverá histórico de uso.
 
-Campos principais:
+`active_usages` representa somente o uso atual:
 
-- tipo;
-- titular impresso;
-- fornecedor;
-- número da conta ou cliente;
-- competência mensal;
-- emissão e vencimento;
-- valor em `NUMERIC(14,2)`;
-- endereço impresso estruturado;
-- observações;
-- versão e datas técnicas.
+- criar ao utilizar;
+- excluir ao devolver;
+- exatamente um owner, documento ou conta;
+- no máximo um uso ativo por item.
 
-`reference_month` representa `YEAR_MONTH`, persistido como o primeiro dia do mês, mas exibido como `MM/AAAA`. Esse formatador não pode ser aplicado a datas completas.
+### 3.7 Anexos
 
-Tipos iniciais:
+Anexos privados no Cloudflare R2.
 
-- energia;
-- água;
-- internet.
-
-Detalhes:
-
-- energia: número da fatura e roteiro de leitura; `account_number` representa a UC;
-- água: número da fatura, leituras, categoria, hidrômetro, localização e código de arrecadação; `account_number` representa o código do imóvel;
-- internet: código de faturamento; `account_number` representa o código do cliente.
-
-### 2.6 Uso ativo
-
-Não haverá histórico de utilização.
-
-`active_usages` representa somente o uso atual de um documento ou conta:
-
-- ao usar, cria-se o registro;
-- ao devolver, o registro é excluído;
-- exatamente um proprietário, documento ou conta;
-- exatamente um uso ativo por item;
-- o estado “em uso” é derivado da existência do registro.
-
-### 2.7 Anexos
-
-Anexos privados ficam no Cloudflare R2.
-
-Podem pertencer a:
+Owners permitidos:
 
 - documento;
 - conta;
-- valor de campo customizado do tipo anexo.
+- valor de campo customizado `ATTACHMENT`.
 
-Não haverá anexo direto no Profile.
+Sem anexos diretos em Profile.
 
 Categorias:
 
-- `FRONT`;
-- `BACK`;
-- `FULL_DOCUMENT`;
-- `DIGITAL_FILE`;
-- `OCR_ORIGINAL`;
-- `EXTRA`.
+- `FRONT`, `BACK`, `FULL_DOCUMENT`, `DIGITAL_FILE`, `OCR_ORIGINAL`, `EXTRA`.
 
 Limites iniciais:
 
 - imagem: 15 MB;
 - PDF: 30 MB;
-- até 10 arquivos por item;
-- até 100 MB totais por item.
+- 10 arquivos por item;
+- 100 MB totais por item.
 
-A lixeira de anexos dura sete dias. O hash SHA-256 gera aviso de possível repetição, mas não bloqueia automaticamente.
+Exclusão envia à lixeira por sete dias. Hash SHA-256 avisa possível repetição sem bloquear.
 
-O attachment guarda somente metadados operacionais mínimos de OCR. Não haverá tabela `ocr_extractions`, resposta bruta da IA, prompt, raciocínio ou base64 persistidos.
+Metadados de OCR ficam no attachment, sem tabela de extração, resposta bruta, prompt, raciocínio ou base64 persistidos.
 
-### 2.8 Campos e entidades customizadas
+### 3.8 Campos e entidades customizadas
 
-`custom_entity_types` define tipos relacionais vinculados a Profile, com cardinalidade `ONE_PER_PROFILE` ou `MANY_PER_PROFILE`.
+`custom_entity_types` define tipos ligados a Profile, com cardinalidade `ONE_PER_PROFILE` ou `MANY_PER_PROFILE`.
 
-`custom_entity_records` nunca fica órfão.
+`custom_fields` pode atingir Profile, tipo de documento, tipo de conta ou tipo de entidade customizada.
 
-`custom_fields` pode se aplicar a:
+Tipos permitidos:
 
-- Profile;
-- tipo de documento;
-- tipo de conta;
-- tipo de entidade customizada.
+- `SHORT_TEXT`, `LONG_TEXT`, `NUMBER`, `MONEY`;
+- `DATE`, `DATETIME`, `BOOLEAN`;
+- `SINGLE_SELECT`, `MULTI_SELECT`;
+- `EMAIL`, `PHONE`, `URL`, `ATTACHMENT`.
 
-Tipos aprovados:
+Sem fórmulas, scripts, JSON livre, relações arbitrárias ou campos calculados inicialmente.
 
-- `SHORT_TEXT`;
-- `LONG_TEXT`;
-- `NUMBER`;
-- `MONEY`;
-- `DATE`;
-- `DATETIME`;
-- `BOOLEAN`;
-- `SINGLE_SELECT`;
-- `MULTI_SELECT`;
-- `EMAIL`;
-- `PHONE`;
-- `URL`;
-- `ATTACHMENT`.
+Valores são armazenados em colunas tipadas. Selects possuem opções com chave estável, label, ativo e ordem; multiselect usa junção.
 
-Não haverá fórmulas, scripts, JSON livre, relações arbitrárias ou campos calculados na primeira versão.
+### 3.9 Imports
 
-Valores são tipados em colunas próprias. Selects possuem opções com chave estável, label, estado ativo e ordem. Multiselect usa tabela de junção.
-
-Campos nativos continuam sendo colunas reais. Eles podem ter apresentação configurável, mas não podem ter o tipo técnico alterado.
-
-### 2.9 Imports e Google Forms
-
-Imports suportam XLSX e Google Forms.
-
-Regras:
+Suporte a XLSX e Google Forms.
 
 - um arquivo por destino;
 - modos `CREATE_ONLY`, `CREATE_AND_UPDATE` e `UPDATE_ONLY`;
-- staging, mapeamento, preview, validação, duplicatas, revisão e aplicação em lotes;
-- arquivo XLSX descartado após processamento;
-- relatório final permanente;
-- detalhes temporários de erro e revisão por 30 dias;
-- dados crus de linhas bem-sucedidas removidos após conclusão;
-- dados temporários do Forms removidos sete dias após finalização.
+- staging, mapeamento, preview, validação, duplicatas e revisão;
+- execução em lotes com checkpoints e idempotência;
+- XLSX descartado após processamento;
+- relatório permanente;
+- detalhes temporários de erro/revisão por 30 dias;
+- dados crus bem-sucedidos removidos após conclusão;
+- sem anexos em XLSX inicialmente.
 
-Google Forms:
+### 3.10 Google Forms
 
-- uma conexão Google administrativa central;
-- login dos usuários não concede acesso automático aos Forms;
-- integrações com status `ACTIVE`, `PAUSED`, `CLOSED` ou `CONNECTION_ERROR`;
+Uma conexão Google administrativa central, separada do login dos usuários.
+
+Integrações possuem status `ACTIVE`, `PAUSED`, `CLOSED` ou `CONNECTION_ERROR`.
+
 - sem sincronização recorrente;
-- sincronização manual, final e reprocessamento;
-- fechamento só conclui após sincronização final bem-sucedida;
-- edições externas posteriores geram revisão, nunca sobrescrita silenciosa;
-- exclusão no Google não exclui dados locais;
-- reabertura processa somente respostas novas ou alteradas.
+- sync manual, final e reprocessamento;
+- fechamento apenas após sync final bem-sucedido;
+- edições externas posteriores geram revisão;
+- exclusão externa não exclui dados locais;
+- reabertura processa apenas respostas novas ou alteradas;
+- temporários removidos sete dias após finalização.
 
-### 2.10 Duplicatas
+### 3.11 Duplicatas
 
-A fila persistente de revisão é somente para Profiles.
+Fila persistente somente para Profiles.
 
 Níveis:
 
@@ -294,127 +251,79 @@ Níveis:
 - `PROBABLE`;
 - `POSSIBLE`.
 
-Nome nunca é o único critério. Não haverá porcentagem exibida.
+Nome nunca é o único critério e não haverá porcentagem exibida.
 
-Origens:
+Origens: criação, edição, import, Forms, OCR e inspeção manual.
 
-- criação manual;
-- import;
-- Google Forms;
-- OCR;
-- edição de Profile;
-- inspeção manual.
+Resoluções: usar existente, mesclar, criar mesmo assim, descartar ou atualizar dados.
 
-Resoluções:
+Merge transfere relações e exclui a origem em transação, sem undo ou snapshot completo.
 
-- usar existente;
-- mesclar;
-- criar mesmo assim;
-- descartar sugestão;
-- dados atualizados.
+Documentos e contas são verificados inline. Inspeção geral somente manual via job.
 
-Merge transfere relacionamentos e exclui a origem em transação. Não haverá undo nem snapshot completo.
+### 3.12 Search
 
-Duplicatas de documentos e contas são verificadas inline, sem fila separada.
+Somente dados estruturados. Não busca anexos, conteúdo de arquivos, OCR bruto ou respostas brutas da IA.
 
-Inspeção geral só ocorre manualmente via job. Não haverá cron periódico de duplicatas.
+Base:
 
-### 2.11 Search
+- B-tree;
+- `pg_trgm`;
+- `unaccent`;
+- função de normalização de caixa, acentos e espaços;
+- consultas próprias por domínio retornando um resultado comum.
 
-Search consulta dados estruturados diretamente no PostgreSQL.
+Sem Elasticsearch, Meilisearch, Typesense, embeddings comuns ou tabela universal duplicada.
 
-Não busca:
+Neon Search e full-text só entram após benchmark e necessidade real.
 
-- conteúdo bruto de OCR;
-- conteúdo de arquivos;
-- anexos;
-- respostas brutas de IA.
+Consultas curtas continuam permitidas, com scans e limites controlados quando necessário.
 
-Tecnologias:
+### 3.13 AI Chat
 
-- B-tree para igualdade, filtros, datas e FKs;
-- `pg_trgm` para buscas parciais e aproximadas;
-- `unaccent` e normalização de caixa/espaços;
-- consultas próprias por domínio retornando um formato comum.
-
-Não haverá inicialmente:
-
-- Elasticsearch;
-- Meilisearch;
-- Typesense;
-- tabela universal duplicada de Search;
-- embeddings para busca comum;
-- Neon Search sem benchmark que demonstre benefício.
-
-Consultas com um ou dois caracteres continuam permitidas, com limites e scans controlados quando necessário.
-
-### 2.12 AI Chat
-
-O AI Chat é um consultor privado e somente leitura.
-
-Ele deve aceitar perguntas simples, moderadas e complexas sobre qualquer dado estruturado do sistema.
+Consultor privado e somente leitura.
 
 Fluxo:
 
 1. interpretar intenção;
-2. gerar plano de consulta tipado;
-3. validar plano e permissões;
+2. gerar plano tipado;
+3. validar catálogo, operadores e permissões;
 4. converter para consultas seguras;
 5. executar pelo Query Engine;
 6. sintetizar resposta;
-7. retornar referências navegáveis para registros ou tabelas.
+7. retornar referências navegáveis.
 
-A IA nunca terá:
+A IA não recebe credenciais, conexão direta, repository nem ferramenta de SQL arbitrário.
 
-- conexão direta ao banco;
-- credenciais do PostgreSQL;
-- ferramenta genérica de SQL arbitrário;
-- acesso direto aos repositories.
+Threads são privadas. Grandes resultados guardam resumo, critérios, contagem e links, não cópia completa.
 
-Threads são privadas por usuário. Grandes resultados não são copiados para as mensagens; ficam critérios, contagem, resumo e links para os dados atuais.
+Runs detalhados: 30 dias; agregados sem conteúdo pessoal podem permanecer.
 
-Runs técnicos detalhados permanecem por 30 dias. Métricas agregadas podem permanecer sem conteúdo pessoal.
+### 3.14 OCR
 
-### 2.13 OCR
+Visão multimodal inicialmente, com revisão humana obrigatória.
 
-OCR é opcional e baseado inicialmente em visão multimodal.
+- nenhum preenchimento automático definitivo;
+- comparação valor atual versus sugerido;
+- schema estruturado por tipo;
+- `store: false` quando suportado;
+- salvar somente provedor, modelo, status, duração e erro operacional;
+- sem resposta bruta ou raciocínio.
 
-Regras:
-
-- revisão humana obrigatória;
-- nenhum campo é alterado automaticamente;
-- comparação entre valor atual e sugerido;
-- resultado validado contra schema do tipo;
-- `store: false` quando o provedor permitir;
-- sem retenção de resposta bruta ou raciocínio;
-- salvar apenas provedor, modelo, status, duração e erro operacional.
-
-### 2.14 Exports
+### 3.15 Exports
 
 Somente XLSX.
 
-Tipos principais:
+- Profile completo com abas relacionadas;
+- tabelas de documentos, contas e entidades customizadas;
+- relações por UUID;
+- sem anexos, notas internas, versões, auditoria ou usuários;
+- arquivo privado no R2 por 24 horas;
+- histórico da operação permanece.
 
-- Profile completo;
-- tabela de documentos;
-- tabela de contas;
-- tabela de entidade customizada.
+### 3.16 Usuários e autorização
 
-O export completo de Profiles contém abas para Profiles, documentos, contas e tipos customizados, relacionadas por UUID.
-
-Não inclui:
-
-- anexos;
-- observações internas;
-- datas e versões técnicas;
-- usuários;
-- auditoria.
-
-Arquivo privado no R2, URL assinada e validade inicial de 24 horas. O histórico da operação permanece depois da remoção do arquivo.
-
-### 2.15 Usuários, autenticação e permissões
-
-Acesso por Google OAuth e allowlist de e-mail.
+Google OAuth + allowlist.
 
 Roles:
 
@@ -422,441 +331,254 @@ Roles:
 - `ADMIN`;
 - `SUPERADMIN`.
 
-Exatamente um SuperAdmin ativo. A interface não permite desativar, excluir ou rebaixar o único SuperAdmin.
+Exatamente um SuperAdmin ativo. Não pode ser desativado, excluído ou rebaixado pela interface.
 
-Estados de usuário:
+Status:
 
-- `INVITED`;
-- `ACTIVE`;
-- `DEACTIVATED`;
-- `DELETED`.
+- `INVITED`, `ACTIVE`, `DEACTIVATED`, `DELETED`.
 
-Exclusão de usuário é lógica e anonimizada para preservar FKs:
-
-- e-mail, subject e avatar são removidos;
-- nome passa a “Usuário excluído”;
-- a linha permanece.
+Exclusão anonimiza e preserva a linha para FKs.
 
 Sessões:
 
-- token opaco aleatório;
-- somente hash SHA-256 no banco;
-- cookie `Secure`, `HttpOnly` e `SameSite=Lax`;
-- validade de 24 horas;
-- nenhuma sessão em `localStorage`;
-- revogação imediata ao desativar usuário.
+- token opaco;
+- somente SHA-256 no banco;
+- cookie `Secure`, `HttpOnly`, `SameSite=Lax`;
+- 24 horas;
+- nada em `localStorage`;
+- revogação ao desativar usuário.
 
-### 2.16 Preferências, flags e notificações
+### 3.17 Preferências, flags e notificações
 
-Preferências do usuário:
+Preferências persistem aparência, densidade, linhas e configuração de colunas.
 
-- aparência;
-- densidade de tabelas;
-- linhas por página;
-- visibilidade, ordem, largura e fixação de colunas.
+Filtros, paginação, sort e grouping permanecem na URL.
 
-Filtros, paginação, ordenação e agrupamentos permanecem na URL, não nas preferências.
-
-Feature flags são globais para a instalação e liberadas por roles, nunca por usuário individual.
+Feature flags são globais e liberadas por roles, nunca por usuário individual.
 
 Notificações:
 
 - uma linha por destinatário;
 - leitura independente;
-- `target_url` em vez de várias FKs opcionais;
+- `target_url`;
 - expiração padrão de sete dias;
-- expirar uma notificação não remove o relatório relacionado.
+- expiração não remove relatório relacionado.
 
-### 2.17 Auditoria e retenções
+### 3.18 Retenções
 
-Auditoria de segurança separada dos logs técnicos, com retenção inicial de 90 dias.
-
-Retenções principais:
-
-- anexos excluídos: sete dias;
-- notificações: sete dias;
-- arquivo de export: 24 horas;
-- revisões de duplicatas resolvidas: sete dias;
-- dados temporários de Forms: sete dias após finalização;
+- anexos excluídos: 7 dias;
+- notificações: 7 dias;
+- arquivos de export: 24 horas;
+- duplicatas resolvidas: 7 dias;
+- temporários do Forms: 7 dias;
 - detalhes temporários de import: 30 dias;
-- runs detalhados de IA: 30 dias.
+- runs detalhados de IA: 30 dias;
+- auditoria de segurança: 90 dias.
 
-Um processo central de housekeeping executa as limpezas.
+Housekeeping centralizado.
 
-## 3. Decisões de domínio e banco
+## 4. Modelo de dados e banco
 
-### 3.1 Instalação única
+### 4.1 Instalação única
 
-Foi removida toda preparação para multi-organização:
+Não existem `organizations`, `organization_id`, escopo multi-tenant ou FKs compostas por organização.
 
-- sem tabela `organizations`;
-- sem `organization_id`;
-- sem FKs compostas por tenant;
-- sem escopo de queries por organização;
-- sem configuração multi-tenant.
+Uma futura migração multi-organização será intencional.
 
-Uma futura migração deverá ser explícita e intencional.
+### 4.2 Convenções
 
-### 3.2 PostgreSQL
-
-Banco principal: Neon PostgreSQL.
-
-Convenções:
-
+- PostgreSQL no Neon;
 - nomes em inglês e `snake_case`;
-- UUIDv7 para entidades principais;
-- IDs gerados pelo backend Go, com default do banco apenas como proteção;
+- UUIDv7 gerado pelo Go, com default opcional no banco;
 - `timestamptz` para instantes;
 - `date` para datas civis;
 - `NUMERIC(14,2)` para dinheiro;
-- texto para CPF, telefone e números de documento;
-- `text` como padrão para conteúdo textual, usando `varchar` somente com limite técnico real;
+- texto para identificadores que preservam zeros;
+- `text` por padrão, `varchar` somente com limite técnico real;
 - `version INTEGER DEFAULT 1` para concorrência otimista.
 
-Migrations:
+### 4.3 Exclusões
 
-- SQL versionado no Git;
-- Tern v2;
-- aplicadas primeiro em staging;
-- migrations já aplicadas nunca são alteradas;
-- rollback apenas quando realmente seguro;
-- produção prefere correção para frente;
-- seeds separados.
-
-Seeds iniciais:
-
-- tipos oficiais de documentos;
-- tipos de contas;
-- estados civis;
-- clubes e categorias aprovadas;
-- roles;
-- feature flags;
-- configuração padrão da aplicação.
-
-A lista de equipes de gincana será adicionada após revisão dos dados atuais.
-
-### 3.3 Exclusões
-
-Não haverá `deleted_at` indiscriminado.
-
-- Profile, documento, conta e conversa: exclusão física;
-- anexos: lixeira de sete dias;
+- Profiles, documentos, contas e threads: exclusão física;
+- attachments: lixeira de sete dias;
 - usuários: anonimização;
-- tipos e campos customizados: desativação antes de exclusão definitiva;
+- tipos/campos: desativação antes da exclusão;
 - temporários: housekeeping.
 
-### 3.4 Constraints críticas
+### 4.4 Constraints críticas
 
-O PostgreSQL deve garantir, além do backend:
+O PostgreSQL deve garantir:
 
 - CPF único quando preenchido;
-- e-mail e `google_subject` únicos quando preenchidos;
+- e-mail e Google subject únicos quando preenchidos;
 - um único SuperAdmin ativo;
-- exatamente um owner por attachment;
-- exatamente um owner por custom field value;
-- no máximo um uso ativo por documento ou conta;
-- resposta externa única por integração do Forms;
-- coerência dos valores tipados;
+- exatamente um owner por attachment e valor customizado;
+- no máximo um uso ativo por item;
+- resposta externa única por integração;
+- coerência de valores tipados;
 - dinheiro nunca como float.
 
-## 4. Arquitetura aprovada
+### 4.5 Migrations e seeds
 
-### 4.1 Monólito modular
+Migrations SQL com Tern v2.
 
-Unidades executáveis:
+- versionadas no Git;
+- staging antes de produção;
+- migrations aplicadas nunca são editadas;
+- correção para frente preferida;
+- River usa migrations próprias.
+
+Seeds separados:
+
+- `database/seeds/system`;
+- `database/seeds/development`;
+- `database/fixtures/test`.
+
+System seeds são idempotentes. Development seeds e fixtures usam somente dados fictícios.
+
+`gymkhana migrate` não executa seeds implicitamente.
+
+## 5. Arquitetura
+
+### 5.1 Monólito modular
+
+Executáveis:
 
 - `web`;
 - `api`;
-- `worker`.
+- `worker`;
+- `migrate`.
 
-API e worker são produzidos pelo mesmo projeto Go e compartilham domínio, casos de uso, banco, integrações e configurações.
+API e worker compartilham domínio e infraestrutura no mesmo projeto Go.
 
-Não haverá inicialmente:
+Sem microserviços, Redis, RabbitMQ, GraphQL ou backend Node inicialmente.
 
-- microserviços;
-- serviço separado de Search;
-- serviço separado de IA;
-- serviço separado de imports;
-- Redis;
-- RabbitMQ;
-- GraphQL;
-- backend Node intermediário.
-
-### 4.2 Frontend
-
-Stack aprovada:
+### 5.2 Frontend
 
 - React 19;
-- TypeScript 6 na inicialização, com migração planejada para TypeScript 7.1+ quando a API programática e o ecossistema estiverem maduros e sem necessidade de manter dois compiladores;
+- TypeScript 6 inicialmente;
+- avaliar TypeScript 7.1+ quando API programática e ecossistema estiverem maduros;
 - Vite 8;
-- Node.js 24 LTS;
+- Node 24 LTS;
 - pnpm 11;
 - TanStack Router v1;
-- TanStack Query v5;
-- TanStack Table v8;
-- TanStack Virtual v3;
-- TanStack Form v1;
+- Query v5;
+- Table v8;
+- Virtual v3;
+- Form v1;
 - Valibot somente na aplicação;
-- Oxlint;
-- Oxfmt;
-- Vitest;
-- Testing Library;
-- Playwright;
-- axe-core no Playwright, após os gates de segurança.
+- Oxlint e Oxfmt;
+- SPA sem SSR;
+- React Compiler adiado até benchmark real.
 
-Aplicação SPA, sem SSR, React Server Components ou TanStack Start.
-
-Divisão de estado:
+Estado:
 
 - URL: Router;
-- estado da API: Query;
+- servidor: Query;
 - formulários: Form;
-- visual local: React;
-- preferências persistidas: backend.
+- local visual: React;
+- preferências: backend.
 
 Sem Redux ou Zustand inicialmente.
 
-React Compiler fica desativado inicialmente. Ele só será avaliado com benchmark real e integração madura.
+### 5.3 UI própria
 
-### 4.3 Gymkhana-UI
-
-Todos os componentes visuais serão próprios.
-
-Não usar:
-
-- Radix;
-- Base UI;
-- React Aria Components;
-- shadcn/ui;
-- Material UI;
-- Chakra;
-- Mantine;
-- Ant Design;
-- outros kits de componentes.
+Sem bibliotecas de componentes ou primitives externas.
 
 Base:
 
 - React;
 - HTML semântico;
 - CSS Modules;
-- CSS custom properties;
-- APIs nativas do navegador;
-- ARIA somente quando necessária.
+- custom properties;
+- APIs nativas;
+- ARIA quando necessária.
 
-Phosphor Icons será a biblioteca de ícones inicial. A API pública dos componentes recebe `ReactNode` e não expõe tipos específicos da biblioteca.
+Phosphor Icons é a biblioteca de ícones.
 
-Componentes de layout incluem `AppShell`, compound components `Page.*`, `Stack`, `Inline`, `Cluster`, `Grid`, `Split`, `Container`, `Section`, `Divider`, `ScrollArea` e `ResizablePanel`.
-
-`Page` usa composição, não um objeto gigante de configuração.
+Componentes de layout incluem `AppShell`, compound components `Page.*`, Stack, Inline, Cluster, Grid, Split, Container, Section, Divider, ScrollArea e ResizablePanel.
 
 Datas usam `Intl` e lógica própria, separando `DATE`, `YEAR_MONTH` e `DATETIME`.
 
-O repositório UI terá playground Vite em vez de Storybook inicialmente.
+Playground Vite no lugar de Storybook inicialmente.
 
-### 4.4 Backend Go
-
-Stack:
+### 5.4 Backend Go
 
 - Go 1.26;
 - `net/http`;
-- `pgx/v5` nativo;
-- `pgxpool`;
+- `pgx/v5` e `pgxpool`;
 - sqlc;
 - sem ORM;
 - Tern v2;
 - River OSS;
 - OpenAPI 3.1;
-- `oapi-codegen` com servidor strict sobre `net/http`;
-- `openapi-typescript` e `openapi-fetch` no frontend.
+- `oapi-codegen` strict server;
+- `openapi-typescript` e `openapi-fetch`.
 
-Organização por domínio:
+Código organizado por domínio em `internal/`, não por pastas globais de controllers/services/repositories.
 
-```text
-cmd/
-├── api/
-└── worker/
-
-internal/
-├── auth/
-├── profiles/
-├── documents/
-├── bills/
-├── customfields/
-├── imports/
-├── forms/
-├── duplicates/
-├── search/
-├── assistant/
-├── attachments/
-├── exports/
-├── jobs/
-├── admin/
-├── platform/
-└── database/
-```
-
-Interfaces só existem quando há substituição real, limite entre domínio e infraestrutura ou necessidade concreta de teste.
-
-### 4.5 REST e OpenAPI
+### 5.5 REST e contrato
 
 REST + JSON em `/api/v1`.
 
-OpenAPI 3.1 é a fonte de verdade do contrato.
+OpenAPI é a fonte do contrato. Código gerado Go e TypeScript é versionado e verificado no CI.
 
-Código gerado é versionado e nunca editado manualmente. O CI regenera Go e TypeScript e falha se houver divergência.
+Erros usam envelope único com `code`, `message`, `request_id` e `field_errors`.
 
-Erro padrão:
+### 5.6 Jobs
 
-```json
-{
-  "error": {
-    "code": "PROFILE_NOT_FOUND",
-    "message": "Profile não encontrado.",
-    "request_id": "uuid",
-    "field_errors": []
-  }
-}
-```
+River é infraestrutura interna e desacoplada.
 
-### 4.6 Jobs
+- nenhum `river_job_id` em entidades;
+- módulos conhecem apenas `operation_id` e interfaces neutras;
+- sem tabela genérica duplicando o estado técnico do River;
+- cada módulo mantém status, progresso e relatório de negócio.
 
-River OSS é infraestrutura interna.
+Operações longas sempre usam jobs: imports, exports, OCR, Forms, duplicatas, bulk actions e housekeeping.
 
-O domínio não conhece:
+### 5.7 Storage e XLSX
 
-- River;
-- IDs internos do River;
-- tabelas internas;
-- estados específicos da biblioteca.
+R2 via adapter S3 e interface própria `ObjectStore`.
 
-Não haverá `river_job_id` em entidades de negócio.
+Uploads diretos por URL assinada, com validação posterior de tamanho, extensão, MIME, assinatura e hash.
 
-Cada operação possui seu próprio ID, e o adaptador recebe apenas esse ID.
+Formatos iniciais: JPEG, PNG, WebP e PDF.
 
-Nenhuma tabela genérica `jobs` duplicará o estado técnico do River. Cada módulo mantém somente status, progresso e relatório úteis à interface.
+Excelize 2.11, leitura por rows iterator e escrita por StreamWriter. Carga em massa por `pgx.CopyFrom`.
 
-Jobs obrigatórios para operações longas:
+### 5.8 IA e streaming
 
-- imports;
-- exports;
-- OCR em lote;
-- Forms;
-- inspeção de duplicatas;
-- mass delete;
-- atualização em massa;
-- housekeeping.
+Adapters iniciais OpenAI e Google com SDKs oficiais isolados.
 
-### 4.7 Storage e XLSX
+Sem LangChain, LangGraph, CrewAI, Semantic Kernel ou Vercel AI SDK.
 
-Cloudflare R2 por adapter compatível com S3.
-
-O domínio conhece somente `ObjectStore` e chaves opacas.
-
-Uploads diretos por URL assinada, confirmação posterior e validação de:
-
-- tamanho;
-- extensão;
-- MIME declarado;
-- assinatura real;
-- existência no R2;
-- hash.
-
-Formatos iniciais: JPEG, PNG, WebP e PDF. SVG, HTML, executáveis, compactados e tipos genéricos não são aceitos.
-
-XLSX usa Excelize 2.11 pela correção de vulnerabilidades, panics e melhorias de memória.
-
-- leitura por iterador de linhas;
-- export por `StreamWriter`;
-- `pgx.CopyFrom` para cargas em lote;
-- processamento em batches e checkpoints;
-- sem transação única gigante;
-- sem carregar planilha inteira na memória.
-
-### 4.8 IA
-
-Provedores iniciais:
-
-- OpenAI;
-- Google.
-
-SDKs oficiais isolados em adapters. Nenhum tipo do provedor cruza o limite do adapter.
-
-Não usar inicialmente:
-
-- LangChain;
-- LangGraph;
-- CrewAI;
-- Semantic Kernel;
-- Vercel AI SDK;
-- framework genérico de agentes.
-
-Orquestração própria, pequena e tipada.
+Orquestração própria e pequena.
 
 AI Chat usa SSE sobre `fetch`, não WebSocket inicialmente.
 
-### 4.9 Segurança
+### 5.9 Segurança
 
-Autenticação Google no backend Go.
+OAuth no Go, `state`, PKCE S256 e validação completa do ID token.
 
-- OAuth 2.0;
-- `state` de uso único;
-- PKCE S256;
-- validação de issuer, audience, assinatura e expiração;
-- tokens Google nunca enviados ao frontend;
-- conexão de Forms separada do login.
+CSRF por token e validação de `Origin`.
 
-CSRF:
+Rate limiting em camadas: borda, memória local e PostgreSQL para quotas globais quando necessário.
 
-- token associado à sessão;
-- validação de `Origin`;
-- `SameSite=Lax` como camada complementar;
-- nenhum efeito colateral em GET, HEAD e OPTIONS.
+Segredos recuperáveis usam AES-256-GCM com rotação por `key_version`.
 
-Rate limiting:
+Logs devem redigir dados pessoais, tokens, chaves, attachments e conteúdo integral de IA.
 
-- borda;
-- limites locais no Go;
-- PostgreSQL para quotas globais quando necessárias;
-- sem Redis inicialmente.
+### 5.10 Logs, cache e saúde
 
-Segredos recuperáveis usam AES-256-GCM da biblioteca padrão, com `nonce` e `key_version`. A chave mestra fica fora do banco e do Git.
-
-Logs devem redigir tokens, cookies, CPF, documentos, chaves, anexos e conteúdo integral de IA.
-
-### 4.10 Logs e saúde
-
-Logs estruturados com `log/slog`.
-
-- JSON em produção;
-- legível localmente;
+- `log/slog` em JSON na produção;
 - `request_id` em todas as requisições;
-- sem bodies completos ou SQL com dados pessoais;
-- auditoria separada.
+- OpenTelemetry adiado;
+- `/health/live` e `/health/ready`;
+- sem Redis;
+- TanStack Query, ETag, índices e pequenos caches em memória;
+- dados privados com `Cache-Control: private, no-store`.
 
-OpenTelemetry não entra na primeira versão.
-
-Health checks:
-
-- `/health/live`;
-- `/health/ready`;
-- saúde separada do worker.
-
-Falhas de R2, Google ou IA não derrubam a API inteira.
-
-### 4.11 Cache
-
-Sem Redis.
-
-- TanStack Query no frontend;
-- CDN da Vercel para assets;
-- índices PostgreSQL;
-- `pgxpool`;
-- ETag para metadados estáveis;
-- cache em memória somente para configurações pequenas e globais.
-
-Dados privados usam normalmente `Cache-Control: private, no-store`.
-
-### 4.12 Testes e segurança de dependências
+### 5.11 Testes e segurança de dependências
 
 Frontend:
 
@@ -867,56 +589,33 @@ Frontend:
 
 Backend:
 
-- `testing`;
-- `httptest`;
+- `testing`, `httptest`;
 - Testcontainers com PostgreSQL real;
-- fuzzing nativo;
+- fuzzing;
 - race detector.
 
-Não usar SQLite como substituto do PostgreSQL.
+Checks:
 
-Pipeline Go:
-
-- `gofmt`;
-- `go vet`;
-- `staticcheck`;
-- `go test`;
-- `go test -race` periodicamente;
-- `govulncheck`.
-
-Supply chain:
-
-- OSV-Scanner;
-- Dependency Review quando disponível;
-- Dependabot Alerts;
-- scan da imagem final;
+- `gofmt`, `go vet`, `staticcheck`, testes, `govulncheck`;
+- OSV-Scanner, Dependency Review, Dependabot Alerts e scan da imagem;
 - GitHub Actions fixadas por SHA;
-- versões exatas e lockfiles versionados;
-- sem merge automático de updates.
+- versões e lockfiles fixados;
+- nenhum auto-merge de dependências.
 
-Não existe garantia contra vulnerabilidade ainda desconhecida. O gate prático é: nenhum release com vulnerabilidade conhecida, aplicável e sem mitigação aprovada.
-
-### 4.13 Deploy inicial
-
-Arquitetura inicial sem custo fixo planejado:
+## 6. Deploy inicial
 
 ```text
 Vercel Hobby
 ├── React SPA
 ├── assets
-├── preview deployments
+├── previews manuais
 └── proxy /api
 
 Google Cloud Run Service
 └── gymkhana api
 
 Google Cloud Run Job
-├── gymkhana worker --drain
-├── imports
-├── exports
-├── OCR
-├── duplicatas
-└── Forms
+└── gymkhana worker --drain
 
 Cloud Scheduler
 └── recuperação + housekeeping
@@ -925,121 +624,358 @@ Neon
 └── PostgreSQL + River
 
 Cloudflare R2
-└── anexos e exports temporários
+└── anexos e exports
 ```
 
-O worker não fica permanentemente ligado. A API registra a operação, enfileira no River e solicita uma execução do Cloud Run Job. O worker processa até a fila ficar ociosa e termina.
+API escala para zero. Worker é iniciado sob demanda, drena a fila e termina.
 
-Um Scheduler inicia recuperação e housekeeping. A arquitetura deve permitir futura migração integral para GCP sem alterar domínio, contratos ou entidades.
+Vercel e API aparecem na mesma origem pública. O frontend usa `/api/v1` relativo.
 
-Frontend e API aparecem na mesma origem pública:
+A arquitetura permanece portátil para eventual migração integral à GCP.
 
-- `/` para SPA;
-- `/api/v1/*` encaminhado ao Cloud Run.
+## 7. Etapa 5 — Estrutura dos repositórios
 
-O frontend usa caminhos relativos. A URL interna do provedor não entra no código da aplicação.
+### 7.1 Grafo de dependências
 
-## 5. Responsabilidade dos repositórios
+```text
+Gymkhana-Database
+├── depends on Gymkhana-UI
+└── depends on Gymkhana-Core
 
-### 5.1 Gymkhana-Database
+Gymkhana-UI
+└── independent
 
-Produto e orquestrador:
+Gymkhana-Core
+└── independent
+```
 
-- web React;
-- API Go;
-- worker;
-- migrations;
-- OpenAPI;
-- SQL;
-- domínio do produto;
-- integrações;
-- configuração e deploy.
+Não há dependências circulares ou entre UI e Core.
 
-Consome versões fixadas de Gymkhana-UI e Gymkhana-Core.
+### 7.2 Gymkhana-Database
 
-### 5.2 Gymkhana-UI
+Estrutura aprovada:
 
-Biblioteca React visual:
+```text
+apps/web/                 React SPA
+cmd/api/                  API entrypoint
+cmd/worker/               worker entrypoint
+cmd/migrate/              migration command
+internal/                 domain modules
+api/                      OpenAPI and generated contract
+Database/                 migrations, queries, seeds, sqlc
+Deploy/                   Docker, Cloud Run and Vercel config
+scripts/
+docs/
+```
 
-- componentes próprios;
-- AppShell;
-- Page;
-- DataGrid visual;
-- tokens;
-- CSS Modules;
-- Phosphor Icons;
-- playground;
-- acessibilidade e testes.
+O módulo Go fica na raiz. O pnpm workspace contém `apps/web`; o package da raiz apenas orquestra scripts e tooling.
 
-Não contém regras de Profile, chamadas de API ou permissões do produto.
+Cada domínio contém apenas arquivos e subpackages necessários. Não existirão diretórios globais de `controllers`, `services`, `repositories`, `models` e `dtos`.
 
-### 5.3 Gymkhana-Core
+### 7.3 Gymkhana-UI
 
-Módulo Go reutilizável, sem React e sem acesso direto ao banco:
+Workspace pnpm:
 
-- normalização;
-- operadores e AST de consulta;
-- matching genérico;
-- pontuação de duplicidade;
-- contratos neutros de IA;
-- orquestração neutra de ferramentas;
-- formatos de resultado.
+```text
+packages/ui/
+apps/playground/
+docs/
+scripts/
+```
 
-Não contém repositories PostgreSQL, handlers HTTP, River, SDKs de provedores ou regras visuais.
+Package:
 
-Go e TypeScript compartilham contratos por OpenAPI, não por um pacote multi-linguagem.
+```text
+@pherlsz/gymkhana-ui
+```
 
-## 6. Política de versões
+Exports públicos explícitos; imports internos por `src/` ou `dist/internal/` são proibidos.
 
-Comparar sempre:
+### 7.4 Gymkhana-Core
 
-- a linha mais madura e comprovada;
-- a linha estável mais atual.
+Packages públicos diretamente na raiz, sem `pkg/` artificial:
 
-Uma versão mais nova só entra quando trouxer pelo menos um benefício concreto:
+```text
+normalize/
+civiltime/
+query/
+matching/
+duplicates/
+assistant/
+tools/
+result/
+internal/
+```
 
-- correção de segurança;
-- correção de bug aplicável;
-- performance mensurável;
-- compatibilidade necessária;
-- feature usada pelo projeto;
-- redução clara de complexidade.
+Não criar packages `utils`, `helpers`, `common` ou `shared`.
 
-Betas e RCs somente em branches de pesquisa ou staging atrás de feature flag. Produção usa versões estáveis.
+Módulos:
 
-O patch exato será fixado na inicialização de cada projeto após verificação de compatibilidade, segurança e changelog.
+```text
+github.com/Pherlsz/Gymkhana-Database
+github.com/Pherlsz/Gymkhana-Core
+```
 
-## 7. Decisões explicitamente adiadas
+### 7.5 Consumo entre repos
+
+Database fixa versões exatas:
+
+- Core por módulo Go privado;
+- UI por package privado.
+
+Sem branch flutuante, submodule, subtree, cópia manual ou script de sincronização.
+
+Desenvolvimento local pode usar:
+
+- `go.work` não versionado fora dos repos;
+- link temporário pnpm sem alterar a versão registrada.
+
+### 7.6 Publicação privada
+
+UI:
+
+- GitHub Packages privado;
+- acesso concedido ao Database;
+- autenticação local por token de leitura fora do Git;
+- `GITHUB_TOKEN` em Actions.
+
+Core:
+
+- módulo Go privado;
+- `GOPRIVATE=github.com/Pherlsz/Gymkhana-Core`;
+- CI usa token fine-grained somente leitura para o Core.
+
+### 7.7 Versionamento
+
+UI e Core começam em `v0.1.0` e usam SemVer.
+
+- patch: correção compatível;
+- minor: funcionalidade compatível;
+- major: quebra pública.
+
+Mesmo em `0.x`, breaking changes são documentadas e migradas explicitamente.
+
+`v1.0.0` apenas após uso em produção, API estável, documentação e cobertura dos contratos públicos.
+
+Sem Changesets inicialmente. Cada biblioteca mantém `CHANGELOG.md` com `Unreleased`.
+
+Releases são manuais assistidas por `workflow_dispatch`, agrupadas e não criadas a cada merge.
+
+### 7.8 Branches, commits e PRs
+
+Desenvolvimento baseado em `main`.
+
+Branches curtas:
+
+- `feature/*`, `fix/*`, `refactor/*`, `chore/*`, `agent/*`.
+
+Sem `develop` ou Git Flow.
+
+Proteção de `main`:
+
+- PR obrigatório quando o desenvolvimento começar;
+- checks obrigatórios;
+- review threads resolvidas;
+- sem force push;
+- squash merge padrão.
+
+Todos os commits, títulos de PR e descrições de PR devem ser em inglês.
+
+Commits locais podem ser múltiplos, mas pushes remotos devem ser agrupados para evitar builds desnecessários.
+
+### 7.9 CI por impacto
+
+UI: install frozen, typecheck, lint, format, unit tests, build, playground, security e package verification.
+
+Core: format, vet, staticcheck, tests, vuln scan; race em main, release e mudanças concorrentes.
+
+Database: jobs separados para frontend, backend, OpenAPI, generated code, migrations, integração, segurança e Docker.
+
+Path filters evitam executar a plataforma inteira para mudanças isoladas. Checks antigos da mesma branch são cancelados quando chega novo push.
+
+### 7.10 Vercel sem builds por push
+
+A integração Git automática da Vercel não controlará todos os deploys.
+
+- push em branch: CI, sem Vercel;
+- preview: somente manual ou por label `deploy-preview`;
+- merge em `main`: produção apenas se caminhos do frontend forem afetados;
+- mudanças somente em backend, banco ou docs não disparam Vercel.
+
+### 7.11 Atualização de dependências internas
+
+Nova versão de UI/Core não atualiza Database automaticamente.
+
+Fluxo:
+
+1. publicar versão;
+2. avaliar benefício;
+3. abrir PR específico no Database;
+4. atualizar versão e lockfile/checksum;
+5. testar integração;
+6. mergear.
+
+Sem `repository_dispatch`, PR automático ou Dependabot para versões internas.
+
+### 7.12 ESM e package verification
+
+Gymkhana-UI é ESM-only:
+
+- sem CommonJS;
+- sem minificação da biblioteca;
+- source maps e declarations;
+- React/ReactDOM como peer dependencies;
+- CSS marcado como side effect;
+- package real testado com `pnpm pack` e instalação em app temporária.
+
+### 7.13 Compatibilidade e deprecações
+
+Breaking changes entre repos seguem expansão e migração:
+
+1. adicionar API nova mantendo antiga;
+2. publicar versão compatível;
+3. migrar Database;
+4. validar produção;
+5. remover API antiga em versão incompatível posterior.
+
+APIs obsoletas recebem `@deprecated`/`Deprecated:`, changelog e instrução de migração.
+
+Antes de 1.0, apenas uma versão exata suportada é mantida pelo Database, mas quebras nunca são silenciosas.
+
+### 7.14 Informações de versão
+
+Build injeta:
+
+- app version;
+- commit SHA;
+- build time.
+
+Backend pode usar `debug.ReadBuildInfo()` para reportar versão do Core.
+
+Frontend recebe `VITE_APP_VERSION` e `VITE_COMMIT_SHA`.
+
+Endpoint `/api/v1/system/version` retorna somente informações não sensíveis.
+
+### 7.15 Builds reproduzíveis
+
+- `pnpm install --frozen-lockfile`;
+- Go com `-mod=readonly`;
+- imagem base fixada por versão e digest;
+- multi-stage e usuário não-root;
+- sem `latest`;
+- Actions por SHA;
+- ferramentas por versão exata.
+
+### 7.16 Ambiente local
+
+Comandos padronizados:
+
+Database:
+
+```text
+make setup dev test lint generate migrate seed build check
+```
+
+UI:
+
+```text
+pnpm setup dev test lint build check pack:verify
+```
+
+Core:
+
+```text
+make test lint fuzz check
+```
+
+Makefile somente em projetos Go/orquestração. UI usa scripts pnpm.
+
+Código roda diretamente na máquina; Docker Compose local é somente para PostgreSQL e serviços auxiliares.
+
+Padrão seguro: PostgreSQL local. Neon de desenvolvimento é opcional.
+
+### 7.17 Configuração
+
+`.env.example` somente com nomes e explicações, nunca valores reais.
+
+Produção não usa `.env`; segredos vêm do provedor.
+
+Cada variável deve documentar obrigatoriedade, padrão, escopo, sensibilidade e necessidade de restart.
+
+Frontend recebe apenas variáveis públicas.
+
+### 7.18 Documentação
+
+- `ORCHESTRATION.md`: decisões globais;
+- `README.md`: entrada rápida;
+- `docs/architecture/`: arquitetura atual;
+- `docs/guides/`: procedimentos;
+- `docs/adr/`: apenas decisões arquiteturais relevantes;
+- `SECURITY.md`: comunicação privada de vulnerabilidades;
+- templates curtos de PR e issues.
+
+Os três documentos de orquestração são sincronizados conscientemente ao final de cada etapa, sem script de cópia automática.
+
+### 7.19 CODEOWNERS e revisão
+
+CODEOWNERS será simples inicialmente e preparado para divisão futura.
+
+Mudanças sensíveis exigem atenção reforçada:
+
+- auth e autorização;
+- migrations destrutivas;
+- criptografia;
+- upload;
+- tools de IA;
+- Query Engine;
+- workflows de release.
+
+Sem aprovação automática por bot.
+
+### 7.20 Critérios de extração
+
+Mover lógica ao Core somente quando for independente de banco, HTTP, UI e entidade específica, reutilizável e com API suficientemente estável.
+
+Na dúvida, nasce no Database e é extraída após uso real.
+
+Mover componente ao UI somente quando não tiver regra de produto, puder receber dados/eventos por props, tiver uso em múltiplas telas ou sistemas e puder ser demonstrado isoladamente.
+
+Componentes específicos permanecem em `apps/web/src/features/`.
+
+## 8. Decisões adiadas
 
 - multi-organização;
 - Redis;
 - OpenTelemetry;
 - React Compiler;
-- TypeScript 7 antes da maturidade do ecossistema necessária ao projeto;
+- TypeScript 7 antes da maturidade necessária;
 - Neon Search sem benchmark;
-- full-text search indiscriminado;
 - Storybook;
 - bibliotecas de componentes;
 - SSR;
 - microserviços;
-- histórico de uso de documentos e contas;
+- histórico de uso;
 - anexos diretos em Profile;
-- engines tradicionais de OCR;
-- frameworks genéricos de agentes;
-- execução de SQL arbitrário pela IA.
+- OCR tradicional;
+- frameworks de agentes;
+- SQL arbitrário pela IA;
+- quarto repositório de workspace;
+- automação cruzada entre repositórios;
+- Changesets.
 
-## 8. Próxima etapa
+## 9. Próxima etapa
 
-**Etapa 5 — divisão física dos repositórios e packages.**
+**Etapa 6 — Design system e Data Grid.**
 
 Objetivos:
 
-- definir estrutura definitiva de diretórios;
-- estratégia de versionamento e releases;
-- consumo entre os três repositórios;
-- CI de cada repositório;
-- publicação do UI e Core;
-- contratos e ownership;
-- fluxo de desenvolvimento sem commits ou builds desnecessários.
+- definir tokens visuais;
+- temas, densidades e responsividade;
+- APIs dos componentes fundamentais;
+- AppShell e Page;
+- comportamento completo do Data Grid;
+- edição inline;
+- filtros, agrupamento, paginação e persistência de colunas;
+- acessibilidade e estados de interface.
 
-Este documento deve ser atualizado novamente ao final da Etapa 5 antes do início da Etapa 6.
+Este documento deve ser atualizado novamente ao final da Etapa 6.
