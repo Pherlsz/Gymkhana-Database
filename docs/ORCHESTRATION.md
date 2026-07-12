@@ -1,12 +1,12 @@
 # Gymkhana Database — Documento de Orquestração
 
-> **Planning version:** Stage 5  
+> **Planning version:** Stage 6  
 > **Última sincronização:** 2026-07-12  
-> **Etapa atual:** Etapa 5 concluída  
+> **Etapa atual:** Etapa 6 concluída  
 > **Fonte principal de verdade:** `Pherlsz/Gymkhana-Database`  
 > **Repositórios relacionados:** `Pherlsz/Gymkhana-UI` e `Pherlsz/Gymkhana-Core`
 
-Este documento consolida as decisões aprovadas nas Etapas 1 a 5 do rebuild. Ele deve ser atualizado ao final de cada etapa antes do início da próxima.
+Este documento consolida as decisões aprovadas nas Etapas 1 a 6 do rebuild. Ele deve ser atualizado ao final de cada etapa antes do início da próxima.
 
 ## 1. Objetivo e princípios
 
@@ -20,7 +20,7 @@ Princípios obrigatórios:
 - monólito modular, sem microserviços iniciais;
 - SQL explícito e sem ORM;
 - domínio desacoplado de provedores e packages de infraestrutura;
-- nenhum update de versão apenas por ser mais recente;
+- nenhuma atualização de versão apenas por ser mais recente;
 - releases bloqueados por vulnerabilidades conhecidas e aplicáveis;
 - performance resolvida com modelagem, índices, streaming e lotes;
 - filtros, paginação, ordenação e agrupamentos refletidos na URL;
@@ -41,7 +41,7 @@ Documentação:
 
 - `Gymkhana-UI` e `Gymkhana-Core`: toda documentação técnica em inglês;
 - `Gymkhana-Database`: o documento de produto/orquestração pode permanecer em português;
-- OpenAPI, nomes de schemas e documentação de código em inglês.
+- OpenAPI, schemas e documentação de código em inglês.
 
 ## 3. Escopo funcional aprovado
 
@@ -54,7 +54,7 @@ Campos principais:
 - UUIDv7;
 - nome completo e nome social;
 - CPF opcional e único quando informado;
-- datas de nascimento e falecimento;
+- nascimento e falecimento;
 - nacionalidade e naturalidade;
 - nomes da mãe e do pai;
 - estado civil e profissão;
@@ -68,8 +68,8 @@ Campos principais:
 
 Regras:
 
-- CPF, telefones e números de documentos são armazenados como texto;
-- CPF canônico somente com dígitos e máscara no frontend;
+- CPF, telefones e números de documentos são texto;
+- CPF canônico usa somente dígitos e máscara no frontend;
 - e-mail em minúsculas;
 - pais são nomes opcionais, não relacionamentos;
 - no máximo uma equipe de gincana atual, sem histórico;
@@ -633,9 +633,9 @@ Vercel e API aparecem na mesma origem pública. O frontend usa `/api/v1` relativ
 
 A arquitetura permanece portátil para eventual migração integral à GCP.
 
-## 7. Etapa 5 — Estrutura dos repositórios
+## 7. Estrutura e governança dos repositórios
 
-### 7.1 Grafo de dependências
+### 7.1 Grafo
 
 ```text
 Gymkhana-Database
@@ -649,11 +649,9 @@ Gymkhana-Core
 └── independent
 ```
 
-Não há dependências circulares ou entre UI e Core.
+Sem dependências circulares ou entre UI e Core.
 
 ### 7.2 Gymkhana-Database
-
-Estrutura aprovada:
 
 ```text
 apps/web/                 React SPA
@@ -662,13 +660,13 @@ cmd/worker/               worker entrypoint
 cmd/migrate/              migration command
 internal/                 domain modules
 api/                      OpenAPI and generated contract
-Database/                 migrations, queries, seeds, sqlc
-Deploy/                   Docker, Cloud Run and Vercel config
+database/                 migrations, queries, seeds, sqlc
+deploy/                   Docker, Cloud Run and Vercel config
 scripts/
 docs/
 ```
 
-O módulo Go fica na raiz. O pnpm workspace contém `apps/web`; o package da raiz apenas orquestra scripts e tooling.
+O módulo Go fica na raiz. O pnpm workspace contém `apps/web`; o package da raiz orquestra scripts e tooling.
 
 Cada domínio contém apenas arquivos e subpackages necessários. Não existirão diretórios globais de `controllers`, `services`, `repositories`, `models` e `dtos`.
 
@@ -693,7 +691,7 @@ Exports públicos explícitos; imports internos por `src/` ou `dist/internal/` s
 
 ### 7.4 Gymkhana-Core
 
-Packages públicos diretamente na raiz, sem `pkg/` artificial:
+Packages públicos diretamente na raiz:
 
 ```text
 normalize/
@@ -707,7 +705,7 @@ result/
 internal/
 ```
 
-Não criar packages `utils`, `helpers`, `common` ou `shared`.
+Sem packages `utils`, `helpers`, `common` ou `shared`.
 
 Módulos:
 
@@ -716,36 +714,20 @@ github.com/Pherlsz/Gymkhana-Database
 github.com/Pherlsz/Gymkhana-Core
 ```
 
-### 7.5 Consumo entre repos
+### 7.5 Consumo e publicação
 
 Database fixa versões exatas:
 
 - Core por módulo Go privado;
-- UI por package privado.
+- UI por GitHub Packages privado.
 
 Sem branch flutuante, submodule, subtree, cópia manual ou script de sincronização.
 
-Desenvolvimento local pode usar:
+Desenvolvimento local pode usar `go.work` não versionado e link temporário pnpm.
 
-- `go.work` não versionado fora dos repos;
-- link temporário pnpm sem alterar a versão registrada.
+UI usa `@pherlsz/gymkhana-ui`; Core usa `GOPRIVATE=github.com/Pherlsz/Gymkhana-Core`.
 
-### 7.6 Publicação privada
-
-UI:
-
-- GitHub Packages privado;
-- acesso concedido ao Database;
-- autenticação local por token de leitura fora do Git;
-- `GITHUB_TOKEN` em Actions.
-
-Core:
-
-- módulo Go privado;
-- `GOPRIVATE=github.com/Pherlsz/Gymkhana-Core`;
-- CI usa token fine-grained somente leitura para o Core.
-
-### 7.7 Versionamento
+### 7.6 Versionamento e releases
 
 UI e Core começam em `v0.1.0` e usam SemVer.
 
@@ -753,196 +735,609 @@ UI e Core começam em `v0.1.0` e usam SemVer.
 - minor: funcionalidade compatível;
 - major: quebra pública.
 
-Mesmo em `0.x`, breaking changes são documentadas e migradas explicitamente.
+Mesmo em `0.x`, quebras são documentadas e migradas explicitamente.
 
-`v1.0.0` apenas após uso em produção, API estável, documentação e cobertura dos contratos públicos.
-
-Sem Changesets inicialmente. Cada biblioteca mantém `CHANGELOG.md` com `Unreleased`.
+Sem Changesets inicialmente. `CHANGELOG.md` possui `Unreleased`.
 
 Releases são manuais assistidas por `workflow_dispatch`, agrupadas e não criadas a cada merge.
 
-### 7.8 Branches, commits e PRs
+### 7.7 Branches, commits e PRs
 
 Desenvolvimento baseado em `main`.
 
-Branches curtas:
-
-- `feature/*`, `fix/*`, `refactor/*`, `chore/*`, `agent/*`.
+Branches curtas: `feature/*`, `fix/*`, `refactor/*`, `chore/*`, `agent/*`.
 
 Sem `develop` ou Git Flow.
 
 Proteção de `main`:
 
-- PR obrigatório quando o desenvolvimento começar;
+- PR obrigatório durante desenvolvimento;
 - checks obrigatórios;
 - review threads resolvidas;
 - sem force push;
 - squash merge padrão.
 
-Todos os commits, títulos de PR e descrições de PR devem ser em inglês.
+Commits, títulos e descrições de PR em inglês.
 
-Commits locais podem ser múltiplos, mas pushes remotos devem ser agrupados para evitar builds desnecessários.
+### 7.8 CI e Vercel
 
-### 7.9 CI por impacto
+CI é dividido por impacto e usa path filters.
 
-UI: install frozen, typecheck, lint, format, unit tests, build, playground, security e package verification.
+- UI: install frozen, typecheck, lint, format, unit, build, playground, security e package verification;
+- Core: format, vet, staticcheck, tests e vulnerability scans;
+- Database: frontend, backend, OpenAPI, generated code, migrations, integração, segurança e Docker.
 
-Core: format, vet, staticcheck, tests, vuln scan; race em main, release e mudanças concorrentes.
+Checks antigos da mesma branch são cancelados por novo push.
 
-Database: jobs separados para frontend, backend, OpenAPI, generated code, migrations, integração, segurança e Docker.
+Vercel não cria build a cada push:
 
-Path filters evitam executar a plataforma inteira para mudanças isoladas. Checks antigos da mesma branch são cancelados quando chega novo push.
+- branch: CI sem Vercel;
+- preview: manual ou label `deploy-preview`;
+- `main`: produção somente se frontend for afetado.
 
-### 7.10 Vercel sem builds por push
-
-A integração Git automática da Vercel não controlará todos os deploys.
-
-- push em branch: CI, sem Vercel;
-- preview: somente manual ou por label `deploy-preview`;
-- merge em `main`: produção apenas se caminhos do frontend forem afetados;
-- mudanças somente em backend, banco ou docs não disparam Vercel.
-
-### 7.11 Atualização de dependências internas
+### 7.9 Compatibilidade
 
 Nova versão de UI/Core não atualiza Database automaticamente.
 
-Fluxo:
+Fluxo: publicar, avaliar, abrir PR no Database, fixar versão, atualizar lockfile/checksum, testar e mergear.
 
-1. publicar versão;
-2. avaliar benefício;
-3. abrir PR específico no Database;
-4. atualizar versão e lockfile/checksum;
-5. testar integração;
-6. mergear.
-
-Sem `repository_dispatch`, PR automático ou Dependabot para versões internas.
-
-### 7.12 ESM e package verification
-
-Gymkhana-UI é ESM-only:
-
-- sem CommonJS;
-- sem minificação da biblioteca;
-- source maps e declarations;
-- React/ReactDOM como peer dependencies;
-- CSS marcado como side effect;
-- package real testado com `pnpm pack` e instalação em app temporária.
-
-### 7.13 Compatibilidade e deprecações
-
-Breaking changes entre repos seguem expansão e migração:
+Quebras usam expansão e migração:
 
 1. adicionar API nova mantendo antiga;
 2. publicar versão compatível;
 3. migrar Database;
 4. validar produção;
-5. remover API antiga em versão incompatível posterior.
+5. remover API antiga em release incompatível posterior.
 
-APIs obsoletas recebem `@deprecated`/`Deprecated:`, changelog e instrução de migração.
+### 7.10 Ambiente local e documentação
 
-Antes de 1.0, apenas uma versão exata suportada é mantida pelo Database, mas quebras nunca são silenciosas.
-
-### 7.14 Informações de versão
-
-Build injeta:
-
-- app version;
-- commit SHA;
-- build time.
-
-Backend pode usar `debug.ReadBuildInfo()` para reportar versão do Core.
-
-Frontend recebe `VITE_APP_VERSION` e `VITE_COMMIT_SHA`.
-
-Endpoint `/api/v1/system/version` retorna somente informações não sensíveis.
-
-### 7.15 Builds reproduzíveis
-
-- `pnpm install --frozen-lockfile`;
-- Go com `-mod=readonly`;
-- imagem base fixada por versão e digest;
-- multi-stage e usuário não-root;
-- sem `latest`;
-- Actions por SHA;
-- ferramentas por versão exata.
-
-### 7.16 Ambiente local
-
-Comandos padronizados:
-
-Database:
+Comandos:
 
 ```text
-make setup dev test lint generate migrate seed build check
+Database: make setup dev test lint generate migrate seed build check
+UI:       pnpm setup dev test lint build check pack:verify
+Core:     make test lint fuzz check
 ```
 
-UI:
+Código roda diretamente na máquina; Docker Compose é usado para PostgreSQL e serviços auxiliares.
 
-```text
-pnpm setup dev test lint build check pack:verify
-```
+Documentação:
 
-Core:
-
-```text
-make test lint fuzz check
-```
-
-Makefile somente em projetos Go/orquestração. UI usa scripts pnpm.
-
-Código roda diretamente na máquina; Docker Compose local é somente para PostgreSQL e serviços auxiliares.
-
-Padrão seguro: PostgreSQL local. Neon de desenvolvimento é opcional.
-
-### 7.17 Configuração
-
-`.env.example` somente com nomes e explicações, nunca valores reais.
-
-Produção não usa `.env`; segredos vêm do provedor.
-
-Cada variável deve documentar obrigatoriedade, padrão, escopo, sensibilidade e necessidade de restart.
-
-Frontend recebe apenas variáveis públicas.
-
-### 7.18 Documentação
-
-- `ORCHESTRATION.md`: decisões globais;
-- `README.md`: entrada rápida;
-- `docs/architecture/`: arquitetura atual;
-- `docs/guides/`: procedimentos;
-- `docs/adr/`: apenas decisões arquiteturais relevantes;
-- `SECURITY.md`: comunicação privada de vulnerabilidades;
+- `ORCHESTRATION.md`;
+- `README.md`;
+- `docs/architecture/`;
+- `docs/guides/`;
+- `docs/adr/`;
+- `SECURITY.md`;
 - templates curtos de PR e issues.
 
-Os três documentos de orquestração são sincronizados conscientemente ao final de cada etapa, sem script de cópia automática.
+Os documentos são sincronizados conscientemente, sem script de cópia automática.
 
-### 7.19 CODEOWNERS e revisão
+### 7.11 Critérios de extração
 
-CODEOWNERS será simples inicialmente e preparado para divisão futura.
+Mover lógica ao Core somente quando independente de banco, HTTP, UI e entidade específica, reutilizável e suficientemente estável.
 
-Mudanças sensíveis exigem atenção reforçada:
+Mover componente ao UI somente quando não possuir regra de produto, puder ser composto por props, tiver uso real em múltiplas telas/sistemas e puder ser demonstrado isoladamente.
 
-- auth e autorização;
-- migrations destrutivas;
-- criptografia;
-- upload;
-- tools de IA;
-- Query Engine;
-- workflows de release.
+Na dúvida, manter no Gymkhana-Database até o reúso ser comprovado.
 
-Sem aprovação automática por bot.
+## 8. Etapa 6 — Design System
 
-### 7.20 Critérios de extração
+### 8.1 Direção visual
 
-Mover lógica ao Core somente quando for independente de banco, HTTP, UI e entidade específica, reutilizável e com API suficientemente estável.
+O sistema será funcional, neutro, moderno, compacto e consistente.
 
-Na dúvida, nasce no Database e é extraída após uso real.
+Prioridades:
 
-Mover componente ao UI somente quando não tiver regra de produto, puder receber dados/eventos por props, tiver uso em múltiplas telas ou sistemas e puder ser demonstrado isoladamente.
+- leitura rápida de grandes volumes;
+- pouco ruído visual;
+- hierarquia clara;
+- alta densidade sem aparência apertada;
+- interações previsíveis;
+- acessibilidade;
+- telas pequenas e ultrawide.
 
-Componentes específicos permanecem em `apps/web/src/features/`.
+Evitar glassmorphism, transparências excessivas, sombras pesadas, gradientes decorativos, cards em todo conteúdo, raios exagerados e animações longas.
 
-## 8. Decisões adiadas
+### 8.2 Cores e temas
+
+Componentes usam tokens semânticos, não cores fixas.
+
+Grupos principais:
+
+- backgrounds e surfaces;
+- textos primary, secondary, muted, disabled e inverse;
+- borders e focus;
+- primary e seus estados;
+- success, warning, danger e info, incluindo variantes subtle.
+
+`app_settings.primary_color` pode definir a identidade principal, mas passa por validação de contraste e geração/seleção de escala.
+
+Temas iniciais:
+
+- `light`;
+- `dark`;
+- `system`.
+
+Implementação por `data-gym-theme` e CSS custom properties. O tema do usuário persiste no backend e é aplicado cedo para evitar flash incorreto.
+
+### 8.3 Tipografia, spacing e forma
+
+Font stack de sistema, sem download obrigatório de Google Fonts.
+
+Escala compacta aproximada:
+
+- 12 px metadata;
+- 13 px grid dense/compact;
+- 14 px corpo padrão;
+- 16 px destaque;
+- 18 px seção;
+- 22 px título de página;
+- 28 px títulos especiais.
+
+Pesos: 400, 500, 600 e 700 limitado.
+
+Spacing usa base de 4 px e escala tipada.
+
+Raios:
+
+- none 0;
+- sm 4 px;
+- md 6 px;
+- lg 10 px;
+- full circular.
+
+Sombras: none, sm, md e lg, usadas apenas quando elevação é necessária.
+
+### 8.4 Densidades e responsividade
+
+Densidades:
+
+- `comfortable`: controles 40–44 px;
+- `compact`: padrão desktop, 34–36 px;
+- `dense`: grids avançados, 28–30 px.
+
+Aplicação por `data-gym-density` e tokens de altura/padding.
+
+Breakpoints globais orientativos: 640, 768, 1024, 1280 e 1536 px. Componentes preferem layout fluido, container queries, `minmax`, `auto-fit` e `clamp`.
+
+Não existem versões separadas da mesma página para desktop e mobile.
+
+### 8.5 Movimento e estados
+
+Transições funcionais:
+
+- fast 100 ms;
+- normal 160 ms;
+- slow 240 ms.
+
+`prefers-reduced-motion` reduz ou remove transições não essenciais.
+
+Estados comuns:
+
+- default, hover, active, focus-visible, disabled, loading, invalid, read-only e selected;
+- expanded, checked, indeterminate, dragging e drop-target quando aplicável.
+
+## 9. Componentes fundamentais
+
+### 9.1 Estado controlado
+
+Componentes com estado suportam `value/onValueChange` ou `defaultValue`, nunca ambos simultaneamente.
+
+`useControllableState` permanece interno.
+
+### 9.2 Props e semântica
+
+Componentes aceitam atributos nativos compatíveis, `className` e `data-testid` quando necessário.
+
+Não haverá API universal de margin/padding/display nem polimorfismo irrestrito por `as`.
+
+Cada componente renderiza o elemento semanticamente correto.
+
+### 9.3 Button e IconButton
+
+Variantes:
+
+- primary;
+- secondary;
+- outline;
+- ghost;
+- danger.
+
+Tamanhos acompanham comfortable, compact e dense.
+
+Button usa `type="button"` por padrão, mantém largura no loading e distingue ações de navegação.
+
+IconButton exige nome acessível; tooltip não substitui `aria-label`.
+
+### 9.4 Fields
+
+Compound API:
+
+- `Field.Root`;
+- `Field.Label`;
+- `Field.Description`;
+- `Field.Error`;
+- `Field.RequiredIndicator`.
+
+O UI coordena label, descrição, erro e ARIA, mas não conhece TanStack Form ou Valibot.
+
+TextField e TextArea permanecem wrappers leves de elementos nativos. Prefix, suffix, clear, loading e contagem podem existir sem incorporar máscaras de domínio.
+
+Checkbox, RadioGroup e Switch possuem semântica distinta e suporte a teclado, foco, disabled e invalid.
+
+### 9.5 Select e Combobox
+
+Select usa `<select>` nativo para listas pequenas e estáticas.
+
+Combobox customizado cobre busca, listas grandes/remotas, opções dinâmicas, loading, erro e seleção. O componente não realiza consultas.
+
+### 9.6 Datas
+
+Tipos separados:
+
+- `CivilDate`;
+- `YearMonth`;
+- instante ISO 8601 para datetime.
+
+Componentes:
+
+- DateField;
+- DatePicker;
+- Calendar;
+- YearMonthField;
+- DateTimeField.
+
+DateField permite digitação `DD/MM/AAAA`. Calendar possui teclado completo, mês exibido separado de seleção e labels via `Intl`.
+
+DatePicker usa Popover no desktop e Dialog/Drawer no mobile. YearMonth nunca é um DatePicker com dias ocultos.
+
+Timezone é responsabilidade da aplicação; UI não assume São Paulo.
+
+### 9.7 Uploads e feedback
+
+FileUpload é visual e neutro. A aplicação solicita URL assinada, envia, confirma e persiste.
+
+Drag and drop nunca é o único caminho. Progresso e erro são por arquivo.
+
+Feedback inclui Alert, InlineMessage, Badge, StatusBadge, Toast, Progress, Spinner, Skeleton, EmptyState e ErrorState.
+
+Toast não é a única forma de informar erro crítico. Máximo visual pequeno, fila, pause em hover/focus e `aria-live`.
+
+### 9.8 Overlays
+
+Compound APIs próprias para Dialog e Drawer, com portal, backdrop, scroll lock, foco inicial, trap, Escape e restauração.
+
+Popover, Tooltip e DropdownMenu possuem semântica e teclado próprios.
+
+Tooltip contém informação curta, nunca ações nem informação essencial.
+
+Confirmações destrutivas variam por impacto. Alto impacto exige contagem, consequências e confirmação reforçada.
+
+### 9.9 Formulários
+
+Gymkhana-UI não depende de TanStack Form.
+
+Adapters como `FormTextField` permanecem no Database.
+
+Erros de campo ficam junto ao controle; erro geral no topo; foco vai ao primeiro erro ou resumo; valores não são perdidos; conflitos de versão têm fluxo específico; `request_id` aparece em erros inesperados.
+
+## 10. AppShell e Page
+
+### 10.1 AppShell
+
+Compound API:
+
+- Root;
+- Sidebar;
+- Brand;
+- Navigation;
+- NavigationGroup;
+- NavigationItem;
+- SidebarFooter;
+- Header;
+- MobileMenuButton;
+- HeaderTitle;
+- HeaderActions;
+- Main.
+
+Sidebar desktop: expanded, collapsed ou hidden. No mobile, vira Drawer com a mesma navegação.
+
+Itens usam links reais e `aria-current`. Funcionalidade sem permissão geralmente é omitida.
+
+Header global contém somente elementos globais: menu, search global, notificações, tema e usuário. Títulos, filtros e ações da rota ficam em Page.
+
+### 10.2 Page
+
+Compound API:
+
+- Root;
+- Header;
+- Heading;
+- Breadcrumbs;
+- Title;
+- Description;
+- Actions;
+- Toolbar;
+- Content;
+- Main;
+- Aside;
+- Section;
+- Footer.
+
+Layouts:
+
+- default;
+- wide;
+- full;
+- centered;
+- split.
+
+`Page.Title` é o único `h1` principal. Breadcrumbs representam hierarquia real. Ações têm uma principal, secundárias e overflow responsivo.
+
+Toolbar contém busca local, filtros, sort, grouping, visualização, seleção e atualização, podendo ficar sticky quando necessário.
+
+Detalhes complexos possuem URL própria. Drawer é preview/edição curta, não substituto automático da rota.
+
+Preferir uma única rolagem principal; rolagens internas somente para sidebar, grid virtualizado, overlays e painéis explicitamente necessários.
+
+## 11. Data Grid
+
+### 11.1 Limites e estado
+
+Gymkhana-UI cuida de renderização, layout, virtualização, interação, teclado e estados visuais.
+
+Gymkhana-Database cuida de HTTP, URL, queries, permissões, operadores, preferências, validação, bulk actions e colunas de domínio.
+
+Estado controlado:
+
+- pagination;
+- sorting;
+- filters;
+- grouping;
+- selection;
+- column preferences.
+
+TanStack Table e Virtual são detalhes internos. A API pública usa tipos próprios.
+
+Toda linha possui ID estável, normalmente UUID.
+
+### 11.2 Paginação e total
+
+Paginação server-side por página/offset inicialmente.
+
+Page sizes:
+
+- 25, 50, 100, 250, 500 e 1000.
+
+Filtros, grouping, page size e normalmente sort voltam para página 1.
+
+Ordenação sempre é estável, com `id` como desempate final.
+
+A API retorna total exato filtrado e autorizado. Estimativa futura somente quando explicitamente marcada.
+
+### 11.3 Virtualização e linhas
+
+Virtualização vertical dentro da página carregada, com até 1000 linhas.
+
+Altura fixa por densidade:
+
+- comfortable ~44 px;
+- compact ~36 px;
+- dense ~30 px.
+
+Sem altura livre, quebras ilimitadas ou previews pesados dentro da célula.
+
+Virtualização horizontal só após necessidade comprovada.
+
+### 11.4 Colunas
+
+Cada coluna possui chave técnica estável, header, accessor/cell, largura, alinhamento, sort/filter/group/edit e capacidades de hide/pin/resize.
+
+Labels traduzidas nunca são chaves.
+
+Colunas nativas e customizadas usam o mesmo contrato.
+
+Ações ficam em coluna específica, geralmente fixada à direita, com uma ação principal e overflow. Coluna de ações não é exportada.
+
+### 11.5 Sort, filtros e URL
+
+Ordenação é server-side, simples ou múltipla, persistida na URL.
+
+Filtros são tipados por texto, número, dinheiro, data, boolean, select e relacionamento.
+
+Busca rápida e filtros avançados coexistem e são combinados pelo backend.
+
+A primeira UI de filtros avançados usa lista ordenada de condições com `AND`. O Query Engine poderá suportar lógica mais rica sem obrigar a primeira interface a expor grupos arbitrários de `AND/OR`.
+
+URL canônica preserva busca, filtros, operadores, sort, grouping, page e page size.
+
+Preferências de coluna não poluem a URL por padrão.
+
+### 11.6 Agrupamento e agregações
+
+Agrupamento é server-side, com contagens globais filtradas e expansão que pode buscar filhos sob demanda.
+
+Suporta arquitetura para múltiplos níveis, sem limitação permanente a um único grupo.
+
+Agregações iniciais:
+
+- count;
+- sum;
+- average;
+- minimum;
+- maximum.
+
+Sempre calculadas pelo backend e respeitando permissões.
+
+### 11.7 Seleção e bulk actions
+
+Seleção usa IDs estáveis e modos:
+
+- explicit;
+- all_matching com exclusões e fingerprint da query.
+
+Header seleciona página atual; ação separada seleciona todos os resultados filtrados.
+
+Alterar filtros/busca/grouping limpa seleção global; trocar página preserva.
+
+Bulk actions recebem critério e exclusões, não milhares de IDs. Backend revalida conjunto e permissões. Operações grandes criam jobs e relatórios com falhas parciais.
+
+### 11.8 Colunas e preferências
+
+Resize em pixels, respeitando min/max; ajuste ao conteúdo considera apenas header e página carregada.
+
+Pinning: left, right e none. Uso típico: seleção e coluna principal à esquerda; ações à direita.
+
+Usuário pode mostrar, ocultar, ordenar, fixar, restaurar e pesquisar colunas.
+
+Preferências persistidas no backend por `user_id + table_key`:
+
+- densidade específica;
+- page size;
+- visibility;
+- order;
+- sizing;
+- pinning.
+
+Filtros, página, sort e grouping permanecem na URL.
+
+Cada tabela possui preset versionado; preferências compatíveis sobrevivem a novas colunas e chaves removidas são ignoradas.
+
+Sem múltiplas visualizações salvas inicialmente.
+
+### 11.9 Edição inline
+
+Somente desktop/tablet quando apropriado e apenas para campos simples de baixo risco:
+
+- texto curto;
+- número e dinheiro;
+- boolean;
+- select simples;
+- datas simples;
+- custom fields equivalentes.
+
+Não usar inline para anexos, relações complexas, endereços completos, detalhes compostos, merges ou validação cruzada ampla.
+
+Estados:
+
+- display;
+- editing;
+- saving;
+- saved;
+- invalid;
+- conflict;
+- failed.
+
+Enter/F2/affordance iniciam; Enter confirma; Tab confirma e move; Escape cancela. Valor original permanece até sucesso.
+
+Validação local + backend. Conflitos usam `version` e nunca sobrescrevem automaticamente.
+
+A aplicação atualiza TanStack Query e pode remover linha que deixe de corresponder aos filtros, informando o usuário.
+
+### 11.10 Acessibilidade
+
+Modo simples usa `<table>`. `role="grid"` somente quando navegação celular, edição, seleção e grouping justificarem e estiverem corretamente implementados.
+
+Roving tabindex no modo interativo. Setas movem células; Home/End, Ctrl/Cmd Home/End, Page Up/Down, Enter, Space, Escape e Tab seguem o padrão definido.
+
+Virtualização preserva foco e renderiza a célula ativa. Headers têm controles separados para sort, filter, menu e resize.
+
+`aria-live` anuncia resultados, seleção, saves, erros, mudança de página e início de operação, sem narrar cada linha.
+
+### 11.11 Estados
+
+Distinguir:
+
+- loading inicial;
+- refreshing com dados anteriores;
+- vazio sem registros;
+- vazio por filtros;
+- sem permissão;
+- recurso não configurado;
+- erro inicial;
+- erro parcial/refetch.
+
+Loading inicial mantém estrutura conhecida. Refresh preserva linhas, scroll, foco e seleção.
+
+Capacidades visuais (`canView`, `canSelect`, `canEdit`, etc.) não substituem segurança no backend.
+
+### 11.12 Mobile, tablet e ultrawide
+
+**A tabela não será automaticamente substituída por cards no mobile.**
+
+Mobile preserva o Data Grid com:
+
+- coluna principal visível/fixada quando útil;
+- poucas colunas essenciais;
+- scroll horizontal;
+- filtros em Drawer;
+- painel de colunas simplificado;
+- detalhes em rota/preview.
+
+Lista/cards só existem como componente específico de tela quando houver benefício funcional claro, nunca como transformação automática do grid.
+
+Recursos não obrigatórios no mobile:
+
+- edição inline;
+- resize;
+- reorder por drag and drop;
+- pinning manual avançado;
+- grouping por arraste;
+- ordenação complexa por múltiplos headers;
+- atalhos avançados;
+- split-view complexo.
+
+Esses fluxos continuam disponíveis por formulário, Drawer, página de edição ou desktop.
+
+Tablet reduz ações e colunas sem criar outra interface.
+
+Ultrawide usa largura ampla para grids, mas não estica indefinidamente colunas de texto.
+
+Presets responsivos definem visibilidade inicial desktop/tablet/mobile, sem duplicar definição de coluna e sem sobrescrever preferências explícitas.
+
+### 11.13 Export e jobs
+
+A ação de export pertence ao produto. Pode exportar página, resultados filtrados, seleção ou todos permitidos, sempre reconstruído e revalidado no backend.
+
+“Exportar colunas visíveis” só existe quando explicitamente escolhido.
+
+Operações longas usam estados:
+
+- queued;
+- running;
+- completed;
+- completed_with_errors;
+- failed;
+- cancelled.
+
+Não mostrar progresso falso. Conclusão invalida queries relacionadas, preserva filtros/página e gera notificação/relatório.
+
+### 11.14 Testes e performance
+
+Design System exige:
+
+- semântica;
+- nome acessível;
+- teclado;
+- foco visível e restaurado;
+- disabled/invalid/loading;
+- contraste light/dark;
+- zoom 200%;
+- fonte aumentada;
+- reduced motion;
+- touch;
+- erros;
+- axe-core;
+- teste manual para componentes críticos.
+
+Data Grid deve ser testado com 25, 100 e 1000 linhas, muitas colunas, custom cells, seleção extensa, refetch, grouping, edição e conflitos.
+
+Unit, playground e Playwright cobrem coluna, query state, preferência, virtualização, teclado, mobile, ultrawide e acessibilidade.
+
+Otimizações complexas somente após profiling. Evitar providers por linha, formulários por célula, medição contínua e overlays montados para todas as linhas.
+
+## 12. Decisões adiadas
 
 - multi-organização;
 - Redis;
@@ -961,21 +1356,28 @@ Componentes específicos permanecem em `apps/web/src/features/`.
 - SQL arbitrário pela IA;
 - quarto repositório de workspace;
 - automação cruzada entre repositórios;
-- Changesets.
+- Changesets;
+- temas arbitrários completos;
+- seleção de intervalo de datas;
+- saved views do Data Grid;
+- nested AND/OR visual avançado;
+- virtualização horizontal padrão;
+- transformação automática de tabela em cards no mobile.
 
-## 9. Próxima etapa
+## 13. Próxima etapa
 
-**Etapa 6 — Design system e Data Grid.**
+**Etapa 7 — Gymkhana-Core, Query Engine, AI Chat e OCR.**
 
 Objetivos:
 
-- definir tokens visuais;
-- temas, densidades e responsividade;
-- APIs dos componentes fundamentais;
-- AppShell e Page;
-- comportamento completo do Data Grid;
-- edição inline;
-- filtros, agrupamento, paginação e persistência de colunas;
-- acessibilidade e estados de interface.
+- fechar o catálogo tipado de campos, entidades e operadores;
+- definir AST, validação e limites do Query Engine;
+- mapear planos neutros para executores seguros do Database;
+- definir matching e regras de duplicatas;
+- fechar contratos neutros de providers e tools;
+- detalhar threads, mensagens, runs, referências e SSE;
+- definir prompts, schemas estruturados e políticas de contexto;
+- detalhar OCR multimodal e revisão humana;
+- definir observabilidade, segurança, custos e testes de IA.
 
-Este documento deve ser atualizado novamente ao final da Etapa 6.
+Este documento deve ser atualizado novamente ao final da Etapa 7.
