@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { Button } from "@pherlsz/gymkhana-ui";
+import { useCallback, useEffect, useState } from "react";
 import { checkLiveHealth } from "./lib/api/health";
 
 type HealthState = "checking" | "available" | "unavailable";
@@ -6,22 +7,25 @@ type HealthState = "checking" | "available" | "unavailable";
 export function App() {
   const [health, setHealth] = useState<HealthState>("checking");
 
+  const refreshHealth = useCallback(async (signal?: AbortSignal) => {
+    setHealth("checking");
+
+    try {
+      const available = await checkLiveHealth(signal);
+      setHealth(available ? "available" : "unavailable");
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      setHealth("unavailable");
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
-
-    void checkLiveHealth(controller.signal)
-      .then((available) => {
-        setHealth(available ? "available" : "unavailable");
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
-        }
-        setHealth("unavailable");
-      });
-
+    void refreshHealth(controller.signal);
     return () => controller.abort();
-  }, []);
+  }, [refreshHealth]);
 
   return (
     <main className="page-shell">
@@ -39,13 +43,22 @@ export function App() {
           </div>
           <div>
             <dt>API</dt>
-            <dd data-health={health}>{healthLabel(health)}</dd>
+            <dd id="api-status" data-health={health}>
+              {healthLabel(health)}
+            </dd>
           </div>
           <div>
             <dt>Contrato</dt>
             <dd>OpenAPI 3.1</dd>
           </div>
         </dl>
+        <Button
+          aria-describedby="api-status"
+          disabled={health === "checking"}
+          onClick={() => void refreshHealth()}
+        >
+          Verificar API
+        </Button>
       </section>
     </main>
   );

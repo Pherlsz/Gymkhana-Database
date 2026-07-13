@@ -9,6 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"
   },
   "dependencies": {
+    "@pherlsz/gymkhana-ui": "0.1.0",
     "react": "19.2.7",
     "react-dom": "19.2.7"
   },
