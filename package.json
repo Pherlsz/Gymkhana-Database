@@ -1,6 +1,7 @@
 {
   "name": "gymkhana-database-workspace",
   "version": "0.0.0",
+  "description": "Private workspace for the Gymkhana Database application.",
   "private": true,
   "scripts": {
     "dev:web": "pnpm --filter @pherlsz/gymkhana-database-web dev",
