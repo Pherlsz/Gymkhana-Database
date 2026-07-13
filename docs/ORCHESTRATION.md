@@ -1,12 +1,12 @@
 # Gymkhana Database — Documento de Orquestração
 
-> **Planning version:** Stage 7  
-> **Última sincronização:** 2026-07-12  
-> **Etapa atual:** Etapa 7 concluída  
+> **Planning version:** Stage 8  
+> **Última sincronização:** 2026-07-13  
+> **Etapa atual:** Etapa 8 concluída  
 > **Fonte principal de verdade:** `Pherlsz/Gymkhana-Database/docs/ORCHESTRATION.md`  
 > **Repositórios relacionados:** `Pherlsz/Gymkhana-UI` e `Pherlsz/Gymkhana-Core`
 
-Este documento consolida as decisões aprovadas nas Etapas 1 a 7 do rebuild. Deve ser atualizado conscientemente ao final de cada etapa, sem sincronização automática entre repositórios.
+Este documento consolida as decisões aprovadas nas Etapas 1 a 8 do rebuild. Deve ser atualizado conscientemente ao final de cada etapa, sem sincronização automática entre repositórios.
 
 ## 1. Objetivo e princípios
 
@@ -14,7 +14,7 @@ Reconstruir o Gymkhana Database como aplicação privada, leve, extensível, seg
 
 Princípios obrigatórios:
 
-- instalação única; multi-organização foi removida completamente;
+- instalação única; multi-organização removida completamente;
 - nenhum `organizations`, `organization_id` ou abstração de tenancy;
 - simplicidade antes de abstrações preventivas;
 - monólito modular, sem microserviços iniciais;
@@ -25,8 +25,8 @@ Princípios obrigatórios:
 - nenhum SQL arbitrário disponibilizado à IA;
 - nenhuma limitação artificial sobre o total de registros ou tipos de perguntas;
 - limites operacionais alteram a forma de execução, não o objetivo funcional;
-- processamento próximo ao banco para reduzir egress;
-- filtros, paginação, sorting e grouping refletidos na URL;
+- processamento próximo ao PostgreSQL para reduzir egress;
+- filtros, paginação, sorting, grouping e tabs relevantes refletidos na URL;
 - acessibilidade, responsividade e desempenho medidos desde o início;
 - versões adotadas por benefício real, compatibilidade, segurança ou performance, não apenas por novidade.
 
@@ -78,7 +78,13 @@ Modelo híbrido:
 
 Tipos oficiais iniciais incluem CIN, RG, CPF, CNH, CTPS, passaporte, título eleitoral, carteira estudantil, conselhos, SUS, Cartão Cidadão, certidões e `OTHER`.
 
-CIN e RG permanecem distintos. Tipos são tabelas administráveis, não enums PostgreSQL. Tipos de sistema podem ser desativados, relabelados, reordenados e ampliados, mas não excluídos. Tipos customizados exigem desativação e confirmação de impacto antes da exclusão.
+CIN e RG permanecem distintos. Tipos são tabelas administráveis, não enums PostgreSQL. Tipos de sistema podem ser desativados, relabelados, reordenados e ampliados, mas não excluídos fisicamente. Tipos customizados exigem desativação e confirmação de impacto antes da exclusão.
+
+Políticas de unicidade por tipo:
+
+- `NONE`;
+- `PER_PROFILE`;
+- `GLOBAL_BY_TYPE`.
 
 ### 3.3 Contas
 
@@ -86,10 +92,12 @@ CIN e RG permanecem distintos. Tipos são tabelas administráveis, não enums Po
 
 Campos incluem tipo, fornecedor, número de cliente/conta, competência, emissão, vencimento, valor, endereço impresso, notas e versão.
 
-- dinheiro: `NUMERIC(14,2)`;
+- dinheiro: `NUMERIC(14,2)` e decimal string na API;
 - competência: `YEAR_MONTH` e exibição `MM/AAAA`;
 - tipos iniciais: água, energia e internet;
-- bill types também são administráveis.
+- bill types são administráveis.
+
+Dados impressos na conta nunca alteram Profile implicitamente.
 
 ### 3.4 Uso ativo
 
@@ -108,7 +116,7 @@ Limites iniciais:
 - 10 arquivos por owner;
 - 100 MB totais por owner.
 
-Upload direto por URL assinada, seguido de validação de MIME, assinatura, tamanho e SHA-256. Exclusão envia à lixeira por sete dias.
+Upload direto por URL assinada, seguido de confirmação e validação de MIME, assinatura, tamanho e SHA-256. Exclusão envia à lixeira por sete dias. URLs assinadas são curtas, nunca públicas ou persistidas.
 
 ### 3.6 Campos e entidades customizadas
 
@@ -127,6 +135,8 @@ Tipos permitidos:
 
 Sem scripts, fórmulas, JSON livre, relações arbitrárias ou código executável. Valores são persistidos em colunas tipadas e selects usam chaves técnicas estáveis.
 
+Mudança de tipo, cardinalidade ou exclusão com dados exige preview, migração explícita e operação quando necessário.
+
 ### 3.7 Imports e Google Forms
 
 Imports XLSX e Forms usam staging, mapping, preview, validação, duplicatas e revisão.
@@ -137,13 +147,34 @@ Modos:
 - `CREATE_AND_UPDATE`;
 - `UPDATE_ONLY`.
 
-Execução em batches, checkpoints e idempotência. XLSX é descartado após processamento; relatório permanece; detalhes temporários de erro/revisão ficam 30 dias.
+Estados de negócio simplificados:
 
-Google Forms usa conexão administrativa separada do OAuth de login. Sem polling recorrente inicial: sync manual, final e reprocessamento. Exclusões externas não removem dados locais.
+- `DRAFT`;
+- `READY`;
+- `RUNNING`;
+- `REVIEW_REQUIRED`;
+- `COMPLETED`;
+- `COMPLETED_WITH_ERRORS`;
+- `FAILED`;
+- `CANCELLED`;
+- `EXPIRED`.
+
+Fases técnicas ficam em `stage`, como uploading, parsing, validating, matching, writing e finalizing.
+
+Execução em batches, checkpoints e idempotência por row. Uma row que cria Profile + documento + conta é transacional quando os elementos dependem uns dos outros. O XLSX é descartado após processamento; relatório permanece; detalhes temporários de erro/revisão ficam 30 dias.
+
+Google Forms usa conexão administrativa separada do OAuth de login. Sem polling recorrente inicial: sync manual, final e reprocessamento. Exclusões externas não removem dados locais. Respostas usam external IDs e fingerprints para sync incremental.
 
 ### 3.8 Exports
 
-Somente XLSX inicialmente. Operação assíncrona, arquivo privado no R2 por 24 horas e histórico permanente da operação. Sem attachments, auditoria, usuários, versões ou notas internas por padrão.
+Somente XLSX inicialmente. Operação assíncrona, geração em streaming, arquivo privado no R2 por 24 horas e histórico permanente da operação. Sem attachments, auditoria, usuários, versões ou notas internas por padrão.
+
+Escopos:
+
+- current page;
+- filtered;
+- selected;
+- all com permissão e confirmação reforçada.
 
 ### 3.9 Usuários e autorização
 
@@ -158,6 +189,18 @@ Roles:
 Exatamente um SuperAdmin ativo. Usuários excluídos são anonimizados para preservar FKs.
 
 Sessão opaca, hash SHA-256 no banco, cookie Secure/HttpOnly/SameSite=Lax/Path=/ por 24 horas, sem JWT ou localStorage. CSRF por token e `Origin`.
+
+Autorização usa permissions centrais, não `if role == ...` espalhado. Exemplos:
+
+- `profiles.read/create/update/delete`;
+- `documents.*`;
+- `imports.*`;
+- `duplicates.read/review/merge`;
+- `assistant.use`;
+- `ocr.start/review`;
+- `admin.users/settings/catalog`.
+
+SUPERADMIN não ignora constraints, concorrência, auditoria, privacidade de threads ou validações de domínio.
 
 ## 4. Persistência e banco
 
@@ -174,6 +217,8 @@ Sessão opaca, hash SHA-256 no banco, cookie Secure/HttpOnly/SameSite=Lax/Path=/
 - system seeds idempotentes, development seeds fictícios e fixtures determinísticas.
 
 Constraints incluem CPF único quando preenchido, e-mail/Google subject únicos, um SuperAdmin ativo, um owner por attachment, coerência de custom values, unicidade de respostas externas e dinheiro nunca como float.
+
+Não usar PostgreSQL RLS inicialmente. Escopos de linha, quando existirem, serão explícitos em repositories/services e revalidados pela autorização.
 
 ## 5. Arquitetura e deploy
 
@@ -217,7 +262,7 @@ Neon
 └── PostgreSQL + River
 
 Cloudflare R2
-└── attachments e exports
+└── attachments, temporary imports e exports
 ```
 
 API e frontend usam a mesma origem pública com `/api/v1`. A arquitetura permanece portátil para futura migração integral à GCP.
@@ -272,11 +317,7 @@ Mobile preserva a tabela; não há transformação automática para cards. Pouca
 
 ## 8. Query Engine
 
-### 8.1 Objetivo
-
-Permitir consultas sobre qualquer dado estruturado atual ou futuro, incluindo campos nativos/customizados, documents, bills, custom entities, relações, padrões de caracteres, agrupamentos e combinações.
-
-O Engine atende Search, Data Grid, filtros, AI Chat, duplicates, exports, bulk actions e relatórios.
+Permite consultas sobre qualquer dado estruturado atual ou futuro, incluindo campos nativos/customizados, documents, bills, custom entities, relações, padrões de caracteres, agrupamentos e combinações.
 
 Fluxo:
 
@@ -292,126 +333,32 @@ pergunta/filtro
 
 Nenhum `execute_sql`, schema físico ou credencial é exposto à IA.
 
-### 8.2 Catálogo dinâmico
+Catálogo runtime com entities, fields, relations, capabilities, operators, aliases, schema version e fingerprint. Chaves técnicas são estáveis; labels podem mudar.
 
-Catálogo runtime com entities, fields, relations, capabilities, operators e aliases autorizados.
+Tipos neutros incluem text, identifier, integer, decimal, money, boolean, civil date, year month, instant, enum, email, phone, URL, UUID e attachment reference.
 
-Entidades iniciais:
+Field paths são estruturados. Relações possuem cardinalidade e quantificadores any/all/none. AST suporta Predicate, RelationPredicate, And, Or e Not.
 
-- profile;
-- document;
-- bill;
-- gymkhana_team;
-- active_usage;
-- custom entities.
+`QueryPlan` define root, projection, filter, sort, grouping, aggregations, distinct, page/limit e result mode. `ExecutionPlan` forma DAG de query, transform, set operation, combination, rank e summarize.
 
-Chaves técnicas estáveis em inglês. Labels podem mudar sem quebrar planos.
+Set operations: union, intersection, difference e symmetric difference. Result grain evita multiplicidade indevida de joins.
 
-O catálogo possui fingerprint considerando entities, fields, types, relations, operators, custom schema e permission scope. Planos antigos são revalidados quando o catálogo muda.
+Padrões diferenciam contiguous, ordered subsequence, unordered subset e permutation. Seleções de caracteres e transformações binárias são tipadas e usam pruning, matemática ou programação dinâmica antes de enumerar.
 
-### 8.3 Tipos e operadores
+Planos válidos acima do orçamento síncrono tornam-se jobs após confirmação quando aplicável. JSON canônico + catálogo + permission scope geram fingerprint.
 
-Tipos neutros:
+Endpoints principais:
 
-- text, long_text e identifier;
-- integer, decimal e money;
-- boolean;
-- civil_date, year_month e instant;
-- enum e multi_enum;
-- email, phone, URL, UUID e attachment reference.
+```text
+POST /api/v1/query/validate
+POST /api/v1/query/execute
+POST /api/v1/query/operations
+POST /api/v1/search
+```
 
-`identifier` preserva zeros e pode conter letras.
-
-Operadores incluem equality, contains, prefix/suffix, empty, comparisons, ranges, enum membership, normalized/fuzzy matching, pattern matching, character classes, length e relation quantifiers.
-
-Nem todo campo expõe todos os operadores do tipo.
-
-### 8.4 Field paths e relações
-
-Field paths são estruturados em root entity, relation path e final field. Traversal arbitrário é proibido; cada relação precisa existir no catálogo.
-
-Cardinalidades: one-to-one, many-to-one, one-to-many e many-to-many.
-
-Quantificadores relacionais: any, all e none.
-
-### 8.5 AST e planos
-
-Filtro suporta `Predicate`, `RelationPredicate`, `And`, `Or` e `Not`.
-
-`QueryPlan` inclui version, catalog fingerprint, root, projection, filter, sort, grouping, aggregations, distinct, pagination/limit e result mode.
-
-Result modes:
-
-- records;
-- references;
-- count;
-- aggregation;
-- groups;
-- exists.
-
-`ExecutionPlan` organiza múltiplas etapas em DAG acíclico:
-
-- query;
-- transform;
-- set operation;
-- combination;
-- rank;
-- summarize.
-
-Etapas podem depender de resultados anteriores por referências tipadas, nunca interpolação textual.
-
-Set operations: union, intersection, difference e symmetric difference. Granularidade (`ResultGrain`) distingue Profiles, documents, bills e outros owners para evitar contagens infladas por joins.
-
-### 8.6 Padrões e combinações de caracteres
-
-O Engine diferencia:
-
-- sequência contígua;
-- subsequência mantendo ordem;
-- subconjunto sem ordem;
-- permutação.
-
-`CharacterSelection` define classes/literais, cardinalidade e modo. Cada posição é usada uma vez por padrão.
-
-Transformações incluem binary-to-integer/byte, digits-to-integer, characters-to-text e counts. Predicados podem verificar letter, digit, alphanumeric, printable, equality, ranges e sets.
-
-Exemplo obrigatório: CPF com oito dígitos binários em quaisquer posições, possivelmente reorganizados, capazes de formar letra ou número.
-
-O executor deve usar matemática, pruning ou programação dinâmica antes de enumerar combinações. Consultas grandes passam ao worker com batches, checkpoints e orçamento.
-
-### 8.7 Ranking e combination solver
-
-Ranking usa critérios e pesos explicáveis, nunca score apresentado como probabilidade.
-
-Combination plans suportam múltiplos records, distinctness, cardinalidade, constraints e objectives. Proibido executar scripts arbitrários; somente transformações tipadas.
-
-### 8.8 Validação e orçamento
-
-Camadas:
-
-1. estrutural;
-2. catálogo;
-3. tipos;
-4. permissão;
-5. operação/custo.
-
-Erros técnicos estáveis incluem unknown entity/field/relation, invalid value/path/aggregation, unsupported operator, permission denied, catalog changed, query too complex, timeout e result too large.
-
-Budgets configuram relation depth, logical nodes, projection, groups, aggregations, character selections, combination width, candidate values, sync rows e execution time.
-
-Planos válidos acima do orçamento síncrono tornam-se jobs, em vez de serem funcionalmente proibidos.
-
-### 8.9 Execução e fingerprint
-
-PostgreSQL executa filtros indexáveis, joins, sets, grouping e aggregations. Go pós-filtra apenas quando necessário, em streaming/batches e sem carregar tabelas inteiras.
-
-Planos possuem JSON canônico, catalog fingerprint e permission scope para gerar query fingerprint. Usos: all-matching, auditoria, jobs, resultados anteriores, cache futuro e bulk actions.
-
-Todo plano gera explicação operacional sem revelar SQL ou raciocínio interno.
+Result sets temporários preservam principalmente IDs, grain, fingerprint e metadata, não cópias completas de records.
 
 ## 9. AI Chat
-
-### 9.1 Escopo
 
 Consultor privado e read-only. Pode consultar, sintetizar, gerar relatório ou export confirmado. Não cria, edita, exclui, mergeia, importa ou altera configuração.
 
@@ -427,74 +374,26 @@ mensagem
 → síntese com referências
 ```
 
-A interpretação nunca depende de o usuário escrever palavras específicas. Linguagem natural, sinônimos, ordem das frases, erros de digitação e diferentes maneiras de descrever o mesmo requisito devem ser resolvidos semanticamente. Keywords podem auxiliar recall, mas não podem ser a regra principal.
+A interpretação nunca depende de palavras específicas. Sinônimos, ordem livre, linguagem coloquial, abreviações, erros pequenos e paráfrases devem produzir planos equivalentes quando a intenção for equivalente.
 
-### 9.2 Catálogo e tools
+Threads privadas por usuário. Mensagens e runs são recursos separados. Envio cria mensagem/run com `Idempotency-Key`; SSE ocorre por endpoint separado e autenticado. A resposta final é recuperável sem o stream.
 
-A IA recebe catálogo semântico autorizado, não schema físico. Catálogo contextual reduz tokens e pode ser ampliado via descoberta controlada.
+Eventos versionados e sequenciais incluem run status, plan, tool, operation, text delta, references, table, completed, failed, cancelled e heartbeat.
 
-Tools iniciais:
+Tools:
 
 - discover catalog;
 - validate query plan;
 - execute query plan;
-- start query job;
+- start query operation;
 - get operation status/result;
 - get record details.
 
-Schemas fechados, versionados, sem propriedades extras e sem execução parcial de calls inválidas.
+Sem SQL, código, tables físicas ou download irrestrito. Plano inválido pode ser corrigido no máximo duas vezes.
 
-Plano inválido pode ser corrigido automaticamente até duas vezes. Depois, resposta honesta sem inventar resultado.
+Ações do Assistant são declarativas e allowlisted, como abrir entidade, result set, operação, refinar consulta ou solicitar export. URLs e HTML arbitrários do modelo não são executados.
 
-### 9.3 Ambiguidade e execução
-
-Interpretações dominantes e de baixo risco podem ser executadas, sempre explicando o plano quando útil. Ambiguidades materialmente diferentes exigem escolha, consulta abrangente segura ou interpretação explícita.
-
-Consultas read-only comuns executam sem confirmação. Jobs pesados, export grande, análise combinatória extensa ou custo relevante exigem confirmação de escopo.
-
-A IA recebe resumo, agregações, amostra controlada e referências, nunca milhares de rows completos. Total e número exibido são distinguidos. Sampling informa método.
-
-### 9.4 Threads, mensagens e runs
-
-Thread privada por usuário, status active/archived, renomeável. Sem compartilhamento inicial.
-
-Mensagens: user, assistant e system_notice. Respostas persistem texto, explanation, references, tables, warnings, operation e declarative actions separadamente, não como Markdown monolítico.
-
-Runs registram estados queued, interpreting, planning, validating, executing, synthesizing, waiting, completed, failed e cancelled. Retries são attempts separados.
-
-Tool calls persistem nome, versão, status, duração, counts e erro sanitizado, nunca prompts, chain of thought, credenciais ou resultados completos.
-
-Detalhes técnicos de runs/tool calls ficam 30 dias; mensagens finais permanecem.
-
-### 9.5 Streaming e contexto
-
-SSE via POST ou criação de run + endpoint de stream, conforme compatibilidade Vercel/Cloud Run. Sem WebSocket inicialmente.
-
-Eventos incluem run status, plan, tool, operation, text delta, references, table, completed, failed, cancelled e heartbeat.
-
-Sem uma gravação por token. Reconexão recupera status/resposta e não cria outro run automaticamente. Cancelamento é best effort e propaga context cancellation.
-
-Contexto é construído pela aplicação com system policies, catálogo contextual, mensagens recentes, resumo estruturado, references e operation state. Sem memória global oculta.
-
-Follow-ups como “desses” usam result set ID, query fingerprint, grain e/ou operation ID, não apenas interpretação textual.
-
-### 9.6 Providers
-
-Interface `AIProvider` neutra, com adapters OpenAI e Google e capabilities explícitas para streaming, structured output, tools, vision, cache e cancellation.
-
-Modelos podem ser configurados por purpose: classification, planning, correction, synthesis, OCR e summarization. A aplicação escolhe o modelo, não a IA.
-
-Fallback somente para erros técnicos transitórios e nunca para esconder plano inválido, permissão, ambiguidade ou resultado vazio.
-
-### 9.7 Segurança, custos e auditoria
-
-Prompt injection em mensagens, dados do banco, PDFs e imagens não altera tools, catálogo, permission scope ou policies. Dados recuperados são conteúdo não confiável, nunca instruções.
-
-Projection mínima, revalidação em cada tool call, limites, auditoria de acesso sensível e exports separados evitam exfiltração.
-
-Run budget controla model calls, tools, corrections, tokens, execution time, records for model e estimated cost. Quotas por usuário podem limitar runs, tokens, AI jobs e OCR.
-
-Logs guardam IDs, status, duração, provider/model, error codes e counts; não guardam mensagens, respostas, CPF, documents, prompts ou payloads completos por padrão.
+Consultas salvas só entram quando o usuário as seleciona explicitamente.
 
 ## 10. OCR multimodal
 
@@ -513,27 +412,27 @@ attachment(s)
 → mutation explícita
 ```
 
-Entradas JPEG, PNG, WebP e PDF. Arquivos são validados por owner, permission, MIME, signature, size, hash, pages e corruption. Provider recebe bytes privados ou signed URL curta.
+Entradas JPEG, PNG, WebP e PDF. Schemas tipados por document/bill type e custom fields. Evidência pode conter attachment, page, normalized bounding box e snippet mínimo. Sem resposta bruta do provider ou chain of thought.
 
-Schemas tipados por document/bill type e custom fields. Cada `SuggestedValue` possui status found/not_found/unclear/conflicting/invalid/not_applicable, raw snippet mínimo, warnings e evidências.
+Revisão permite accept, reject, keep current e edit-and-accept por campo. Aplicação revalida permissions, versions, constraints e duplicatas.
 
-Evidência pode conter attachment, page, normalized bounding box e snippet. Sem inventar coordenadas. Confiança é apresentada como clear/review recommended/unclear/conflicting, nunca porcentagem objetiva.
+Endpoints:
 
-Comparação diferencia empty current, same, different, invalid e source conflict.
-
-Revisão por campo permite accept, reject, keep current e edit before accepting. Campos de Profile e documento são separados. Aplicação revalida permissions, values, version e duplicates em transaction.
-
-OCR é job assíncrono com estados queued, preparing, classifying, extracting, validating, ready_for_review, applied, completed_without_changes, failed, cancelled e expired.
+```text
+POST /api/v1/ocr-operations
+GET  /api/v1/ocr-operations/{id}
+GET  /api/v1/ocr-operations/{id}/review
+POST /api/v1/ocr-operations/{id}/apply
+POST /api/v1/ocr-operations/{id}/reject
+POST /api/v1/ocr-operations/{id}/cancel
+```
 
 Retenção:
 
-- `ready_for_review`: 30 dias;
-- após aceite, rejeição, descarte ou aplicação: detalhes temporários por no máximo 7 dias, padrão 7;
-- depois ficam somente operation, attachment, reviewer, action, affected field keys, date e result summary;
-- temporários de imagem/PDF são removidos após processamento;
+- ready for review: 30 dias;
+- após aceite, rejeição, descarte ou aplicação: detalhes temporários por no máximo 7 dias;
+- depois somente auditoria mínima;
 - original segue retenção do attachment.
-
-Structured output é obrigatório quando suportado; saída inválida tem no máximo uma correção estrutural. Prompt/schema/model/attachments geram fingerprint idempotente.
 
 ## 11. Matching e duplicatas
 
@@ -551,11 +450,9 @@ normalização
 
 Sem merge automático e nome nunca é evidência suficiente sozinho.
 
-Candidate pair é canônico por UUID e possui unique constraint.
+Candidate pair é canônico por UUID e possui unique constraint. Blocking usa CPF, official document, email, phone, name+birth, parent, address fragments e trigram candidates.
 
-Blocking usa CPF, official document, email, phone, name+birth, parent, address fragments e trigram candidates. Blocking apenas reduz candidatos.
-
-Evidências possuem direção supports duplicate, supports distinct ou neutral e strength. Níveis visíveis:
+Níveis visíveis:
 
 - VERY_STRONG;
 - PROBABLE;
@@ -563,17 +460,26 @@ Evidências possuem direção supports duplicate, supports distinct ou neutral e
 
 Score interno pode ordenar, mas não é probabilidade e sempre exige reasons estruturadas.
 
-Cases possuem origem, status, rule version, normalization version e evidence fingerprint. Decisões de pessoas diferentes permanecem minimamente para evitar recriação, mas podem reabrir por mudança material.
+Casos guardam origem, status, rule version, normalization version e evidence fingerprint. Decisões de pessoas diferentes permanecem minimamente para evitar recriação e só reabrem por mudança material.
 
-Ações: usar existente, merge, criar mesmo assim, confirmar diferentes, descartar candidato ou atualizar existente.
+Merge exige preview, escolha de destination/source, resolução de conflitos, locks, versions e uma única transaction com rollback total. Sem undo completo inicial.
 
-Merge escolhe destination/source, mostra impacto, resolve conflicts, bloqueia rows, valida versions e executa uma única transaction com rollback total. Sem undo completo inicial; auditoria reforçada obrigatória.
+Endpoints principais:
 
-Casos abertos permanecem. Após resolução, detalhes completos ficam sete dias; depois permanece decisão mínima, pair, fingerprints, rule, user e date.
+```text
+GET  /api/v1/duplicate-cases
+GET  /api/v1/duplicate-cases/{id}
+POST /api/v1/duplicate-cases/{id}/resolve
+POST /api/v1/duplicate-cases/{id}/merge-preview
+POST /api/v1/duplicate-cases/{id}/merge
+POST /api/v1/duplicate-inspections
+```
+
+Detalhes extensos de documents, bills e custom records são carregados sob demanda.
 
 ## 12. Duplicatas e orçamento de egress Neon
 
-A otimização de egress é requisito arquitetural, pois o free tier disponível possui orçamento mensal pequeno.
+A otimização de egress é requisito arquitetural.
 
 É proibido carregar milhares de Profiles completos e suas relações para o Cloud Run para comparar em Go.
 
@@ -597,54 +503,37 @@ Regras:
 - aggregations e counts no PostgreSQL;
 - joins largos que repetem Profile devem ser separados;
 - queue paginada em 25/50/100;
-- detalhes e relações carregados sob demanda;
-- bulk actions enviam case IDs ou query fingerprint/exclusions;
+- detalhes e relações sob demanda;
+- bulk actions por IDs ou query fingerprint/exclusions;
 - inspection incremental por profile fingerprint, rule version e normalization version;
 - um global duplicate job por vez inicialmente;
 - batches e keyset pagination;
 - direct Neon connection para jobs que dependam de session/temp state; pooled endpoint para API comum;
-- read replicas e pooling não são tratados como redução de egress;
 - `pg_trgm`, `unaccent`, B-tree e partial indexes conforme query real;
-- `online_advisor` pode ser usado em PG17 apenas como recomendação validada por `EXPLAIN (ANALYZE, BUFFERS)`;
-- `pg_stat_statements` é obrigatório nos benchmarks;
-- medir `data_transfer_bytes` antes/depois quando API do Neon estiver disponível;
-- relatório mostra Profiles, pairs, rows recebidas, estimated bytes, observed delta e duração;
-- checkpoints permitem interromper por orçamento e retomar.
+- `pg_stat_statements` obrigatório nos benchmarks;
+- medir `data_transfer_bytes` antes/depois quando disponível;
+- checkpoints permitem interromper e retomar.
 
-Alertas de consumo: 50%, 70%, 85% e 95%. Inspeções não essenciais podem ser bloqueadas conforme consumo.
+Alertas: 50%, 70%, 85% e 95% de consumo mensal. Capabilities podem bloquear inspeções não essenciais sem declarar a API indisponível.
 
-Critério inicial de benchmark com 20 mil candidate pairs:
-
-- nenhum Profile completo por pair;
-- nenhuma lista sem paginação;
-- nenhuma aggregation no frontend/worker;
-- no máximo um compact vector por pair enviado ao Core;
-- detalhes apenas sob demanda;
-- nenhuma multiplicação cartesiana;
-- scan incremental;
-- stats e delta de egress registrados;
-- operação retomável;
-- meta de dezenas de MB, não GB, por inspeção completa.
+Benchmark obrigatório com 20 mil candidate pairs, meta de dezenas de MB e não GB.
 
 ## 13. Tarefas complexas de gincana
 
-O usuário pode colar tarefa em qualquer estilo e pedir análise. O parser é semântico e não exige palavras-chave específicas. Deve interpretar sinônimos, ordem livre, abreviações, linguagem coloquial e variações de escrita; palavras-chave são apenas sinais auxiliares.
+O usuário pode colar tarefa em qualquer estilo. O parser é semântico e não exige palavras-chave específicas.
 
-Uma tarefa pode exigir simultaneamente:
+Uma única tarefa pode combinar simultaneamente:
 
 - pessoas;
 - documentos;
 - contas;
 - endereços;
-- custom entities;
-- campos customizados;
+- custom entities e fields;
 - padrões/transformações de caracteres;
 - combinações entre múltiplos records;
 - requisitos externos.
 
-Não existe exclusividade entre categorias. Exemplo válido: duas pessoas distintas, uma CNH e uma conta de água do mesmo owner, mais um documento de outra pessoa que forme caractere binário.
-
-O plano contém requirements, constraints, objectives, quantities, mandatory flags e warnings. Cada requirement possui binding explícito:
+Bindings explícitos:
 
 - same entity;
 - different entities;
@@ -653,38 +542,340 @@ O plano contém requirements, constraints, objectives, quantities, mandatory fla
 - any member;
 - whole combination.
 
-Isso determina quando person, document e bill precisam pertencer ao mesmo Profile ou a pessoas diferentes.
+Isso determina quando pessoa, documento e conta pertencem ao mesmo Profile ou a owners diferentes.
 
-Requisitos são classificados como consultáveis ou externos. O sistema nunca inventa o cumprimento de requisito externo.
+O solver começa pelo conjunto mais restrito, propaga constraints, usa set operations, branch-and-bound, dynamic programming e memoization limitada, sem enumeração cega.
 
-Cardinalidade reconhece exact, min e max. Ordem de caracteres diferencia contiguous, ordered subsequence, unordered subset e permutation.
+Estados de negócio simplificados:
 
-Dicionários auxiliares versionados podem representar santos, cidades, animais, cores, profissões, times e classes de caracteres. Não há web search automática na primeira versão do produto; conhecimento externo precisa estar cadastrado ou ser fornecido pelo usuário.
+- DRAFT;
+- RUNNING;
+- REVIEW_REQUIRED;
+- COMPLETED;
+- COMPLETED_WITH_WARNINGS;
+- FAILED;
+- CANCELLED;
+- EXPIRED.
 
-Cada requirement gera candidate sets; sets são combinados por bindings. O solver:
+Fases técnicas ficam em `stage`.
 
-- começa pelo conjunto mais restrito;
-- propaga constraints;
-- elimina incompatíveis cedo;
-- usa branch-and-bound, dynamic programming e limited memoization quando útil;
-- não enumera combinações cegamente;
-- mantém IDs e minimal evidence próximos ao banco;
-- executa como job quando excede orçamento.
+Endpoints:
 
-Soluções podem ser principal e alternativas materialmente diferentes. Ranking é explicável e considera mandatory coverage, optional coverage, evidence clarity, warnings, diversity e external dependencies. Nunca é probabilidade de sucesso.
+```text
+POST /api/v1/gymkhana-task-analyses
+GET  /api/v1/gymkhana-task-analyses/{id}
+POST /api/v1/gymkhana-task-analyses/{id}/refine
+```
 
-Requirement status: satisfied, partially satisfied, not satisfied, not verifiable e ambiguous.
+Retenção: até 30 dias enquanto pendente e até 7 dias para intermediários após conclusão/decisão.
 
-Cada solução traz references e evidências por requirement, incluindo positions/characters/transformations quando necessário, mas minimiza exposição de dados sensíveis.
+## 14. Contrato REST e OpenAPI
 
-Retenção segue o padrão de ação:
+Base única:
 
-- enquanto pendente ou em acompanhamento: até 30 dias;
-- após conclusão/consulta: detalhes temporários por no máximo 7 dias;
-- mensagem final, critérios e referências essenciais podem permanecer na thread;
-- candidate sets e temporary combination tables são removidos.
+```text
+/api/v1
+```
 
-## 14. Segurança, retenção e observabilidade
+Recursos usam plural e IDs UUID opacos. Endpoints são orientados a recursos; comandos de domínio usam sub-recursos explícitos.
+
+Métodos:
+
+- GET para leitura;
+- POST para criação/comandos/operações;
+- PATCH para alteração parcial;
+- PUT apenas para substituição real;
+- DELETE para exclusão/lixeira.
+
+Status principais:
+
+- 200, 201, 202 e 204;
+- 400, 401, 403, 404, 409, 412, 422 e 429;
+- 500 e 503.
+
+`404` pode ocultar existência de recurso sem permissão.
+
+Envelope de erro:
+
+```json
+{
+  "error": {
+    "code": "stable_technical_code",
+    "message": "Mensagem em português",
+    "request_id": "req_...",
+    "field_errors": [],
+    "details": {}
+  }
+}
+```
+
+Sem stack trace, SQL ou payload de provider.
+
+Responses individuais não usam envelope `data` desnecessário. Listagens usam `items`, `page`, `page_size`, `total` e `page_count`.
+
+Paginação padrão por page/page_size; page sizes 25, 50, 100, 250, 500 e 1000. Jobs internos podem usar keyset.
+
+Sorting canônico: `sort=field:asc,other:desc`, com ID como desempate interno.
+
+Filtros simples usam query params. AST complexa usa POST read-only em endpoints `/query`. Projection é validada; não existe `fields=*`. Includes são allowlisted, rasos e não podem multiplicar payload de forma descontrolada.
+
+OpenAPI principal em `api/openapi.yaml`, podendo ser dividido e empacotado deterministicamente. Operation IDs estáveis em inglês. Schemas separados por operação, como Summary, Detail, CreateRequest, UpdateRequest e ListResponse.
+
+Datas civis: `YYYY-MM-DD`; year month: `YYYY-MM`; instantes: RFC3339 UTC; money: decimal string; identifiers: string.
+
+Código gerado Go e TypeScript é versionado e CI falha em diff não commitado. Contract tests validam implementação, examples, errors, nullability, enums e breaking changes.
+
+## 15. Concorrência e idempotência
+
+Mutations de recursos editáveis exigem `version` no body; `If-Match` pode ser suportado para clientes técnicos.
+
+Update SQL usa `WHERE id = ? AND version = ?`. Conflito retorna `412 Precondition Failed`. Nenhum last-write-wins silencioso.
+
+PATCH usa schema próprio:
+
+- campo ausente: não alterar;
+- `null`: limpar quando permitido;
+- valor presente: substituir.
+
+`Idempotency-Key` obrigatório para imports, exports, OCR, Forms sync, duplicate inspection, query jobs, Assistant messages, merge, bulk actions e mutations críticas sujeitas a retry.
+
+Escopo da idempotência:
+
+- user ID;
+- endpoint/command;
+- idempotency key;
+- request fingerprint.
+
+Mesma key + mesmo request retorna resultado original. Mesma key + request diferente retorna conflito.
+
+IDs distintos são preservados: request, operation, thread, message, run e import.
+
+## 16. Profiles, documents, bills e custom data na API
+
+Endpoints principais de Profile:
+
+```text
+GET    /api/v1/profiles
+POST   /api/v1/profiles
+GET    /api/v1/profiles/{id}
+PATCH  /api/v1/profiles/{id}
+DELETE /api/v1/profiles/{id}
+POST   /api/v1/profiles/{id}/restore
+```
+
+Related collections são paginadas em endpoints próprios. O detalhe retorna contagens e referências compactas, não todas as relações.
+
+Criação de Profile normaliza, valida unicidade, gera candidatos de duplicata e pode exigir decisão para PROBABLE/VERY_STRONG. POSSIBLE pode criar com warning e case.
+
+Edição pode ocorrer por seções, sempre compartilhando e atualizando a versão global do Profile.
+
+Documents e bills possuem endpoints nested por Profile e endpoints próprios por ID. Mudança de document type é ação reforçada; não PATCH silencioso. Active usage é sub-recurso único.
+
+Custom values podem ser atualizados na mesma transaction do recurso. Fields ou options inativos existentes podem ser exibidos como legacy, mas não selecionados novamente sem regra explícita.
+
+## 17. Attachments e uploads
+
+Upload em três etapas:
+
+```text
+criar upload request
+→ PUT direto no R2
+→ confirmar upload
+```
+
+Upload request informa filename, content type, size e SHA-256. O backend verifica objeto real antes de criar attachment.
+
+Uploads abandonados expiram e housekeeping remove registros, objetos órfãos e multipart incompletos.
+
+Acesso a attachment ou export usa POST que gera signed URL curta. Metadata nunca expõe bucket, object key ou provider details.
+
+Attachment pode ser renomeado sem mover o objeto. Exclusão lógica permite restore em sete dias.
+
+## 18. Lixeira, restauração e auditoria
+
+Profile, document, bill, custom record e attachment usam lixeira lógica por sete dias quando aplicável.
+
+Campos técnicos:
+
+- deleted_at;
+- deleted_by_user_id;
+- deletion_reason;
+- purge_after.
+
+Exclusão de Profile gera preview de documents, bills, custom records, attachments, active usages, duplicate cases e operações pendentes. Filhos entram na mesma unidade lógica e não ficam órfãos.
+
+Restore revalida CPF, documentos, cardinalidades e limites. Conflito bloqueia restauração automática.
+
+Purge definitivo remove temporários e objetos na ordem correta e preserva auditoria mínima. Purge antecipado exige SUPERADMIN e confirmação reforçada.
+
+Auditoria registra actor, action, resource type/ID, source, changed field keys, request ID, operation ID quando aplicável e result. Before/after apenas para campos críticos, podendo ser mascarado, criptografado, hash ou omitido.
+
+Activity feed é projeção paginada da auditoria relevante, não event sourcing.
+
+## 19. Imports e Google Forms na API
+
+Import é recurso persistente com endpoints para create, upload, parse, mapping, validate, rows, decisions, execute, cancel, retry e report.
+
+Mapping pode produzir na mesma row:
+
+- Profile;
+- documento;
+- conta;
+- custom values;
+- custom record.
+
+Transformações permitidas são tipadas: trim, whitespace, upper/lower, remove mask, parse date/year month/decimal, map option, split, join e constant. Sem JavaScript, Python, SQL ou expressão arbitrária.
+
+Preview e erros são paginados. Contagens são agregadas no PostgreSQL. Decisões de row podem ser CREATE_NEW, USE_EXISTING, UPDATE_EXISTING, SKIP e REVIEW_LATER.
+
+Batch decisions não automatizam merges, conflitos de strong identifiers ou sobrescrita ambígua.
+
+Google Forms possui connections, available forms, import configurations e sync. Question external IDs são preferidos a labels. Respostas editadas geram nova staging version e não sobrescrevem valor local divergente sem revisão.
+
+## 20. Operações, exports e notificações
+
+`operation` representa acompanhamento de negócio; River é detalhe interno.
+
+Endpoints:
+
+```text
+GET  /api/v1/operations
+GET  /api/v1/operations/{id}
+POST /api/v1/operations/{id}/cancel
+GET  /api/v1/operations/{id}/report
+```
+
+Estados:
+
+- QUEUED;
+- RUNNING;
+- WAITING_FOR_REVIEW;
+- COMPLETED;
+- COMPLETED_WITH_ERRORS;
+- FAILED;
+- CANCEL_REQUESTED;
+- CANCELLED;
+- EXPIRED.
+
+Progress pode ser determinate ou indeterminate; sem porcentagem falsa. Polling é adaptativo. Cloud Run Job é lançado após commit de operation + River job; Scheduler recupera filas sem worker ativo.
+
+Exports são operations e usam query plan, scope, columns e format XLSX.
+
+Notificações internas e privadas informam conclusão, erro, revisão ou alerta. Sem e-mail, push ou SMS inicialmente. Retenção de sete dias.
+
+## 21. Administração e configurações
+
+Prefixo `/api/v1/admin` para users, settings, document types, bill types, custom fields, custom entity types, gymkhana teams, dictionaries, Google Forms, AI configuration, system usage e audit.
+
+Usuário criado é allowlist entry, sem senha local. Status: INVITED, ACTIVE, DISABLED e DELETED.
+
+Transferência de SuperAdmin usa endpoint próprio e transaction, nunca PATCH comum de role.
+
+Settings são tipados por grupos, não JSON irrestrito. Public settings não expõem secrets. Mudanças que afetam dados geram preview/operação própria.
+
+Feature flags server-side iniciais podem controlar Assistant, OCR, Forms, exports e advanced query.
+
+Secrets de providers entram por endpoint específico e nunca são devolvidos em texto legível. Testes de provider usam payload sintético, não dados reais.
+
+Preferências do usuário incluem theme, density e Data Grid settings. Filtros, sorting, grouping e página permanecem na URL. Saved queries são privadas, revalidadas ao executar e nunca usadas automaticamente pelo Assistant.
+
+Dicionários auxiliares são administráveis, versionados e entram no fingerprint das análises.
+
+## 22. Capacidades e uso do sistema
+
+`GET /api/v1/system/capabilities` informa feature enabled/available/reason para a SPA. Health e capabilities são conceitos distintos.
+
+Painel administrativo pode mostrar storage, attachments, exports, imports, operations, AI/OCR usage, jobs e egress Neon.
+
+Níveis de egress:
+
+- NORMAL;
+- NOTICE;
+- WARNING;
+- RESTRICTED;
+- CRITICAL.
+
+Restrições graduais bloqueiam somente operações grandes e não essenciais quando possível.
+
+## 23. Frontend e rotas
+
+TanStack Router com rotas tipadas e deep links para Profiles, documents, bills, imports, Assistant threads, OCR, duplicate cases, operations, exports, saved queries, settings e administração.
+
+Estado relevante da página permanece na URL. Tokens, signed URLs, drafts e conteúdo sensível não entram na URL.
+
+Bootstrap:
+
+```text
+session
++ public settings
++ capabilities
+→ AppShell e rota
+```
+
+Rotas declaram permissions. O frontend filtra navegação e ações, mas o backend é sempre a barreira de segurança. Responses de detalhe podem incluir permissions efetivas do recurso.
+
+URLs de detalhe são reais; Drawer serve para preview, não como único acesso.
+
+Navegação atualiza título, breadcrumbs e foco principal.
+
+## 24. Cliente API, Query Keys e cache
+
+Frontend usa openapi-typescript + openapi-fetch.
+
+Camadas:
+
+```text
+generated types
+→ central typed client
+→ feature query/mutation functions
+→ components
+```
+
+Componentes não chamam fetch diretamente.
+
+Cliente central cuida de cookies, CSRF, AbortSignal, idempotency headers e error envelope, sem lógica de negócio.
+
+Retries automáticos apenas para reads transitórias limitadas; mutations não são repetidas indiscriminadamente.
+
+Query keys são factories estruturadas por domínio e usam parâmetros normalizados/fingerprints.
+
+Mutation response é fonte imediata. Atualizar detail/cache local e invalidar apenas listas/resultados potencialmente afetados. Nada de refetch global.
+
+Optimistic update somente para ações simples e reversíveis, como notification read e preferências visuais. Nunca para merge, OCR apply, import execute ou settings críticos.
+
+## 25. Formulários e erros
+
+Produto usa TanStack Form + Valibot. Gymkhana-UI permanece independente.
+
+Frontend valida experiência; backend valida definitivamente tipos, normalização, permissions, unicidade, relações, concorrência e duplicatas.
+
+Field errors mapeiam paths estáveis. Form preserva valores e foca o primeiro erro. Dirty state protege contra perda real.
+
+Formulários complexos usam rota dedicada. Dialog/Drawer apenas para tarefas curtas.
+
+Categorias de erro:
+
+- 401: sessão;
+- 403/404: permissão/recurso;
+- 422: campos;
+- 409: decisão de negócio;
+- 412: versão;
+- 429: quota/rate limit;
+- 500/503: infraestrutura com request ID.
+
+Error boundaries por raiz, rota e áreas complexas. Erros esperados de API são estados normais.
+
+## 26. Assistant e operações no frontend
+
+Uma execução ativa por thread inicialmente. Threads diferentes podem executar conforme quota.
+
+SSE partial text pode usar estado local/buffer e consolidar na mensagem final. Reconexão usa sequence/run status e nunca duplica run.
+
+Assistant renderiza separadamente texto, interpretação, filters, references, table, warnings, operation e actions. Markdown é sanitizado e limitado.
+
+Central de operações mostra operações próprias e administrativas autorizadas. Cada feature também apresenta sua operação contextual. Cancelamento só aparece quando `cancelable=true` e fica `CANCEL_REQUESTED` até confirmação do backend.
+
+## 27. Segurança, retenção e observabilidade
 
 - logs JSON com `slog` e request ID;
 - dados pessoais, tokens, signed URLs, prompts, tool payloads e conteúdo de arquivo redigidos;
@@ -708,43 +899,59 @@ Retenções principais:
 - duplicate resolved full details: 7 dias;
 - gymkhana task pending details: 30 dias;
 - gymkhana task post-action details: no máximo 7 dias;
-- security audit: 90 dias.
+- security audit: 90 dias;
+- business audit essencial: conforme tipo.
 
 Housekeeping centralizado.
 
-## 15. Testes e critérios de qualidade
+## 28. Testes e critérios de qualidade
 
 Frontend: Vitest, Testing Library, Playwright e axe-core.
 
 Backend: stdlib testing, httptest, Testcontainers com PostgreSQL real, fuzz e race detector.
 
-Query Engine/Core:
+Contract/OpenAPI:
 
-- AST, catalog, operators, paths, quantifiers;
-- canonical serialization/fingerprints;
-- character selection/permutation;
-- sets, combinations, ranking e explanations;
-- deterministic matching;
-- Unicode and invalid-plan fuzzing.
+- lint;
+- schemas/examples;
+- operation IDs únicos;
+- generated code sincronizado;
+- responses reais compatíveis;
+- breaking-change detection.
 
-Database:
+Authorization matrix cobre unauthenticated, MEMBER, ADMIN, SUPERADMIN, disabled/deleted user e expired session.
 
-- safe SQL and parameterization;
-- permission filtering;
-- grouping/aggregations;
-- post-processing streaming;
-- jobs, cancellation e checkpoints;
-- SSE reconnect/cancel;
-- prompt injection;
-- OCR schemas, evidence, conflicts e review;
-- duplicate candidate generation, merge rollback e re-open rules;
-- 20k duplicate pair egress benchmark;
-- complex tasks crossing people + documents + bills + custom entities;
-- multiple natural-language phrasings for the same intent, ensuring no dependency on exact words.
+Concorrência cobre edits simultâneos, OCR review desatualizada, merge preview stale, import row durante execução e restore com unicidade.
+
+Idempotência cobre same key/same body, different body, concurrent requests, timeout, retry e usuário diferente.
+
+Integração cobre todos os módulos e egress.
+
+E2E obrigatório:
+
+1. login autorizado;
+2. criar Profile e detectar duplicata;
+3. adicionar documento/attachment;
+4. OCR review/apply;
+5. adicionar conta;
+6. Search e AI Chat;
+7. tarefa combinando pessoa + documento + conta;
+8. import XLSX;
+9. Forms sync;
+10. duplicate merge;
+11. export;
+12. delete/restore;
+13. administração.
+
+Testes de linguagem natural usam famílias de paráfrases e comparam intenção/plano, não texto final idêntico.
+
+Testes de payload/egress falham para SELECT *, listas sem paginação, Profile completo por pair, agregação no worker, joins cartesianos e refetch global desnecessário.
+
+Acessibilidade é validada em login, AppShell, Profile, forms, Data Grid, import, OCR, duplicates, Assistant, operations e admin.
 
 Quality gates incluem gofmt, vet, staticcheck, tests, race where relevant, govulncheck, OSV, dependency review, image scan, pinned Actions e exact tool versions.
 
-## 16. Decisões adiadas
+## 29. Decisões adiadas
 
 - multi-organização;
 - Redis;
@@ -764,23 +971,25 @@ Quality gates incluem gofmt, vet, staticcheck, tests, race where relevant, govul
 - fourth workspace repository;
 - automatic cross-repository dependency updates;
 - Changesets;
-- multiple saved Data Grid views;
+- shared saved queries;
+- cron execution of saved queries;
 - advanced visual nested AND/OR builder;
 - default horizontal virtualization;
-- automatic table-to-card conversion on mobile.
+- automatic table-to-card conversion on mobile;
+- PostgreSQL RLS without demonstrated need.
 
-## 17. Próxima etapa
+## 30. Próxima etapa
 
-**Etapa 8 — APIs, permissões e fluxos completos frontend/backend.**
+**Etapa 9 — planejamento de implementação, milestones, dependências e ordem de entrega.**
 
 Objetivos:
 
-- definir recursos e endpoints REST por módulo;
-- fechar authorization matrix e permission checks;
-- detalhar OpenAPI schemas e pagination envelopes;
-- mapear mutations, idempotency e optimistic concurrency;
-- definir flows de Profile, document, bill, custom fields, imports, Forms, duplicates, Search, Assistant, OCR, exports e admin;
-- definir route tree, query keys, error handling e cache invalidation;
-- fechar contract tests e integration boundaries.
+- transformar as decisões em workstreams implementáveis;
+- definir milestones e critérios de aceite incrementais;
+- ordenar fundações, domínio, API, frontend, workers e integrações;
+- mapear dependências entre os três repositórios;
+- definir estratégia de branches, PRs, releases e ambientes por milestone;
+- definir datasets sintéticos, benchmarks e gates antes de produção;
+- evitar big-bang e manter o produto utilizável ao fim de cada incremento.
 
-Este documento deve ser atualizado novamente ao final da Etapa 8.
+Este documento deve ser atualizado novamente ao final da Etapa 9.
