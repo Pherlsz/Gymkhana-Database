@@ -1,0 +1,50 @@
+openapi: 3.1.0
+info:
+  title: Gymkhana Database API
+  version: 0.1.0
+  description: Private API contract for Gymkhana Database.
+servers:
+  - url: /
+paths:
+  /health/live:
+    get:
+      operationId: getLiveHealth
+      summary: Check whether the API process is alive
+      tags: [Health]
+      responses:
+        "200":
+          description: API process is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /health/ready:
+    get:
+      operationId: getReadyHealth
+      summary: Check whether required dependencies are ready
+      tags: [Health]
+      responses:
+        "200":
+          description: API and required dependencies are ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          description: A required dependency is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
+        request_id:
+          type: string

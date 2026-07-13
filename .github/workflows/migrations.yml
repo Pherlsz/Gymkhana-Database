@@ -1,0 +1,70 @@
+name: Migrations
+
+on:
+  pull_request:
+    paths:
+      - "database/**"
+      - "internal/platform/postgres/dbgen/**"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - ".github/workflows/migrations.yml"
+  push:
+    branches: [main]
+    paths:
+      - "database/**"
+      - "internal/platform/postgres/dbgen/**"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - ".github/workflows/migrations.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrations-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: gymkhana
+          POSTGRES_USER: gymkhana
+          POSTGRES_PASSWORD: gymkhana
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gymkhana -d gymkhana"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: 1.26.5
+          cache: true
+
+      - name: Apply migrations
+        run: go run github.com/jackc/tern/v2@v2.4.1 migrate --migrations database/migrations --config database/tern.conf
+
+      - name: Check migration status
+        run: go run github.com/jackc/tern/v2@v2.4.1 status --migrations database/migrations --config database/tern.conf
+
+      - name: Regenerate sqlc output
+        run: |
+          make generate-sql
+          find internal/platform/postgres/dbgen -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
+
+      - name: Verify generated files
+        run: git diff --exit-code -- internal/platform/postgres/dbgen
