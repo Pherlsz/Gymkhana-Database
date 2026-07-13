@@ -57,5 +57,17 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run frontend quality gates
-        run: pnpm check:web
+      - name: Typecheck
+        run: pnpm typecheck:web
+
+      - name: Lint
+        run: pnpm lint:web
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Test
+        run: pnpm test:web
+
+      - name: Build
+        run: pnpm build:web
