@@ -1,0 +1,26 @@
+# Go
+/bin/
+/coverage/
+*.test
+
+# Node
+node_modules/
+dist/
+.vite/
+coverage-web/
+playwright-report/
+test-results/
+
+# Environment
+.env
+.env.local
+
+# Generated temporary files
+*.tgz
+.tmp/
+
+# IDE and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

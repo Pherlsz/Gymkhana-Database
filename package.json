@@ -1,0 +1,39 @@
+{
+  "name": "gymkhana-database-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter @pherlsz/gymkhana-database-web dev",
+    "build:web": "pnpm --filter @pherlsz/gymkhana-database-web build",
+    "typecheck:web": "pnpm --filter @pherlsz/gymkhana-database-web typecheck",
+    "lint:web": "oxlint -c oxlint.json apps",
+    "format": "oxfmt apps scripts .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml --write",
+    "format:check": "oxfmt apps scripts .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml --check",
+    "test:web": "vitest run",
+    "generate:openapi:ts": "openapi-typescript api/openapi.yaml -o apps/web/src/generated/api.ts",
+    "check:web": "pnpm typecheck:web && pnpm lint:web && pnpm format:check && pnpm test:web && pnpm build:web"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "jsdom": "29.1.1",
+    "openapi-typescript": "7.10.1",
+    "oxfmt": "0.58.0",
+    "oxlint": "1.73.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "typescript": "6.0.3",
+    "vite": "8.1.4",
+    "vitest": "4.1.10"
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.0.0 <12"
+  },
+  "packageManager": "pnpm@11.12.0"
+}
