@@ -10,6 +10,7 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "Makefile"
+      - "scripts/configure-private-go.sh"
       - ".github/workflows/openapi.yml"
   push:
     branches: [main]
@@ -21,6 +22,7 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "Makefile"
+      - "scripts/configure-private-go.sh"
       - ".github/workflows/openapi.yml"
 
 permissions:
@@ -53,6 +55,11 @@ jobs:
 
       - name: Enable Corepack
         run: corepack enable
+
+      - name: Configure private Core access
+        run: scripts/configure-private-go.sh
+        env:
+          GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: |

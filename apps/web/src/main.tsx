@@ -1,5 +1,6 @@
 import "@pherlsz/gymkhana-ui/tokens.css";
 import "@pherlsz/gymkhana-ui/styles.css";
+import { ThemeProvider } from "@pherlsz/gymkhana-ui";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
@@ -13,6 +14,8 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <ThemeProvider density="comfortable" theme="system">
+      <App />
+    </ThemeProvider>
   </StrictMode>,
 );

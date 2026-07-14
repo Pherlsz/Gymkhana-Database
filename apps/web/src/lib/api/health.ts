@@ -1,6 +1,6 @@
-export async function checkLiveHealth(signal?: AbortSignal): Promise<boolean> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
-  const response = await fetch(`${baseUrl}/health/live`, signal ? { signal } : undefined);
+import { getLiveHealth } from "./client";
 
-  return response.ok;
+export async function checkLiveHealth(signal?: AbortSignal): Promise<boolean> {
+  const response = await getLiveHealth(signal);
+  return response.status === "ok";
 }

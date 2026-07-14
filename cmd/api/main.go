@@ -28,7 +28,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	logger := logging.New(cfg.LogLevel)
+	logger := logging.New(string(cfg.LogLevel))
 	slog.SetDefault(logger)
 
 	rootCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -43,8 +43,10 @@ func run() error {
 	}
 
 	server := &http.Server{
-		Addr:              cfg.HTTPAddress,
-		Handler:           httpserver.New(logger, pool),
+		Addr: cfg.HTTPAddress,
+		Handler: httpserver.New(logger, pool, httpserver.Options{
+			MaxBodyBytes: cfg.HTTPMaxBodyBytes,
+		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,

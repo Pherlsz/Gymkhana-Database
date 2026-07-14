@@ -13,12 +13,23 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const DefaultMaxBodyBytes int64 = 1 << 20
+
+type Options struct {
+	MaxBodyBytes int64
+}
+
 type healthResponse struct {
 	Status    string `json:"status"`
 	RequestID string `json:"request_id,omitempty"`
 }
 
-func New(logger *slog.Logger, pool *pgxpool.Pool) http.Handler {
+func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handler {
+	settings := Options{MaxBodyBytes: DefaultMaxBodyBytes}
+	if len(options) > 0 && options[0].MaxBodyBytes > 0 {
+		settings = options[0]
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health/live", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context())})
@@ -38,8 +49,9 @@ func New(logger *slog.Logger, pool *pgxpool.Pool) http.Handler {
 
 		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context())})
 	})
+	mux.HandleFunc("/", fallbackHandler)
 
-	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(mux)))
+	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, mux))))
 }
 
 type contextKey string
@@ -52,6 +64,15 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("X-Request-ID", requestID)
 		ctx := context.WithValue(r.Context(), requestIDKey, requestID)
 		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func bodyLimitMiddleware(limit int64, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Body != nil {
+			r.Body = http.MaxBytesReader(w, r.Body, limit)
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -69,7 +90,7 @@ func recoverMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 		defer func() {
 			if recovered := recover(); recovered != nil {
 				logger.Error("panic recovered", "request_id", requestIDFromContext(r.Context()), "panic", recovered, "stack", string(debug.Stack()))
-				writeJSON(w, http.StatusInternalServerError, healthResponse{Status: "unavailable", RequestID: requestIDFromContext(r.Context())})
+				writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "An internal error occurred"})
 			}
 		}()
 		next.ServeHTTP(w, r)
