@@ -8,6 +8,8 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- Authentication persistence foundations for users, opaque sessions, and essential audit events.
+- Stable role, audit-event, and 24-hour session lifecycle contracts.
 - Typed environment, log-level, request-body limit, and shutdown configuration validation.
 - Stable JSON API error envelopes, request boundaries, and request-ID propagation.
 - Generated-contract-based frontend API helpers with structured error metadata.
