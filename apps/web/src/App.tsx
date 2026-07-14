@@ -9,12 +9,27 @@ import {
   Surface,
 } from "@pherlsz/gymkhana-ui";
 import { useCallback, useEffect, useState } from "react";
+import {
+  APIRequestError,
+  apiURL,
+  getAuthSession,
+  logout,
+  type AuthSessionResponse,
+} from "./lib/api/client";
 import { checkLiveHealth } from "./lib/api/health";
 
 type HealthState = "checking" | "available" | "unavailable";
+type AuthState =
+  | { kind: "checking" }
+  | { kind: "authenticated"; session: AuthSessionResponse }
+  | { kind: "unauthenticated" }
+  | { kind: "disabled" }
+  | { kind: "unavailable" };
 
 export function App() {
   const [health, setHealth] = useState<HealthState>("checking");
+  const [authentication, setAuthentication] = useState<AuthState>({ kind: "checking" });
+  const [signingOut, setSigningOut] = useState(false);
 
   const refreshHealth = useCallback(async (signal?: AbortSignal) => {
     setHealth("checking");
@@ -30,26 +45,65 @@ export function App() {
     }
   }, []);
 
+  const refreshAuthentication = useCallback(async (signal?: AbortSignal) => {
+    setAuthentication({ kind: "checking" });
+    try {
+      const session = await getAuthSession(signal);
+      setAuthentication({ kind: "authenticated", session });
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      if (error instanceof APIRequestError && error.status === 401) {
+        setAuthentication({ kind: "unauthenticated" });
+        return;
+      }
+      if (error instanceof APIRequestError && error.status === 503) {
+        setAuthentication({ kind: "disabled" });
+        return;
+      }
+      setAuthentication({ kind: "unavailable" });
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     void refreshHealth(controller.signal);
+    void refreshAuthentication(controller.signal);
     return () => controller.abort();
-  }, [refreshHealth]);
+  }, [refreshAuthentication, refreshHealth]);
+
+  const signOut = useCallback(async () => {
+    setSigningOut(true);
+    try {
+      await logout();
+      setAuthentication({ kind: "unauthenticated" });
+    } catch {
+      setAuthentication({ kind: "unavailable" });
+    } finally {
+      setSigningOut(false);
+    }
+  }, []);
 
   return (
     <AppShell.Root>
       <AppShell.Header className="app-header">
         <strong>Gymkhana Database</strong>
-        <StatusBadge tone="info">M1 foundations</StatusBadge>
+        <Inline align="center">
+          {authentication.kind === "authenticated" ? (
+            <span className="current-user">@{authentication.session.user.login}</span>
+          ) : null}
+          <StatusBadge tone={authenticationTone(authentication)}>M2 authentication</StatusBadge>
+        </Inline>
       </AppShell.Header>
       <AppShell.Main>
         <Page.Root maxWidth="lg">
           <Page.Header>
-            <Page.Eyebrow>Shared foundations</Page.Eyebrow>
+            <Page.Eyebrow>Private application access</Page.Eyebrow>
             <Page.Title>Gymkhana Database</Page.Title>
             <Page.Description>
-              Contratos de plataforma, componentes compartilhados e dependências versionadas para os
-              primeiros incrementos verticais.
+              Acesso privado com GitHub, sessões revogáveis de 24 horas e permissões vinculadas ao
+              usuário da aplicação.
             </Page.Description>
             <Page.Actions>
               <Button
@@ -66,12 +120,20 @@ export function App() {
             <Stack gap="6">
               {health === "unavailable" ? (
                 <Alert title="API indisponível" tone="danger">
-                  Verifique se o serviço local está em execução e tente novamente.
+                  Verifique se o serviço está em execução e tente novamente.
                 </Alert>
               ) : null}
 
+              <AuthenticationPanel
+                authentication={authentication}
+                signingOut={signingOut}
+                onLogin={() => window.location.assign(apiURL("/auth/login"))}
+                onRetry={() => void refreshAuthentication()}
+                onSignOut={() => void signOut()}
+              />
+
               <Page.Section
-                description="Versões externas são consumidas somente por releases exatas."
+                description="A infraestrutura compartilhada continua consumida somente por versões exatas."
                 title="Foundation status"
               >
                 <Inline align="stretch">
@@ -96,6 +158,77 @@ export function App() {
   );
 }
 
+function AuthenticationPanel({
+  authentication,
+  signingOut,
+  onLogin,
+  onRetry,
+  onSignOut,
+}: {
+  authentication: AuthState;
+  signingOut: boolean;
+  onLogin: () => void;
+  onRetry: () => void;
+  onSignOut: () => void;
+}) {
+  switch (authentication.kind) {
+    case "checking":
+      return <Alert title="Verificando acesso">Validando a sessão da aplicação.</Alert>;
+    case "unauthenticated":
+      return (
+        <Surface className="authentication-panel" tone="raised">
+          <Stack gap="4">
+            <div>
+              <strong>Autenticação necessária</strong>
+              <p className="authentication-panel__description">
+                Entre com uma conta GitHub previamente autorizada para acessar os módulos privados.
+              </p>
+            </div>
+            <Inline>
+              <Button onClick={onLogin}>Entrar com GitHub</Button>
+            </Inline>
+          </Stack>
+        </Surface>
+      );
+    case "disabled":
+      return (
+        <Alert title="Autenticação desativada neste ambiente" tone="info">
+          Configure as variáveis OAuth para testar o acesso privado localmente.
+        </Alert>
+      );
+    case "unavailable":
+      return (
+        <Alert title="Não foi possível verificar a sessão" tone="danger">
+          <Stack gap="3">
+            <span>Tente novamente sem recarregar a página.</span>
+            <Inline>
+              <Button onClick={onRetry}>Tentar novamente</Button>
+            </Inline>
+          </Stack>
+        </Alert>
+      );
+    case "authenticated":
+      return (
+        <Surface className="authentication-panel" tone="raised">
+          <Stack gap="4">
+            <div>
+              <strong>{authentication.session.user.display_name}</strong>
+              <p className="authentication-panel__description">
+                @{authentication.session.user.login} · {roleLabel(authentication.session.user.role)}
+              </p>
+            </div>
+            <Inline>
+              <StatusBadge tone="success">Sessão ativa</StatusBadge>
+              <Button disabled={signingOut} onClick={onSignOut}>
+                {signingOut ? "Saindo" : "Sair"}
+              </Button>
+            </Inline>
+          </Stack>
+        </Surface>
+      );
+  }
+}
+
 function FoundationCard({ label, value }: { label: string; value: string }) {
   return (
     <Surface className="foundation-card" tone="raised">
@@ -105,6 +238,30 @@ function FoundationCard({ label, value }: { label: string; value: string }) {
       </Stack>
     </Surface>
   );
+}
+
+function authenticationTone(authentication: AuthState): "neutral" | "success" | "danger" | "info" {
+  switch (authentication.kind) {
+    case "authenticated":
+      return "success";
+    case "unavailable":
+      return "danger";
+    case "unauthenticated":
+      return "info";
+    default:
+      return "neutral";
+  }
+}
+
+function roleLabel(role: "MEMBER" | "ADMIN" | "SUPERADMIN"): string {
+  switch (role) {
+    case "SUPERADMIN":
+      return "Superadmin";
+    case "ADMIN":
+      return "Admin";
+    default:
+      return "Membro";
+  }
 }
 
 function healthTone(health: HealthState): "neutral" | "success" | "danger" {

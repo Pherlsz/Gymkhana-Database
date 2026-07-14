@@ -4,9 +4,9 @@ Private web application for managing people, documents, bills, custom data, impo
 
 ## Current status
 
-Milestone 1 shared foundations. Business modules remain intentionally outside this increment.
+Milestone 2 authentication and minimal administration. Product data modules remain intentionally outside this increment.
 
-The application now consumes:
+The application consumes:
 
 - `github.com/Pherlsz/Gymkhana-Core v0.2.1` for deterministic normalization and civil-time values;
 - `@pherlsz/gymkhana-ui 0.3.0` for semantic themes, layouts, controls, feedback, overlays, AppShell, and Page composition;
@@ -31,9 +31,7 @@ go env -w GOPRIVATE=github.com/Pherlsz/Gymkhana-Core
 go env -w GONOSUMDB=github.com/Pherlsz/Gymkhana-Core
 ```
 
-GitHub Actions uses the repository secret `GYMKHANA_REPOSITORY_TOKEN`. Use a fine-grained token with read-only access to Gymkhana Core. Workflows fall back to `GITHUB_TOKEN`, but GitHub normally scopes that token to Gymkhana Database and therefore the dedicated secret is the supported configuration.
-
-The UI package continues to use the workflow `GITHUB_TOKEN` with `packages: read` and package access granted to Gymkhana Database.
+GitHub Actions uses the repository secret `GYMKHANA_REPOSITORY_TOKEN`, backed by a fine-grained token with read-only access to Gymkhana Core. The UI package uses the workflow token with package read access.
 
 ## Setup
 
@@ -58,6 +56,24 @@ pnpm dev:web
 - Live health: `http://localhost:8080/health/live`
 - Ready health: `http://localhost:8080/health/ready`
 
+## GitHub authentication
+
+Authentication is optional only in local and test environments. Staging and production fail during startup unless private application access is completely configured.
+
+Create a GitHub OAuth App and configure these environment values:
+
+- `AUTH_ENABLED=true`
+- `GITHUB_OAUTH_CLIENT_ID`
+- the GitHub OAuth client secret, supplied through the deployment secret manager;
+- `GITHUB_OAUTH_REDIRECT_URL`, ending in `/auth/callback`;
+- `AUTH_APPLICATION_URL`, the web application URL used after login;
+- `AUTH_ALLOWED_GITHUB_LOGINS`, a comma-separated allowlist;
+- `AUTH_SUPERADMIN_GITHUB_LOGIN`, which must also appear in the allowlist.
+
+For local testing, use callback `http://localhost:8080/auth/callback` and application URL `http://localhost:5173`. The API stores only SHA-256 session hashes. Browser cookies are HttpOnly, SameSite=Lax, host-only, and become Secure outside local/test. Application sessions expire after 24 hours and logout revokes the server-side session.
+
+The first successful login matching `AUTH_SUPERADMIN_GITHUB_LOGIN` creates the initial `SUPERADMIN`. Other allowed first-time users are created as `MEMBER`. Disabled users remain denied even when their GitHub login is allowed.
+
 ## Common commands
 
 ```bash
@@ -75,13 +91,15 @@ export GYMKHANA_REPOSITORY_TOKEN=<read-only-token>
 docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN -f Dockerfile.api .
 ```
 
-## M1 platform contracts
+## Platform contracts
 
-- typed environment and log-level configuration with bounded request sizes and shutdown timeouts;
-- stable JSON error envelopes with request IDs, error codes, and safe public messages;
-- generated-contract-based frontend helpers that preserve HTTP status, error code, and request ID;
-- integration tests proving the released Core normalization and civil-date APIs;
-- real ThemeProvider, AppShell, Page, feedback, layout, and status component consumption.
+- typed environment validation that fails closed in deployed environments;
+- GitHub OAuth with state validation and an explicit login allowlist;
+- opaque, revocable, server-side sessions with a 24-hour lifetime;
+- stable JSON error envelopes with request IDs and safe public messages;
+- generated Go and TypeScript API contracts;
+- deterministic sqlc persistence adapters;
+- released Core and UI dependencies consumed only through exact versions.
 
 ## Repository boundaries
 

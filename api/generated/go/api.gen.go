@@ -9,9 +9,37 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/oapi-codegen/runtime"
 )
+
+const (
+	SessionCookieScopes sessionCookieContextKey = "sessionCookie.Scopes"
+)
+
+// Defines values for AuthUserRole.
+const (
+	ADMIN      AuthUserRole = "ADMIN"
+	MEMBER     AuthUserRole = "MEMBER"
+	SUPERADMIN AuthUserRole = "SUPERADMIN"
+)
+
+// Valid indicates whether the value is a known member of the AuthUserRole enum.
+func (e AuthUserRole) Valid() bool {
+	switch e {
+	case ADMIN:
+		return true
+	case MEMBER:
+		return true
+	case SUPERADMIN:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for HealthResponseStatus.
 const (
@@ -31,6 +59,32 @@ func (e HealthResponseStatus) Valid() bool {
 	}
 }
 
+// AuthSessionResponse defines model for AuthSessionResponse.
+type AuthSessionResponse struct {
+	Authenticated bool     `json:"authenticated"`
+	User          AuthUser `json:"user"`
+}
+
+// AuthUser defines model for AuthUser.
+type AuthUser struct {
+	AvatarUrl   *string      `json:"avatar_url,omitempty"`
+	DisplayName string       `json:"display_name"`
+	Login       string       `json:"login"`
+	Role        AuthUserRole `json:"role"`
+}
+
+// AuthUserRole defines model for AuthUser.Role.
+type AuthUserRole string
+
+// ErrorResponse defines model for ErrorResponse.
+type ErrorResponse struct {
+	Error struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	} `json:"error"`
+	RequestId *string `json:"request_id,omitempty"`
+}
+
 // HealthResponse defines model for HealthResponse.
 type HealthResponse struct {
 	RequestId *string              `json:"request_id,omitempty"`
@@ -40,8 +94,41 @@ type HealthResponse struct {
 // HealthResponseStatus defines model for HealthResponse.Status.
 type HealthResponseStatus string
 
+// AuthUnavailable defines model for AuthUnavailable.
+type AuthUnavailable = ErrorResponse
+
+// BadRequest defines model for BadRequest.
+type BadRequest = ErrorResponse
+
+// Forbidden defines model for Forbidden.
+type Forbidden = ErrorResponse
+
+// Unauthorized defines model for Unauthorized.
+type Unauthorized = ErrorResponse
+
+// sessionCookieContextKey is the context key for sessionCookie security scheme
+type sessionCookieContextKey string
+
+// CompleteGitHubLoginParams defines parameters for CompleteGitHubLogin.
+type CompleteGitHubLoginParams struct {
+	Code  string `form:"code" json:"code"`
+	State string `form:"state" json:"state"`
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Revoke the current application session
+	// (POST /api/auth/logout)
+	Logout(w http.ResponseWriter, r *http.Request)
+	// Read the current protected application session
+	// (GET /api/auth/session)
+	GetAuthSession(w http.ResponseWriter, r *http.Request)
+	// Complete GitHub OAuth authentication
+	// (GET /auth/callback)
+	CompleteGitHubLogin(w http.ResponseWriter, r *http.Request, params CompleteGitHubLoginParams)
+	// Begin GitHub OAuth authentication
+	// (GET /auth/login)
+	BeginGitHubLogin(w http.ResponseWriter, r *http.Request)
 	// Check whether the API process is alive
 	// (GET /health/live)
 	GetLiveHealth(w http.ResponseWriter, r *http.Request)
@@ -58,6 +145,106 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// Logout operation middleware
+func (siw *ServerInterfaceWrapper) Logout(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Logout(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAuthSession operation middleware
+func (siw *ServerInterfaceWrapper) GetAuthSession(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAuthSession(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteGitHubLogin operation middleware
+func (siw *ServerInterfaceWrapper) CompleteGitHubLogin(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CompleteGitHubLoginParams
+
+	// ------------- Required query parameter "code" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "code", r.URL.Query(), &params.Code, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "code"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "code", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteGitHubLogin(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BeginGitHubLogin operation middleware
+func (siw *ServerInterfaceWrapper) BeginGitHubLogin(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BeginGitHubLogin(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetLiveHealth operation middleware
 func (siw *ServerInterfaceWrapper) GetLiveHealth(w http.ResponseWriter, r *http.Request) {
@@ -207,10 +394,201 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/auth/logout", wrapper.Logout)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/auth/session", wrapper.GetAuthSession)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/auth/callback", wrapper.CompleteGitHubLogin)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/auth/login", wrapper.BeginGitHubLogin)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/health/live", wrapper.GetLiveHealth)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/health/ready", wrapper.GetReadyHealth)
 
 	return m
+}
+
+type AuthUnavailableJSONResponse ErrorResponse
+
+type BadRequestJSONResponse ErrorResponse
+
+type ForbiddenJSONResponse ErrorResponse
+
+type UnauthorizedJSONResponse ErrorResponse
+
+type LogoutRequestObject struct {
+}
+
+type LogoutResponseObject interface {
+	VisitLogoutResponse(w http.ResponseWriter) error
+}
+
+type Logout204Response struct {
+}
+
+func (response Logout204Response) VisitLogoutResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type Logout503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response Logout503JSONResponse) VisitLogoutResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAuthSessionRequestObject struct {
+}
+
+type GetAuthSessionResponseObject interface {
+	VisitGetAuthSessionResponse(w http.ResponseWriter) error
+}
+
+type GetAuthSession200JSONResponse AuthSessionResponse
+
+func (response GetAuthSession200JSONResponse) VisitGetAuthSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAuthSession401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetAuthSession401JSONResponse) VisitGetAuthSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetAuthSession503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response GetAuthSession503JSONResponse) VisitGetAuthSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteGitHubLoginRequestObject struct {
+	Params CompleteGitHubLoginParams
+}
+
+type CompleteGitHubLoginResponseObject interface {
+	VisitCompleteGitHubLoginResponse(w http.ResponseWriter) error
+}
+
+type CompleteGitHubLogin302Response struct {
+}
+
+func (response CompleteGitHubLogin302Response) VisitCompleteGitHubLoginResponse(w http.ResponseWriter) error {
+	w.WriteHeader(302)
+	return nil
+}
+
+type CompleteGitHubLogin400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CompleteGitHubLogin400JSONResponse) VisitCompleteGitHubLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteGitHubLogin403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CompleteGitHubLogin403JSONResponse) VisitCompleteGitHubLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteGitHubLogin502JSONResponse ErrorResponse
+
+func (response CompleteGitHubLogin502JSONResponse) VisitCompleteGitHubLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteGitHubLogin503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response CompleteGitHubLogin503JSONResponse) VisitCompleteGitHubLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type BeginGitHubLoginRequestObject struct {
+}
+
+type BeginGitHubLoginResponseObject interface {
+	VisitBeginGitHubLoginResponse(w http.ResponseWriter) error
+}
+
+type BeginGitHubLogin302Response struct {
+}
+
+func (response BeginGitHubLogin302Response) VisitBeginGitHubLoginResponse(w http.ResponseWriter) error {
+	w.WriteHeader(302)
+	return nil
+}
+
+type BeginGitHubLogin503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response BeginGitHubLogin503JSONResponse) VisitBeginGitHubLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GetLiveHealthRequestObject struct {
@@ -271,6 +649,18 @@ func (response GetReadyHealth503JSONResponse) VisitGetReadyHealthResponse(w http
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Revoke the current application session
+	// (POST /api/auth/logout)
+	Logout(ctx context.Context, request LogoutRequestObject) (LogoutResponseObject, error)
+	// Read the current protected application session
+	// (GET /api/auth/session)
+	GetAuthSession(ctx context.Context, request GetAuthSessionRequestObject) (GetAuthSessionResponseObject, error)
+	// Complete GitHub OAuth authentication
+	// (GET /auth/callback)
+	CompleteGitHubLogin(ctx context.Context, request CompleteGitHubLoginRequestObject) (CompleteGitHubLoginResponseObject, error)
+	// Begin GitHub OAuth authentication
+	// (GET /auth/login)
+	BeginGitHubLogin(ctx context.Context, request BeginGitHubLoginRequestObject) (BeginGitHubLoginResponseObject, error)
 	// Check whether the API process is alive
 	// (GET /health/live)
 	GetLiveHealth(ctx context.Context, request GetLiveHealthRequestObject) (GetLiveHealthResponseObject, error)
@@ -306,6 +696,104 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// Logout operation middleware
+func (sh *strictHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	var request LogoutRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Logout(ctx, request.(LogoutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Logout")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LogoutResponseObject); ok {
+		if err := validResponse.VisitLogoutResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetAuthSession operation middleware
+func (sh *strictHandler) GetAuthSession(w http.ResponseWriter, r *http.Request) {
+	var request GetAuthSessionRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAuthSession(ctx, request.(GetAuthSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAuthSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAuthSessionResponseObject); ok {
+		if err := validResponse.VisitGetAuthSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CompleteGitHubLogin operation middleware
+func (sh *strictHandler) CompleteGitHubLogin(w http.ResponseWriter, r *http.Request, params CompleteGitHubLoginParams) {
+	var request CompleteGitHubLoginRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CompleteGitHubLogin(ctx, request.(CompleteGitHubLoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompleteGitHubLogin")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompleteGitHubLoginResponseObject); ok {
+		if err := validResponse.VisitCompleteGitHubLoginResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// BeginGitHubLogin operation middleware
+func (sh *strictHandler) BeginGitHubLogin(w http.ResponseWriter, r *http.Request) {
+	var request BeginGitHubLoginRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.BeginGitHubLogin(ctx, request.(BeginGitHubLoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BeginGitHubLogin")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(BeginGitHubLoginResponseObject); ok {
+		if err := validResponse.VisitBeginGitHubLoginResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetLiveHealth operation middleware

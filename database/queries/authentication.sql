@@ -67,6 +67,23 @@ SELECT *
 FROM app_sessions
 WHERE token_hash = $1;
 
+-- name: GetAuthenticatedAppSession :one
+SELECT
+  app_sessions.id AS session_id,
+  app_users.id AS app_user_id,
+  app_users.github_user_id,
+  app_users.github_login,
+  app_users.display_name,
+  app_users.avatar_url,
+  app_users.role,
+  app_users.active
+FROM app_sessions
+JOIN app_users ON app_users.id = app_sessions.user_id
+WHERE app_sessions.token_hash = $1
+  AND app_sessions.revoked_at IS NULL
+  AND app_sessions.expires_at > $2
+  AND app_users.active;
+
 -- name: TouchAppSession :exec
 UPDATE app_sessions
 SET last_seen_at = now()
@@ -78,6 +95,11 @@ WHERE id = $1
 UPDATE app_sessions
 SET revoked_at = COALESCE(revoked_at, now())
 WHERE id = $1;
+
+-- name: RevokeAppSessionByTokenHash :exec
+UPDATE app_sessions
+SET revoked_at = COALESCE(revoked_at, now())
+WHERE token_hash = $1;
 
 -- name: RevokeAllAppSessionsForUser :exec
 UPDATE app_sessions

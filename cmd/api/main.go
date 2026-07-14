@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/config"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/httpserver"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/logging"
@@ -42,10 +44,35 @@ func run() error {
 		defer pool.Close()
 	}
 
+	var authService *auth.Service
+	if cfg.Auth.Enabled {
+		if pool == nil {
+			return errors.New("authentication requires a database connection")
+		}
+		provider, err := auth.NewGitHubProvider(auth.GitHubProviderOptions{
+			ClientID:     cfg.Auth.GitHubClientID,
+			ClientSecret: cfg.Auth.GitHubClientSecret,
+			RedirectURL:  cfg.Auth.GitHubRedirectURL,
+		})
+		if err != nil {
+			return fmt.Errorf("configure GitHub OAuth: %w", err)
+		}
+		authService, err = auth.NewService(provider, auth.NewPostgresStore(pool), auth.ServiceOptions{
+			AllowedLogins:   cfg.Auth.AllowedLogins,
+			SuperadminLogin: cfg.Auth.SuperadminLogin,
+		})
+		if err != nil {
+			return fmt.Errorf("configure authentication service: %w", err)
+		}
+	}
+
 	server := &http.Server{
 		Addr: cfg.HTTPAddress,
 		Handler: httpserver.New(logger, pool, httpserver.Options{
-			MaxBodyBytes: cfg.HTTPMaxBodyBytes,
+			MaxBodyBytes:   cfg.HTTPMaxBodyBytes,
+			Auth:           authService,
+			SecureCookies:  cfg.Auth.SecureCookies,
+			ApplicationURL: cfg.Auth.ApplicationURL,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
@@ -55,7 +82,7 @@ func run() error {
 
 	serverError := make(chan error, 1)
 	go func() {
-		logger.Info("api listening", "address", cfg.HTTPAddress, "environment", cfg.Environment)
+		logger.Info("api listening", "address", cfg.HTTPAddress, "environment", cfg.Environment, "authentication_enabled", cfg.Auth.Enabled)
 		serverError <- server.ListenAndServe()
 	}()
 

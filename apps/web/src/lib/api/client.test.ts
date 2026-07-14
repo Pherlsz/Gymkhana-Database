@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { APIRequestError, getLiveHealth } from "./client";
+import { APIRequestError, getAuthSession, getLiveHealth, logout } from "./client";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
@@ -8,14 +8,27 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 }
 
 describe("generated API client helpers", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
+  afterEach(() => vi.unstubAllGlobals());
 
-  it("returns the generated health response type", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ status: "ok" })));
+  it("returns health and protected session responses", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ status: "ok" }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          authenticated: true,
+          user: { login: "member", display_name: "Member", role: "MEMBER" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
 
     await expect(getLiveHealth()).resolves.toEqual({ status: "ok" });
+    await expect(getAuthSession()).resolves.toMatchObject({ user: { login: "member" } });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "/health/live",
+      expect.objectContaining({ credentials: "include" }),
+    );
   });
 
   it("preserves stable API error metadata", async () => {
@@ -24,21 +37,32 @@ describe("generated API client helpers", () => {
       vi.fn().mockResolvedValue(
         jsonResponse(
           {
-            error: { code: "not_found", message: "Resource was not found" },
+            error: { code: "unauthorized", message: "Authentication is required" },
             request_id: "request-123",
           },
-          { status: 404 },
+          { status: 401 },
         ),
       ),
     );
 
-    const error = await getLiveHealth().catch((cause: unknown) => cause);
+    const error = await getAuthSession().catch((cause: unknown) => cause);
     expect(error).toBeInstanceOf(APIRequestError);
     expect(error).toMatchObject({
-      status: 404,
-      code: "not_found",
+      status: 401,
+      code: "unauthorized",
       requestId: "request-123",
-      message: "Resource was not found",
+      message: "Authentication is required",
     });
+  });
+
+  it("accepts the empty logout response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(logout()).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/logout",
+      expect.objectContaining({ method: "POST", credentials: "include" }),
+    );
   });
 });

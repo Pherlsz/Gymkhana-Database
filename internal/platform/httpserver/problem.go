@@ -12,13 +12,18 @@ import (
 type ErrorCode string
 
 const (
-	ErrorCodeBadRequest       ErrorCode = "bad_request"
-	ErrorCodeInvalidJSON      ErrorCode = "invalid_json"
-	ErrorCodeUnsupportedMedia ErrorCode = "unsupported_media_type"
-	ErrorCodeRequestTooLarge  ErrorCode = "request_too_large"
-	ErrorCodeNotFound         ErrorCode = "not_found"
-	ErrorCodeMethodNotAllowed ErrorCode = "method_not_allowed"
-	ErrorCodeInternal         ErrorCode = "internal_error"
+	ErrorCodeBadRequest        ErrorCode = "bad_request"
+	ErrorCodeInvalidJSON       ErrorCode = "invalid_json"
+	ErrorCodeUnsupportedMedia  ErrorCode = "unsupported_media_type"
+	ErrorCodeRequestTooLarge   ErrorCode = "request_too_large"
+	ErrorCodeUnauthorized      ErrorCode = "unauthorized"
+	ErrorCodeForbidden         ErrorCode = "forbidden"
+	ErrorCodeInvalidOAuthState ErrorCode = "invalid_oauth_state"
+	ErrorCodeAuthProvider      ErrorCode = "auth_provider_error"
+	ErrorCodeAuthUnavailable   ErrorCode = "auth_unavailable"
+	ErrorCodeNotFound          ErrorCode = "not_found"
+	ErrorCodeMethodNotAllowed  ErrorCode = "method_not_allowed"
+	ErrorCodeInternal          ErrorCode = "internal_error"
 )
 
 type Problem struct {
@@ -71,7 +76,7 @@ func writeProblem(w http.ResponseWriter, r *http.Request, problem Problem) {
 }
 
 func fallbackHandler(w http.ResponseWriter, r *http.Request) {
-	if strings.HasPrefix(r.URL.Path, "/health/") {
+	if strings.HasPrefix(r.URL.Path, "/health/") || strings.HasPrefix(r.URL.Path, "/auth/") || strings.HasPrefix(r.URL.Path, "/api/") {
 		writeProblem(w, r, Problem{Status: http.StatusMethodNotAllowed, Code: ErrorCodeMethodNotAllowed, Message: "HTTP method is not allowed for this resource"})
 		return
 	}

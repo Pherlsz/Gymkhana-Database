@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Gymkhana Database API
-  version: 0.1.0
+  version: 0.2.0
   description: Private API contract for Gymkhana Database.
 servers:
   - url: /
@@ -36,7 +36,108 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+  /auth/login:
+    get:
+      operationId: beginGitHubLogin
+      summary: Begin GitHub OAuth authentication
+      tags: [Authentication]
+      responses:
+        "302":
+          description: Redirect to GitHub authorization
+        "503":
+          $ref: "#/components/responses/AuthUnavailable"
+  /auth/callback:
+    get:
+      operationId: completeGitHubLogin
+      summary: Complete GitHub OAuth authentication
+      tags: [Authentication]
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Authentication completed and redirected to the application
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "502":
+          description: GitHub authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/AuthUnavailable"
+  /api/auth/session:
+    get:
+      operationId: getAuthSession
+      summary: Read the current protected application session
+      tags: [Authentication]
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Authenticated application session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/AuthUnavailable"
+  /api/auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke the current application session
+      tags: [Authentication]
+      security:
+        - sessionCookie: []
+      responses:
+        "204":
+          description: Session revoked or already absent
+        "503":
+          $ref: "#/components/responses/AuthUnavailable"
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: gymkhana_session
+  responses:
+    BadRequest:
+      description: Request is invalid
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication is required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: The GitHub account is not allowed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    AuthUnavailable:
+      description: Authentication is not configured
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   schemas:
     HealthResponse:
       type: object
@@ -46,5 +147,46 @@ components:
         status:
           type: string
           enum: [ok, unavailable]
+        request_id:
+          type: string
+    AuthSessionResponse:
+      type: object
+      additionalProperties: false
+      required: [authenticated, user]
+      properties:
+        authenticated:
+          type: boolean
+          const: true
+        user:
+          $ref: "#/components/schemas/AuthUser"
+    AuthUser:
+      type: object
+      additionalProperties: false
+      required: [login, display_name, role]
+      properties:
+        login:
+          type: string
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        role:
+          type: string
+          enum: [MEMBER, ADMIN, SUPERADMIN]
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
         request_id:
           type: string
