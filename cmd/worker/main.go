@@ -18,7 +18,7 @@ func main() {
 		slog.Error("load configuration", "error", err)
 		os.Exit(1)
 	}
-	logger := logging.New(cfg.LogLevel)
+	logger := logging.New(string(cfg.LogLevel))
 
 	if *drain {
 		logger.Info("worker drain completed", "registered_jobs", 0)
