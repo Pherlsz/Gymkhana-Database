@@ -1,9 +1,4 @@
-CREATE TABLE app_metadata (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+-- M2 authentication persistence foundations.
 
 CREATE TABLE app_users (
   id UUID PRIMARY KEY,
@@ -54,3 +49,14 @@ CREATE TABLE auth_audit_events (
 CREATE INDEX auth_audit_events_occurred_at_index ON auth_audit_events (occurred_at DESC);
 CREATE INDEX auth_audit_events_actor_index ON auth_audit_events (actor_user_id, occurred_at DESC);
 CREATE INDEX auth_audit_events_subject_index ON auth_audit_events (subject_user_id, occurred_at DESC);
+
+INSERT INTO app_metadata (key, value)
+VALUES ('schema.authentication', 'm2.1')
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now();
+
+---- create above / drop below ----
+
+DELETE FROM app_metadata WHERE key = 'schema.authentication';
+DROP TABLE auth_audit_events;
+DROP TABLE app_sessions;
+DROP TABLE app_users;
