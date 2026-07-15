@@ -170,7 +170,7 @@ func TestPostgresStoreAssignsCurrentUse(t *testing.T) {
 }
 
 func databaseDocumentType(id Identifier, now time.Time) dbgen.DocumentType {
-	regex := `^[A-Z0-9]+$`
+	regex := `^[A-Z0-9-]+$`
 	return dbgen.DocumentType{ID: databaseUUID(id), TechnicalKey: "rg_geral", Label: "Registro Geral", Active: true,
 		UniquenessPolicy: string(UniquenessPerProfile), ValidationRegex: &regex, DateRequired: true, Version: 1,
 		CreatedAt: pgtype.Timestamptz{Time: now, Valid: true}, UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true}}
