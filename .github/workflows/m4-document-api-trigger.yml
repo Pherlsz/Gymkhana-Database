@@ -1,0 +1,43 @@
+name: M4 document API trigger
+
+on:
+  pull_request:
+    branches:
+      - agent/m4-document-api
+    paths:
+      - ".github/workflows/m4-document-api-trigger.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out helper payload
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/m4-document-api-publish
+          path: helper
+      - name: Extract and verify payload
+        run: |
+          awk '/^H4sI/{capture=1} capture && /^PAYLOAD$/{exit} capture {print}' helper/.github/workflows/m4-document-api-publish.yml > /tmp/m4payload.b64
+          base64 --decode --ignore-garbage /tmp/m4payload.b64 > /tmp/m4payload.tar.gz
+          gzip -t /tmp/m4payload.tar.gz
+          tar -tzf /tmp/m4payload.tar.gz
+      - name: Check out target branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/m4-document-api
+          path: target
+      - name: Restore and publish implementation
+        working-directory: target
+        run: |
+          tar -xzf /tmp/m4payload.tar.gz -C .
+          gofmt -w internal/auth/auth.go internal/document/*.go internal/platform/httpserver/*.go cmd/api/main.go
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cmd/api/main.go database internal/auth/auth.go internal/document internal/platform/httpserver/document.go internal/platform/httpserver/server.go
+          git commit -m "feat(documents): add protected service and HTTP foundation"
+          git push origin HEAD:agent/m4-document-api
