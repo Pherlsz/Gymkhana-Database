@@ -22,6 +22,120 @@ const (
 	SessionCookieScopes sessionCookieContextKey = "sessionCookie.Scopes"
 )
 
+// Defines values for DocumentRecordState.
+const (
+	ARCHIVED DocumentRecordState = "ARCHIVED"
+	CURRENT  DocumentRecordState = "CURRENT"
+	EXPIRED  DocumentRecordState = "EXPIRED"
+	REPLACED DocumentRecordState = "REPLACED"
+)
+
+// Valid indicates whether the value is a known member of the DocumentRecordState enum.
+func (e DocumentRecordState) Valid() bool {
+	switch e {
+	case ARCHIVED:
+		return true
+	case CURRENT:
+		return true
+	case EXPIRED:
+		return true
+	case REPLACED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentSortField.
+const (
+	DocumentSortFieldCreatedAt       DocumentSortField = "created_at"
+	DocumentSortFieldDocumentDate    DocumentSortField = "document_date"
+	DocumentSortFieldIdentifierValue DocumentSortField = "identifier_value"
+	DocumentSortFieldTypeLabel       DocumentSortField = "type_label"
+	DocumentSortFieldUpdatedAt       DocumentSortField = "updated_at"
+)
+
+// Valid indicates whether the value is a known member of the DocumentSortField enum.
+func (e DocumentSortField) Valid() bool {
+	switch e {
+	case DocumentSortFieldCreatedAt:
+		return true
+	case DocumentSortFieldDocumentDate:
+		return true
+	case DocumentSortFieldIdentifierValue:
+		return true
+	case DocumentSortFieldTypeLabel:
+		return true
+	case DocumentSortFieldUpdatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentStatus.
+const (
+	AVAILABLE DocumentStatus = "AVAILABLE"
+	INUSE     DocumentStatus = "IN_USE"
+)
+
+// Valid indicates whether the value is a known member of the DocumentStatus enum.
+func (e DocumentStatus) Valid() bool {
+	switch e {
+	case AVAILABLE:
+		return true
+	case INUSE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentTypeSortField.
+const (
+	DocumentTypeSortFieldCreatedAt    DocumentTypeSortField = "created_at"
+	DocumentTypeSortFieldLabel        DocumentTypeSortField = "label"
+	DocumentTypeSortFieldTechnicalKey DocumentTypeSortField = "technical_key"
+	DocumentTypeSortFieldUpdatedAt    DocumentTypeSortField = "updated_at"
+)
+
+// Valid indicates whether the value is a known member of the DocumentTypeSortField enum.
+func (e DocumentTypeSortField) Valid() bool {
+	switch e {
+	case DocumentTypeSortFieldCreatedAt:
+		return true
+	case DocumentTypeSortFieldLabel:
+		return true
+	case DocumentTypeSortFieldTechnicalKey:
+		return true
+	case DocumentTypeSortFieldUpdatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentUniquenessPolicy.
+const (
+	GLOBALBYTYPE DocumentUniquenessPolicy = "GLOBAL_BY_TYPE"
+	NONE         DocumentUniquenessPolicy = "NONE"
+	PERPROFILE   DocumentUniquenessPolicy = "PER_PROFILE"
+)
+
+// Valid indicates whether the value is a known member of the DocumentUniquenessPolicy enum.
+func (e DocumentUniquenessPolicy) Valid() bool {
+	switch e {
+	case GLOBALBYTYPE:
+		return true
+	case NONE:
+		return true
+	case PERPROFILE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthResponseStatus.
 const (
 	Ok          HealthResponseStatus = "ok"
@@ -125,6 +239,11 @@ type AdminUsersResponse struct {
 	Users []AdminUser `json:"users"`
 }
 
+// AssignDocumentCurrentUseRequest defines model for AssignDocumentCurrentUseRequest.
+type AssignDocumentCurrentUseRequest struct {
+	HolderProfileId openapi_types.UUID `json:"holder_profile_id"`
+}
+
 // AuthSessionResponse defines model for AuthSessionResponse.
 type AuthSessionResponse struct {
 	Authenticated bool     `json:"authenticated"`
@@ -139,10 +258,118 @@ type AuthUser struct {
 	Role        UserRole `json:"role"`
 }
 
+// DeleteDocumentResourceRequest defines model for DeleteDocumentResourceRequest.
+type DeleteDocumentResourceRequest struct {
+	Confirmation string `json:"confirmation"`
+	Version      int64  `json:"version"`
+}
+
 // DeleteProfileRequest defines model for DeleteProfileRequest.
 type DeleteProfileRequest struct {
 	Confirmation string `json:"confirmation"`
 	Version      int64  `json:"version"`
+}
+
+// Document defines model for Document.
+type Document struct {
+	CreatedAt       time.Time           `json:"created_at"`
+	CurrentUse      DocumentCurrentUse  `json:"current_use"`
+	DocumentDate    string              `json:"document_date"`
+	DocumentTypeId  openapi_types.UUID  `json:"document_type_id"`
+	Id              openapi_types.UUID  `json:"id"`
+	IdentifierValue string              `json:"identifier_value"`
+	Notes           string              `json:"notes"`
+	OwnerProfileId  openapi_types.UUID  `json:"owner_profile_id"`
+	RecordState     DocumentRecordState `json:"record_state"`
+	Status          DocumentStatus      `json:"status"`
+	Type            DocumentType        `json:"type"`
+	UpdatedAt       time.Time           `json:"updated_at"`
+	Version         int64               `json:"version"`
+}
+
+// DocumentCurrentUse defines model for DocumentCurrentUse.
+type DocumentCurrentUse struct {
+	AssignedAt      time.Time          `json:"assigned_at"`
+	HolderProfileId openapi_types.UUID `json:"holder_profile_id"`
+}
+
+// DocumentPageMeta defines model for DocumentPageMeta.
+type DocumentPageMeta struct {
+	Limit     int32             `json:"limit"`
+	Offset    int32             `json:"offset"`
+	SortField DocumentSortField `json:"sort_field"`
+	SortOrder SortOrder         `json:"sort_order"`
+	Total     int64             `json:"total"`
+}
+
+// DocumentPageResponse defines model for DocumentPageResponse.
+type DocumentPageResponse struct {
+	Documents []Document       `json:"documents"`
+	Page      DocumentPageMeta `json:"page"`
+}
+
+// DocumentRecordState defines model for DocumentRecordState.
+type DocumentRecordState string
+
+// DocumentSortField defines model for DocumentSortField.
+type DocumentSortField string
+
+// DocumentStatus defines model for DocumentStatus.
+type DocumentStatus string
+
+// DocumentType defines model for DocumentType.
+type DocumentType struct {
+	Active           bool                     `json:"active"`
+	CreatedAt        time.Time                `json:"created_at"`
+	DateRequired     bool                     `json:"date_required"`
+	Id               openapi_types.UUID       `json:"id"`
+	Label            string                   `json:"label"`
+	TechnicalKey     string                   `json:"technical_key"`
+	UniquenessPolicy DocumentUniquenessPolicy `json:"uniqueness_policy"`
+	UpdatedAt        time.Time                `json:"updated_at"`
+	ValidationRegex  string                   `json:"validation_regex"`
+	Version          int64                    `json:"version"`
+}
+
+// DocumentTypePageMeta defines model for DocumentTypePageMeta.
+type DocumentTypePageMeta struct {
+	Limit     int32                 `json:"limit"`
+	Offset    int32                 `json:"offset"`
+	SortField DocumentTypeSortField `json:"sort_field"`
+	SortOrder SortOrder             `json:"sort_order"`
+	Total     int64                 `json:"total"`
+}
+
+// DocumentTypePageResponse defines model for DocumentTypePageResponse.
+type DocumentTypePageResponse struct {
+	Page  DocumentTypePageMeta `json:"page"`
+	Types []DocumentType       `json:"types"`
+}
+
+// DocumentTypeSortField defines model for DocumentTypeSortField.
+type DocumentTypeSortField string
+
+// DocumentTypeValuesRequest defines model for DocumentTypeValuesRequest.
+type DocumentTypeValuesRequest struct {
+	Active           bool                     `json:"active"`
+	DateRequired     bool                     `json:"date_required"`
+	Label            string                   `json:"label"`
+	TechnicalKey     string                   `json:"technical_key"`
+	UniquenessPolicy DocumentUniquenessPolicy `json:"uniqueness_policy"`
+	ValidationRegex  string                   `json:"validation_regex"`
+}
+
+// DocumentUniquenessPolicy defines model for DocumentUniquenessPolicy.
+type DocumentUniquenessPolicy string
+
+// DocumentValuesRequest defines model for DocumentValuesRequest.
+type DocumentValuesRequest struct {
+	DocumentDate    string              `json:"document_date"`
+	DocumentTypeId  openapi_types.UUID  `json:"document_type_id"`
+	IdentifierValue string              `json:"identifier_value"`
+	Notes           string              `json:"notes"`
+	OwnerProfileId  openapi_types.UUID  `json:"owner_profile_id"`
+	RecordState     DocumentRecordState `json:"record_state"`
 }
 
 // ErrorResponse defines model for ErrorResponse.
@@ -231,6 +458,28 @@ type ProfileValuesRequest struct {
 // SortOrder defines model for SortOrder.
 type SortOrder string
 
+// UpdateDocumentRequest defines model for UpdateDocumentRequest.
+type UpdateDocumentRequest struct {
+	DocumentDate    string              `json:"document_date"`
+	DocumentTypeId  openapi_types.UUID  `json:"document_type_id"`
+	IdentifierValue string              `json:"identifier_value"`
+	Notes           string              `json:"notes"`
+	OwnerProfileId  openapi_types.UUID  `json:"owner_profile_id"`
+	RecordState     DocumentRecordState `json:"record_state"`
+	Version         int64               `json:"version"`
+}
+
+// UpdateDocumentTypeRequest defines model for UpdateDocumentTypeRequest.
+type UpdateDocumentTypeRequest struct {
+	Active           bool                     `json:"active"`
+	DateRequired     bool                     `json:"date_required"`
+	Label            string                   `json:"label"`
+	TechnicalKey     string                   `json:"technical_key"`
+	UniquenessPolicy DocumentUniquenessPolicy `json:"uniqueness_policy"`
+	ValidationRegex  string                   `json:"validation_regex"`
+	Version          int64                    `json:"version"`
+}
+
 // UpdateProfileRequest defines model for UpdateProfileRequest.
 type UpdateProfileRequest struct {
 	Address       ProfileAddress `json:"address"`
@@ -287,6 +536,30 @@ type ListApplicationUsersParams struct {
 	Offset *int32 `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// ListDocumentTypesParams defines parameters for ListDocumentTypes.
+type ListDocumentTypesParams struct {
+	Limit  *int32                 `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int32                 `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort   *DocumentTypeSortField `form:"sort,omitempty" json:"sort,omitempty"`
+	Order  *SortOrder             `form:"order,omitempty" json:"order,omitempty"`
+	Label  *string                `form:"label,omitempty" json:"label,omitempty"`
+	Active *bool                  `form:"active,omitempty" json:"active,omitempty"`
+}
+
+// ListDocumentsParams defines parameters for ListDocuments.
+type ListDocumentsParams struct {
+	Limit           *int32               `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset          *int32               `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort            *DocumentSortField   `form:"sort,omitempty" json:"sort,omitempty"`
+	Order           *SortOrder           `form:"order,omitempty" json:"order,omitempty"`
+	OwnerProfileId  *openapi_types.UUID  `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
+	DocumentTypeId  *openapi_types.UUID  `form:"document_type_id,omitempty" json:"document_type_id,omitempty"`
+	Identifier      *string              `form:"identifier,omitempty" json:"identifier,omitempty"`
+	RecordState     *DocumentRecordState `form:"record_state,omitempty" json:"record_state,omitempty"`
+	Status          *DocumentStatus      `form:"status,omitempty" json:"status,omitempty"`
+	HolderProfileId *openapi_types.UUID  `form:"holder_profile_id,omitempty" json:"holder_profile_id,omitempty"`
+}
+
 // ListProfilesParams defines parameters for ListProfiles.
 type ListProfilesParams struct {
 	Limit    *int32            `form:"limit,omitempty" json:"limit,omitempty"`
@@ -308,6 +581,27 @@ type CompleteGitHubLoginParams struct {
 
 // UpdateApplicationUserAccessJSONRequestBody defines body for UpdateApplicationUserAccess for application/json ContentType.
 type UpdateApplicationUserAccessJSONRequestBody = UpdateUserAccessRequest
+
+// CreateDocumentTypeJSONRequestBody defines body for CreateDocumentType for application/json ContentType.
+type CreateDocumentTypeJSONRequestBody = DocumentTypeValuesRequest
+
+// DeleteDocumentTypeJSONRequestBody defines body for DeleteDocumentType for application/json ContentType.
+type DeleteDocumentTypeJSONRequestBody = DeleteDocumentResourceRequest
+
+// UpdateDocumentTypeJSONRequestBody defines body for UpdateDocumentType for application/json ContentType.
+type UpdateDocumentTypeJSONRequestBody = UpdateDocumentTypeRequest
+
+// CreateDocumentJSONRequestBody defines body for CreateDocument for application/json ContentType.
+type CreateDocumentJSONRequestBody = DocumentValuesRequest
+
+// DeleteDocumentJSONRequestBody defines body for DeleteDocument for application/json ContentType.
+type DeleteDocumentJSONRequestBody = DeleteDocumentResourceRequest
+
+// UpdateDocumentJSONRequestBody defines body for UpdateDocument for application/json ContentType.
+type UpdateDocumentJSONRequestBody = UpdateDocumentRequest
+
+// AssignDocumentCurrentUseJSONRequestBody defines body for AssignDocumentCurrentUse for application/json ContentType.
+type AssignDocumentCurrentUseJSONRequestBody = AssignDocumentCurrentUseRequest
 
 // CreateProfileJSONRequestBody defines body for CreateProfile for application/json ContentType.
 type CreateProfileJSONRequestBody = ProfileValuesRequest
@@ -332,6 +626,45 @@ type ServerInterface interface {
 	// Read the current protected application session
 	// (GET /api/auth/session)
 	GetAuthSession(w http.ResponseWriter, r *http.Request)
+	// List administrable document types
+	// (GET /api/v1/document-types)
+	ListDocumentTypes(w http.ResponseWriter, r *http.Request, params ListDocumentTypesParams)
+	// Create an administrable document type
+	// (POST /api/v1/document-types)
+	CreateDocumentType(w http.ResponseWriter, r *http.Request)
+	// Permanently delete an unused document type
+	// (DELETE /api/v1/document-types/{document_type_id})
+	DeleteDocumentType(w http.ResponseWriter, r *http.Request, documentTypeId openapi_types.UUID)
+	// Read one document type
+	// (GET /api/v1/document-types/{document_type_id})
+	GetDocumentType(w http.ResponseWriter, r *http.Request, documentTypeId openapi_types.UUID)
+	// Replace document type settings using optimistic concurrency
+	// (PUT /api/v1/document-types/{document_type_id})
+	UpdateDocumentType(w http.ResponseWriter, r *http.Request, documentTypeId openapi_types.UUID)
+	// List Profile-owned documents
+	// (GET /api/v1/documents)
+	ListDocuments(w http.ResponseWriter, r *http.Request, params ListDocumentsParams)
+	// Create a Profile-owned document
+	// (POST /api/v1/documents)
+	CreateDocument(w http.ResponseWriter, r *http.Request)
+	// Permanently delete an available document
+	// (DELETE /api/v1/documents/{document_id})
+	DeleteDocument(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID)
+	// Read one document
+	// (GET /api/v1/documents/{document_id})
+	GetDocument(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID)
+	// Replace document values using optimistic concurrency
+	// (PUT /api/v1/documents/{document_id})
+	UpdateDocument(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID)
+	// Return a document and remove its current-use relation
+	// (DELETE /api/v1/documents/{document_id}/current-use)
+	ReturnDocumentCurrentUse(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID)
+	// Assign or replace the current document holder
+	// (PUT /api/v1/documents/{document_id}/current-use)
+	AssignDocumentCurrentUse(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID)
+	// Duplicate a document into an independent record
+	// (POST /api/v1/documents/{document_id}/duplicate)
+	DuplicateDocument(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID)
 	// List physical-person profiles
 	// (GET /api/v1/profiles)
 	ListProfiles(w http.ResponseWriter, r *http.Request, params ListProfilesParams)
@@ -488,6 +821,594 @@ func (siw *ServerInterfaceWrapper) GetAuthSession(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAuthSession(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDocumentTypes operation middleware
+func (siw *ServerInterfaceWrapper) ListDocumentTypes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDocumentTypesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "label" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "label", r.URL.Query(), &params.Label, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "label"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "label", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "active" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "active", r.URL.Query(), &params.Active, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "active"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "active", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDocumentTypes(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateDocumentType operation middleware
+func (siw *ServerInterfaceWrapper) CreateDocumentType(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateDocumentType(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteDocumentType operation middleware
+func (siw *ServerInterfaceWrapper) DeleteDocumentType(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "document_type_id" -------------
+	var documentTypeId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "document_type_id", r.PathValue("document_type_id"), &documentTypeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_type_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteDocumentType(w, r, documentTypeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDocumentType operation middleware
+func (siw *ServerInterfaceWrapper) GetDocumentType(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "document_type_id" -------------
+	var documentTypeId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "document_type_id", r.PathValue("document_type_id"), &documentTypeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_type_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDocumentType(w, r, documentTypeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateDocumentType operation middleware
+func (siw *ServerInterfaceWrapper) UpdateDocumentType(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "document_type_id" -------------
+	var documentTypeId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "document_type_id", r.PathValue("document_type_id"), &documentTypeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_type_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateDocumentType(w, r, documentTypeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDocuments operation middleware
+func (siw *ServerInterfaceWrapper) ListDocuments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDocumentsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "owner_profile_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_profile_id", r.URL.Query(), &params.OwnerProfileId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_profile_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_profile_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "document_type_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "document_type_id", r.URL.Query(), &params.DocumentTypeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "document_type_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_type_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "identifier" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "identifier", r.URL.Query(), &params.Identifier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "identifier"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "identifier", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "record_state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_state", r.URL.Query(), &params.RecordState, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "holder_profile_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "holder_profile_id", r.URL.Query(), &params.HolderProfileId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "holder_profile_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "holder_profile_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDocuments(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateDocument operation middleware
+func (siw *ServerInterfaceWrapper) CreateDocument(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateDocument(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteDocument operation middleware
+func (siw *ServerInterfaceWrapper) DeleteDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "document_id" -------------
+	var documentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "document_id", r.PathValue("document_id"), &documentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteDocument(w, r, documentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDocument operation middleware
+func (siw *ServerInterfaceWrapper) GetDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "document_id" -------------
+	var documentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "document_id", r.PathValue("document_id"), &documentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDocument(w, r, documentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateDocument operation middleware
+func (siw *ServerInterfaceWrapper) UpdateDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "document_id" -------------
+	var documentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "document_id", r.PathValue("document_id"), &documentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateDocument(w, r, documentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReturnDocumentCurrentUse operation middleware
+func (siw *ServerInterfaceWrapper) ReturnDocumentCurrentUse(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "document_id" -------------
+	var documentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "document_id", r.PathValue("document_id"), &documentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReturnDocumentCurrentUse(w, r, documentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignDocumentCurrentUse operation middleware
+func (siw *ServerInterfaceWrapper) AssignDocumentCurrentUse(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "document_id" -------------
+	var documentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "document_id", r.PathValue("document_id"), &documentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignDocumentCurrentUse(w, r, documentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DuplicateDocument operation middleware
+func (siw *ServerInterfaceWrapper) DuplicateDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "document_id" -------------
+	var documentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "document_id", r.PathValue("document_id"), &documentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "document_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DuplicateDocument(w, r, documentId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1000,6 +1921,19 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/admin/users/{user_id}/access", wrapper.UpdateApplicationUserAccess)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/auth/session", wrapper.GetAuthSession)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/document-types", wrapper.ListDocumentTypes)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/document-types", wrapper.CreateDocumentType)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/document-types/{document_type_id}", wrapper.DeleteDocumentType)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/document-types/{document_type_id}", wrapper.GetDocumentType)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/document-types/{document_type_id}", wrapper.UpdateDocumentType)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/documents", wrapper.ListDocuments)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/documents", wrapper.CreateDocument)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/documents/{document_id}", wrapper.DeleteDocument)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/documents/{document_id}", wrapper.GetDocument)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/documents/{document_id}", wrapper.UpdateDocument)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/documents/{document_id}/current-use", wrapper.ReturnDocumentCurrentUse)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/documents/{document_id}/current-use", wrapper.AssignDocumentCurrentUse)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/documents/{document_id}/duplicate", wrapper.DuplicateDocument)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/profiles", wrapper.ListProfiles)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/profiles", wrapper.CreateProfile)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/profiles/{profile_id}", wrapper.DeleteProfile)
@@ -1282,6 +2216,1329 @@ func (response GetAuthSession401JSONResponse) VisitGetAuthSessionResponse(w http
 type GetAuthSession503JSONResponse struct{ AuthUnavailableJSONResponse }
 
 func (response GetAuthSession503JSONResponse) VisitGetAuthSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocumentTypesRequestObject struct {
+	Params ListDocumentTypesParams
+}
+
+type ListDocumentTypesResponseObject interface {
+	VisitListDocumentTypesResponse(w http.ResponseWriter) error
+}
+
+type ListDocumentTypes200JSONResponse DocumentTypePageResponse
+
+func (response ListDocumentTypes200JSONResponse) VisitListDocumentTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocumentTypes400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListDocumentTypes400JSONResponse) VisitListDocumentTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocumentTypes401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListDocumentTypes401JSONResponse) VisitListDocumentTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocumentTypes403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListDocumentTypes403JSONResponse) VisitListDocumentTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocumentTypes503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListDocumentTypes503JSONResponse) VisitListDocumentTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentTypeRequestObject struct {
+	Body *CreateDocumentTypeJSONRequestBody
+}
+
+type CreateDocumentTypeResponseObject interface {
+	VisitCreateDocumentTypeResponse(w http.ResponseWriter) error
+}
+
+type CreateDocumentType201JSONResponse DocumentType
+
+func (response CreateDocumentType201JSONResponse) VisitCreateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateDocumentType400JSONResponse) VisitCreateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateDocumentType401JSONResponse) VisitCreateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateDocumentType403JSONResponse) VisitCreateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentType409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateDocumentType409JSONResponse) VisitCreateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentType422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response CreateDocumentType422JSONResponse) VisitCreateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response CreateDocumentType503JSONResponse) VisitCreateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocumentTypeRequestObject struct {
+	DocumentTypeId openapi_types.UUID `json:"document_type_id"`
+	Body           *DeleteDocumentTypeJSONRequestBody
+}
+
+type DeleteDocumentTypeResponseObject interface {
+	VisitDeleteDocumentTypeResponse(w http.ResponseWriter) error
+}
+
+type DeleteDocumentType204Response struct {
+}
+
+func (response DeleteDocumentType204Response) VisitDeleteDocumentTypeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteDocumentType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteDocumentType400JSONResponse) VisitDeleteDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocumentType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteDocumentType401JSONResponse) VisitDeleteDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocumentType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteDocumentType403JSONResponse) VisitDeleteDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocumentType404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteDocumentType404JSONResponse) VisitDeleteDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocumentType409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteDocumentType409JSONResponse) VisitDeleteDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocumentType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response DeleteDocumentType503JSONResponse) VisitDeleteDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocumentTypeRequestObject struct {
+	DocumentTypeId openapi_types.UUID `json:"document_type_id"`
+}
+
+type GetDocumentTypeResponseObject interface {
+	VisitGetDocumentTypeResponse(w http.ResponseWriter) error
+}
+
+type GetDocumentType200JSONResponse DocumentType
+
+func (response GetDocumentType200JSONResponse) VisitGetDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocumentType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetDocumentType400JSONResponse) VisitGetDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocumentType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetDocumentType401JSONResponse) VisitGetDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocumentType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetDocumentType403JSONResponse) VisitGetDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocumentType404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetDocumentType404JSONResponse) VisitGetDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocumentType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetDocumentType503JSONResponse) VisitGetDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentTypeRequestObject struct {
+	DocumentTypeId openapi_types.UUID `json:"document_type_id"`
+	Body           *UpdateDocumentTypeJSONRequestBody
+}
+
+type UpdateDocumentTypeResponseObject interface {
+	VisitUpdateDocumentTypeResponse(w http.ResponseWriter) error
+}
+
+type UpdateDocumentType200JSONResponse DocumentType
+
+func (response UpdateDocumentType200JSONResponse) VisitUpdateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateDocumentType400JSONResponse) VisitUpdateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateDocumentType401JSONResponse) VisitUpdateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateDocumentType403JSONResponse) VisitUpdateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentType404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateDocumentType404JSONResponse) VisitUpdateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentType409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpdateDocumentType409JSONResponse) VisitUpdateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentType422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UpdateDocumentType422JSONResponse) VisitUpdateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response UpdateDocumentType503JSONResponse) VisitUpdateDocumentTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocumentsRequestObject struct {
+	Params ListDocumentsParams
+}
+
+type ListDocumentsResponseObject interface {
+	VisitListDocumentsResponse(w http.ResponseWriter) error
+}
+
+type ListDocuments200JSONResponse DocumentPageResponse
+
+func (response ListDocuments200JSONResponse) VisitListDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocuments400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListDocuments400JSONResponse) VisitListDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocuments401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListDocuments401JSONResponse) VisitListDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocuments403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListDocuments403JSONResponse) VisitListDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocuments503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListDocuments503JSONResponse) VisitListDocumentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentRequestObject struct {
+	Body *CreateDocumentJSONRequestBody
+}
+
+type CreateDocumentResponseObject interface {
+	VisitCreateDocumentResponse(w http.ResponseWriter) error
+}
+
+type CreateDocument201JSONResponse Document
+
+func (response CreateDocument201JSONResponse) VisitCreateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocument400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateDocument400JSONResponse) VisitCreateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocument401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateDocument401JSONResponse) VisitCreateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocument403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateDocument403JSONResponse) VisitCreateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocument404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateDocument404JSONResponse) VisitCreateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocument409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateDocument409JSONResponse) VisitCreateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocument422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response CreateDocument422JSONResponse) VisitCreateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocument503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response CreateDocument503JSONResponse) VisitCreateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocumentRequestObject struct {
+	DocumentId openapi_types.UUID `json:"document_id"`
+	Body       *DeleteDocumentJSONRequestBody
+}
+
+type DeleteDocumentResponseObject interface {
+	VisitDeleteDocumentResponse(w http.ResponseWriter) error
+}
+
+type DeleteDocument204Response struct {
+}
+
+func (response DeleteDocument204Response) VisitDeleteDocumentResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteDocument400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteDocument400JSONResponse) VisitDeleteDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocument401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteDocument401JSONResponse) VisitDeleteDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocument403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteDocument403JSONResponse) VisitDeleteDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocument404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteDocument404JSONResponse) VisitDeleteDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocument409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteDocument409JSONResponse) VisitDeleteDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteDocument503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response DeleteDocument503JSONResponse) VisitDeleteDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocumentRequestObject struct {
+	DocumentId openapi_types.UUID `json:"document_id"`
+}
+
+type GetDocumentResponseObject interface {
+	VisitGetDocumentResponse(w http.ResponseWriter) error
+}
+
+type GetDocument200JSONResponse Document
+
+func (response GetDocument200JSONResponse) VisitGetDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocument400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetDocument400JSONResponse) VisitGetDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocument401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetDocument401JSONResponse) VisitGetDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocument403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetDocument403JSONResponse) VisitGetDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocument404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetDocument404JSONResponse) VisitGetDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDocument503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetDocument503JSONResponse) VisitGetDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentRequestObject struct {
+	DocumentId openapi_types.UUID `json:"document_id"`
+	Body       *UpdateDocumentJSONRequestBody
+}
+
+type UpdateDocumentResponseObject interface {
+	VisitUpdateDocumentResponse(w http.ResponseWriter) error
+}
+
+type UpdateDocument200JSONResponse Document
+
+func (response UpdateDocument200JSONResponse) VisitUpdateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocument400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateDocument400JSONResponse) VisitUpdateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocument401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateDocument401JSONResponse) VisitUpdateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocument403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateDocument403JSONResponse) VisitUpdateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocument404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateDocument404JSONResponse) VisitUpdateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocument409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpdateDocument409JSONResponse) VisitUpdateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocument422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UpdateDocument422JSONResponse) VisitUpdateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocument503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response UpdateDocument503JSONResponse) VisitUpdateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnDocumentCurrentUseRequestObject struct {
+	DocumentId openapi_types.UUID `json:"document_id"`
+}
+
+type ReturnDocumentCurrentUseResponseObject interface {
+	VisitReturnDocumentCurrentUseResponse(w http.ResponseWriter) error
+}
+
+type ReturnDocumentCurrentUse204Response struct {
+}
+
+func (response ReturnDocumentCurrentUse204Response) VisitReturnDocumentCurrentUseResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ReturnDocumentCurrentUse400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReturnDocumentCurrentUse400JSONResponse) VisitReturnDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnDocumentCurrentUse401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReturnDocumentCurrentUse401JSONResponse) VisitReturnDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnDocumentCurrentUse403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ReturnDocumentCurrentUse403JSONResponse) VisitReturnDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnDocumentCurrentUse404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReturnDocumentCurrentUse404JSONResponse) VisitReturnDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnDocumentCurrentUse409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReturnDocumentCurrentUse409JSONResponse) VisitReturnDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnDocumentCurrentUse503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ReturnDocumentCurrentUse503JSONResponse) VisitReturnDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignDocumentCurrentUseRequestObject struct {
+	DocumentId openapi_types.UUID `json:"document_id"`
+	Body       *AssignDocumentCurrentUseJSONRequestBody
+}
+
+type AssignDocumentCurrentUseResponseObject interface {
+	VisitAssignDocumentCurrentUseResponse(w http.ResponseWriter) error
+}
+
+type AssignDocumentCurrentUse200JSONResponse DocumentCurrentUse
+
+func (response AssignDocumentCurrentUse200JSONResponse) VisitAssignDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignDocumentCurrentUse400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AssignDocumentCurrentUse400JSONResponse) VisitAssignDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignDocumentCurrentUse401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AssignDocumentCurrentUse401JSONResponse) VisitAssignDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignDocumentCurrentUse403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AssignDocumentCurrentUse403JSONResponse) VisitAssignDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignDocumentCurrentUse404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AssignDocumentCurrentUse404JSONResponse) VisitAssignDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignDocumentCurrentUse409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AssignDocumentCurrentUse409JSONResponse) VisitAssignDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignDocumentCurrentUse503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response AssignDocumentCurrentUse503JSONResponse) VisitAssignDocumentCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateDocumentRequestObject struct {
+	DocumentId openapi_types.UUID `json:"document_id"`
+}
+
+type DuplicateDocumentResponseObject interface {
+	VisitDuplicateDocumentResponse(w http.ResponseWriter) error
+}
+
+type DuplicateDocument201JSONResponse Document
+
+func (response DuplicateDocument201JSONResponse) VisitDuplicateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateDocument400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DuplicateDocument400JSONResponse) VisitDuplicateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateDocument401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DuplicateDocument401JSONResponse) VisitDuplicateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateDocument403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DuplicateDocument403JSONResponse) VisitDuplicateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateDocument404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DuplicateDocument404JSONResponse) VisitDuplicateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateDocument409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DuplicateDocument409JSONResponse) VisitDuplicateDocumentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateDocument503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response DuplicateDocument503JSONResponse) VisitDuplicateDocumentResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -2040,6 +4297,45 @@ type StrictServerInterface interface {
 	// Read the current protected application session
 	// (GET /api/auth/session)
 	GetAuthSession(ctx context.Context, request GetAuthSessionRequestObject) (GetAuthSessionResponseObject, error)
+	// List administrable document types
+	// (GET /api/v1/document-types)
+	ListDocumentTypes(ctx context.Context, request ListDocumentTypesRequestObject) (ListDocumentTypesResponseObject, error)
+	// Create an administrable document type
+	// (POST /api/v1/document-types)
+	CreateDocumentType(ctx context.Context, request CreateDocumentTypeRequestObject) (CreateDocumentTypeResponseObject, error)
+	// Permanently delete an unused document type
+	// (DELETE /api/v1/document-types/{document_type_id})
+	DeleteDocumentType(ctx context.Context, request DeleteDocumentTypeRequestObject) (DeleteDocumentTypeResponseObject, error)
+	// Read one document type
+	// (GET /api/v1/document-types/{document_type_id})
+	GetDocumentType(ctx context.Context, request GetDocumentTypeRequestObject) (GetDocumentTypeResponseObject, error)
+	// Replace document type settings using optimistic concurrency
+	// (PUT /api/v1/document-types/{document_type_id})
+	UpdateDocumentType(ctx context.Context, request UpdateDocumentTypeRequestObject) (UpdateDocumentTypeResponseObject, error)
+	// List Profile-owned documents
+	// (GET /api/v1/documents)
+	ListDocuments(ctx context.Context, request ListDocumentsRequestObject) (ListDocumentsResponseObject, error)
+	// Create a Profile-owned document
+	// (POST /api/v1/documents)
+	CreateDocument(ctx context.Context, request CreateDocumentRequestObject) (CreateDocumentResponseObject, error)
+	// Permanently delete an available document
+	// (DELETE /api/v1/documents/{document_id})
+	DeleteDocument(ctx context.Context, request DeleteDocumentRequestObject) (DeleteDocumentResponseObject, error)
+	// Read one document
+	// (GET /api/v1/documents/{document_id})
+	GetDocument(ctx context.Context, request GetDocumentRequestObject) (GetDocumentResponseObject, error)
+	// Replace document values using optimistic concurrency
+	// (PUT /api/v1/documents/{document_id})
+	UpdateDocument(ctx context.Context, request UpdateDocumentRequestObject) (UpdateDocumentResponseObject, error)
+	// Return a document and remove its current-use relation
+	// (DELETE /api/v1/documents/{document_id}/current-use)
+	ReturnDocumentCurrentUse(ctx context.Context, request ReturnDocumentCurrentUseRequestObject) (ReturnDocumentCurrentUseResponseObject, error)
+	// Assign or replace the current document holder
+	// (PUT /api/v1/documents/{document_id}/current-use)
+	AssignDocumentCurrentUse(ctx context.Context, request AssignDocumentCurrentUseRequestObject) (AssignDocumentCurrentUseResponseObject, error)
+	// Duplicate a document into an independent record
+	// (POST /api/v1/documents/{document_id}/duplicate)
+	DuplicateDocument(ctx context.Context, request DuplicateDocumentRequestObject) (DuplicateDocumentResponseObject, error)
 	// List physical-person profiles
 	// (GET /api/v1/profiles)
 	ListProfiles(ctx context.Context, request ListProfilesRequestObject) (ListProfilesResponseObject, error)
@@ -2201,6 +4497,389 @@ func (sh *strictHandler) GetAuthSession(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetAuthSessionResponseObject); ok {
 		if err := validResponse.VisitGetAuthSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListDocumentTypes operation middleware
+func (sh *strictHandler) ListDocumentTypes(w http.ResponseWriter, r *http.Request, params ListDocumentTypesParams) {
+	var request ListDocumentTypesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDocumentTypes(ctx, request.(ListDocumentTypesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDocumentTypes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDocumentTypesResponseObject); ok {
+		if err := validResponse.VisitListDocumentTypesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateDocumentType operation middleware
+func (sh *strictHandler) CreateDocumentType(w http.ResponseWriter, r *http.Request) {
+	var request CreateDocumentTypeRequestObject
+
+	var body CreateDocumentTypeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateDocumentType(ctx, request.(CreateDocumentTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateDocumentType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateDocumentTypeResponseObject); ok {
+		if err := validResponse.VisitCreateDocumentTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteDocumentType operation middleware
+func (sh *strictHandler) DeleteDocumentType(w http.ResponseWriter, r *http.Request, documentTypeId openapi_types.UUID) {
+	var request DeleteDocumentTypeRequestObject
+
+	request.DocumentTypeId = documentTypeId
+
+	var body DeleteDocumentTypeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteDocumentType(ctx, request.(DeleteDocumentTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteDocumentType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteDocumentTypeResponseObject); ok {
+		if err := validResponse.VisitDeleteDocumentTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDocumentType operation middleware
+func (sh *strictHandler) GetDocumentType(w http.ResponseWriter, r *http.Request, documentTypeId openapi_types.UUID) {
+	var request GetDocumentTypeRequestObject
+
+	request.DocumentTypeId = documentTypeId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDocumentType(ctx, request.(GetDocumentTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDocumentType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDocumentTypeResponseObject); ok {
+		if err := validResponse.VisitGetDocumentTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateDocumentType operation middleware
+func (sh *strictHandler) UpdateDocumentType(w http.ResponseWriter, r *http.Request, documentTypeId openapi_types.UUID) {
+	var request UpdateDocumentTypeRequestObject
+
+	request.DocumentTypeId = documentTypeId
+
+	var body UpdateDocumentTypeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateDocumentType(ctx, request.(UpdateDocumentTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateDocumentType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateDocumentTypeResponseObject); ok {
+		if err := validResponse.VisitUpdateDocumentTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListDocuments operation middleware
+func (sh *strictHandler) ListDocuments(w http.ResponseWriter, r *http.Request, params ListDocumentsParams) {
+	var request ListDocumentsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDocuments(ctx, request.(ListDocumentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDocuments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDocumentsResponseObject); ok {
+		if err := validResponse.VisitListDocumentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateDocument operation middleware
+func (sh *strictHandler) CreateDocument(w http.ResponseWriter, r *http.Request) {
+	var request CreateDocumentRequestObject
+
+	var body CreateDocumentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateDocument(ctx, request.(CreateDocumentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateDocument")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateDocumentResponseObject); ok {
+		if err := validResponse.VisitCreateDocumentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteDocument operation middleware
+func (sh *strictHandler) DeleteDocument(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID) {
+	var request DeleteDocumentRequestObject
+
+	request.DocumentId = documentId
+
+	var body DeleteDocumentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteDocument(ctx, request.(DeleteDocumentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteDocument")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteDocumentResponseObject); ok {
+		if err := validResponse.VisitDeleteDocumentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetDocument operation middleware
+func (sh *strictHandler) GetDocument(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID) {
+	var request GetDocumentRequestObject
+
+	request.DocumentId = documentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDocument(ctx, request.(GetDocumentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDocument")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDocumentResponseObject); ok {
+		if err := validResponse.VisitGetDocumentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateDocument operation middleware
+func (sh *strictHandler) UpdateDocument(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID) {
+	var request UpdateDocumentRequestObject
+
+	request.DocumentId = documentId
+
+	var body UpdateDocumentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateDocument(ctx, request.(UpdateDocumentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateDocument")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateDocumentResponseObject); ok {
+		if err := validResponse.VisitUpdateDocumentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReturnDocumentCurrentUse operation middleware
+func (sh *strictHandler) ReturnDocumentCurrentUse(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID) {
+	var request ReturnDocumentCurrentUseRequestObject
+
+	request.DocumentId = documentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReturnDocumentCurrentUse(ctx, request.(ReturnDocumentCurrentUseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReturnDocumentCurrentUse")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReturnDocumentCurrentUseResponseObject); ok {
+		if err := validResponse.VisitReturnDocumentCurrentUseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AssignDocumentCurrentUse operation middleware
+func (sh *strictHandler) AssignDocumentCurrentUse(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID) {
+	var request AssignDocumentCurrentUseRequestObject
+
+	request.DocumentId = documentId
+
+	var body AssignDocumentCurrentUseJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AssignDocumentCurrentUse(ctx, request.(AssignDocumentCurrentUseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AssignDocumentCurrentUse")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AssignDocumentCurrentUseResponseObject); ok {
+		if err := validResponse.VisitAssignDocumentCurrentUseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DuplicateDocument operation middleware
+func (sh *strictHandler) DuplicateDocument(w http.ResponseWriter, r *http.Request, documentId openapi_types.UUID) {
+	var request DuplicateDocumentRequestObject
+
+	request.DocumentId = documentId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DuplicateDocument(ctx, request.(DuplicateDocumentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DuplicateDocument")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DuplicateDocumentResponseObject); ok {
+		if err := validResponse.VisitDuplicateDocumentResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

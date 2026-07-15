@@ -8,6 +8,12 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- Protected document-type administration and Profile-owned document CRUD API with centralized role permissions.
+- Document filtering, sorting, pagination, structured validation, optimistic conflicts, duplication, and explicit permanent-delete confirmation.
+- Current-use assignment, holder replacement, and return endpoints without creating a historical usage timeline.
+- Durable document mutation audit events correlated by actor and request ID while retaining deleted identifiers.
+- OpenAPI 0.5.0 document contracts with regenerated Go and TypeScript clients.
+- Service, HTTP, and PostgreSQL audit-adapter coverage for document permissions, errors, current use, and audit metadata.
 - Canonical Profile-owned document and bill persistence with FK-enforced ownership, administrable types, and optimistic versioning.
 - Controlled document uniqueness policies, optional regex/date requirements, leading-zero-safe identifiers, and old-record states.
 - Bill persistence preserving printed holder, address, reference, civil competence, decimal money, and currency values.
@@ -50,7 +56,7 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 - Pinned Gymkhana Core `v0.2.1` and Gymkhana UI `0.3.0`.
 - Updated `openapi-typescript` from `7.10.1` to `7.13.0`.
 - Added authenticated private Core access to CI, security, OpenAPI, deployment, and container builds.
-- Expanded audit correlation to invalid OAuth callbacks, failed sign-out, administration access, access conflicts, session revocation, and Profile mutations.
+- Expanded audit correlation to invalid OAuth callbacks, failed sign-out, administration access, access conflicts, session revocation, Profile mutations, and document mutations/current-use changes.
 
 ## [0.0.0] - 2026-07-13
 
