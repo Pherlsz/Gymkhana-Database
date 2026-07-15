@@ -1,0 +1,53 @@
+name: M4 store trigger
+
+on:
+  pull_request:
+    branches:
+      - agent/m4-documents-bills-domain
+    paths:
+      - ".github/workflows/m4-store-trigger.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out helper payload
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/m4-sqlc-generation-2
+          path: helper
+      - name: Extract compressed stores
+        run: |
+          awk '/cat > \/tmp\/document_store.gz.b64/{capture=1; next} capture && /^[[:space:]]*EOF[[:space:]]*$/{exit} capture {sub(/^[[:space:]]+/, ""); print}' helper/.github/workflows/m4-store-publish.yml > /tmp/document_store.gz.b64
+          awk '/cat > \/tmp\/bill_store.gz.b64/{capture=1; next} capture && /^[[:space:]]*EOF[[:space:]]*$/{exit} capture {sub(/^[[:space:]]+/, ""); print}' helper/.github/workflows/m4-store-publish.yml > /tmp/bill_store.gz.b64
+          test -s /tmp/document_store.gz.b64
+          test -s /tmp/bill_store.gz.b64
+      - name: Check out target branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/m4-documents-bills-domain
+          path: target
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: 1.26.5
+          cache-dependency-path: target/go.sum
+      - name: Restore and validate stores
+        working-directory: target
+        run: |
+          base64 -d /tmp/document_store.gz.b64 | gzip -d > internal/document/postgres_store.go
+          base64 -d /tmp/bill_store.gz.b64 | gzip -d > internal/bill/postgres_store.go
+          gofmt -w internal/document/postgres_store.go internal/bill/postgres_store.go
+          go test ./internal/document ./internal/bill
+      - name: Publish stores
+        working-directory: target
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add internal/document/postgres_store.go internal/bill/postgres_store.go
+          git commit -m "feat(records): add PostgreSQL stores"
+          git push origin HEAD:agent/m4-documents-bills-domain
