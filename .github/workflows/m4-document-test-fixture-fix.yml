@@ -1,0 +1,41 @@
+name: M4 document test fixture fix
+
+on:
+  pull_request:
+    branches:
+      - agent/m4-documents-bills-domain
+    paths:
+      - ".github/workflows/m4-document-test-fixture-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out target branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/m4-documents-bills-domain
+      - name: Align identifier fixture regex
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("internal/document/postgres_store_test.go")
+          source = path.read_text()
+          old = "regex := `^[A-Z0-9]+$`"
+          new = "regex := `^[A-Z0-9-]+$`"
+          if old not in source:
+              raise SystemExit("expected fixture regex not found")
+          path.write_text(source.replace(old, new, 1))
+          PY
+          gofmt -w internal/document/postgres_store_test.go
+      - name: Publish correction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add internal/document/postgres_store_test.go
+          git commit -m "fix(documents): align store fixture regex"
+          git push origin HEAD:agent/m4-documents-bills-domain
