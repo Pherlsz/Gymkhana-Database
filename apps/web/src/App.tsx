@@ -8,8 +8,11 @@ import {
   StatusBadge,
   Surface,
 } from "@pherlsz/gymkhana-ui";
-import { useCallback, useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Link, Outlet, RouterProvider, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { AdminUsersPanel } from "./AdminUsersPanel";
+import { ProfilesPage, normalizeProfileSearch } from "./ProfilesPage";
 import {
   APIRequestError,
   apiURL,
@@ -27,6 +30,33 @@ type AuthState =
   | { kind: "disabled" }
   | { kind: "unavailable" };
 
+const SessionContext = createContext<AuthSessionResponse | null>(null);
+export function useApplicationSession(): AuthSessionResponse {
+  const value = useContext(SessionContext);
+  if (!value) throw new Error("Application session is unavailable");
+  return value;
+}
+
+const rootRoute = createRootRoute({ component: () => <Outlet /> });
+const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: HomePage });
+export const profilesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/profiles",
+  validateSearch: normalizeProfileSearch,
+  component: ProfilesPage,
+});
+const routeTree = rootRoute.addChildren([homeRoute, profilesRoute]);
+const router = createRouter({ routeTree });
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 15_000, retry: 1 } },
+});
+
 export function App() {
   const [health, setHealth] = useState<HealthState>("checking");
   const [authentication, setAuthentication] = useState<AuthState>({ kind: "checking" });
@@ -34,14 +64,11 @@ export function App() {
 
   const refreshHealth = useCallback(async (signal?: AbortSignal) => {
     setHealth("checking");
-
     try {
       const available = await checkLiveHealth(signal);
       setHealth(available ? "available" : "unavailable");
     } catch (error: unknown) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
+      if (error instanceof DOMException && error.name === "AbortError") return;
       setHealth("unavailable");
     }
   }, []);
@@ -52,9 +79,7 @@ export function App() {
       const session = await getAuthSession(signal);
       setAuthentication({ kind: "authenticated", session });
     } catch (error: unknown) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
+      if (error instanceof DOMException && error.name === "AbortError") return;
       if (error instanceof APIRequestError && error.status === 401) {
         setAuthentication({ kind: "unauthenticated" });
         return;
@@ -78,6 +103,7 @@ export function App() {
     setSigningOut(true);
     try {
       await logout();
+      queryClient.clear();
       setAuthentication({ kind: "unauthenticated" });
     } catch {
       setAuthentication({ kind: "unavailable" });
@@ -86,81 +112,103 @@ export function App() {
     }
   }, []);
 
+  if (authentication.kind !== "authenticated") {
+    return (
+      <PublicShell health={health} authentication={authentication} signingOut={signingOut}
+        onLogin={() => window.location.assign(apiURL("/auth/login"))}
+        onRetry={() => void refreshAuthentication()}
+        onSignOut={() => void signOut()}
+        onRefreshHealth={() => void refreshHealth()} />
+    );
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SessionContext.Provider value={authentication.session}>
+        <AppShell.Root>
+          <AppShell.Header className="app-header">
+            <Inline align="center">
+              <strong>Gymkhana Database</strong>
+              <nav aria-label="Navegação principal" className="app-nav">
+                <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" to="/">Início</Link>
+                <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" to="/profiles" search={normalizeProfileSearch({})}>Pessoas</Link>
+              </nav>
+            </Inline>
+            <Inline align="center">
+              <span className="current-user">@{authentication.session.user.login}</span>
+              <StatusBadge tone="success">{roleLabel(authentication.session.user.role)}</StatusBadge>
+              <Button disabled={signingOut} onClick={() => void signOut()}>{signingOut ? "Saindo" : "Sair"}</Button>
+            </Inline>
+          </AppShell.Header>
+          <AppShell.Main>
+            <RouterProvider router={router} />
+          </AppShell.Main>
+        </AppShell.Root>
+      </SessionContext.Provider>
+    </QueryClientProvider>
+  );
+}
+
+function HomePage() {
+  const session = useApplicationSession();
+  return (
+    <Page.Root maxWidth="lg">
+      <Page.Header>
+        <Page.Eyebrow>Aplicação privada</Page.Eyebrow>
+        <Page.Title>Gymkhana Database</Page.Title>
+        <Page.Description>Gerencie pessoas e permissões com sessões privadas e dados normalizados.</Page.Description>
+      </Page.Header>
+      <Page.Content>
+        <Stack gap="6">
+          <Surface className="authentication-panel" tone="raised">
+            <Stack gap="3">
+              <strong>{session.user.display_name}</strong>
+              <span className="authentication-panel__description">@{session.user.login} · {roleLabel(session.user.role)}</span>
+              <StatusBadge tone="success">Sessão ativa</StatusBadge>
+            </Stack>
+          </Surface>
+          {canManageUsers(session.user.role) ? (
+            <Page.Section description="Funções, acesso ativo e revogação de sessões são controlados pela aplicação." title="Administração de usuários">
+              <AdminUsersPanel currentLogin={session.user.login} />
+            </Page.Section>
+          ) : null}
+          <Page.Section description="A infraestrutura compartilhada continua consumida somente por versões exatas." title="Foundation status">
+            <Inline align="stretch">
+              <FoundationCard label="Frontend" value="React + TypeScript" />
+              <FoundationCard label="Core" value="v0.2.1" />
+              <FoundationCard label="UI" value="v0.3.0" />
+            </Inline>
+          </Page.Section>
+        </Stack>
+      </Page.Content>
+    </Page.Root>
+  );
+}
+
+function PublicShell(props: {
+  health: HealthState;
+  authentication: AuthState;
+  signingOut: boolean;
+  onLogin: () => void;
+  onRetry: () => void;
+  onSignOut: () => void;
+  onRefreshHealth: () => void;
+}) {
   return (
     <AppShell.Root>
-      <AppShell.Header className="app-header">
-        <strong>Gymkhana Database</strong>
-        <Inline align="center">
-          {authentication.kind === "authenticated" ? (
-            <span className="current-user">@{authentication.session.user.login}</span>
-          ) : null}
-          <StatusBadge tone={authenticationTone(authentication)}>M2 authentication</StatusBadge>
-        </Inline>
-      </AppShell.Header>
+      <AppShell.Header className="app-header"><strong>Gymkhana Database</strong><StatusBadge tone={authenticationTone(props.authentication)}>Acesso privado</StatusBadge></AppShell.Header>
       <AppShell.Main>
         <Page.Root maxWidth="lg">
           <Page.Header>
             <Page.Eyebrow>Private application access</Page.Eyebrow>
             <Page.Title>Gymkhana Database</Page.Title>
-            <Page.Description>
-              Acesso privado com GitHub, sessões revogáveis de 24 horas e permissões vinculadas ao
-              usuário da aplicação.
-            </Page.Description>
-            <Page.Actions>
-              <Button
-                aria-describedby="api-status"
-                disabled={health === "checking"}
-                onClick={() => void refreshHealth()}
-              >
-                Verificar API
-              </Button>
-            </Page.Actions>
+            <Page.Description>Acesso privado com GitHub, sessões revogáveis de 24 horas e permissões da aplicação.</Page.Description>
+            <Page.Actions><Button disabled={props.health === "checking"} onClick={props.onRefreshHealth}>Verificar API</Button></Page.Actions>
           </Page.Header>
-
           <Page.Content>
             <Stack gap="6">
-              {health === "unavailable" ? (
-                <Alert title="API indisponível" tone="danger">
-                  Verifique se o serviço está em execução e tente novamente.
-                </Alert>
-              ) : null}
-
-              <AuthenticationPanel
-                authentication={authentication}
-                signingOut={signingOut}
-                onLogin={() => window.location.assign(apiURL("/auth/login"))}
-                onRetry={() => void refreshAuthentication()}
-                onSignOut={() => void signOut()}
-              />
-
-              {authentication.kind === "authenticated" &&
-              canManageUsers(authentication.session.user.role) ? (
-                <Page.Section
-                  description="Funções, acesso ativo e revogação de sessões são controlados pela aplicação."
-                  title="Administração de usuários"
-                >
-                  <AdminUsersPanel currentLogin={authentication.session.user.login} />
-                </Page.Section>
-              ) : null}
-
-              <Page.Section
-                description="A infraestrutura compartilhada continua consumida somente por versões exatas."
-                title="Foundation status"
-              >
-                <Inline align="stretch">
-                  <FoundationCard label="Frontend" value="React + TypeScript" />
-                  <FoundationCard label="Core" value="v0.2.1" />
-                  <FoundationCard label="UI" value="v0.3.0" />
-                  <Surface className="foundation-card" tone="raised">
-                    <Stack gap="2">
-                      <span className="foundation-card__label">API</span>
-                      <StatusBadge id="api-status" tone={healthTone(health)}>
-                        {healthLabel(health)}
-                      </StatusBadge>
-                    </Stack>
-                  </Surface>
-                </Inline>
-              </Page.Section>
+              {props.health === "unavailable" ? <Alert title="API indisponível" tone="danger">Verifique se o serviço está em execução e tente novamente.</Alert> : null}
+              <AuthenticationPanel authentication={props.authentication} signingOut={props.signingOut} onLogin={props.onLogin} onRetry={props.onRetry} onSignOut={props.onSignOut} />
             </Stack>
           </Page.Content>
         </Page.Root>
@@ -169,134 +217,19 @@ export function App() {
   );
 }
 
-function AuthenticationPanel({
-  authentication,
-  signingOut,
-  onLogin,
-  onRetry,
-  onSignOut,
-}: {
-  authentication: AuthState;
-  signingOut: boolean;
-  onLogin: () => void;
-  onRetry: () => void;
-  onSignOut: () => void;
-}) {
+function AuthenticationPanel({ authentication, signingOut, onLogin, onRetry, onSignOut }: { authentication: AuthState; signingOut: boolean; onLogin: () => void; onRetry: () => void; onSignOut: () => void }) {
   switch (authentication.kind) {
-    case "checking":
-      return <Alert title="Verificando acesso">Validando a sessão da aplicação.</Alert>;
-    case "unauthenticated":
-      return (
-        <Surface className="authentication-panel" tone="raised">
-          <Stack gap="4">
-            <div>
-              <strong>Autenticação necessária</strong>
-              <p className="authentication-panel__description">
-                Entre com uma conta GitHub previamente autorizada para acessar os módulos privados.
-              </p>
-            </div>
-            <Inline>
-              <Button onClick={onLogin}>Entrar com GitHub</Button>
-            </Inline>
-          </Stack>
-        </Surface>
-      );
-    case "disabled":
-      return (
-        <Alert title="Autenticação desativada neste ambiente" tone="info">
-          Configure as variáveis OAuth para testar o acesso privado localmente.
-        </Alert>
-      );
-    case "unavailable":
-      return (
-        <Alert title="Não foi possível verificar a sessão" tone="danger">
-          <Stack gap="3">
-            <span>Tente novamente sem recarregar a página.</span>
-            <Inline>
-              <Button onClick={onRetry}>Tentar novamente</Button>
-            </Inline>
-          </Stack>
-        </Alert>
-      );
-    case "authenticated":
-      return (
-        <Surface className="authentication-panel" tone="raised">
-          <Stack gap="4">
-            <div>
-              <strong>{authentication.session.user.display_name}</strong>
-              <p className="authentication-panel__description">
-                @{authentication.session.user.login} · {roleLabel(authentication.session.user.role)}
-              </p>
-            </div>
-            <Inline>
-              <StatusBadge tone="success">Sessão ativa</StatusBadge>
-              <Button disabled={signingOut} onClick={onSignOut}>
-                {signingOut ? "Saindo" : "Sair"}
-              </Button>
-            </Inline>
-          </Stack>
-        </Surface>
-      );
+    case "checking": return <Alert title="Verificando acesso">Validando a sessão da aplicação.</Alert>;
+    case "unauthenticated": return <Surface className="authentication-panel" tone="raised"><Stack gap="4"><div><strong>Autenticação necessária</strong><p className="authentication-panel__description">Entre com uma conta GitHub previamente autorizada.</p></div><Inline><Button onClick={onLogin}>Entrar com GitHub</Button></Inline></Stack></Surface>;
+    case "disabled": return <Alert title="Autenticação desativada neste ambiente" tone="info">Configure as variáveis OAuth para testar o acesso privado localmente.</Alert>;
+    case "unavailable": return <Alert title="Não foi possível verificar a sessão" tone="danger"><Stack gap="3"><span>Tente novamente sem recarregar a página.</span><Inline><Button onClick={onRetry}>Tentar novamente</Button></Inline></Stack></Alert>;
+    case "authenticated": return <Surface className="authentication-panel" tone="raised"><Stack gap="4"><strong>{authentication.session.user.display_name}</strong><Inline><StatusBadge tone="success">Sessão ativa</StatusBadge><Button disabled={signingOut} onClick={onSignOut}>{signingOut ? "Saindo" : "Sair"}</Button></Inline></Stack></Surface>;
   }
 }
 
 function FoundationCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Surface className="foundation-card" tone="raised">
-      <Stack gap="2">
-        <span className="foundation-card__label">{label}</span>
-        <strong>{value}</strong>
-      </Stack>
-    </Surface>
-  );
+  return <Surface className="foundation-card" tone="raised"><Stack gap="2"><span className="foundation-card__label">{label}</span><strong>{value}</strong></Stack></Surface>;
 }
-
-function canManageUsers(role: "MEMBER" | "ADMIN" | "SUPERADMIN"): boolean {
-  return role === "ADMIN" || role === "SUPERADMIN";
-}
-
-function authenticationTone(authentication: AuthState): "neutral" | "success" | "danger" | "info" {
-  switch (authentication.kind) {
-    case "authenticated":
-      return "success";
-    case "unavailable":
-      return "danger";
-    case "unauthenticated":
-      return "info";
-    default:
-      return "neutral";
-  }
-}
-
-function roleLabel(role: "MEMBER" | "ADMIN" | "SUPERADMIN"): string {
-  switch (role) {
-    case "SUPERADMIN":
-      return "Superadmin";
-    case "ADMIN":
-      return "Admin";
-    default:
-      return "Membro";
-  }
-}
-
-function healthTone(health: HealthState): "neutral" | "success" | "danger" {
-  switch (health) {
-    case "available":
-      return "success";
-    case "unavailable":
-      return "danger";
-    default:
-      return "neutral";
-  }
-}
-
-function healthLabel(health: HealthState): string {
-  switch (health) {
-    case "available":
-      return "Disponível";
-    case "unavailable":
-      return "Indisponível";
-    default:
-      return "Verificando";
-  }
-}
+function canManageUsers(role: "MEMBER" | "ADMIN" | "SUPERADMIN") { return role === "ADMIN" || role === "SUPERADMIN"; }
+function roleLabel(role: "MEMBER" | "ADMIN" | "SUPERADMIN") { return role === "SUPERADMIN" ? "Superadmin" : role === "ADMIN" ? "Admin" : "Membro"; }
+function authenticationTone(authentication: AuthState): "neutral" | "success" | "danger" | "info" { return authentication.kind === "authenticated" ? "success" : authentication.kind === "unavailable" ? "danger" : authentication.kind === "unauthenticated" ? "info" : "neutral"; }
