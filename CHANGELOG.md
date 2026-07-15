@@ -8,6 +8,10 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- Canonical physical-person Profile schema with explicit identity, contact, address, notes, timestamps, and optimistic version columns.
+- Profile domain normalization and validation backed by the pinned Gymkhana Core contracts.
+- Deterministic sqlc create, get, count, list, update, duplicate, and permanent-delete queries.
+- PostgreSQL Profile adapter with stable not-found and optimistic-conflict errors.
 - GitHub OAuth sign-in with state validation and explicit allowed-login enforcement.
 - Protected session and logout endpoints backed by revocable 24-hour opaque sessions.
 - Fail-closed authentication configuration for staging and production.
