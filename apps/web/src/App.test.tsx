@@ -113,7 +113,7 @@ describe("App", () => {
     const nameFilter = screen.getByLabelText("Nome");
     fireEvent.change(nameFilter, { target: { value: "Ana" } });
     await waitFor(() => expect(window.location.search).toContain("full_name=Ana"));
-    const editor = screen.getByLabelText("full_name de Ana da Silva");
+    const editor = await screen.findByLabelText("full_name de Ana da Silva");
     fireEvent.change(editor, { target: { value: "Ana Souza" } });
     fireEvent.blur(editor);
     await waitFor(() =>
