@@ -54,8 +54,9 @@ func ParseIdentifier(value string) (Identifier, error) {
 	return identifier, nil
 }
 
-func (service *Service) ListUsers(ctx context.Context, actor Session, limit, offset int32) ([]ManagedUser, error) {
+func (service *Service) ListUsers(ctx context.Context, actor Session, limit, offset int32, requestID string) ([]ManagedUser, error) {
 	if !actor.User.Role.CanManageUsers() || !actor.User.Active {
+		service.recordAudit(ctx, &actor.User.ID, nil, AuditEventUserAdministrationAccessed, AuditOutcomeDenied, requestID, actor.User.Login)
 		return nil, ErrForbidden
 	}
 	if limit <= 0 || limit > 100 {
@@ -66,31 +67,40 @@ func (service *Service) ListUsers(ctx context.Context, actor Session, limit, off
 	}
 	store, ok := service.store.(UserAdministrationStore)
 	if !ok {
+		service.recordAudit(ctx, &actor.User.ID, nil, AuditEventUserAdministrationAccessed, AuditOutcomeFailure, requestID, actor.User.Login)
 		return nil, fmt.Errorf("%w: administration store is unavailable", ErrInvalidServiceSetup)
 	}
-	return store.ListUsers(ctx, limit, offset)
+	users, err := store.ListUsers(ctx, limit, offset)
+	if err != nil {
+		service.recordAudit(ctx, &actor.User.ID, nil, AuditEventUserAdministrationAccessed, AuditOutcomeFailure, requestID, actor.User.Login)
+		return nil, err
+	}
+	service.recordAudit(ctx, &actor.User.ID, nil, AuditEventUserAdministrationAccessed, AuditOutcomeSuccess, requestID, actor.User.Login)
+	return users, nil
 }
 
 func (service *Service) UpdateUserAccess(ctx context.Context, actor Session, params UpdateUserAccessParams, requestID string) (ManagedUser, error) {
 	if !actor.User.Role.CanManageUsers() || !actor.User.Active {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeDenied, requestID, "")
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeDenied, requestID, actor.User.Login)
 		return ManagedUser{}, ErrForbidden
 	}
 	if (params.Role != RoleMember && params.Role != RoleAdmin) || params.Version <= 0 {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeDenied, requestID, "")
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeDenied, requestID, actor.User.Login)
 		return ManagedUser{}, ErrInvalidUserAccess
 	}
 	if actor.User.ID == params.UserID {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeDenied, requestID, "")
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeDenied, requestID, actor.User.Login)
 		return ManagedUser{}, ErrSelfAccessChange
 	}
 
 	store, ok := service.store.(UserAdministrationStore)
 	if !ok {
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeFailure, requestID, actor.User.Login)
 		return ManagedUser{}, fmt.Errorf("%w: administration store is unavailable", ErrInvalidServiceSetup)
 	}
 	target, err := store.FindUserByID(ctx, params.UserID)
 	if err != nil {
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeFailure, requestID, actor.User.Login)
 		return ManagedUser{}, err
 	}
 	if target.User.Role == RoleSuperadmin {
@@ -103,9 +113,7 @@ func (service *Service) UpdateUserAccess(ctx context.Context, actor Session, par
 
 	updated, err := store.UpdateUserAccess(ctx, params)
 	if err != nil {
-		if !errors.Is(err, ErrUserAccessConflict) {
-			service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeFailure, requestID, target.User.Login)
-		}
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeFailure, requestID, target.User.Login)
 		return ManagedUser{}, err
 	}
 	if err := store.RevokeAllSessionsForUser(ctx, params.UserID); err != nil {

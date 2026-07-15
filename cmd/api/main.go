@@ -60,6 +60,15 @@ func run() error {
 		authService, err = auth.NewService(provider, auth.NewPostgresStore(pool), auth.ServiceOptions{
 			AllowedLogins:   cfg.Auth.AllowedLogins,
 			SuperadminLogin: cfg.Auth.SuperadminLogin,
+			OnAuditFailure: func(_ context.Context, event auth.AuditEvent, auditErr error) {
+				logger.Error(
+					"authentication audit event was not persisted",
+					"event_type", event.EventType,
+					"outcome", event.Outcome,
+					"request_id", event.RequestID,
+					"error", auditErr,
+				)
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("configure authentication service: %w", err)

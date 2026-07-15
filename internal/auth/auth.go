@@ -36,17 +36,24 @@ func (role Role) CanManageUsers() bool {
 type AuditEventType string
 
 const (
-	AuditEventSignInSucceeded   AuditEventType = "SIGN_IN_SUCCEEDED"
-	AuditEventSignInDenied      AuditEventType = "SIGN_IN_DENIED"
-	AuditEventSignInFailed      AuditEventType = "SIGN_IN_FAILED"
-	AuditEventSignOut           AuditEventType = "SIGN_OUT"
-	AuditEventSessionRevoked    AuditEventType = "SESSION_REVOKED"
-	AuditEventUserAccessChanged AuditEventType = "USER_ACCESS_CHANGED"
+	AuditEventSignInSucceeded            AuditEventType = "SIGN_IN_SUCCEEDED"
+	AuditEventSignInDenied               AuditEventType = "SIGN_IN_DENIED"
+	AuditEventSignInFailed               AuditEventType = "SIGN_IN_FAILED"
+	AuditEventSignOut                    AuditEventType = "SIGN_OUT"
+	AuditEventSessionRevoked             AuditEventType = "SESSION_REVOKED"
+	AuditEventUserAdministrationAccessed AuditEventType = "USER_ADMINISTRATION_ACCESSED"
+	AuditEventUserAccessChanged          AuditEventType = "USER_ACCESS_CHANGED"
 )
 
 func (eventType AuditEventType) Valid() bool {
 	switch eventType {
-	case AuditEventSignInSucceeded, AuditEventSignInDenied, AuditEventSignInFailed, AuditEventSignOut, AuditEventSessionRevoked, AuditEventUserAccessChanged:
+	case AuditEventSignInSucceeded,
+		AuditEventSignInDenied,
+		AuditEventSignInFailed,
+		AuditEventSignOut,
+		AuditEventSessionRevoked,
+		AuditEventUserAdministrationAccessed,
+		AuditEventUserAccessChanged:
 		return true
 	default:
 		return false

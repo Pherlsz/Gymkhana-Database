@@ -14,6 +14,13 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 - Authentication-aware web shell with login, current-user, role, and sign-out states.
 - Authentication persistence foundations for users, opaque sessions, and essential audit events.
 - Stable role, audit-event, and 24-hour session lifecycle contracts.
+- Centralized `MEMBER`, `ADMIN`, and protected `SUPERADMIN` authorization.
+- Minimal user-administration API and responsive interface with optimistic access updates.
+- Automatic per-user session revocation after effective role or active-status changes.
+- Credentialed CORS and exact-origin validation derived from `AUTH_APPLICATION_URL`.
+- Complete authentication and administration audit outcomes with observable persistence failures.
+- Safe `make check-config` environment preflight and authentication operations runbook.
+- Synthetic end-to-end M2 authentication, administration, audit, and revocation validation.
 - Typed environment, log-level, request-body limit, and shutdown configuration validation.
 - Stable JSON API error envelopes, request boundaries, and request-ID propagation.
 - Generated-contract-based frontend API helpers with structured error metadata.
@@ -25,6 +32,7 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 - Pinned Gymkhana Core `v0.2.1` and Gymkhana UI `0.3.0`.
 - Updated `openapi-typescript` from `7.10.1` to `7.13.0`.
 - Added authenticated private Core access to CI, security, OpenAPI, deployment, and container builds.
+- Expanded audit correlation to invalid OAuth callbacks, failed sign-out, administration access, access conflicts, and session revocation.
 
 ## [0.0.0] - 2026-07-13
 

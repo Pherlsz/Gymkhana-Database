@@ -28,7 +28,9 @@ type fakeStore struct {
 	authSession      Session
 	authSessionError error
 	revokedHash      []byte
+	revokeError      error
 	audits           []AuditEvent
+	auditError       error
 }
 
 func (store *fakeStore) FindUserByGitHubID(context.Context, int64) (User, error) {
@@ -70,10 +72,13 @@ func (store *fakeStore) TouchSession(context.Context, Identifier) error { return
 
 func (store *fakeStore) RevokeSessionByTokenHash(_ context.Context, hash []byte) error {
 	store.revokedHash = append([]byte(nil), hash...)
-	return nil
+	return store.revokeError
 }
 
 func (store *fakeStore) RecordAuditEvent(_ context.Context, event AuditEvent) error {
+	if store.auditError != nil {
+		return store.auditError
+	}
 	store.audits = append(store.audits, event)
 	return nil
 }
@@ -113,6 +118,23 @@ func TestServiceBootstrapsAllowedSuperadminAndSession(t *testing.T) {
 		t.Fatalf("session = %#v", store.createdSession)
 	}
 	if len(store.audits) != 1 || store.audits[0].EventType != AuditEventSignInSucceeded {
+		t.Fatalf("audits = %#v", store.audits)
+	}
+}
+
+func TestServiceAuditsInvalidOAuthCode(t *testing.T) {
+	store := &fakeStore{}
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{
+		AllowedLogins: []string{"admin"}, SuperadminLogin: "admin",
+	})
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+
+	if _, err := service.CompleteLogin(context.Background(), " ", "request-invalid-code"); !errors.Is(err, ErrInvalidOAuthCode) {
+		t.Fatalf("CompleteLogin() error = %v, want %v", err, ErrInvalidOAuthCode)
+	}
+	if len(store.audits) != 1 || store.audits[0].EventType != AuditEventSignInFailed || store.audits[0].RequestID != "request-invalid-code" {
 		t.Fatalf("audits = %#v", store.audits)
 	}
 }
@@ -187,8 +209,51 @@ func TestServiceReadsAndRevokesOpaqueSession(t *testing.T) {
 	if len(store.revokedHash) != 32 {
 		t.Fatalf("revoked hash length = %d", len(store.revokedHash))
 	}
-	if len(store.audits) != 1 || store.audits[0].EventType != AuditEventSignOut {
+	if len(store.audits) != 1 || store.audits[0].EventType != AuditEventSignOut || store.audits[0].Outcome != AuditOutcomeSuccess {
 		t.Fatalf("audits = %#v", store.audits)
+	}
+}
+
+func TestServiceAuditsSignOutFailure(t *testing.T) {
+	userID, _ := NewIdentifier()
+	store := &fakeStore{
+		authSession: Session{User: User{ID: userID, Login: "member"}},
+		revokeError: errors.New("database unavailable"),
+	}
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{
+		AllowedLogins: []string{"admin"}, SuperadminLogin: "admin",
+	})
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+
+	if err := service.SignOut(context.Background(), "opaque-session", "request-signout-failure"); err == nil {
+		t.Fatal("SignOut() error = nil")
+	}
+	if len(store.audits) != 1 || store.audits[0].EventType != AuditEventSignOut || store.audits[0].Outcome != AuditOutcomeFailure {
+		t.Fatalf("audits = %#v", store.audits)
+	}
+}
+
+func TestServiceReportsAuditPersistenceFailure(t *testing.T) {
+	store := &fakeStore{auditError: errors.New("audit database unavailable")}
+	var reported AuditEvent
+	var reportedErr error
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{
+		AllowedLogins:   []string{"admin"},
+		SuperadminLogin: "admin",
+		OnAuditFailure: func(_ context.Context, event AuditEvent, err error) {
+			reported = event
+			reportedErr = err
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+
+	_, _ = service.CompleteLogin(context.Background(), "", "request-audit-failure")
+	if reported.EventType != AuditEventSignInFailed || reported.RequestID != "request-audit-failure" || reportedErr == nil {
+		t.Fatalf("reported = %#v, error = %v", reported, reportedErr)
 	}
 }
 

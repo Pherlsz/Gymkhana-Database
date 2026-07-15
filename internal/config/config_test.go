@@ -25,6 +25,18 @@ func clearConfiguration(t *testing.T) {
 	}
 }
 
+func setValidLocalAuthentication(t *testing.T) {
+	t.Helper()
+	t.Setenv("AUTH_ENABLED", "true")
+	t.Setenv("DATABASE_URL", "postgres://localhost/gymkhana")
+	t.Setenv("GITHUB_OAUTH_CLIENT_ID", "client-id")
+	t.Setenv("GITHUB_OAUTH_CLIENT_SECRET", "client-secret")
+	t.Setenv("GITHUB_OAUTH_REDIRECT_URL", "http://localhost:8080/auth/callback")
+	t.Setenv("AUTH_APPLICATION_URL", "http://localhost:5173")
+	t.Setenv("AUTH_ALLOWED_GITHUB_LOGINS", " Pherlsz, member,PHERLSZ ")
+	t.Setenv("AUTH_SUPERADMIN_GITHUB_LOGIN", "Pherlsz")
+}
+
 func TestLoadUsesSafeTypedDefaults(t *testing.T) {
 	clearConfiguration(t)
 
@@ -89,14 +101,7 @@ func TestLoadRequiresDatabaseOutsideLocalAndTest(t *testing.T) {
 
 func TestLoadValidatesEnabledAuthentication(t *testing.T) {
 	clearConfiguration(t)
-	t.Setenv("AUTH_ENABLED", "true")
-	t.Setenv("DATABASE_URL", "postgres://localhost/gymkhana")
-	t.Setenv("GITHUB_OAUTH_CLIENT_ID", "client-id")
-	t.Setenv("GITHUB_OAUTH_CLIENT_SECRET", "client-secret")
-	t.Setenv("GITHUB_OAUTH_REDIRECT_URL", "http://localhost:8080/auth/callback")
-	t.Setenv("AUTH_APPLICATION_URL", "http://localhost:5173")
-	t.Setenv("AUTH_ALLOWED_GITHUB_LOGINS", " Pherlsz, member,PHERLSZ ")
-	t.Setenv("AUTH_SUPERADMIN_GITHUB_LOGIN", "Pherlsz")
+	setValidLocalAuthentication(t)
 
 	cfg, err := Load()
 	if err != nil {
@@ -116,12 +121,45 @@ func TestLoadValidatesEnabledAuthentication(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsUnsafeAuthenticationURLs(t *testing.T) {
+	tests := []struct {
+		name           string
+		redirectURL    string
+		applicationURL string
+	}{
+		{name: "redirect scheme", redirectURL: "ftp://localhost/auth/callback"},
+		{name: "redirect path", redirectURL: "http://localhost:8080/callback"},
+		{name: "redirect credentials", redirectURL: "http://user:pass@localhost:8080/auth/callback"},
+		{name: "redirect query", redirectURL: "http://localhost:8080/auth/callback?code=example"},
+		{name: "redirect fragment", redirectURL: "http://localhost:8080/auth/callback#fragment"},
+		{name: "application scheme", applicationURL: "file:///tmp/app"},
+		{name: "application credentials", applicationURL: "http://user:pass@localhost:5173"},
+		{name: "application query", applicationURL: "http://localhost:5173?mode=admin"},
+		{name: "application fragment", applicationURL: "http://localhost:5173#admin"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			clearConfiguration(t)
+			setValidLocalAuthentication(t)
+			if test.redirectURL != "" {
+				t.Setenv("GITHUB_OAUTH_REDIRECT_URL", test.redirectURL)
+			}
+			if test.applicationURL != "" {
+				t.Setenv("AUTH_APPLICATION_URL", test.applicationURL)
+			}
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() error = nil, want URL validation error")
+			}
+		})
+	}
+}
+
 func TestLoadRequiresSecureCompleteAuthenticationOutsideDevelopment(t *testing.T) {
 	clearConfiguration(t)
+	setValidLocalAuthentication(t)
 	t.Setenv("APP_ENV", "production")
 	t.Setenv("DATABASE_URL", "postgres://database/gymkhana")
-	t.Setenv("GITHUB_OAUTH_CLIENT_ID", "client-id")
-	t.Setenv("GITHUB_OAUTH_CLIENT_SECRET", "client-secret")
 	t.Setenv("GITHUB_OAUTH_REDIRECT_URL", "https://api.database.example/auth/callback")
 	t.Setenv("AUTH_APPLICATION_URL", "https://database.example")
 	t.Setenv("AUTH_ALLOWED_GITHUB_LOGINS", "pherlsz")

@@ -1,8 +1,8 @@
 # Gymkhana Database — Documento de Orquestração
 
 > **Planning version:** Stage 10  
-> **Última sincronização:** 2026-07-13  
-> **Etapa atual:** Etapa 10 concluída — implementação M0 autorizada  
+> **Última sincronização:** 2026-07-15  
+> **Etapa atual:** M2 concluído — M3 autorizado após validação final  
 > **Fonte principal de verdade:** `Pherlsz/Gymkhana-Database/docs/ORCHESTRATION.md`  
 > **Repositórios relacionados:** `Pherlsz/Gymkhana-UI` e `Pherlsz/Gymkhana-Core`
 
@@ -153,7 +153,7 @@ Regras:
 - optimistic concurrency por `version` e `412`;
 - `Idempotency-Key` em operações críticas;
 - sessão opaca, cookie Secure/HttpOnly/SameSite=Lax e hash no banco;
-- Google OAuth + allowlist;
+- GitHub OAuth + allowlist;
 - CSRF e validação de `Origin`;
 - roles MEMBER, ADMIN e exatamente um SUPERADMIN ativo;
 - autorização por permissions centralizadas;

@@ -7,13 +7,20 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const DefaultMaxBodyBytes int64 = 1 << 20
+
+const (
+	corsAllowedMethods = "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS"
+	corsAllowedHeaders = "Accept, Content-Type"
+)
 
 type Options struct {
 	MaxBodyBytes   int64
@@ -62,7 +69,8 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerAdministrationRoutes(mux, logger, settings.Auth)
 	mux.HandleFunc("/", fallbackHandler)
 
-	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, mux))))
+	applicationOrigin := absoluteOrigin(settings.ApplicationURL)
+	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, browserOriginMiddleware(applicationOrigin, mux)))))
 }
 
 type contextKey string
@@ -85,6 +93,53 @@ func bodyLimitMiddleware(limit int64, next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func browserOriginMiddleware(applicationOrigin string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := strings.TrimSpace(r.Header.Get("Origin"))
+		trustedOrigin := applicationOrigin != "" && origin == applicationOrigin
+		if trustedOrigin {
+			w.Header().Set("Access-Control-Allow-Origin", applicationOrigin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Add("Vary", "Origin")
+		}
+
+		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+			if !trustedOrigin {
+				writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "Request origin is not allowed"})
+				return
+			}
+			w.Header().Set("Access-Control-Allow-Methods", corsAllowedMethods)
+			w.Header().Set("Access-Control-Allow-Headers", corsAllowedHeaders)
+			w.Header().Set("Access-Control-Max-Age", "600")
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		if applicationOrigin != "" && !isSafeMethod(r.Method) && !trustedOrigin {
+			writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "Request origin is not allowed"})
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func absoluteOrigin(value string) string {
+	parsed, err := url.Parse(value)
+	if err != nil || !parsed.IsAbs() || parsed.Host == "" {
+		return ""
+	}
+	return (&url.URL{Scheme: strings.ToLower(parsed.Scheme), Host: strings.ToLower(parsed.Host)}).String()
+}
+
+func isSafeMethod(method string) bool {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodTrace:
+		return true
+	default:
+		return false
+	}
 }
 
 func securityHeaders(next http.Handler) http.Handler {
