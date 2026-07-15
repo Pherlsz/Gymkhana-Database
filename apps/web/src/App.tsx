@@ -13,8 +13,12 @@ import {
   APIRequestError,
   apiURL,
   getAuthSession,
+  listUsers,
   logout,
+  updateUserAccess,
   type AuthSessionResponse,
+  type ManagedUser,
+  type UserAccessUpdate,
 } from "./lib/api/client";
 import { checkLiveHealth } from "./lib/api/health";
 
@@ -93,7 +97,7 @@ export function App() {
           {authentication.kind === "authenticated" ? (
             <span className="current-user">@{authentication.session.user.login}</span>
           ) : null}
-          <StatusBadge tone={authenticationTone(authentication)}>M2 authentication</StatusBadge>
+          <StatusBadge tone={authenticationTone(authentication)}>M2 authorization</StatusBadge>
         </Inline>
       </AppShell.Header>
       <AppShell.Main>
@@ -102,8 +106,7 @@ export function App() {
             <Page.Eyebrow>Private application access</Page.Eyebrow>
             <Page.Title>Gymkhana Database</Page.Title>
             <Page.Description>
-              Acesso privado com GitHub, sessões revogáveis de 24 horas e permissões vinculadas ao
-              usuário da aplicação.
+              Acesso privado com GitHub, sessões revogáveis e permissões centralizadas por papel.
             </Page.Description>
             <Page.Actions>
               <Button
@@ -131,6 +134,11 @@ export function App() {
                 onRetry={() => void refreshAuthentication()}
                 onSignOut={() => void signOut()}
               />
+
+              {authentication.kind === "authenticated" &&
+              authentication.session.capabilities.manage_users ? (
+                <UserAdministration currentLogin={authentication.session.user.login} />
+              ) : null}
 
               <Page.Section
                 description="A infraestrutura compartilhada continua consumida somente por versões exatas."
@@ -227,6 +235,155 @@ function AuthenticationPanel({
         </Surface>
       );
   }
+}
+
+function UserAdministration({ currentLogin }: { currentLogin: string }) {
+  const [users, setUsers] = useState<ManagedUser[]>([]);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+
+  const refresh = useCallback(async (signal?: AbortSignal) => {
+    setState("loading");
+    try {
+      setUsers(await listUsers(signal));
+      setState("ready");
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      setState("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void refresh(controller.signal);
+    return () => controller.abort();
+  }, [refresh]);
+
+  const replaceUser = useCallback((updated: ManagedUser) => {
+    setUsers((current) => current.map((user) => (user.id === updated.id ? updated : user)));
+  }, []);
+
+  return (
+    <Page.Section
+      description="Administradores podem alterar membros e administradores. O superadmin e a própria conta permanecem protegidos."
+      title="Administração de usuários"
+    >
+      <Stack gap="4">
+        {state === "loading" ? <Alert title="Carregando usuários">Aguarde.</Alert> : null}
+        {state === "error" ? (
+          <Alert title="Não foi possível carregar os usuários" tone="danger">
+            <Inline>
+              <Button onClick={() => void refresh()}>Tentar novamente</Button>
+            </Inline>
+          </Alert>
+        ) : null}
+        {state === "ready" && users.length === 0 ? (
+          <Alert title="Nenhum usuário encontrado">A lista está vazia.</Alert>
+        ) : null}
+        {state === "ready"
+          ? users.map((user) => (
+              <ManagedUserEditor
+                key={user.id}
+                current={user.login === currentLogin}
+                onUpdated={replaceUser}
+                user={user}
+              />
+            ))
+          : null}
+      </Stack>
+    </Page.Section>
+  );
+}
+
+function ManagedUserEditor({
+  current,
+  onUpdated,
+  user,
+}: {
+  current: boolean;
+  onUpdated: (updated: ManagedUser) => void;
+  user: ManagedUser;
+}) {
+  const [role, setRole] = useState<"MEMBER" | "ADMIN">(
+    user.role === "ADMIN" ? "ADMIN" : "MEMBER",
+  );
+  const [active, setActive] = useState(user.active);
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const locked = user.protected || current;
+
+  useEffect(() => {
+    setRole(user.role === "ADMIN" ? "ADMIN" : "MEMBER");
+    setActive(user.active);
+  }, [user]);
+
+  const save = useCallback(async () => {
+    setSaving(true);
+    setFailed(false);
+    try {
+      const update: UserAccessUpdate = { role, active, version: user.version };
+      onUpdated(await updateUserAccess(user.id, update));
+    } catch {
+      setFailed(true);
+    } finally {
+      setSaving(false);
+    }
+  }, [active, onUpdated, role, user.id, user.version]);
+
+  const changed = role !== user.role || active !== user.active;
+
+  return (
+    <Surface className="managed-user" tone="raised">
+      <Stack gap="4">
+        <Inline align="center" justify="space-between">
+          <div>
+            <strong>{user.display_name}</strong>
+            <p className="managed-user__identity">@{user.login}</p>
+          </div>
+          <Inline align="center">
+            {current ? <StatusBadge tone="info">Sua conta</StatusBadge> : null}
+            {user.protected ? <StatusBadge tone="neutral">Protegido</StatusBadge> : null}
+            <StatusBadge tone={user.active ? "success" : "neutral"}>
+              {user.active ? "Ativo" : "Inativo"}
+            </StatusBadge>
+          </Inline>
+        </Inline>
+
+        <div className="managed-user__controls">
+          <label>
+            <span>Papel</span>
+            <select
+              disabled={locked || saving}
+              onChange={(event) => setRole(event.target.value as "MEMBER" | "ADMIN")}
+              value={role}
+            >
+              <option value="MEMBER">Membro</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </label>
+          <label className="managed-user__checkbox">
+            <input
+              checked={active}
+              disabled={locked || saving}
+              onChange={(event) => setActive(event.target.checked)}
+              type="checkbox"
+            />
+            <span>Acesso ativo</span>
+          </label>
+          <Button disabled={locked || saving || !changed} onClick={() => void save()}>
+            {saving ? "Salvando" : "Salvar acesso"}
+          </Button>
+        </div>
+
+        {failed ? (
+          <Alert title="Alteração não salva" tone="danger">
+            Recarregue a lista e tente novamente.
+          </Alert>
+        ) : null}
+      </Stack>
+    </Surface>
+  );
 }
 
 function FoundationCard({ label, value }: { label: string; value: string }) {
