@@ -1,13 +1,330 @@
 # Gymkhana Database — Regras de Produto, Domínio e Arquitetura
 
 > **Escopo deste documento:** decisões permanentes aprovadas para o rebuild do Gymkhana Database.  
-> **Não pertence a este documento:** progresso de desenvolvimento, milestone atual, próxima ação, branches, PRs, versões publicadas, releases ou checklists de execução.  
+> **Inclui:** regras de negócio, domínio, arquitetura, stack escolhida, responsabilidades técnicas, alternativas rejeitadas e os motivos das decisões.  
+> **Não inclui:** progresso de desenvolvimento, milestone atual, próxima ação, branches, PRs, versões publicadas, releases ou checklists de execução.  
 > **Acompanhamento operacional único:** [issue mestre #31](https://github.com/Pherlsz/Gymkhana-Database/issues/31).  
 > **Repositórios relacionados:** `Pherlsz/Gymkhana-UI` e `Pherlsz/Gymkhana-Core`.
 
-Este arquivo é a fonte permanente das regras de produto e das invariantes arquiteturais. Ele só deve mudar quando uma decisão aprovada de negócio, domínio, segurança, experiência ou arquitetura for alterada.
+Este arquivo é a fonte permanente das regras de produto e das invariantes arquiteturais. Ele só deve mudar quando uma decisão aprovada de negócio, domínio, segurança, experiência, stack ou arquitetura for alterada.
 
 Nenhum documento adicional deve ser criado para acompanhar andamento, aceite de milestone ou próxima ação. Documentação técnica específica pode existir quando necessária para operar uma funcionalidade real, mas não substitui a issue mestre como tracker e não deve duplicar o estado do projeto.
+
+## Arquitetura escolhida e racional
+
+Esta seção registra não apenas **o que** foi escolhido, mas também **por que** foi escolhido. Esses motivos fazem parte da arquitetura e devem ser preservados para impedir que uma implementação futura reintroduza complexidade já rejeitada.
+
+### Topologia da aplicação
+
+```text
+React SPA
+   │
+   ▼
+cmd/api ───────────────► PostgreSQL / Neon
+   │                           ▲
+   │                           │
+   ├──────────────► Cloudflare R2
+   │
+   └──────────────► providers externos aprovados
+
+cmd/worker ─────────────► PostgreSQL / River / providers
+
+cmd/migrate ────────────► PostgreSQL
+```
+
+Executáveis e responsabilidades:
+
+- `React SPA`: interface privada, rotas, formulários, grids, Search, AI Chat e administração;
+- `cmd/api`: HTTP, autenticação, autorização, contratos, composição de módulos e operações síncronas;
+- `cmd/worker`: jobs reais, imports, matching, OCR, processamento pesado e housekeeping quando esses módulos existirem;
+- `cmd/migrate`: aplicação e inspeção explícita de migrations, separado do lifecycle do servidor;
+- nenhum executável contém regras de domínio em `cmd`; `cmd` apenas configura e compõe dependências.
+
+**Motivo da separação:** API, worker e migrations possuem lifecycle, escala e permissões diferentes. Separá-los evita que deploy web execute migrations automaticamente, permite que jobs escalem independentemente e mantém o backend como um único produto modular, sem virar microserviços.
+
+### Baseline tecnológica aprovada
+
+As versões abaixo representam a baseline arquitetural definida para o rebuild. Atualizações compatíveis podem ocorrer nos manifests e PRs sem transformar o Orchestration em tracker de versões, desde que não alterem os contratos e motivos registrados aqui.
+
+#### Backend e dados
+
+- Go 1.26;
+- biblioteca padrão `net/http`;
+- pgx v5;
+- sqlc;
+- PostgreSQL;
+- Tern v2;
+- River OSS quando existirem jobs reais;
+- OpenAPI 3.1;
+- oapi-codegen em modo strict server;
+- SQL explícito, parametrizado e versionado;
+- executáveis compilados como binários independentes.
+
+#### Frontend
+
+- React 19;
+- TypeScript 6 como baseline inicial;
+- Vite 8;
+- Node.js 24 LTS;
+- pnpm 11;
+- TanStack Router;
+- TanStack Query;
+- TanStack Table;
+- TanStack Virtual;
+- TanStack Form;
+- Valibot;
+- openapi-typescript e openapi-fetch;
+- Gymkhana-UI como pacote privado;
+- Lucide para ícones.
+
+#### Infraestrutura
+
+- PostgreSQL gerenciado no Neon;
+- Vercel para a SPA;
+- Cloud Run Service para a API;
+- Cloud Run Job para o worker;
+- Cloud Scheduler para recovery e housekeeping;
+- Cloudflare R2 para arquivos privados;
+- Cloudflare Access apenas como camada externa opcional.
+
+#### Qualidade e geração
+
+- gofmt, `go vet`, race tests, Staticcheck e govulncheck no backend;
+- Oxlint, Oxfmt, Vitest, typecheck e build de produção no frontend;
+- OSV-Scanner e dependency review para dependências;
+- OpenAPI e sqlc gerados deterministicamente e versionados;
+- Actions pinadas e workflows separados por responsabilidade.
+
+### Por que monólito modular
+
+Foi escolhido um **monólito modular**, não microserviços, porque:
+
+- o produto é privado, com grupo fechado e volume operacional moderado;
+- módulos possuem muitas transações e relações compartilhadas;
+- deployment, debugging, migrations e consistência são mais simples em uma aplicação;
+- limites de domínio podem ser preservados por packages e contratos sem custo de rede;
+- microserviços adicionariam observabilidade distribuída, retries, versionamento entre serviços e operação sem ganho proporcional;
+- a arquitetura ainda permite separar API e worker por processo sem fragmentar o domínio em serviços independentes.
+
+Microserviços só podem ser reconsiderados quando houver evidência concreta de escala, isolamento operacional ou ownership que justifique a complexidade.
+
+### Por que Go no backend
+
+Go foi escolhido para reduzir complexidade e produzir um backend previsível:
+
+- tipagem estática e toolchain simples;
+- binários pequenos e fáceis de executar em containers/Cloud Run;
+- baixo consumo de memória e inicialização rápida;
+- concorrência adequada para HTTP, imports, streaming e jobs;
+- excelente suporte a PostgreSQL e geração de contratos;
+- menor superfície de dependências que frameworks backend maiores;
+- facilita separar domínio puro de adapters de banco, HTTP e providers.
+
+Não haverá backend Node paralelo. Manter uma única linguagem no servidor evita duplicação de modelos, regras, ferramentas e runtime.
+
+### Por que `net/http` e não um framework web obrigatório
+
+A biblioteca padrão foi escolhida porque:
+
+- cobre o volume e as necessidades do produto;
+- reduz lock-in e dependências transitivas;
+- mantém middleware, timeouts, body limits e lifecycle explícitos;
+- integra diretamente com handlers gerados pelo OpenAPI;
+- evita abstrações de framework que escondam contratos HTTP ou dificultem testes.
+
+Uma biblioteca auxiliar pequena pode ser adotada quando resolver um problema real, mas não deve substituir o contrato explícito do HTTP nem criar uma arquitetura baseada no framework.
+
+### Por que PostgreSQL e Neon
+
+PostgreSQL foi escolhido em vez de MongoDB, Firebase ou um armazenamento documental como base principal porque o produto depende de:
+
+- relações fortes entre Profiles, documentos, contas, usos, custom data e anexos;
+- constraints, transações e concorrência otimista;
+- joins e filtros cruzados;
+- agregações, patterns, sets e combinações;
+- candidate generation de duplicatas;
+- Query Engine e consultas ad hoc controladas;
+- integridade referencial e migrations explícitas.
+
+Neon foi escolhido como PostgreSQL gerenciado porque reduz operação inicial, possui boa integração com ambientes serverless e permite começar com custo baixo. O desenho deve manter processamento próximo ao banco e evitar transferência desnecessária para respeitar limites de egress.
+
+Firebase/MongoDB poderiam simplificar CRUD isolado, mas tornariam mais complexas as consultas relacionais e combinatórias que são o objetivo central do produto.
+
+### Por que pgx + sqlc + SQL explícito, sem ORM
+
+O produto é orientado a dados e consultas complexas. SQL explícito foi escolhido porque:
+
+- permite controlar joins, índices, locks, paginação e planos de execução;
+- evita queries ocultas, N+1 e comportamento implícito de ORM;
+- aproveita recursos reais do PostgreSQL;
+- mantém performance e egress previsíveis;
+- permite que o Query Engine tenha uma fronteira clara de compilação;
+- sqlc gera tipos Go a partir do SQL aprovado, reduzindo boilerplate sem retirar controle;
+- pgx oferece integração PostgreSQL direta e eficiente.
+
+Não introduzir ORM como segunda camada de persistência. Isso criaria dois modelos de acesso e tornaria mais difícil entender qual SQL realmente é executado.
+
+### Por que Tern para migrations
+
+Tern foi escolhido para migrations SQL ordenadas e explícitas porque:
+
+- combina com pgx/sqlc e com a decisão de usar SQL diretamente;
+- é leve e previsível;
+- permite validar banco vazio, upgrade e rollback onde aplicável;
+- não acopla schema a um ORM;
+- mantém migrations revisáveis como parte do produto.
+
+Migrations não são executadas automaticamente pelo container do banco nem silenciosamente no startup da API.
+
+### Por que REST JSON + OpenAPI, sem GraphQL
+
+REST com OpenAPI foi escolhido porque:
+
+- as operações do produto possuem contratos claros e autorizáveis;
+- geração determinística mantém Go e TypeScript sincronizados;
+- facilita validação, documentação, testes e error envelopes estáveis;
+- torna caching, idempotência e semântica HTTP explícitos;
+- reduz a superfície de autorização dinâmica e complexidade de GraphQL;
+- combina com ferramentas tipadas do Query Engine sem expor o schema físico.
+
+GraphQL não é necessário para permitir consultas flexíveis. Flexibilidade pertence ao QueryPlan/Query Engine tipado, não a uma API que exponha livremente o grafo de dados.
+
+### Por que React SPA + Vite, sem SSR
+
+A aplicação é privada e autenticada; SEO e renderização pública não são requisitos. SPA com Vite foi escolhida porque:
+
+- reduz infraestrutura e lifecycle de servidor frontend;
+- possui desenvolvimento e build rápidos;
+- pode ser entregue como assets estáticos pela Vercel;
+- mantém a API como única autoridade de dados e segurança;
+- simplifica deploy, preview e rollback;
+- evita duplicar lógica entre renderização servidor/cliente.
+
+SSR só deve ser reconsiderado se surgir um requisito real de conteúdo público indexável ou uma limitação comprovada da SPA.
+
+### Por que TanStack e divisão explícita de estado
+
+Cada categoria de estado possui um responsável:
+
+- TanStack Router: URL, filtros, paginação, sorting, grouping e tabs navegáveis;
+- TanStack Query: cache e estado vindo do servidor;
+- TanStack Form: lifecycle dos formulários;
+- TanStack Table/Virtual: grids e grandes listas;
+- React: estado visual transitório;
+- backend: preferências persistentes.
+
+Redux/Zustand foram rejeitados inicialmente porque criariam outra fonte global de estado, duplicando Router e Query sem necessidade comprovada. Podem ser reconsiderados apenas para um problema que não seja resolvido por essa divisão.
+
+### Por que Valibot
+
+Valibot foi escolhido para validação frontend porque:
+
+- é TypeScript-first;
+- possui composição explícita;
+- mantém bundles e dependências enxutos;
+- integra bem com TanStack Form;
+- serve para validar a borda da UI sem tentar substituir as validações autoritativas do backend.
+
+### Por que uma UI própria e Gymkhana-UI
+
+Ant Design, Material UI e shadcn não são a base visual do produto. A UI própria foi escolhida porque:
+
+- a identidade visual deve permanecer controlada pelo projeto;
+- os componentes precisam funcionar em grids densos, formulários e ferramentas internas específicas;
+- reduz dependência de APIs e estilos de terceiros;
+- permite reutilizar primitives nos demais projetos Gymkhana;
+- evita carregar dezenas de componentes ou padrões que não serão usados;
+- mantém temas, densidade e acessibilidade sob controle do projeto.
+
+Essas bibliotecas podem ser usadas como referência de comportamento, não como dependência principal. Lucide foi escolhido por oferecer ícones consistentes, amplos e reutilizáveis sem acoplar o design a uma biblioteca de componentes.
+
+Gymkhana-UI recebe apenas componentes com contrato ou reutilização comprovada. Componentes específicos permanecem no Database até justificar extração.
+
+### Por que Gymkhana-Core separado
+
+Gymkhana-Core concentra lógica Go pura e independente de infraestrutura, como:
+
+- normalização;
+- datas civis;
+- canonicalização;
+- fingerprints;
+- algoritmos de matching/solver quando comprovadamente reutilizáveis.
+
+A separação evita copiar lógica entre aplicações, mas não deve virar um repositório genérico de abstrações prematuras. O Database continua dono das regras de produto e dos adapters.
+
+### Por que River e não Redis/RabbitMQ
+
+River foi escolhido para jobs quando eles realmente existirem porque:
+
+- usa PostgreSQL já presente na arquitetura;
+- reduz um serviço operacional adicional;
+- permite coordenação transacional com dados do produto;
+- é suficiente para imports, matching, OCR, retries e housekeeping previstos;
+- preserva observabilidade e idempotência sem uma fila fictícia permanente.
+
+Redis e RabbitMQ não entram inicialmente porque o produto ainda não possui necessidade de throughput ou fan-out que justifique outra infraestrutura.
+
+### Por que Vercel, Cloud Run, R2 e Cloud Scheduler
+
+- **Vercel para SPA:** entrega de assets e previews simples, alinhada ao frontend Vite; pushes devem ser consolidados para evitar builds desnecessários.
+- **Cloud Run Service para API:** executa o binário Go em container, suporta scale-to-zero e mantém caminho coerente para infraestrutura GCP futura.
+- **Cloud Run Job para worker:** jobs possuem lifecycle diferente da API e não devem ocupar processo HTTP permanente.
+- **Cloud Scheduler:** dispara recovery/housekeeping sem criar servidor de cron próprio.
+- **Cloudflare R2:** separa blobs privados do PostgreSQL, suporta URLs assinadas e reduz dependência de filesystem local.
+
+Railway foi rejeitado porque adicionaria outra plataforma/custo sem necessidade, enquanto Vercel + Neon + Cloud Run cobrem as responsabilidades definidas e mantêm uma rota de evolução mais clara.
+
+### Por que Cloudflare Access é opcional
+
+Cloudflare Access pode filtrar acesso antes da aplicação, mas não substitui:
+
+- GitHub OAuth;
+- sessão da aplicação;
+- roles e permissions;
+- auditoria;
+- constraints de domínio.
+
+Isso evita que a segurança interna dependa exclusivamente de uma configuração externa e permite executar localmente sem reproduzir toda a camada Cloudflare.
+
+### Por que não usar OpenTelemetry inicialmente
+
+OpenTelemetry não faz parte da baseline porque:
+
+- o produto começa como monólito modular e grupo fechado;
+- logs estruturados, request IDs, auditoria e métricas da plataforma cobrem o diagnóstico inicial;
+- instrumentação distribuída adicionaria dependências, configuração e custo operacional antes de existir sistema distribuído;
+- pode ser reconsiderado quando houver uma necessidade observável que as ferramentas atuais não resolvam.
+
+### Por que não usar agent framework como base do AI Chat
+
+AI Chat e tarefas complexas usam ferramentas tipadas e Query Engine próprio porque:
+
+- o domínio exige controle exato sobre catálogo, permissões e planos;
+- frameworks de agentes podem esconder loops, estado e custos;
+- a segurança depende de impedir SQL e ações arbitrárias;
+- result sets, referências e explicações são contratos do produto;
+- evita lock-in em CrewAI, LangGraph ou framework equivalente para uma função que pode ser implementada com primitives explícitas.
+
+Frameworks podem ser avaliados como implementação interna futura, mas não podem substituir os contratos do produto ou se tornar requisito arquitetural obrigatório.
+
+### Alternativas rejeitadas na baseline
+
+Sem nova decisão fundamentada, não introduzir como arquitetura principal:
+
+- microserviços;
+- backend Node;
+- SSR;
+- GraphQL;
+- ORM;
+- MongoDB/Firebase como banco canônico;
+- Redis ou RabbitMQ;
+- Redux/Zustand;
+- Ant Design, Material UI ou shadcn como base da UI;
+- Railway;
+- OpenTelemetry por padrão;
+- agent framework obrigatório;
+- MinIO local sem uso real;
+- qualquer serviço criado apenas para representar arquitetura futura.
 
 ## 1. Objetivo do produto
 
@@ -455,6 +772,8 @@ Não deve existir um planner limitado a tipos fixos de pergunta ou `field hints`
 
 ## 23. Arquitetura técnica permanente
 
+Esta seção resume as invariantes. A seção “Arquitetura escolhida e racional” registra a stack detalhada e os motivos.
+
 ### 23.1 Aplicação
 
 - Monólito modular.
@@ -581,10 +900,11 @@ Sem nova decisão explícita, não adicionar:
 
 ## 27. Governança deste documento
 
-- Este arquivo contém somente regras permanentes de produto, domínio, segurança, experiência e arquitetura.
-- Não registrar aqui milestone atual, progresso, checklist, próxima ação, branch, PR, release ou versão instalada.
+- Este arquivo contém regras permanentes de produto, domínio, segurança, experiência, stack, racional arquitetural e limites técnicos.
+- Não registrar aqui milestone atual, progresso, checklist, próxima ação, branch, PR, release ou versão instalada no momento.
+- A baseline e os motivos das tecnologias escolhidas devem permanecer registrados, mesmo após upgrades de versão.
 - Não atualizar este arquivo ao concluir uma tarefa ou milestone.
-- Atualizar este arquivo somente quando o usuário aprovar mudança real de regra ou arquitetura.
+- Atualizar este arquivo somente quando o usuário aprovar mudança real de regra, stack ou arquitetura.
 - A issue [#31](https://github.com/Pherlsz/Gymkhana-Database/issues/31) é o único checklist vivo e a única fonte de progresso/retomada.
 - Issues específicas detalham execução; não redefinem silenciosamente as regras permanentes.
 - Em caso de conflito, uma decisão mais recente e explicitamente aprovada pelo usuário deve primeiro atualizar este arquivo e depois refletir-se na checklist.
