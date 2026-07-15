@@ -40,6 +40,7 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Changed
 
+- Pinned TanStack Query `5.101.2`, TanStack Router `1.170.18`, and TanStack Table `8.21.3` for the Profile interface.
 - Pinned Gymkhana Core `v0.2.1` and Gymkhana UI `0.3.0`.
 - Updated `openapi-typescript` from `7.10.1` to `7.13.0`.
 - Added authenticated private Core access to CI, security, OpenAPI, deployment, and container builds.
