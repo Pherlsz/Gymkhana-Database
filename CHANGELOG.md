@@ -8,6 +8,12 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- Canonical Profile-owned document and bill persistence with administrable types and optimistic versioning.
+- Controlled document uniqueness policies, optional regex/date requirements, leading-zero-safe identifiers, and old-record states.
+- Bill persistence preserving printed holder, address, reference, civil competence, decimal money, and currency values.
+- Transactional current-use relations for documents and supported bills without fabricating a historical timeline.
+- Deterministic sqlc type/record CRUD, filtering, sorting, pagination, duplication, deletion, and current-use queries.
+- Document and bill domain/PostgreSQL store tests for validation, immutable rules, optimistic conflicts, decimal round-trips, and current use.
 - Responsive Profile management route with URL-backed filters, sorting, pagination, selection, and panel state.
 - Canonical Profile create, detail, edit, duplicate, and permanent-delete interface for authenticated users.
 - Desktop TanStack Table grid with supported on-blur inline editing and mobile card-based reading.
