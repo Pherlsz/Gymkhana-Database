@@ -33,6 +33,18 @@ func (role Role) CanManageUsers() bool {
 	return role == RoleAdmin || role == RoleSuperadmin
 }
 
+func (role Role) CanReadProfiles() bool {
+	return role.Valid()
+}
+
+func (role Role) CanWriteProfiles() bool {
+	return role.Valid()
+}
+
+func (role Role) CanDeleteProfiles() bool {
+	return role == RoleAdmin || role == RoleSuperadmin
+}
+
 type AuditEventType string
 
 const (

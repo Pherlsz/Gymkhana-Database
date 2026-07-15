@@ -19,6 +19,7 @@ const (
 	ErrorCodeUnauthorized      ErrorCode = "unauthorized"
 	ErrorCodeForbidden         ErrorCode = "forbidden"
 	ErrorCodeConflict          ErrorCode = "conflict"
+	ErrorCodeValidation        ErrorCode = "validation_error"
 	ErrorCodeInvalidOAuthState ErrorCode = "invalid_oauth_state"
 	ErrorCodeAuthProvider      ErrorCode = "auth_provider_error"
 	ErrorCodeAuthUnavailable   ErrorCode = "auth_unavailable"
@@ -27,10 +28,17 @@ const (
 	ErrorCodeInternal          ErrorCode = "internal_error"
 )
 
-type Problem struct {
-	Status  int
-	Code    ErrorCode
+type FieldProblem struct {
+	Field   string
+	Code    string
 	Message string
+}
+
+type Problem struct {
+	Status      int
+	Code        ErrorCode
+	Message     string
+	FieldErrors []FieldProblem
 }
 
 type errorBody struct {
@@ -38,9 +46,16 @@ type errorBody struct {
 	Message string    `json:"message"`
 }
 
+type fieldErrorBody struct {
+	Field   string `json:"field"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
 type errorResponse struct {
-	Error     errorBody `json:"error"`
-	RequestID string    `json:"request_id,omitempty"`
+	Error       errorBody        `json:"error"`
+	RequestID   string           `json:"request_id,omitempty"`
+	FieldErrors []fieldErrorBody `json:"field_errors,omitempty"`
 }
 
 func DecodeJSON(w http.ResponseWriter, r *http.Request, destination any) *Problem {
@@ -70,10 +85,17 @@ func DecodeJSON(w http.ResponseWriter, r *http.Request, destination any) *Proble
 }
 
 func writeProblem(w http.ResponseWriter, r *http.Request, problem Problem) {
-	writeJSON(w, problem.Status, errorResponse{
+	response := errorResponse{
 		Error:     errorBody{Code: problem.Code, Message: problem.Message},
 		RequestID: requestIDFromContext(r.Context()),
-	})
+	}
+	if len(problem.FieldErrors) > 0 {
+		response.FieldErrors = make([]fieldErrorBody, 0, len(problem.FieldErrors))
+		for _, field := range problem.FieldErrors {
+			response.FieldErrors = append(response.FieldErrors, fieldErrorBody(field))
+		}
+	}
+	writeJSON(w, problem.Status, response)
 }
 
 func fallbackHandler(w http.ResponseWriter, r *http.Request) {

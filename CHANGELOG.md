@@ -8,6 +8,9 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- Protected Profile CRUD API with deterministic filtering, sorting, pagination, optimistic concurrency, and explicit permanent-delete confirmation.
+- Profile mutation audit events correlated by actor and request ID while retaining deleted Profile identifiers.
+- Structured Profile field-validation errors in the stable API error envelope.
 - Canonical physical-person Profile schema with explicit identity, contact, address, notes, timestamps, and optimistic version columns.
 - Profile domain normalization and validation backed by the pinned Gymkhana Core contracts.
 - Deterministic sqlc create, get, count, list, update, duplicate, and permanent-delete queries.
@@ -36,7 +39,7 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 - Pinned Gymkhana Core `v0.2.1` and Gymkhana UI `0.3.0`.
 - Updated `openapi-typescript` from `7.10.1` to `7.13.0`.
 - Added authenticated private Core access to CI, security, OpenAPI, deployment, and container builds.
-- Expanded audit correlation to invalid OAuth callbacks, failed sign-out, administration access, access conflicts, and session revocation.
+- Expanded audit correlation to invalid OAuth callbacks, failed sign-out, administration access, access conflicts, session revocation, and Profile mutations.
 
 ## [0.0.0] - 2026-07-13
 

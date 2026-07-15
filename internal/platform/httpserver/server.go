@@ -25,6 +25,7 @@ const (
 type Options struct {
 	MaxBodyBytes   int64
 	Auth           authenticationService
+	Profile        profileService
 	SecureCookies  bool
 	ApplicationURL string
 }
@@ -45,7 +46,6 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 			settings.ApplicationURL = "/"
 		}
 	}
-
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health/live", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context())})
@@ -55,20 +55,18 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 			writeJSON(w, http.StatusServiceUnavailable, healthResponse{Status: "unavailable", RequestID: requestIDFromContext(r.Context())})
 			return
 		}
-
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 		defer cancel()
 		if err := pool.Ping(ctx); err != nil {
 			writeJSON(w, http.StatusServiceUnavailable, healthResponse{Status: "unavailable", RequestID: requestIDFromContext(r.Context())})
 			return
 		}
-
 		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context())})
 	})
 	registerAuthRoutes(mux, logger, settings.Auth, settings.SecureCookies, settings.ApplicationURL)
 	registerAdministrationRoutes(mux, logger, settings.Auth)
+	registerProfileRoutes(mux, logger, settings.Auth, settings.Profile)
 	mux.HandleFunc("/", fallbackHandler)
-
 	applicationOrigin := absoluteOrigin(settings.ApplicationURL)
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, browserOriginMiddleware(applicationOrigin, mux)))))
 }
@@ -81,11 +79,9 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := newRequestID()
 		w.Header().Set("X-Request-ID", requestID)
-		ctx := context.WithValue(r.Context(), requestIDKey, requestID)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), requestIDKey, requestID)))
 	})
 }
-
 func bodyLimitMiddleware(limit int64, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Body != nil {
@@ -94,7 +90,6 @@ func bodyLimitMiddleware(limit int64, next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
 func browserOriginMiddleware(applicationOrigin string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := strings.TrimSpace(r.Header.Get("Origin"))
@@ -104,7 +99,6 @@ func browserOriginMiddleware(applicationOrigin string, next http.Handler) http.H
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Add("Vary", "Origin")
 		}
-
 		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
 			if !trustedOrigin {
 				writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "Request origin is not allowed"})
@@ -116,7 +110,6 @@ func browserOriginMiddleware(applicationOrigin string, next http.Handler) http.H
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-
 		if applicationOrigin != "" && !isSafeMethod(r.Method) && !trustedOrigin {
 			writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "Request origin is not allowed"})
 			return
@@ -124,7 +117,6 @@ func browserOriginMiddleware(applicationOrigin string, next http.Handler) http.H
 		next.ServeHTTP(w, r)
 	})
 }
-
 func absoluteOrigin(value string) string {
 	parsed, err := url.Parse(value)
 	if err != nil || !parsed.IsAbs() || parsed.Host == "" {
@@ -132,7 +124,6 @@ func absoluteOrigin(value string) string {
 	}
 	return (&url.URL{Scheme: strings.ToLower(parsed.Scheme), Host: strings.ToLower(parsed.Host)}).String()
 }
-
 func isSafeMethod(method string) bool {
 	switch method {
 	case http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodTrace:
@@ -141,7 +132,6 @@ func isSafeMethod(method string) bool {
 		return false
 	}
 }
-
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -151,7 +141,6 @@ func securityHeaders(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
 func recoverMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -163,18 +152,15 @@ func recoverMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
 func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
 }
-
 func requestIDFromContext(ctx context.Context) string {
 	requestID, _ := ctx.Value(requestIDKey).(string)
 	return requestID
 }
-
 func newRequestID() string {
 	var value [16]byte
 	if _, err := rand.Read(value[:]); err != nil {

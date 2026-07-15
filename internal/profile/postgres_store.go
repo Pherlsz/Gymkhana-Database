@@ -19,8 +19,8 @@ var (
 type Store interface {
 	Create(context.Context, Identifier, Values) (Profile, error)
 	Get(context.Context, Identifier) (Profile, error)
-	Count(context.Context) (int64, error)
-	List(context.Context, int32, int32) ([]Profile, error)
+	Count(context.Context, Filters) (int64, error)
+	List(context.Context, ListOptions) ([]Profile, error)
 	Update(context.Context, Identifier, int64, Values) (Profile, error)
 	Duplicate(context.Context, Identifier, Identifier) (Profile, error)
 	Delete(context.Context, Identifier, int64) error
@@ -29,11 +29,12 @@ type Store interface {
 type profileQueries interface {
 	CreateProfile(context.Context, dbgen.CreateProfileParams) (dbgen.Profile, error)
 	GetProfileByID(context.Context, pgtype.UUID) (dbgen.Profile, error)
-	CountProfiles(context.Context) (int64, error)
+	CountProfiles(context.Context, dbgen.CountProfilesParams) (int64, error)
 	ListProfiles(context.Context, dbgen.ListProfilesParams) ([]dbgen.Profile, error)
 	UpdateProfile(context.Context, dbgen.UpdateProfileParams) (dbgen.Profile, error)
 	DuplicateProfile(context.Context, dbgen.DuplicateProfileParams) (dbgen.Profile, error)
 	DeleteProfile(context.Context, dbgen.DeleteProfileParams) (pgtype.UUID, error)
+	RecordProfileAuditEvent(context.Context, dbgen.RecordProfileAuditEventParams) error
 }
 
 type PostgresStore struct {
@@ -67,35 +68,42 @@ func (store *PostgresStore) Get(ctx context.Context, id Identifier) (Profile, er
 	return profileFromDatabase(value)
 }
 
-func (store *PostgresStore) Count(ctx context.Context) (int64, error) {
-	count, err := store.queries.CountProfiles(ctx)
+func (store *PostgresStore) Count(ctx context.Context, filters Filters) (int64, error) {
+	count, err := store.queries.CountProfiles(ctx, dbgen.CountProfilesParams{
+		FullNameFilter: filters.FullName,
+		CpfFilter:      filters.CPF,
+		EmailFilter:    filters.Email,
+		CityFilter:     filters.City,
+		StateFilter:    filters.State,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("count profiles: %w", err)
 	}
 	return count, nil
 }
 
-func (store *PostgresStore) List(ctx context.Context, limit, offset int32) ([]Profile, error) {
-	if limit <= 0 || limit > 1000 {
-		limit = 100
-	}
-	if offset < 0 {
-		offset = 0
-	}
+func (store *PostgresStore) List(ctx context.Context, options ListOptions) ([]Profile, error) {
 	values, err := store.queries.ListProfiles(ctx, dbgen.ListProfilesParams{
-		PageLimit:  limit,
-		PageOffset: offset,
+		FullNameFilter: options.Filters.FullName,
+		CpfFilter:      options.Filters.CPF,
+		EmailFilter:    options.Filters.Email,
+		CityFilter:     options.Filters.City,
+		StateFilter:    options.Filters.State,
+		SortField:      string(options.SortField),
+		SortOrder:      string(options.SortOrder),
+		PageLimit:      options.Limit,
+		PageOffset:     options.Offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list profiles: %w", err)
 	}
 	profiles := make([]Profile, 0, len(values))
 	for _, value := range values {
-		profile, mapErr := profileFromDatabase(value)
+		mapped, mapErr := profileFromDatabase(value)
 		if mapErr != nil {
 			return nil, mapErr
 		}
-		profiles = append(profiles, profile)
+		profiles = append(profiles, mapped)
 	}
 	return profiles, nil
 }
@@ -146,6 +154,22 @@ func (store *PostgresStore) Delete(ctx context.Context, id Identifier, version i
 	}
 	if err != nil {
 		return fmt.Errorf("delete profile: %w", err)
+	}
+	return nil
+}
+
+func (store *PostgresStore) RecordAuditEvent(ctx context.Context, event AuditEvent) error {
+	params := dbgen.RecordProfileAuditEventParams{
+		ID:              databaseUUID(event.ID),
+		ActorUserID:     pgtype.UUID{Bytes: event.ActorUserID, Valid: true},
+		ProfileID:       databaseUUID(event.ProfileID),
+		SourceProfileID: optionalDatabaseUUID(event.SourceProfileID),
+		EventType:       string(event.EventType),
+		Outcome:         string(event.Outcome),
+		RequestID:       event.RequestID,
+	}
+	if err := store.queries.RecordProfileAuditEvent(ctx, params); err != nil {
+		return fmt.Errorf("record profile audit event: %w", err)
 	}
 	return nil
 }
@@ -250,6 +274,13 @@ func databaseUUID(identifier Identifier) pgtype.UUID {
 	return pgtype.UUID{Bytes: identifier, Valid: true}
 }
 
+func optionalDatabaseUUID(identifier *Identifier) pgtype.UUID {
+	if identifier == nil {
+		return pgtype.UUID{}
+	}
+	return databaseUUID(*identifier)
+}
+
 func identifierFromDatabase(value pgtype.UUID) (Identifier, error) {
 	if !value.Valid {
 		return Identifier{}, errors.New("profile database identifier is invalid")
@@ -279,3 +310,4 @@ func stringValue(value *string) string {
 }
 
 var _ Store = (*PostgresStore)(nil)
+var _ AuditStore = (*PostgresStore)(nil)
