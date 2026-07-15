@@ -37,13 +37,27 @@ jobs:
           go-version: 1.26.5
           cache-dependency-path: target/go.sum
       - name: Restore and validate stores
+        id: validate
+        continue-on-error: true
         working-directory: target
         run: |
+          set -o pipefail
           base64 -d /tmp/document_store.gz.b64 | gzip -d > internal/document/postgres_store.go
           base64 -d /tmp/bill_store.gz.b64 | gzip -d > internal/bill/postgres_store.go
           gofmt -w internal/document/postgres_store.go internal/bill/postgres_store.go
-          go test ./internal/document ./internal/bill
+          go test ./internal/document ./internal/bill 2>&1 | tee /tmp/m4-store-test.log
+      - name: Publish diagnostic to helper only
+        if: steps.validate.outcome == 'failure'
+        working-directory: helper
+        run: |
+          cp /tmp/m4-store-test.log m4-store-test.log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add m4-store-test.log
+          git commit -m "chore: capture M4 store test diagnostic"
+          git push origin HEAD:agent/m4-sqlc-generation-2
       - name: Publish stores
+        if: steps.validate.outcome == 'success'
         working-directory: target
         run: |
           git config user.name "github-actions[bot]"
@@ -51,3 +65,6 @@ jobs:
           git add internal/document/postgres_store.go internal/bill/postgres_store.go
           git commit -m "feat(records): add PostgreSQL stores"
           git push origin HEAD:agent/m4-documents-bills-domain
+      - name: Fail when validation failed
+        if: steps.validate.outcome == 'failure'
+        run: exit 1
