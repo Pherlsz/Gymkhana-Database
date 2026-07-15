@@ -4,6 +4,13 @@ type LiveHealthResponse =
   paths["/health/live"]["get"]["responses"][200]["content"]["application/json"];
 export type AuthSessionResponse =
   paths["/api/auth/session"]["get"]["responses"][200]["content"]["application/json"];
+export type AdminUsersResponse =
+  paths["/api/admin/users"]["get"]["responses"][200]["content"]["application/json"];
+export type AdminUser = AdminUsersResponse["users"][number];
+export type UserRole = AdminUser["role"];
+
+type UpdateUserAccessRequest =
+  paths["/api/admin/users/{user_id}/access"]["patch"]["requestBody"]["content"]["application/json"];
 
 type ErrorPayload = {
   error?: { code?: string; message?: string };
@@ -30,7 +37,7 @@ export class APIRequestError extends Error {
   }
 }
 
-export function apiURL(path: keyof paths): string {
+export function apiURL(path: string): string {
   const baseURL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
   return `${baseURL}${path}`;
 }
@@ -84,4 +91,26 @@ export async function logout(): Promise<void> {
     headers: { Accept: "application/json" },
   });
   if (!response.ok) await throwAPIError(response);
+}
+
+export async function listApplicationUsers(signal?: AbortSignal): Promise<AdminUsersResponse> {
+  const request: RequestInit = { credentials: "include", headers: { Accept: "application/json" } };
+  if (signal) request.signal = signal;
+  const response = await fetch(apiURL("/api/admin/users?limit=100&offset=0"), request);
+  if (!response.ok) return throwAPIError(response);
+  return readJSON<AdminUsersResponse>(response);
+}
+
+export async function updateApplicationUserAccess(
+  userId: string,
+  request: UpdateUserAccessRequest,
+): Promise<AdminUser> {
+  const response = await fetch(apiURL(`/api/admin/users/${encodeURIComponent(userId)}/access`), {
+    method: "PATCH",
+    credentials: "include",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) return throwAPIError(response);
+  return readJSON<AdminUser>(response);
 }

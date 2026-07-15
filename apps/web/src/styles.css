@@ -44,9 +44,38 @@ p {
   padding: var(--gym-space-6);
 }
 
-.authentication-panel__description {
+.authentication-panel__description,
+.managed-user__secondary {
   margin-block-start: var(--gym-space-2);
   color: var(--gym-color-text-muted);
+}
+
+.managed-user {
+  padding: var(--gym-space-5);
+}
+
+.managed-user__field {
+  display: grid;
+  gap: var(--gym-space-2);
+  min-inline-size: 10rem;
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.managed-user__field select {
+  min-block-size: 2.5rem;
+  padding-inline: var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+  color: var(--gym-color-text);
+}
+
+.managed-user__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gym-space-2);
+  min-block-size: 2.5rem;
 }
 
 .foundation-card {

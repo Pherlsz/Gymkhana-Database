@@ -106,6 +106,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/admin/users": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List application users for administration */
+    get: operations["listApplicationUsers"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}/access": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update application role and active status */
+    patch: operations["updateApplicationUserAccess"];
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -125,8 +159,30 @@ export interface components {
       display_name: string;
       /** Format: uri */
       avatar_url?: string;
-      /** @enum {string} */
-      role: "MEMBER" | "ADMIN" | "SUPERADMIN";
+      role: components["schemas"]["UserRole"];
+    };
+    /** @enum {string} */
+    UserRole: "MEMBER" | "ADMIN" | "SUPERADMIN";
+    AdminUsersResponse: {
+      users: components["schemas"]["AdminUser"][];
+    };
+    AdminUser: {
+      /** Format: uuid */
+      id: string;
+      login: string;
+      display_name: string;
+      /** Format: uri */
+      avatar_url?: string;
+      role: components["schemas"]["UserRole"];
+      active: boolean;
+      /** Format: int64 */
+      version: number;
+    };
+    UpdateUserAccessRequest: {
+      role: components["schemas"]["UserRole"];
+      active: boolean;
+      /** Format: int64 */
+      version: number;
     };
     ErrorResponse: {
       error: {
@@ -155,8 +211,26 @@ export interface components {
         "application/json": components["schemas"]["ErrorResponse"];
       };
     };
-    /** @description The GitHub account is not allowed */
+    /** @description The current user is not authorized */
     Forbidden: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The requested resource was not found */
+    NotFound: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The requested update conflicts with current state */
+    Conflict: {
       headers: {
         [name: string]: unknown;
       };
@@ -320,6 +394,65 @@ export interface operations {
         };
         content?: never;
       };
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  listApplicationUsers: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Application users */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminUsersResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  updateApplicationUserAccess: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateUserAccessRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated application user */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminUser"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
       503: components["responses"]["AuthUnavailable"];
     };
   };

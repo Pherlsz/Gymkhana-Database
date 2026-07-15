@@ -30,6 +30,29 @@ func (store *PostgresStore) FindUserByGitHubID(ctx context.Context, githubUserID
 	return userFromDatabase(value), nil
 }
 
+func (store *PostgresStore) FindUserByID(ctx context.Context, userID Identifier) (ManagedUser, error) {
+	value, err := store.queries.GetAppUserByID(ctx, databaseUUID(userID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ManagedUser{}, ErrUserNotFound
+	}
+	if err != nil {
+		return ManagedUser{}, err
+	}
+	return managedUserFromDatabase(value), nil
+}
+
+func (store *PostgresStore) ListUsers(ctx context.Context, limit, offset int32) ([]ManagedUser, error) {
+	values, err := store.queries.ListAppUsers(ctx, dbgen.ListAppUsersParams{Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, err
+	}
+	users := make([]ManagedUser, 0, len(values))
+	for _, value := range values {
+		users = append(users, managedUserFromDatabase(value))
+	}
+	return users, nil
+}
+
 func (store *PostgresStore) CreateUser(ctx context.Context, params CreateUserParams) (User, error) {
 	avatarURL := optionalString(params.Identity.AvatarURL)
 	value, err := store.queries.CreateAppUser(ctx, dbgen.CreateAppUserParams{
@@ -58,6 +81,26 @@ func (store *PostgresStore) UpdateUserIdentity(ctx context.Context, userID Ident
 		return User{}, err
 	}
 	return userFromDatabase(value), nil
+}
+
+func (store *PostgresStore) UpdateUserAccess(ctx context.Context, params UpdateUserAccessParams) (ManagedUser, error) {
+	value, err := store.queries.UpdateAppUserAccess(ctx, dbgen.UpdateAppUserAccessParams{
+		ID:      databaseUUID(params.UserID),
+		Role:    string(params.Role),
+		Active:  params.Active,
+		Version: params.Version,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ManagedUser{}, ErrUserAccessConflict
+	}
+	if err != nil {
+		return ManagedUser{}, err
+	}
+	return managedUserFromDatabase(value), nil
+}
+
+func (store *PostgresStore) CountActiveSuperadmins(ctx context.Context) (int64, error) {
+	return store.queries.CountActiveSuperadmins(ctx)
 }
 
 func (store *PostgresStore) CreateSession(ctx context.Context, params CreateSessionParams) error {
@@ -103,6 +146,10 @@ func (store *PostgresStore) RevokeSessionByTokenHash(ctx context.Context, tokenH
 	return store.queries.RevokeAppSessionByTokenHash(ctx, tokenHash)
 }
 
+func (store *PostgresStore) RevokeAllSessionsForUser(ctx context.Context, userID Identifier) error {
+	return store.queries.RevokeAllAppSessionsForUser(ctx, databaseUUID(userID))
+}
+
 func (store *PostgresStore) RecordAuditEvent(ctx context.Context, event AuditEvent) error {
 	_, err := store.queries.CreateAuthAuditEvent(ctx, dbgen.CreateAuthAuditEventParams{
 		ID:            databaseUUID(event.ID),
@@ -126,6 +173,10 @@ func userFromDatabase(value dbgen.AppUser) User {
 		Role:         Role(value.Role),
 		Active:       value.Active,
 	}
+}
+
+func managedUserFromDatabase(value dbgen.AppUser) ManagedUser {
+	return ManagedUser{User: userFromDatabase(value), Version: value.Version}
 }
 
 func databaseUUID(value Identifier) pgtype.UUID {

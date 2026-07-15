@@ -14,32 +14,12 @@ import (
 	"net/http"
 
 	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 const (
 	SessionCookieScopes sessionCookieContextKey = "sessionCookie.Scopes"
 )
-
-// Defines values for AuthUserRole.
-const (
-	ADMIN      AuthUserRole = "ADMIN"
-	MEMBER     AuthUserRole = "MEMBER"
-	SUPERADMIN AuthUserRole = "SUPERADMIN"
-)
-
-// Valid indicates whether the value is a known member of the AuthUserRole enum.
-func (e AuthUserRole) Valid() bool {
-	switch e {
-	case ADMIN:
-		return true
-	case MEMBER:
-		return true
-	case SUPERADMIN:
-		return true
-	default:
-		return false
-	}
-}
 
 // Defines values for HealthResponseStatus.
 const (
@@ -59,6 +39,43 @@ func (e HealthResponseStatus) Valid() bool {
 	}
 }
 
+// Defines values for UserRole.
+const (
+	ADMIN      UserRole = "ADMIN"
+	MEMBER     UserRole = "MEMBER"
+	SUPERADMIN UserRole = "SUPERADMIN"
+)
+
+// Valid indicates whether the value is a known member of the UserRole enum.
+func (e UserRole) Valid() bool {
+	switch e {
+	case ADMIN:
+		return true
+	case MEMBER:
+		return true
+	case SUPERADMIN:
+		return true
+	default:
+		return false
+	}
+}
+
+// AdminUser defines model for AdminUser.
+type AdminUser struct {
+	Active      bool               `json:"active"`
+	AvatarUrl   *string            `json:"avatar_url,omitempty"`
+	DisplayName string             `json:"display_name"`
+	Id          openapi_types.UUID `json:"id"`
+	Login       string             `json:"login"`
+	Role        UserRole           `json:"role"`
+	Version     int64              `json:"version"`
+}
+
+// AdminUsersResponse defines model for AdminUsersResponse.
+type AdminUsersResponse struct {
+	Users []AdminUser `json:"users"`
+}
+
 // AuthSessionResponse defines model for AuthSessionResponse.
 type AuthSessionResponse struct {
 	Authenticated bool     `json:"authenticated"`
@@ -67,14 +84,11 @@ type AuthSessionResponse struct {
 
 // AuthUser defines model for AuthUser.
 type AuthUser struct {
-	AvatarUrl   *string      `json:"avatar_url,omitempty"`
-	DisplayName string       `json:"display_name"`
-	Login       string       `json:"login"`
-	Role        AuthUserRole `json:"role"`
+	AvatarUrl   *string  `json:"avatar_url,omitempty"`
+	DisplayName string   `json:"display_name"`
+	Login       string   `json:"login"`
+	Role        UserRole `json:"role"`
 }
-
-// AuthUserRole defines model for AuthUser.Role.
-type AuthUserRole string
 
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
@@ -94,14 +108,30 @@ type HealthResponse struct {
 // HealthResponseStatus defines model for HealthResponse.Status.
 type HealthResponseStatus string
 
+// UpdateUserAccessRequest defines model for UpdateUserAccessRequest.
+type UpdateUserAccessRequest struct {
+	Active  bool     `json:"active"`
+	Role    UserRole `json:"role"`
+	Version int64    `json:"version"`
+}
+
+// UserRole defines model for UserRole.
+type UserRole string
+
 // AuthUnavailable defines model for AuthUnavailable.
 type AuthUnavailable = ErrorResponse
 
 // BadRequest defines model for BadRequest.
 type BadRequest = ErrorResponse
 
+// Conflict defines model for Conflict.
+type Conflict = ErrorResponse
+
 // Forbidden defines model for Forbidden.
 type Forbidden = ErrorResponse
+
+// NotFound defines model for NotFound.
+type NotFound = ErrorResponse
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized = ErrorResponse
@@ -109,14 +139,29 @@ type Unauthorized = ErrorResponse
 // sessionCookieContextKey is the context key for sessionCookie security scheme
 type sessionCookieContextKey string
 
+// ListApplicationUsersParams defines parameters for ListApplicationUsers.
+type ListApplicationUsersParams struct {
+	Limit  *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int32 `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // CompleteGitHubLoginParams defines parameters for CompleteGitHubLogin.
 type CompleteGitHubLoginParams struct {
 	Code  string `form:"code" json:"code"`
 	State string `form:"state" json:"state"`
 }
 
+// UpdateApplicationUserAccessJSONRequestBody defines body for UpdateApplicationUserAccess for application/json ContentType.
+type UpdateApplicationUserAccessJSONRequestBody = UpdateUserAccessRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// List application users for administration
+	// (GET /api/admin/users)
+	ListApplicationUsers(w http.ResponseWriter, r *http.Request, params ListApplicationUsersParams)
+	// Update application role and active status
+	// (PATCH /api/admin/users/{user_id}/access)
+	UpdateApplicationUserAccess(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
 	// Revoke the current application session
 	// (POST /api/auth/logout)
 	Logout(w http.ResponseWriter, r *http.Request)
@@ -145,6 +190,90 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListApplicationUsers operation middleware
+func (siw *ServerInterfaceWrapper) ListApplicationUsers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListApplicationUsersParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListApplicationUsers(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateApplicationUserAccess operation middleware
+func (siw *ServerInterfaceWrapper) UpdateApplicationUserAccess(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "user_id" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "user_id", r.PathValue("user_id"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateApplicationUserAccess(w, r, userId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // Logout operation middleware
 func (siw *ServerInterfaceWrapper) Logout(w http.ResponseWriter, r *http.Request) {
@@ -394,6 +523,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/admin/users", wrapper.ListApplicationUsers)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/admin/users/{user_id}/access", wrapper.UpdateApplicationUserAccess)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/auth/session", wrapper.GetAuthSession)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/auth/callback", wrapper.CompleteGitHubLogin)
@@ -408,9 +539,198 @@ type AuthUnavailableJSONResponse ErrorResponse
 
 type BadRequestJSONResponse ErrorResponse
 
+type ConflictJSONResponse ErrorResponse
+
 type ForbiddenJSONResponse ErrorResponse
 
+type NotFoundJSONResponse ErrorResponse
+
 type UnauthorizedJSONResponse ErrorResponse
+
+type ListApplicationUsersRequestObject struct {
+	Params ListApplicationUsersParams
+}
+
+type ListApplicationUsersResponseObject interface {
+	VisitListApplicationUsersResponse(w http.ResponseWriter) error
+}
+
+type ListApplicationUsers200JSONResponse AdminUsersResponse
+
+func (response ListApplicationUsers200JSONResponse) VisitListApplicationUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListApplicationUsers400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListApplicationUsers400JSONResponse) VisitListApplicationUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListApplicationUsers401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListApplicationUsers401JSONResponse) VisitListApplicationUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListApplicationUsers403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListApplicationUsers403JSONResponse) VisitListApplicationUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListApplicationUsers503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response ListApplicationUsers503JSONResponse) VisitListApplicationUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateApplicationUserAccessRequestObject struct {
+	UserId openapi_types.UUID `json:"user_id"`
+	Body   *UpdateApplicationUserAccessJSONRequestBody
+}
+
+type UpdateApplicationUserAccessResponseObject interface {
+	VisitUpdateApplicationUserAccessResponse(w http.ResponseWriter) error
+}
+
+type UpdateApplicationUserAccess200JSONResponse AdminUser
+
+func (response UpdateApplicationUserAccess200JSONResponse) VisitUpdateApplicationUserAccessResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateApplicationUserAccess400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateApplicationUserAccess400JSONResponse) VisitUpdateApplicationUserAccessResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateApplicationUserAccess401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateApplicationUserAccess401JSONResponse) VisitUpdateApplicationUserAccessResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateApplicationUserAccess403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateApplicationUserAccess403JSONResponse) VisitUpdateApplicationUserAccessResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateApplicationUserAccess404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateApplicationUserAccess404JSONResponse) VisitUpdateApplicationUserAccessResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateApplicationUserAccess409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpdateApplicationUserAccess409JSONResponse) VisitUpdateApplicationUserAccessResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateApplicationUserAccess503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response UpdateApplicationUserAccess503JSONResponse) VisitUpdateApplicationUserAccessResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type LogoutRequestObject struct {
 }
@@ -649,6 +969,12 @@ func (response GetReadyHealth503JSONResponse) VisitGetReadyHealthResponse(w http
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// List application users for administration
+	// (GET /api/admin/users)
+	ListApplicationUsers(ctx context.Context, request ListApplicationUsersRequestObject) (ListApplicationUsersResponseObject, error)
+	// Update application role and active status
+	// (PATCH /api/admin/users/{user_id}/access)
+	UpdateApplicationUserAccess(ctx context.Context, request UpdateApplicationUserAccessRequestObject) (UpdateApplicationUserAccessResponseObject, error)
 	// Revoke the current application session
 	// (POST /api/auth/logout)
 	Logout(ctx context.Context, request LogoutRequestObject) (LogoutResponseObject, error)
@@ -696,6 +1022,65 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListApplicationUsers operation middleware
+func (sh *strictHandler) ListApplicationUsers(w http.ResponseWriter, r *http.Request, params ListApplicationUsersParams) {
+	var request ListApplicationUsersRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListApplicationUsers(ctx, request.(ListApplicationUsersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListApplicationUsers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListApplicationUsersResponseObject); ok {
+		if err := validResponse.VisitListApplicationUsersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateApplicationUserAccess operation middleware
+func (sh *strictHandler) UpdateApplicationUserAccess(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request UpdateApplicationUserAccessRequestObject
+
+	request.UserId = userId
+
+	var body UpdateApplicationUserAccessJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateApplicationUserAccess(ctx, request.(UpdateApplicationUserAccessRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateApplicationUserAccess")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateApplicationUserAccessResponseObject); ok {
+		if err := validResponse.VisitUpdateApplicationUserAccessResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // Logout operation middleware
