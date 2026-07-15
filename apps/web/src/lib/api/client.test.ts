@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { APIRequestError, getAuthSession, getLiveHealth, logout } from "./client";
+import {
+  APIRequestError,
+  getAuthSession,
+  getLiveHealth,
+  listUsers,
+  logout,
+  updateUserAccess,
+} from "./client";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
@@ -10,25 +17,37 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 describe("generated API client helpers", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("returns health and protected session responses", async () => {
+  it("returns health, session, and managed users", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse({ status: "ok" }))
       .mockResolvedValueOnce(
         jsonResponse({
           authenticated: true,
-          user: { login: "member", display_name: "Member", role: "MEMBER" },
+          user: { login: "admin", display_name: "Admin", role: "ADMIN" },
+          capabilities: { manage_users: true },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          users: [
+            {
+              id: "11111111-1111-4111-8111-111111111111",
+              login: "member",
+              display_name: "Member",
+              role: "MEMBER",
+              active: true,
+              version: 1,
+              protected: false,
+            },
+          ],
         }),
       );
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(getLiveHealth()).resolves.toEqual({ status: "ok" });
-    await expect(getAuthSession()).resolves.toMatchObject({ user: { login: "member" } });
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      "/health/live",
-      expect.objectContaining({ credentials: "include" }),
-    );
+    await expect(getAuthSession()).resolves.toMatchObject({ user: { login: "admin" } });
+    await expect(listUsers()).resolves.toHaveLength(1);
   });
 
   it("preserves stable API error metadata", async () => {
@@ -55,14 +74,30 @@ describe("generated API client helpers", () => {
     });
   });
 
-  it("accepts the empty logout response", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+  it("updates access and accepts the empty logout response", async () => {
+    const updated = {
+      id: "11111111-1111-4111-8111-111111111111",
+      login: "member",
+      display_name: "Member",
+      role: "ADMIN",
+      active: true,
+      version: 2,
+      protected: false,
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(updated))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
 
+    await expect(
+      updateUserAccess(updated.id, { role: "ADMIN", active: true, version: 1 }),
+    ).resolves.toEqual(updated);
     await expect(logout()).resolves.toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/auth/logout",
-      expect.objectContaining({ method: "POST", credentials: "include" }),
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      `/api/admin/users/${updated.id}/access`,
+      expect.objectContaining({ method: "PATCH", credentials: "include" }),
     );
   });
 });

@@ -25,8 +25,13 @@ type authenticationService interface {
 }
 
 type authSessionResponse struct {
-	Authenticated bool              `json:"authenticated"`
-	User          *authUserResponse `json:"user,omitempty"`
+	Authenticated bool                     `json:"authenticated"`
+	User          *authUserResponse        `json:"user,omitempty"`
+	Capabilities  authCapabilitiesResponse `json:"capabilities"`
+}
+
+type authCapabilitiesResponse struct {
+	ManageUsers bool `json:"manage_users"`
 }
 
 type authUserResponse struct {
@@ -98,6 +103,9 @@ func registerAuthRoutes(
 		writeJSON(w, http.StatusOK, authSessionResponse{
 			Authenticated: true,
 			User:          authUser(session.User),
+			Capabilities: authCapabilitiesResponse{
+				ManageUsers: session.User.Role.Allows(auth.PermissionManageUsers),
+			},
 		})
 	})
 

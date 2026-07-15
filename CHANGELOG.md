@@ -8,6 +8,9 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- Centralized role permissions and protected user-administration endpoints.
+- Minimal administration UI for listing users and changing MEMBER/ADMIN access.
+- Optimistic user access updates with automatic session revocation after changes.
 - GitHub OAuth sign-in with state validation and explicit allowed-login enforcement.
 - Protected session and logout endpoints backed by revocable 24-hour opaque sessions.
 - Fail-closed authentication configuration for staging and production.
@@ -22,6 +25,8 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Changed
 
+- Authentication sessions now expose explicit capabilities for frontend feature access.
+- The active SUPERADMIN and each administrator's own account are protected from access edits.
 - Pinned Gymkhana Core `v0.2.1` and Gymkhana UI `0.3.0`.
 - Updated `openapi-typescript` from `7.10.1` to `7.13.0`.
 - Added authenticated private Core access to CI, security, OpenAPI, deployment, and container builds.

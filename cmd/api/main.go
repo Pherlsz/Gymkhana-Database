@@ -71,6 +71,7 @@ func run() error {
 		Handler: httpserver.New(logger, pool, httpserver.Options{
 			MaxBodyBytes:   cfg.HTTPMaxBodyBytes,
 			Auth:           authService,
+			Users:          authService,
 			SecureCookies:  cfg.Auth.SecureCookies,
 			ApplicationURL: cfg.Auth.ApplicationURL,
 		}),

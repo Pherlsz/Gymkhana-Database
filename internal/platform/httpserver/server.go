@@ -18,6 +18,7 @@ const DefaultMaxBodyBytes int64 = 1 << 20
 type Options struct {
 	MaxBodyBytes   int64
 	Auth           authenticationService
+	Users          userAdministrationService
 	SecureCookies  bool
 	ApplicationURL string
 }
@@ -59,6 +60,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context())})
 	})
 	registerAuthRoutes(mux, logger, settings.Auth, settings.SecureCookies, settings.ApplicationURL)
+	registerAdministrationRoutes(mux, logger, settings.Auth, settings.Users)
 	mux.HandleFunc("/", fallbackHandler)
 
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, mux))))

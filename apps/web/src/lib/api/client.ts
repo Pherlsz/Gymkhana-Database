@@ -4,6 +4,13 @@ type LiveHealthResponse =
   paths["/health/live"]["get"]["responses"][200]["content"]["application/json"];
 export type AuthSessionResponse =
   paths["/api/auth/session"]["get"]["responses"][200]["content"]["application/json"];
+export type ManagedUser =
+  paths["/api/admin/users"]["get"]["responses"][200]["content"]["application/json"]["users"][number];
+export type UserAccessUpdate =
+  paths["/api/admin/users/{user_id}/access"]["patch"]["requestBody"]["content"]["application/json"];
+
+type ManagedUsersResponse =
+  paths["/api/admin/users"]["get"]["responses"][200]["content"]["application/json"];
 
 type ErrorPayload = {
   error?: { code?: string; message?: string };
@@ -30,7 +37,7 @@ export class APIRequestError extends Error {
   }
 }
 
-export function apiURL(path: keyof paths): string {
+export function apiURL(path: string): string {
   const baseURL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
   return `${baseURL}${path}`;
 }
@@ -84,4 +91,26 @@ export async function logout(): Promise<void> {
     headers: { Accept: "application/json" },
   });
   if (!response.ok) await throwAPIError(response);
+}
+
+export async function listUsers(signal?: AbortSignal): Promise<ManagedUser[]> {
+  const request: RequestInit = { credentials: "include", headers: { Accept: "application/json" } };
+  if (signal) request.signal = signal;
+  const response = await fetch(apiURL("/api/admin/users"), request);
+  if (!response.ok) return throwAPIError(response);
+  return (await readJSON<ManagedUsersResponse>(response)).users;
+}
+
+export async function updateUserAccess(
+  userId: string,
+  update: UserAccessUpdate,
+): Promise<ManagedUser> {
+  const response = await fetch(apiURL(`/api/admin/users/${userId}/access`), {
+    method: "PATCH",
+    credentials: "include",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(update),
+  });
+  if (!response.ok) return throwAPIError(response);
+  return readJSON<ManagedUser>(response);
 }

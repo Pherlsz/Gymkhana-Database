@@ -1,0 +1,65 @@
+name: Temporary M2 user administration generation
+
+on:
+  push:
+    branches: [agent/m2-user-administration]
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  generate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: agent/m2-user-administration
+          token: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: 1.26.5
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Configure private Core access
+        run: scripts/configure-private-go.sh
+        env:
+          GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate and format
+        run: |
+          make generate-go generate-ts
+          gofmt -w cmd internal api/generated/go
+          pnpm format
+
+      - name: Commit generated files
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .
+          git commit -m "chore: synchronize M2.3 generated files"
+          git push origin HEAD:agent/m2-user-administration

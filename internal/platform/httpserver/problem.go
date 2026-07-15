@@ -18,6 +18,8 @@ const (
 	ErrorCodeRequestTooLarge   ErrorCode = "request_too_large"
 	ErrorCodeUnauthorized      ErrorCode = "unauthorized"
 	ErrorCodeForbidden         ErrorCode = "forbidden"
+	ErrorCodeConflict          ErrorCode = "conflict"
+	ErrorCodeValidation        ErrorCode = "validation_error"
 	ErrorCodeInvalidOAuthState ErrorCode = "invalid_oauth_state"
 	ErrorCodeAuthProvider      ErrorCode = "auth_provider_error"
 	ErrorCodeAuthUnavailable   ErrorCode = "auth_unavailable"
