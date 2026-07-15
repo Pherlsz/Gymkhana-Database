@@ -8,6 +8,10 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- Responsive Profile management route with URL-backed filters, sorting, pagination, selection, and panel state.
+- Canonical Profile create, detail, edit, duplicate, and permanent-delete interface for authenticated users.
+- Desktop TanStack Table grid with supported on-blur inline editing and mobile card-based reading.
+- Profile frontend acceptance coverage for authentication, navigation, URL state, listing, and inline editing.
 - Protected Profile CRUD API with deterministic filtering, sorting, pagination, optimistic concurrency, and explicit permanent-delete confirmation.
 - Profile mutation audit events correlated by actor and request ID while retaining deleted Profile identifiers.
 - Structured Profile field-validation errors in the stable API error envelope.
@@ -36,6 +40,7 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Changed
 
+- Pinned TanStack Query `5.101.2`, TanStack Router `1.170.18`, and TanStack Table `8.21.3` for the Profile interface.
 - Pinned Gymkhana Core `v0.2.1` and Gymkhana UI `0.3.0`.
 - Updated `openapi-typescript` from `7.10.1` to `7.13.0`.
 - Added authenticated private Core access to CI, security, OpenAPI, deployment, and container builds.
