@@ -48,3 +48,24 @@ type AuthAuditEvent struct {
 	ProviderLogin *string            `json:"provider_login"`
 	OccurredAt    pgtype.Timestamptz `json:"occurred_at"`
 }
+
+type Profile struct {
+	ID                  pgtype.UUID        `json:"id"`
+	FullName            string             `json:"full_name"`
+	SocialName          *string            `json:"social_name"`
+	Cpf                 *string            `json:"cpf"`
+	Email               *string            `json:"email"`
+	MobilePhone         *string            `json:"mobile_phone"`
+	LandlinePhone       *string            `json:"landline_phone"`
+	AddressStreet       *string            `json:"address_street"`
+	AddressNumber       *string            `json:"address_number"`
+	AddressComplement   *string            `json:"address_complement"`
+	AddressNeighborhood *string            `json:"address_neighborhood"`
+	AddressCity         *string            `json:"address_city"`
+	AddressState        *string            `json:"address_state"`
+	AddressPostalCode   *string            `json:"address_postal_code"`
+	Notes               *string            `json:"notes"`
+	Version             int64              `json:"version"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
