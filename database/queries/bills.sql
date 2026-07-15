@@ -63,7 +63,11 @@ SELECT
   bill.*,
   bill_type.technical_key AS type_technical_key,
   bill_type.label AS type_label,
+  bill_type.active AS type_active,
   bill_type.supports_current_use AS type_supports_current_use,
+  bill_type.version AS type_version,
+  bill_type.created_at AS type_created_at,
+  bill_type.updated_at AS type_updated_at,
   bill_current_use.holder_profile_id AS current_holder_profile_id,
   bill_current_use.assigned_at AS current_assigned_at
 FROM bills AS bill
@@ -90,7 +94,11 @@ SELECT
   bill.*,
   bill_type.technical_key AS type_technical_key,
   bill_type.label AS type_label,
+  bill_type.active AS type_active,
   bill_type.supports_current_use AS type_supports_current_use,
+  bill_type.version AS type_version,
+  bill_type.created_at AS type_created_at,
+  bill_type.updated_at AS type_updated_at,
   bill_current_use.holder_profile_id AS current_holder_profile_id,
   bill_current_use.assigned_at AS current_assigned_at
 FROM bills AS bill
