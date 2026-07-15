@@ -8,7 +8,7 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
-- Canonical Profile-owned document and bill persistence with administrable types and optimistic versioning.
+- Canonical Profile-owned document and bill persistence with FK-enforced ownership, administrable types, and optimistic versioning.
 - Controlled document uniqueness policies, optional regex/date requirements, leading-zero-safe identifiers, and old-record states.
 - Bill persistence preserving printed holder, address, reference, civil competence, decimal money, and currency values.
 - Transactional current-use relations for documents and supported bills without fabricating a historical timeline.
