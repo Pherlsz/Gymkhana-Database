@@ -1,9 +1,0 @@
-$ pnpm --filter @pherlsz/gymkhana-database-web typecheck
-$ tsc -p tsconfig.json --noEmit --pretty false
-$ oxlint -c oxlint.json apps
-::error file=apps/web/src/ProfilesPage.tsx,line=1,endLine=1,col=46,endColumn=57,title=eslint(no-unused-vars)::Identifier 'StatusBadge' is imported but never used.
-::warning file=apps/web/src/ProfilesPage.tsx,line=42,endLine=42,col=17,endColumn=39,title=unicorn(consistent-function-scoping)::Function `positiveInteger` does not capture any variables from its parent scope
-
-Found 1 warning and 1 error.
-Finished in 20ms on 10 files with 125 rules using 2 threads.
-[ELIFECYCLE] Command failed with exit code 1.
