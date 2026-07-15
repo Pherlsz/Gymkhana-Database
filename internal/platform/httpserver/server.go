@@ -16,7 +16,10 @@ import (
 const DefaultMaxBodyBytes int64 = 1 << 20
 
 type Options struct {
-	MaxBodyBytes int64
+	MaxBodyBytes   int64
+	Auth           authenticationService
+	SecureCookies  bool
+	ApplicationURL string
 }
 
 type healthResponse struct {
@@ -25,9 +28,15 @@ type healthResponse struct {
 }
 
 func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handler {
-	settings := Options{MaxBodyBytes: DefaultMaxBodyBytes}
-	if len(options) > 0 && options[0].MaxBodyBytes > 0 {
+	settings := Options{MaxBodyBytes: DefaultMaxBodyBytes, ApplicationURL: "/"}
+	if len(options) > 0 {
 		settings = options[0]
+		if settings.MaxBodyBytes <= 0 {
+			settings.MaxBodyBytes = DefaultMaxBodyBytes
+		}
+		if settings.ApplicationURL == "" {
+			settings.ApplicationURL = "/"
+		}
 	}
 
 	mux := http.NewServeMux()
@@ -49,6 +58,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 
 		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context())})
 	})
+	registerAuthRoutes(mux, logger, settings.Auth, settings.SecureCookies, settings.ApplicationURL)
 	mux.HandleFunc("/", fallbackHandler)
 
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, mux))))
@@ -81,6 +91,7 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Cache-Control", "no-store")
 		next.ServeHTTP(w, r)
 	})
 }

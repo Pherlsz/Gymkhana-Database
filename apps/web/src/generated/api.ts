@@ -38,6 +38,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/auth/login": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Begin GitHub OAuth authentication */
+    get: operations["beginGitHubLogin"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/callback": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Complete GitHub OAuth authentication */
+    get: operations["completeGitHubLogin"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/auth/session": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the current protected application session */
+    get: operations["getAuthSession"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/auth/logout": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Revoke the current application session */
+    post: operations["logout"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -47,8 +115,65 @@ export interface components {
       status: "ok" | "unavailable";
       request_id?: string;
     };
+    AuthSessionResponse: {
+      /** @constant */
+      authenticated: true;
+      user: components["schemas"]["AuthUser"];
+    };
+    AuthUser: {
+      login: string;
+      display_name: string;
+      /** Format: uri */
+      avatar_url?: string;
+      /** @enum {string} */
+      role: "MEMBER" | "ADMIN" | "SUPERADMIN";
+    };
+    ErrorResponse: {
+      error: {
+        code: string;
+        message: string;
+      };
+      request_id?: string;
+    };
   };
-  responses: never;
+  responses: {
+    /** @description Request is invalid */
+    BadRequest: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Authentication is required */
+    Unauthorized: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The GitHub account is not allowed */
+    Forbidden: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Authentication is not configured */
+    AuthUnavailable: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+  };
   parameters: never;
   requestBodies: never;
   headers: never;
@@ -103,6 +228,99 @@ export interface operations {
           "application/json": components["schemas"]["HealthResponse"];
         };
       };
+    };
+  };
+  beginGitHubLogin: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Redirect to GitHub authorization */
+      302: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  completeGitHubLogin: {
+    parameters: {
+      query: {
+        code: string;
+        state: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Authentication completed and redirected to the application */
+      302: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      403: components["responses"]["Forbidden"];
+      /** @description GitHub authentication failed */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  getAuthSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Authenticated application session */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AuthSessionResponse"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  logout: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Session revoked or already absent */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      503: components["responses"]["AuthUnavailable"];
     };
   };
 }

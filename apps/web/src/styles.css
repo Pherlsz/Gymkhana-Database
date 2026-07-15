@@ -20,6 +20,10 @@ select {
   font: inherit;
 }
 
+p {
+  margin-block: 0;
+}
+
 .app-header {
   display: flex;
   align-items: center;
@@ -28,6 +32,21 @@ select {
   padding: var(--gym-space-4) var(--gym-space-6);
   border-block-end: 1px solid var(--gym-color-border);
   background: var(--gym-color-surface);
+}
+
+.current-user {
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.authentication-panel {
+  max-inline-size: 42rem;
+  padding: var(--gym-space-6);
+}
+
+.authentication-panel__description {
+  margin-block-start: var(--gym-space-2);
+  color: var(--gym-color-text-muted);
 }
 
 .foundation-card {

@@ -229,6 +229,56 @@ func (q *Queries) GetAppUserByID(ctx context.Context, id pgtype.UUID) (AppUser, 
 	return i, err
 }
 
+const getAuthenticatedAppSession = `-- name: GetAuthenticatedAppSession :one
+SELECT
+  app_sessions.id AS session_id,
+  app_users.id AS app_user_id,
+  app_users.github_user_id,
+  app_users.github_login,
+  app_users.display_name,
+  app_users.avatar_url,
+  app_users.role,
+  app_users.active
+FROM app_sessions
+JOIN app_users ON app_users.id = app_sessions.user_id
+WHERE app_sessions.token_hash = $1
+  AND app_sessions.revoked_at IS NULL
+  AND app_sessions.expires_at > $2
+  AND app_users.active
+`
+
+type GetAuthenticatedAppSessionParams struct {
+	TokenHash []byte             `json:"token_hash"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
+type GetAuthenticatedAppSessionRow struct {
+	SessionID    pgtype.UUID `json:"session_id"`
+	AppUserID    pgtype.UUID `json:"app_user_id"`
+	GithubUserID int64       `json:"github_user_id"`
+	GithubLogin  string      `json:"github_login"`
+	DisplayName  string      `json:"display_name"`
+	AvatarUrl    *string     `json:"avatar_url"`
+	Role         string      `json:"role"`
+	Active       bool        `json:"active"`
+}
+
+func (q *Queries) GetAuthenticatedAppSession(ctx context.Context, arg GetAuthenticatedAppSessionParams) (GetAuthenticatedAppSessionRow, error) {
+	row := q.db.QueryRow(ctx, getAuthenticatedAppSession, arg.TokenHash, arg.ExpiresAt)
+	var i GetAuthenticatedAppSessionRow
+	err := row.Scan(
+		&i.SessionID,
+		&i.AppUserID,
+		&i.GithubUserID,
+		&i.GithubLogin,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.Role,
+		&i.Active,
+	)
+	return i, err
+}
+
 const listAppUsers = `-- name: ListAppUsers :many
 SELECT id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
 FROM app_users
@@ -291,6 +341,17 @@ WHERE id = $1
 
 func (q *Queries) RevokeAppSession(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, revokeAppSession, id)
+	return err
+}
+
+const revokeAppSessionByTokenHash = `-- name: RevokeAppSessionByTokenHash :exec
+UPDATE app_sessions
+SET revoked_at = COALESCE(revoked_at, now())
+WHERE token_hash = $1
+`
+
+func (q *Queries) RevokeAppSessionByTokenHash(ctx context.Context, tokenHash []byte) error {
+	_, err := q.db.Exec(ctx, revokeAppSessionByTokenHash, tokenHash)
 	return err
 }
 

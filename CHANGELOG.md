@@ -8,6 +8,10 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- GitHub OAuth sign-in with state validation and explicit allowed-login enforcement.
+- Protected session and logout endpoints backed by revocable 24-hour opaque sessions.
+- Fail-closed authentication configuration for staging and production.
+- Authentication-aware web shell with login, current-user, role, and sign-out states.
 - Authentication persistence foundations for users, opaque sessions, and essential audit events.
 - Stable role, audit-event, and 24-hour session lifecycle contracts.
 - Typed environment, log-level, request-body limit, and shutdown configuration validation.
