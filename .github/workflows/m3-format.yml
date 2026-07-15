@@ -1,0 +1,62 @@
+name: M3 Profile UI formatting
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/m3-format.yml"
+      - "apps/web/**"
+      - "pnpm-lock.yaml"
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out helper branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Format Profile UI source
+        run: |
+          pnpm exec oxfmt \
+            apps/web/package.json \
+            apps/web/src/App.tsx \
+            apps/web/src/App.test.tsx \
+            apps/web/src/ProfilesPage.tsx \
+            apps/web/src/lib/api/client.ts \
+            apps/web/src/styles.css \
+            --write
+          tar -czf /tmp/m3-profile-ui-formatted.tgz \
+            apps/web/package.json \
+            apps/web/src/App.tsx \
+            apps/web/src/App.test.tsx \
+            apps/web/src/ProfilesPage.tsx \
+            apps/web/src/lib/api/client.ts \
+            apps/web/src/styles.css
+      - name: Publish formatted source to Profile UI branch
+        run: |
+          git fetch origin agent/m3-profile-ui
+          git checkout -B agent/m3-profile-ui origin/agent/m3-profile-ui
+          tar -xzf /tmp/m3-profile-ui-formatted.tgz
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web
+          git commit -m "style(web): format M3 Profile UI"
+          git push origin HEAD:agent/m3-profile-ui
