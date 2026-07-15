@@ -1,0 +1,137 @@
+$ pnpm --filter @pherlsz/gymkhana-database-web typecheck
+$ tsc -p tsconfig.json --noEmit --pretty false
+$ oxlint -c oxlint.json apps
+Found 0 warnings and 0 errors.
+Finished in 14ms on 10 files with 125 rules using 2 threads.
+$ vitest run
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/home/runner/work/Gymkhana-Database/Gymkhana-Database[39m
+
+[90mstderr[2m | apps/web/src/App.test.tsx[2m > [22m[2mApp[2m > [22m[2mshows the authenticated application shell and signs out
+[22m[39mWarning: useRouter must be used inside a <RouterProvider> component!
+Warning: useRouter must be used inside a <RouterProvider> component!
+An error occurred in the <ForwardRef> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+[90mstderr[2m | apps/web/src/App.test.tsx[2m > [22m[2mApp[2m > [22m[2mnavigates to Profiles, keeps list state in the URL, and saves an inline edit
+[22m[39mWarning: useRouter must be used inside a <RouterProvider> component!
+Warning: useRouter must be used inside a <RouterProvider> component!
+An error occurred in the <ForwardRef> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+
+ [31m❯[39m apps/web/src/App.test.tsx [2m([22m[2m3 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 2153[2mms[22m[39m
+[31m     [31m×[31m shows the authenticated application shell and signs out[39m[33m 1034[2mms[22m[39m
+     [32m✓[39m shows GitHub login when the protected session returns unauthorized[32m 110[2mms[22m[39m
+[31m     [31m×[31m navigates to Profiles, keeps list state in the URL, and saves an inline edit[39m[33m 1008[2mms[22m[39m
+ [32m✓[39m apps/web/src/lib/api/client.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m apps/web/src/App.test.tsx[2m > [22mApp[2m > [22mshows the authenticated application shell and signs out
+[31m[1mTestingLibraryElementError[22m: Unable to find an element with the text: Member Name. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div />[31m
+[36m</body>[31m
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div />[31m
+[36m</body>[31m[39m
+[90m [2m❯[22m waitForWrapper node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:[2m163:27[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m86:33[22m[39m
+[36m [2m❯[22m apps/web/src/App.test.tsx:[2m67:25[22m[39m
+    [90m 65|[39m     vi[33m.[39m[34mstubGlobal[39m([32m"fetch"[39m[33m,[39m fetchMock)[33m;[39m
+    [90m 66|[39m     [34mrender[39m([33m<[39m[33mApp[39m [33m/[39m[33m>[39m)[33m;[39m
+    [90m 67|[39m     [34mexpect[39m([35mawait[39m screen[33m.[39m[34mfindByText[39m([32m"Member Name"[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m   |[39m                         [31m^[39m
+    [90m 68|[39m     [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m"@member · Membro"[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+    [90m 69|[39m     [34mexpect[39m(screen[33m.[39m[34mgetByText[39m([32m"Sessão ativa"[39m))[33m.[39m[34mtoBeInTheDocument[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m apps/web/src/App.test.tsx[2m > [22mApp[2m > [22mnavigates to Profiles, keeps list state in the URL, and saves an inline edit
+[31m[1mTestingLibraryElementError[22m: Unable to find an element with the text: Member Name. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div />[31m
+[36m</body>[31m
+
+Ignored nodes: comments, script, style
+[36m<body>[31m
+  [36m<div />[31m
+[36m</body>[31m[39m
+[90m [2m❯[22m waitForWrapper node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:[2m163:27[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:[2m86:33[22m[39m
+[36m [2m❯[22m apps/web/src/App.test.tsx:[2m110:18[22m[39m
+    [90m108|[39m     vi[33m.[39m[34mstubGlobal[39m([32m"fetch"[39m[33m,[39m fetchMock)[33m;[39m
+    [90m109|[39m     [34mrender[39m([33m<[39m[33mApp[39m [33m/[39m[33m>[39m)[33m;[39m
+    [90m110|[39m     [35mawait[39m screen[33m.[39m[34mfindByText[39m([32m"Member Name"[39m)[33m;[39m
+    [90m   |[39m                  [31m^[39m
+    [90m111|[39m     fireEvent[33m.[39m[34mclick[39m(screen[33m.[39m[34mgetByRole[39m([32m"link"[39m[33m,[39m { name[33m:[39m [32m"Pessoas"[39m }))[33m;[39m
+    [90m112|[39m     expect(await screen.findAllByText("Ana da Silva")).not.toHaveLengt…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Errors [49m[22m[31m⎯⎯⎯⎯⎯⎯[39m
+[31m[1m
+Vitest caught 2 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.[22m[39m
+
+[31m⎯⎯⎯⎯⎯[39m[1m[41m Uncaught Exception [49m[22m[31m⎯⎯⎯⎯⎯[39m
+[31m[1mTypeError[22m: Cannot read properties of null (reading 'isServer')[39m
+[90m [2m❯[22m useLinkProps node_modules/.pnpm/@tanstack+react-router@1.170.18_react-dom@19.2.7_react@19.2.7__react@19.2.7/node_modules/@tanstack/react-router/dist/esm/link.js:[2m27:39[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/@tanstack+react-router@1.170.18_react-dom@19.2.7_react@19.2.7__react@19.2.7/node_modules/@tanstack/react-router/dist/esm/link.js:[2m449:40[22m[39m
+[90m [2m❯[22m Object.react_stack_bottom_frame node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m25904:20[22m[39m
+[90m [2m❯[22m renderWithHooks node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m7662:22[22m[39m
+[90m [2m❯[22m updateForwardRef node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m9724:19[22m[39m
+[90m [2m❯[22m beginWork node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m12117:18[22m[39m
+[90m [2m❯[22m runWithFiberInDEV node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m874:13[22m[39m
+[90m [2m❯[22m performUnitOfWork node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m17641:22[22m[39m
+[90m [2m❯[22m workLoopSync node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m17469:41[22m[39m
+[90m [2m❯[22m renderRootSync node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m17450:11[22m[39m
+
+[31mThis error originated in "[1mapps/web/src/App.test.tsx[22m" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.[39m
+[31mThe latest test that might've caused the error is "[1mshows the authenticated application shell and signs out[22m". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.[39m
+
+[31m⎯⎯⎯⎯⎯[39m[1m[41m Uncaught Exception [49m[22m[31m⎯⎯⎯⎯⎯[39m
+[31m[1mTypeError[22m: Cannot read properties of null (reading 'isServer')[39m
+[90m [2m❯[22m useLinkProps node_modules/.pnpm/@tanstack+react-router@1.170.18_react-dom@19.2.7_react@19.2.7__react@19.2.7/node_modules/@tanstack/react-router/dist/esm/link.js:[2m27:39[22m[39m
+[90m [2m❯[22m node_modules/.pnpm/@tanstack+react-router@1.170.18_react-dom@19.2.7_react@19.2.7__react@19.2.7/node_modules/@tanstack/react-router/dist/esm/link.js:[2m449:40[22m[39m
+[90m [2m❯[22m Object.react_stack_bottom_frame node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m25904:20[22m[39m
+[90m [2m❯[22m renderWithHooks node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m7662:22[22m[39m
+[90m [2m❯[22m updateForwardRef node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m9724:19[22m[39m
+[90m [2m❯[22m beginWork node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m12117:18[22m[39m
+[90m [2m❯[22m runWithFiberInDEV node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m874:13[22m[39m
+[90m [2m❯[22m performUnitOfWork node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m17641:22[22m[39m
+[90m [2m❯[22m workLoopSync node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m17469:41[22m[39m
+[90m [2m❯[22m renderRootSync node_modules/.pnpm/react-dom@19.2.7_react@19.2.7/node_modules/react-dom/cjs/react-dom-client.development.js:[2m17450:11[22m[39m
+
+[31mThis error originated in "[1mapps/web/src/App.test.tsx[22m" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.[39m
+[31mThe latest test that might've caused the error is "[1mnavigates to Profiles, keeps list state in the URL, and saves an inline edit[22m". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.[39m
+[31m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m4 passed[39m[22m[90m (6)[39m
+[2m     Errors [22m [1m[31m2 errors[39m[22m
+[2m   Start at [22m 16:54:29
+[2m   Duration [22m 3.81s[2m (transform 183ms, setup 84ms, import 336ms, tests 2.16s, environment 996ms)[22m
+
+
+::error file=/home/runner/work/Gymkhana-Database/Gymkhana-Database/apps/web/src/App.test.tsx,title=apps/web/src/App.test.tsx > App > shows the authenticated application shell and signs out,line=67,column=25::TestingLibraryElementError: Unable to find an element with the text: Member Name. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.%0A%0AIgnored nodes: comments, script, style%0A<body>%0A  <div />%0A</body>%0A%0AIgnored nodes: comments, script, style%0A<body>%0A  <div />%0A</body>%0A ❯ waitForWrapper node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:163:27%0A ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:86:33%0A ❯ apps/web/src/App.test.tsx:67:25%0A%0A
+
+::error file=/home/runner/work/Gymkhana-Database/Gymkhana-Database/apps/web/src/App.test.tsx,title=apps/web/src/App.test.tsx > App > navigates to Profiles%2C keeps list state in the URL%2C and saves an inline edit,line=110,column=18::TestingLibraryElementError: Unable to find an element with the text: Member Name. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.%0A%0AIgnored nodes: comments, script, style%0A<body>%0A  <div />%0A</body>%0A%0AIgnored nodes: comments, script, style%0A<body>%0A  <div />%0A</body>%0A ❯ waitForWrapper node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:163:27%0A ❯ node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:86:33%0A ❯ apps/web/src/App.test.tsx:110:18%0A%0A
+[ELIFECYCLE] Command failed with exit code 1.
