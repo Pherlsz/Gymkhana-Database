@@ -2,9 +2,11 @@
 
 Private web application for managing people, documents, bills, custom data, imports, search, duplicate review, OCR, and AI-assisted queries for gymkhana workflows.
 
-## Current status
+## Documentation and tracking
 
-Milestone 2 authentication and minimal administration. Product data modules remain intentionally outside this increment.
+Permanent product, domain, security, UX, and architecture rules live in [`docs/ORCHESTRATION.md`](docs/ORCHESTRATION.md).
+
+Development status, milestone definitions, completed work, pending work, and continuation context live only in the [master checklist issue #31](https://github.com/Pherlsz/Gymkhana-Database/issues/31). The README and repository documents do not track the current milestone or next action.
 
 The application consumes:
 
@@ -114,6 +116,9 @@ Gymkhana Database owns the product, persistence, HTTP API, workers, provider int
 
 Private UI/Core versions are pinned only after their releases are published. Permanent branch, commit, `replace`, subtree, submodule, or copied-source dependencies are not allowed.
 
-## Planning and implementation tracking
+## Project governance
 
-Architecture and product decisions live in [`docs/ORCHESTRATION.md`](docs/ORCHESTRATION.md). Delivery conventions and GitHub milestone usage live in [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md). M2 acceptance evidence lives in [`docs/M2_ACCEPTANCE.md`](docs/M2_ACCEPTANCE.md).
+- [`docs/ORCHESTRATION.md`](docs/ORCHESTRATION.md) contains permanent approved rules only.
+- [Issue #31](https://github.com/Pherlsz/Gymkhana-Database/issues/31) is the only live project checklist and continuation tracker.
+- [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) is an operational runbook for the implemented authentication feature.
+- New milestone-status, acceptance-tracking, continuation, or next-action documents must not be created.
