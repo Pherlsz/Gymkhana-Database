@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Gymkhana Database API
-  version: 0.2.0
+  version: 0.3.0
   description: Private API contract for Gymkhana Database.
 servers:
   - url: /
@@ -107,6 +107,83 @@ paths:
           description: Session revoked or already absent
         "503":
           $ref: "#/components/responses/AuthUnavailable"
+  /api/admin/users:
+    get:
+      operationId: listApplicationUsers
+      summary: List application users for administration
+      tags: [Administration]
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Application users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUsersResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/AuthUnavailable"
+  /api/admin/users/{user_id}/access:
+    patch:
+      operationId: updateApplicationUserAccess
+      summary: Update application role and active status
+      tags: [Administration]
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserAccessRequest"
+      responses:
+        "200":
+          description: Updated application user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/AuthUnavailable"
 components:
   securitySchemes:
     sessionCookie:
@@ -127,7 +204,19 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     Forbidden:
-      description: The GitHub account is not allowed
+      description: The current user is not authorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: The requested update conflicts with current state
       content:
         application/json:
           schema:
@@ -172,8 +261,55 @@ components:
           type: string
           format: uri
         role:
+          $ref: "#/components/schemas/UserRole"
+    UserRole:
+      type: string
+      enum: [MEMBER, ADMIN, SUPERADMIN]
+    AdminUsersResponse:
+      type: object
+      additionalProperties: false
+      required: [users]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUser"
+    AdminUser:
+      type: object
+      additionalProperties: false
+      required: [id, login, display_name, role, active, version]
+      properties:
+        id:
           type: string
-          enum: [MEMBER, ADMIN, SUPERADMIN]
+          format: uuid
+        login:
+          type: string
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        role:
+          $ref: "#/components/schemas/UserRole"
+        active:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+    UpdateUserAccessRequest:
+      type: object
+      additionalProperties: false
+      required: [role, active, version]
+      properties:
+        role:
+          $ref: "#/components/schemas/UserRole"
+        active:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+          minimum: 1
     ErrorResponse:
       type: object
       additionalProperties: false

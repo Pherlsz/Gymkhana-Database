@@ -9,6 +9,7 @@ import {
   Surface,
 } from "@pherlsz/gymkhana-ui";
 import { useCallback, useEffect, useState } from "react";
+import { AdminUsersPanel } from "./AdminUsersPanel";
 import {
   APIRequestError,
   apiURL,
@@ -132,6 +133,16 @@ export function App() {
                 onSignOut={() => void signOut()}
               />
 
+              {authentication.kind === "authenticated" &&
+              canManageUsers(authentication.session.user.role) ? (
+                <Page.Section
+                  description="Funções, acesso ativo e revogação de sessões são controlados pela aplicação."
+                  title="Administração de usuários"
+                >
+                  <AdminUsersPanel currentLogin={authentication.session.user.login} />
+                </Page.Section>
+              ) : null}
+
               <Page.Section
                 description="A infraestrutura compartilhada continua consumida somente por versões exatas."
                 title="Foundation status"
@@ -238,6 +249,10 @@ function FoundationCard({ label, value }: { label: string; value: string }) {
       </Stack>
     </Surface>
   );
+}
+
+function canManageUsers(role: "MEMBER" | "ADMIN" | "SUPERADMIN"): boolean {
+  return role === "ADMIN" || role === "SUPERADMIN";
 }
 
 function authenticationTone(authentication: AuthState): "neutral" | "success" | "danger" | "info" {
