@@ -109,10 +109,16 @@ export async function logout(): Promise<void> {
 }
 
 export async function listApplicationUsers(signal?: AbortSignal): Promise<AdminUsersResponse> {
-  return requestJSON<AdminUsersResponse>("/api/admin/users?limit=100&offset=0", signal ? { signal } : {});
+  return requestJSON<AdminUsersResponse>(
+    "/api/admin/users?limit=100&offset=0",
+    signal ? { signal } : {},
+  );
 }
 
-export async function updateApplicationUserAccess(userId: string, request: UpdateUserAccessRequest): Promise<AdminUser> {
+export async function updateApplicationUserAccess(
+  userId: string,
+  request: UpdateUserAccessRequest,
+): Promise<AdminUser> {
   return requestJSON<AdminUser>(`/api/admin/users/${encodeURIComponent(userId)}/access`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -134,7 +140,10 @@ export type ProfileListSearch = {
   mode: "create" | "view" | "edit" | undefined;
 };
 
-export async function listProfiles(search: ProfileListSearch, signal?: AbortSignal): Promise<ProfilePageResponse> {
+export async function listProfiles(
+  search: ProfileListSearch,
+  signal?: AbortSignal,
+): Promise<ProfilePageResponse> {
   const query = new URLSearchParams({
     limit: String(search.limit),
     offset: String((search.page - 1) * search.limit),
@@ -164,10 +173,16 @@ export async function updateProfile(id: string, request: UpdateProfileRequest): 
 }
 
 export async function duplicateProfile(id: string): Promise<Profile> {
-  return requestJSON<Profile>(`/api/v1/profiles/${encodeURIComponent(id)}/duplicate`, { method: "POST" });
+  return requestJSON<Profile>(`/api/v1/profiles/${encodeURIComponent(id)}/duplicate`, {
+    method: "POST",
+  });
 }
 
-export async function deleteProfile(id: string, version: number, confirmation: string): Promise<void> {
+export async function deleteProfile(
+  id: string,
+  version: number,
+  confirmation: string,
+): Promise<void> {
   const response = await fetch(apiURL(`/api/v1/profiles/${encodeURIComponent(id)}`), {
     method: "DELETE",
     credentials: "include",
