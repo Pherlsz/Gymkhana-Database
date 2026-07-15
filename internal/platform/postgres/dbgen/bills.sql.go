@@ -281,7 +281,11 @@ SELECT
   bill.id, bill.owner_profile_id, bill.bill_type_id, bill.printed_holder_name, bill.printed_address, bill.reference_value, bill.competence, bill.amount, bill.currency, bill.notes, bill.record_state, bill.version, bill.created_at, bill.updated_at,
   bill_type.technical_key AS type_technical_key,
   bill_type.label AS type_label,
+  bill_type.active AS type_active,
   bill_type.supports_current_use AS type_supports_current_use,
+  bill_type.version AS type_version,
+  bill_type.created_at AS type_created_at,
+  bill_type.updated_at AS type_updated_at,
   bill_current_use.holder_profile_id AS current_holder_profile_id,
   bill_current_use.assigned_at AS current_assigned_at
 FROM bills AS bill
@@ -307,7 +311,11 @@ type GetBillByIDRow struct {
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 	TypeTechnicalKey       string             `json:"type_technical_key"`
 	TypeLabel              string             `json:"type_label"`
+	TypeActive             bool               `json:"type_active"`
 	TypeSupportsCurrentUse bool               `json:"type_supports_current_use"`
+	TypeVersion            int64              `json:"type_version"`
+	TypeCreatedAt          pgtype.Timestamptz `json:"type_created_at"`
+	TypeUpdatedAt          pgtype.Timestamptz `json:"type_updated_at"`
 	CurrentHolderProfileID pgtype.UUID        `json:"current_holder_profile_id"`
 	CurrentAssignedAt      pgtype.Timestamptz `json:"current_assigned_at"`
 }
@@ -332,7 +340,11 @@ func (q *Queries) GetBillByID(ctx context.Context, id pgtype.UUID) (GetBillByIDR
 		&i.UpdatedAt,
 		&i.TypeTechnicalKey,
 		&i.TypeLabel,
+		&i.TypeActive,
 		&i.TypeSupportsCurrentUse,
+		&i.TypeVersion,
+		&i.TypeCreatedAt,
+		&i.TypeUpdatedAt,
 		&i.CurrentHolderProfileID,
 		&i.CurrentAssignedAt,
 	)
@@ -439,7 +451,11 @@ SELECT
   bill.id, bill.owner_profile_id, bill.bill_type_id, bill.printed_holder_name, bill.printed_address, bill.reference_value, bill.competence, bill.amount, bill.currency, bill.notes, bill.record_state, bill.version, bill.created_at, bill.updated_at,
   bill_type.technical_key AS type_technical_key,
   bill_type.label AS type_label,
+  bill_type.active AS type_active,
   bill_type.supports_current_use AS type_supports_current_use,
+  bill_type.version AS type_version,
+  bill_type.created_at AS type_created_at,
+  bill_type.updated_at AS type_updated_at,
   bill_current_use.holder_profile_id AS current_holder_profile_id,
   bill_current_use.assigned_at AS current_assigned_at
 FROM bills AS bill
@@ -503,7 +519,11 @@ type ListBillsRow struct {
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 	TypeTechnicalKey       string             `json:"type_technical_key"`
 	TypeLabel              string             `json:"type_label"`
+	TypeActive             bool               `json:"type_active"`
 	TypeSupportsCurrentUse bool               `json:"type_supports_current_use"`
+	TypeVersion            int64              `json:"type_version"`
+	TypeCreatedAt          pgtype.Timestamptz `json:"type_created_at"`
+	TypeUpdatedAt          pgtype.Timestamptz `json:"type_updated_at"`
 	CurrentHolderProfileID pgtype.UUID        `json:"current_holder_profile_id"`
 	CurrentAssignedAt      pgtype.Timestamptz `json:"current_assigned_at"`
 }
@@ -546,7 +566,11 @@ func (q *Queries) ListBills(ctx context.Context, arg ListBillsParams) ([]ListBil
 			&i.UpdatedAt,
 			&i.TypeTechnicalKey,
 			&i.TypeLabel,
+			&i.TypeActive,
 			&i.TypeSupportsCurrentUse,
+			&i.TypeVersion,
+			&i.TypeCreatedAt,
+			&i.TypeUpdatedAt,
 			&i.CurrentHolderProfileID,
 			&i.CurrentAssignedAt,
 		); err != nil {

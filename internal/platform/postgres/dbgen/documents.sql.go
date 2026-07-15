@@ -266,8 +266,12 @@ SELECT
   document.id, document.owner_profile_id, document.document_type_id, document.identifier_value, document.uniqueness_policy, document.document_date, document.notes, document.record_state, document.version, document.created_at, document.updated_at,
   document_type.technical_key AS type_technical_key,
   document_type.label AS type_label,
+  document_type.active AS type_active,
   document_type.validation_regex AS type_validation_regex,
   document_type.date_required AS type_date_required,
+  document_type.version AS type_version,
+  document_type.created_at AS type_created_at,
+  document_type.updated_at AS type_updated_at,
   document_current_use.holder_profile_id AS current_holder_profile_id,
   document_current_use.assigned_at AS current_assigned_at
 FROM documents AS document
@@ -290,8 +294,12 @@ type GetDocumentByIDRow struct {
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 	TypeTechnicalKey       string             `json:"type_technical_key"`
 	TypeLabel              string             `json:"type_label"`
+	TypeActive             bool               `json:"type_active"`
 	TypeValidationRegex    *string            `json:"type_validation_regex"`
 	TypeDateRequired       bool               `json:"type_date_required"`
+	TypeVersion            int64              `json:"type_version"`
+	TypeCreatedAt          pgtype.Timestamptz `json:"type_created_at"`
+	TypeUpdatedAt          pgtype.Timestamptz `json:"type_updated_at"`
 	CurrentHolderProfileID pgtype.UUID        `json:"current_holder_profile_id"`
 	CurrentAssignedAt      pgtype.Timestamptz `json:"current_assigned_at"`
 }
@@ -313,8 +321,12 @@ func (q *Queries) GetDocumentByID(ctx context.Context, id pgtype.UUID) (GetDocum
 		&i.UpdatedAt,
 		&i.TypeTechnicalKey,
 		&i.TypeLabel,
+		&i.TypeActive,
 		&i.TypeValidationRegex,
 		&i.TypeDateRequired,
+		&i.TypeVersion,
+		&i.TypeCreatedAt,
+		&i.TypeUpdatedAt,
 		&i.CurrentHolderProfileID,
 		&i.CurrentAssignedAt,
 	)
@@ -425,8 +437,12 @@ SELECT
   document.id, document.owner_profile_id, document.document_type_id, document.identifier_value, document.uniqueness_policy, document.document_date, document.notes, document.record_state, document.version, document.created_at, document.updated_at,
   document_type.technical_key AS type_technical_key,
   document_type.label AS type_label,
+  document_type.active AS type_active,
   document_type.validation_regex AS type_validation_regex,
   document_type.date_required AS type_date_required,
+  document_type.version AS type_version,
+  document_type.created_at AS type_created_at,
+  document_type.updated_at AS type_updated_at,
   document_current_use.holder_profile_id AS current_holder_profile_id,
   document_current_use.assigned_at AS current_assigned_at
 FROM documents AS document
@@ -483,8 +499,12 @@ type ListDocumentsRow struct {
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 	TypeTechnicalKey       string             `json:"type_technical_key"`
 	TypeLabel              string             `json:"type_label"`
+	TypeActive             bool               `json:"type_active"`
 	TypeValidationRegex    *string            `json:"type_validation_regex"`
 	TypeDateRequired       bool               `json:"type_date_required"`
+	TypeVersion            int64              `json:"type_version"`
+	TypeCreatedAt          pgtype.Timestamptz `json:"type_created_at"`
+	TypeUpdatedAt          pgtype.Timestamptz `json:"type_updated_at"`
 	CurrentHolderProfileID pgtype.UUID        `json:"current_holder_profile_id"`
 	CurrentAssignedAt      pgtype.Timestamptz `json:"current_assigned_at"`
 }
@@ -523,8 +543,12 @@ func (q *Queries) ListDocuments(ctx context.Context, arg ListDocumentsParams) ([
 			&i.UpdatedAt,
 			&i.TypeTechnicalKey,
 			&i.TypeLabel,
+			&i.TypeActive,
 			&i.TypeValidationRegex,
 			&i.TypeDateRequired,
+			&i.TypeVersion,
+			&i.TypeCreatedAt,
+			&i.TypeUpdatedAt,
 			&i.CurrentHolderProfileID,
 			&i.CurrentAssignedAt,
 		); err != nil {
