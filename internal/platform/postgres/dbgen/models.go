@@ -49,6 +49,73 @@ type AuthAuditEvent struct {
 	OccurredAt    pgtype.Timestamptz `json:"occurred_at"`
 }
 
+type Bill struct {
+	ID                pgtype.UUID        `json:"id"`
+	OwnerProfileID    pgtype.UUID        `json:"owner_profile_id"`
+	BillTypeID        pgtype.UUID        `json:"bill_type_id"`
+	PrintedHolderName *string            `json:"printed_holder_name"`
+	PrintedAddress    *string            `json:"printed_address"`
+	ReferenceValue    *string            `json:"reference_value"`
+	Competence        *string            `json:"competence"`
+	Amount            pgtype.Numeric     `json:"amount"`
+	Currency          *string            `json:"currency"`
+	Notes             *string            `json:"notes"`
+	RecordState       string             `json:"record_state"`
+	Version           int64              `json:"version"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type BillCurrentUse struct {
+	BillID          pgtype.UUID        `json:"bill_id"`
+	HolderProfileID pgtype.UUID        `json:"holder_profile_id"`
+	AssignedAt      pgtype.Timestamptz `json:"assigned_at"`
+}
+
+type BillType struct {
+	ID                 pgtype.UUID        `json:"id"`
+	TechnicalKey       string             `json:"technical_key"`
+	Label              string             `json:"label"`
+	Active             bool               `json:"active"`
+	SupportsCurrentUse bool               `json:"supports_current_use"`
+	Version            int64              `json:"version"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Document struct {
+	ID               pgtype.UUID        `json:"id"`
+	OwnerProfileID   pgtype.UUID        `json:"owner_profile_id"`
+	DocumentTypeID   pgtype.UUID        `json:"document_type_id"`
+	IdentifierValue  string             `json:"identifier_value"`
+	UniquenessPolicy string             `json:"uniqueness_policy"`
+	DocumentDate     pgtype.Date        `json:"document_date"`
+	Notes            *string            `json:"notes"`
+	RecordState      string             `json:"record_state"`
+	Version          int64              `json:"version"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type DocumentCurrentUse struct {
+	DocumentID      pgtype.UUID        `json:"document_id"`
+	HolderProfileID pgtype.UUID        `json:"holder_profile_id"`
+	AssignedAt      pgtype.Timestamptz `json:"assigned_at"`
+}
+
+type DocumentType struct {
+	ID               pgtype.UUID        `json:"id"`
+	TechnicalKey     string             `json:"technical_key"`
+	Label            string             `json:"label"`
+	Active           bool               `json:"active"`
+	UniquenessPolicy string             `json:"uniqueness_policy"`
+	ValidationRegex  *string            `json:"validation_regex"`
+	DateRequired     bool               `json:"date_required"`
+	Version          int64              `json:"version"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Profile struct {
 	ID                  pgtype.UUID        `json:"id"`
 	FullName            string             `json:"full_name"`
