@@ -64,8 +64,12 @@ SELECT
   document.*,
   document_type.technical_key AS type_technical_key,
   document_type.label AS type_label,
+  document_type.active AS type_active,
   document_type.validation_regex AS type_validation_regex,
   document_type.date_required AS type_date_required,
+  document_type.version AS type_version,
+  document_type.created_at AS type_created_at,
+  document_type.updated_at AS type_updated_at,
   document_current_use.holder_profile_id AS current_holder_profile_id,
   document_current_use.assigned_at AS current_assigned_at
 FROM documents AS document
@@ -91,8 +95,12 @@ SELECT
   document.*,
   document_type.technical_key AS type_technical_key,
   document_type.label AS type_label,
+  document_type.active AS type_active,
   document_type.validation_regex AS type_validation_regex,
   document_type.date_required AS type_date_required,
+  document_type.version AS type_version,
+  document_type.created_at AS type_created_at,
+  document_type.updated_at AS type_updated_at,
   document_current_use.holder_profile_id AS current_holder_profile_id,
   document_current_use.assigned_at AS current_assigned_at
 FROM documents AS document
