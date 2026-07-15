@@ -1,0 +1,313 @@
+package httpserver
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+	"time"
+
+	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
+	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
+)
+
+type profileService interface {
+	List(context.Context, auth.Session, profile.ListOptions) (profile.Page, error)
+	Get(context.Context, auth.Session, profile.Identifier) (profile.Profile, error)
+	Create(context.Context, auth.Session, profile.Values, string) (profile.Profile, error)
+	Update(context.Context, auth.Session, profile.Identifier, int64, profile.Values, string) (profile.Profile, error)
+	Duplicate(context.Context, auth.Session, profile.Identifier, string) (profile.Profile, error)
+	Delete(context.Context, auth.Session, profile.Identifier, int64, string, string) error
+}
+
+type profileAddressRequest struct {
+	Street       string `json:"street"`
+	Number       string `json:"number"`
+	Complement   string `json:"complement"`
+	Neighborhood string `json:"neighborhood"`
+	City         string `json:"city"`
+	State        string `json:"state"`
+	PostalCode   string `json:"postal_code"`
+}
+
+type profileValuesRequest struct {
+	FullName      string                `json:"full_name"`
+	SocialName    string                `json:"social_name"`
+	CPF           string                `json:"cpf"`
+	Email         string                `json:"email"`
+	MobilePhone   string                `json:"mobile_phone"`
+	LandlinePhone string                `json:"landline_phone"`
+	Address       profileAddressRequest `json:"address"`
+	Notes         string                `json:"notes"`
+}
+
+type updateProfileRequest struct {
+	FullName      string                `json:"full_name"`
+	SocialName    string                `json:"social_name"`
+	CPF           string                `json:"cpf"`
+	Email         string                `json:"email"`
+	MobilePhone   string                `json:"mobile_phone"`
+	LandlinePhone string                `json:"landline_phone"`
+	Address       profileAddressRequest `json:"address"`
+	Notes         string                `json:"notes"`
+	Version       int64                 `json:"version"`
+}
+
+type deleteProfileRequest struct {
+	Version      int64  `json:"version"`
+	Confirmation string `json:"confirmation"`
+}
+
+type profileAddressResponse struct {
+	Street       string `json:"street"`
+	Number       string `json:"number"`
+	Complement   string `json:"complement"`
+	Neighborhood string `json:"neighborhood"`
+	City         string `json:"city"`
+	State        string `json:"state"`
+	PostalCode   string `json:"postal_code"`
+}
+
+type profileResponse struct {
+	ID            string                 `json:"id"`
+	FullName      string                 `json:"full_name"`
+	SocialName    string                 `json:"social_name"`
+	CPF           string                 `json:"cpf"`
+	Email         string                 `json:"email"`
+	MobilePhone   string                 `json:"mobile_phone"`
+	LandlinePhone string                 `json:"landline_phone"`
+	Address       profileAddressResponse `json:"address"`
+	Notes         string                 `json:"notes"`
+	Version       int64                  `json:"version"`
+	CreatedAt     time.Time              `json:"created_at"`
+	UpdatedAt     time.Time              `json:"updated_at"`
+}
+
+type profilePageResponse struct {
+	Profiles []profileResponse `json:"profiles"`
+	Page     profilePageMeta   `json:"page"`
+}
+
+type profilePageMeta struct {
+	Total     int64  `json:"total"`
+	Limit     int32  `json:"limit"`
+	Offset    int32  `json:"offset"`
+	SortField string `json:"sort_field"`
+	SortOrder string `json:"sort_order"`
+}
+
+func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service profileService) {
+	mux.HandleFunc("GET /api/v1/profiles", func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if service == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "O módulo de pessoas não está configurado"})
+			return
+		}
+		limit, parseProblem := parseBoundedInt32(r.URL.Query().Get("limit"), 100, 1, 1000)
+		if parseProblem != nil {
+			writeProblem(w, r, *parseProblem)
+			return
+		}
+		offset, parseProblem := parseBoundedInt32(r.URL.Query().Get("offset"), 0, 0, 1_000_000)
+		if parseProblem != nil {
+			writeProblem(w, r, *parseProblem)
+			return
+		}
+		page, err := service.List(r.Context(), actor, profile.ListOptions{
+			Limit: limit, Offset: offset, SortField: profile.SortField(r.URL.Query().Get("sort")), SortOrder: profile.SortOrder(r.URL.Query().Get("order")),
+			Filters: profile.Filters{FullName: r.URL.Query().Get("full_name"), CPF: r.URL.Query().Get("cpf"), Email: r.URL.Query().Get("email"), City: r.URL.Query().Get("city"), State: r.URL.Query().Get("state")},
+		})
+		if err != nil {
+			writeProfileError(w, r, logger, "list profiles", err)
+			return
+		}
+		response := profilePageResponse{Profiles: make([]profileResponse, 0, len(page.Profiles)), Page: profilePageMeta{Total: page.Total, Limit: page.Limit, Offset: page.Offset, SortField: string(page.SortField), SortOrder: string(page.SortOrder)}}
+		for _, value := range page.Profiles {
+			response.Profiles = append(response.Profiles, profileFromDomain(value))
+		}
+		writeJSON(w, http.StatusOK, response)
+	})
+	mux.HandleFunc("POST /api/v1/profiles", func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if service == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "O módulo de pessoas não está configurado"})
+			return
+		}
+		var request profileValuesRequest
+		if problem := DecodeJSON(w, r, &request); problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		created, err := service.Create(r.Context(), actor, request.domainValues(), requestIDFromContext(r.Context()))
+		if err != nil {
+			writeProfileError(w, r, logger, "create profile", err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, profileFromDomain(created))
+	})
+	mux.HandleFunc("GET /api/v1/profiles/{profile_id}", func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if service == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "O módulo de pessoas não está configurado"})
+			return
+		}
+		id, problem := parseProfileIdentifier(r.PathValue("profile_id"))
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		value, err := service.Get(r.Context(), actor, id)
+		if err != nil {
+			writeProfileError(w, r, logger, "get profile", err)
+			return
+		}
+		writeJSON(w, http.StatusOK, profileFromDomain(value))
+	})
+	mux.HandleFunc("PUT /api/v1/profiles/{profile_id}", func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if service == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "O módulo de pessoas não está configurado"})
+			return
+		}
+		id, problem := parseProfileIdentifier(r.PathValue("profile_id"))
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		var request updateProfileRequest
+		if problem := DecodeJSON(w, r, &request); problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		updated, err := service.Update(r.Context(), actor, id, request.Version, request.domainValues(), requestIDFromContext(r.Context()))
+		if err != nil {
+			writeProfileError(w, r, logger, "update profile", err)
+			return
+		}
+		writeJSON(w, http.StatusOK, profileFromDomain(updated))
+	})
+	mux.HandleFunc("POST /api/v1/profiles/{profile_id}/duplicate", func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if service == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "O módulo de pessoas não está configurado"})
+			return
+		}
+		id, problem := parseProfileIdentifier(r.PathValue("profile_id"))
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		duplicated, err := service.Duplicate(r.Context(), actor, id, requestIDFromContext(r.Context()))
+		if err != nil {
+			writeProfileError(w, r, logger, "duplicate profile", err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, profileFromDomain(duplicated))
+	})
+	mux.HandleFunc("DELETE /api/v1/profiles/{profile_id}", func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if service == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "O módulo de pessoas não está configurado"})
+			return
+		}
+		id, problem := parseProfileIdentifier(r.PathValue("profile_id"))
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		var request deleteProfileRequest
+		if problem := DecodeJSON(w, r, &request); problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if err := service.Delete(r.Context(), actor, id, request.Version, request.Confirmation, requestIDFromContext(r.Context())); err != nil {
+			writeProfileError(w, r, logger, "delete profile", err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+}
+
+func (request profileValuesRequest) domainValues() profile.Values {
+	return profile.Values{FullName: request.FullName, SocialName: request.SocialName, CPF: request.CPF, Email: request.Email, MobilePhone: request.MobilePhone, LandlinePhone: request.LandlinePhone,
+		Address: profile.Address{Street: request.Address.Street, Number: request.Address.Number, Complement: request.Address.Complement, Neighborhood: request.Address.Neighborhood, City: request.Address.City, State: request.Address.State, PostalCode: request.Address.PostalCode}, Notes: request.Notes}
+}
+func (request updateProfileRequest) domainValues() profile.Values {
+	return profileValuesRequest{FullName: request.FullName, SocialName: request.SocialName, CPF: request.CPF, Email: request.Email, MobilePhone: request.MobilePhone, LandlinePhone: request.LandlinePhone, Address: request.Address, Notes: request.Notes}.domainValues()
+}
+func profileFromDomain(value profile.Profile) profileResponse {
+	return profileResponse{ID: value.ID.String(), FullName: value.Values.FullName, SocialName: value.Values.SocialName, CPF: value.Values.CPF, Email: value.Values.Email, MobilePhone: value.Values.MobilePhone, LandlinePhone: value.Values.LandlinePhone,
+		Address: profileAddressResponse{Street: value.Values.Address.Street, Number: value.Values.Address.Number, Complement: value.Values.Address.Complement, Neighborhood: value.Values.Address.Neighborhood, City: value.Values.Address.City, State: value.Values.Address.State, PostalCode: value.Values.Address.PostalCode}, Notes: value.Values.Notes, Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
+}
+func parseProfileIdentifier(value string) (profile.Identifier, *Problem) {
+	id, err := profile.ParseIdentifier(value)
+	if err != nil {
+		return profile.Identifier{}, &Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "O identificador da pessoa é inválido"}
+	}
+	return id, nil
+}
+func writeProfileError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, operation string, err error) {
+	var validation *profile.ValidationError
+	switch {
+	case errors.As(err, &validation):
+		writeProblem(w, r, Problem{Status: http.StatusUnprocessableEntity, Code: ErrorCodeValidation, Message: "Revise os campos informados", FieldErrors: profileFieldProblems(validation)})
+	case errors.Is(err, profile.ErrInvalidListOptions):
+		writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Filtros, ordenação ou paginação são inválidos"})
+	case errors.Is(err, profile.ErrInvalidConfirmation):
+		writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Digite Confirmar para excluir permanentemente"})
+	case errors.Is(err, profile.ErrForbidden):
+		writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "Você não possui permissão para esta operação"})
+	case errors.Is(err, profile.ErrNotFound):
+		writeProblem(w, r, Problem{Status: http.StatusNotFound, Code: ErrorCodeNotFound, Message: "A pessoa não foi encontrada"})
+	case errors.Is(err, profile.ErrConflict):
+		writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "A pessoa foi alterada desde o último carregamento"})
+	default:
+		logger.Error(operation, "request_id", requestIDFromContext(r.Context()), "error", err)
+		writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Não foi possível concluir a operação"})
+	}
+}
+func profileFieldProblems(validation *profile.ValidationError) []FieldProblem {
+	problems := make([]FieldProblem, 0, len(validation.Fields))
+	for _, field := range validation.Fields {
+		problems = append(problems, FieldProblem{Field: field.Field, Code: field.Code, Message: profileFieldMessage(field.Code)})
+	}
+	return problems
+}
+func profileFieldMessage(code string) string {
+	switch code {
+	case "required":
+		return "Campo obrigatório"
+	case "too_long":
+		return "Valor maior que o permitido"
+	case "not_mobile":
+		return "Informe um celular brasileiro válido"
+	case "not_landline":
+		return "Informe um telefone fixo brasileiro válido"
+	default:
+		return "Formato inválido"
+	}
+}

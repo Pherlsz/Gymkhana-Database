@@ -140,6 +140,62 @@ export interface paths {
     patch: operations["updateApplicationUserAccess"];
     trace?: never;
   };
+  "/api/v1/profiles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List physical-person profiles */
+    get: operations["listProfiles"];
+    put?: never;
+    /** Create a physical-person profile */
+    post: operations["createProfile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/profiles/{profile_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        profile_id: string;
+      };
+      cookie?: never;
+    };
+    /** Read one physical-person profile */
+    get: operations["getProfile"];
+    /** Replace canonical profile values using optimistic concurrency */
+    put: operations["updateProfile"];
+    post?: never;
+    /** Permanently delete a profile with explicit confirmation */
+    delete: operations["deleteProfile"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/profiles/{profile_id}/duplicate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Duplicate a profile into an independent profile for review */
+    post: operations["duplicateProfile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -184,12 +240,97 @@ export interface components {
       /** Format: int64 */
       version: number;
     };
+    /**
+     * @default full_name
+     * @enum {string}
+     */
+    ProfileSortField: "full_name" | "cpf" | "email" | "address_city" | "created_at" | "updated_at";
+    /**
+     * @default asc
+     * @enum {string}
+     */
+    SortOrder: "asc" | "desc";
+    ProfileAddress: {
+      street: string;
+      number: string;
+      complement: string;
+      neighborhood: string;
+      city: string;
+      state: string;
+      postal_code: string;
+    };
+    ProfileValuesRequest: {
+      full_name: string;
+      social_name: string;
+      cpf: string;
+      email: string;
+      mobile_phone: string;
+      landline_phone: string;
+      address: components["schemas"]["ProfileAddress"];
+      notes: string;
+    };
+    UpdateProfileRequest: {
+      full_name: string;
+      social_name: string;
+      cpf: string;
+      email: string;
+      mobile_phone: string;
+      landline_phone: string;
+      address: components["schemas"]["ProfileAddress"];
+      notes: string;
+      /** Format: int64 */
+      version: number;
+    };
+    DeleteProfileRequest: {
+      /** Format: int64 */
+      version: number;
+      /** @constant */
+      confirmation: "Confirmar";
+    };
+    Profile: {
+      /** Format: uuid */
+      id: string;
+      full_name: string;
+      social_name: string;
+      cpf: string;
+      email: string;
+      mobile_phone: string;
+      landline_phone: string;
+      address: components["schemas"]["ProfileAddress"];
+      notes: string;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    ProfilePageMeta: {
+      /** Format: int64 */
+      total: number;
+      /** Format: int32 */
+      limit: number;
+      /** Format: int32 */
+      offset: number;
+      sort_field: components["schemas"]["ProfileSortField"];
+      sort_order: components["schemas"]["SortOrder"];
+    };
+    ProfilePageResponse: {
+      profiles: components["schemas"]["Profile"][];
+      page: components["schemas"]["ProfilePageMeta"];
+    };
+    FieldError: {
+      field: string;
+      code: string;
+      message: string;
+    };
     ErrorResponse: {
       error: {
         code: string;
         message: string;
       };
       request_id?: string;
+      field_errors?: components["schemas"]["FieldError"][];
     };
   };
   responses: {
@@ -238,8 +379,26 @@ export interface components {
         "application/json": components["schemas"]["ErrorResponse"];
       };
     };
+    /** @description One or more fields are invalid */
+    ValidationError: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
     /** @description Authentication is not configured */
     AuthUnavailable: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The requested module is unavailable */
+    ServiceUnavailable: {
       headers: {
         [name: string]: unknown;
       };
@@ -454,6 +613,186 @@ export interface operations {
       404: components["responses"]["NotFound"];
       409: components["responses"]["Conflict"];
       503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  listProfiles: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: components["schemas"]["ProfileSortField"];
+        order?: components["schemas"]["SortOrder"];
+        full_name?: string;
+        cpf?: string;
+        email?: string;
+        city?: string;
+        state?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated profile list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProfilePageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProfileValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created profile */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        profile_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Profile */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        profile_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateProfileRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated profile */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        profile_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteProfileRequest"];
+      };
+    };
+    responses: {
+      /** @description Profile permanently deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  duplicateProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        profile_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Duplicated profile */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
     };
   };
 }

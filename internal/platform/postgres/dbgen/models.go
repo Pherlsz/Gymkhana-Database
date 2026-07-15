@@ -69,3 +69,14 @@ type Profile struct {
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
+
+type ProfileAuditEvent struct {
+	ID              pgtype.UUID        `json:"id"`
+	ActorUserID     pgtype.UUID        `json:"actor_user_id"`
+	ProfileID       pgtype.UUID        `json:"profile_id"`
+	SourceProfileID pgtype.UUID        `json:"source_profile_id"`
+	EventType       string             `json:"event_type"`
+	Outcome         string             `json:"outcome"`
+	RequestID       string             `json:"request_id"`
+	OccurredAt      pgtype.Timestamptz `json:"occurred_at"`
+}

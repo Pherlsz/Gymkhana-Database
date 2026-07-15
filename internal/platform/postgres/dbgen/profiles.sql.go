@@ -14,10 +14,29 @@ import (
 const countProfiles = `-- name: CountProfiles :one
 SELECT count(*)
 FROM profiles
+WHERE ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
+  AND ($2::text = '' OR coalesce(cpf, '') LIKE '%' || $2::text || '%')
+  AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%')
+  AND ($4::text = '' OR lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%')
+  AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
 `
 
-func (q *Queries) CountProfiles(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countProfiles)
+type CountProfilesParams struct {
+	FullNameFilter string `json:"full_name_filter"`
+	CpfFilter      string `json:"cpf_filter"`
+	EmailFilter    string `json:"email_filter"`
+	CityFilter     string `json:"city_filter"`
+	StateFilter    string `json:"state_filter"`
+}
+
+func (q *Queries) CountProfiles(ctx context.Context, arg CountProfilesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countProfiles,
+		arg.FullNameFilter,
+		arg.CpfFilter,
+		arg.EmailFilter,
+		arg.CityFilter,
+		arg.StateFilter,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -25,37 +44,14 @@ func (q *Queries) CountProfiles(ctx context.Context) (int64, error) {
 
 const createProfile = `-- name: CreateProfile :one
 INSERT INTO profiles (
-  id,
-  full_name,
-  social_name,
-  cpf,
-  email,
-  mobile_phone,
-  landline_phone,
-  address_street,
-  address_number,
-  address_complement,
-  address_neighborhood,
-  address_city,
-  address_state,
-  address_postal_code,
-  notes
+  id, full_name, social_name, cpf, email, mobile_phone, landline_phone,
+  address_street, address_number, address_complement, address_neighborhood,
+  address_city, address_state, address_postal_code, notes
 ) VALUES (
-  $1,
-  $2,
-  $3,
-  $4,
-  $5,
-  $6,
-  $7,
-  $8,
-  $9,
-  $10,
-  $11,
-  $12,
-  $13,
-  $14,
-  $15
+  $1, $2, $3, $4, $5,
+  $6, $7, $8,
+  $9, $10, $11,
+  $12, $13, $14, $15
 )
 RETURNING id, full_name, social_name, cpf, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, version, created_at, updated_at
 `
@@ -121,10 +117,7 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (P
 }
 
 const deleteProfile = `-- name: DeleteProfile :one
-DELETE FROM profiles
-WHERE id = $1
-  AND version = $2
-RETURNING id
+DELETE FROM profiles WHERE id = $1 AND version = $2 RETURNING id
 `
 
 type DeleteProfileParams struct {
@@ -141,38 +134,14 @@ func (q *Queries) DeleteProfile(ctx context.Context, arg DeleteProfileParams) (p
 
 const duplicateProfile = `-- name: DuplicateProfile :one
 INSERT INTO profiles (
-  id,
-  full_name,
-  social_name,
-  cpf,
-  email,
-  mobile_phone,
-  landline_phone,
-  address_street,
-  address_number,
-  address_complement,
-  address_neighborhood,
-  address_city,
-  address_state,
-  address_postal_code,
-  notes
+  id, full_name, social_name, cpf, email, mobile_phone, landline_phone,
+  address_street, address_number, address_complement, address_neighborhood,
+  address_city, address_state, address_postal_code, notes
 )
-SELECT
-  $1,
-  source.full_name,
-  source.social_name,
-  source.cpf,
-  source.email,
-  source.mobile_phone,
-  source.landline_phone,
-  source.address_street,
-  source.address_number,
-  source.address_complement,
-  source.address_neighborhood,
-  source.address_city,
-  source.address_state,
-  source.address_postal_code,
-  source.notes
+SELECT $1, source.full_name, source.social_name, source.cpf, source.email,
+  source.mobile_phone, source.landline_phone, source.address_street, source.address_number,
+  source.address_complement, source.address_neighborhood, source.address_city, source.address_state,
+  source.address_postal_code, source.notes
 FROM profiles AS source
 WHERE source.id = $2
 RETURNING id, full_name, social_name, cpf, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, version, created_at, updated_at
@@ -210,9 +179,7 @@ func (q *Queries) DuplicateProfile(ctx context.Context, arg DuplicateProfilePara
 }
 
 const getProfileByID = `-- name: GetProfileByID :one
-SELECT id, full_name, social_name, cpf, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, version, created_at, updated_at
-FROM profiles
-WHERE id = $1
+SELECT id, full_name, social_name, cpf, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, version, created_at, updated_at FROM profiles WHERE id = $1
 `
 
 func (q *Queries) GetProfileByID(ctx context.Context, id pgtype.UUID) (Profile, error) {
@@ -244,18 +211,53 @@ func (q *Queries) GetProfileByID(ctx context.Context, id pgtype.UUID) (Profile, 
 const listProfiles = `-- name: ListProfiles :many
 SELECT id, full_name, social_name, cpf, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, version, created_at, updated_at
 FROM profiles
-ORDER BY lower(full_name), id
-LIMIT $2
-OFFSET $1
+WHERE ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
+  AND ($2::text = '' OR coalesce(cpf, '') LIKE '%' || $2::text || '%')
+  AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%')
+  AND ($4::text = '' OR lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%')
+  AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
+ORDER BY
+  CASE WHEN $6::text = 'full_name' AND $7::text = 'asc' THEN lower(full_name) END ASC,
+  CASE WHEN $6::text = 'full_name' AND $7::text = 'desc' THEN lower(full_name) END DESC,
+  CASE WHEN $6::text = 'cpf' AND $7::text = 'asc' THEN cpf END ASC NULLS LAST,
+  CASE WHEN $6::text = 'cpf' AND $7::text = 'desc' THEN cpf END DESC NULLS LAST,
+  CASE WHEN $6::text = 'email' AND $7::text = 'asc' THEN lower(email) END ASC NULLS LAST,
+  CASE WHEN $6::text = 'email' AND $7::text = 'desc' THEN lower(email) END DESC NULLS LAST,
+  CASE WHEN $6::text = 'address_city' AND $7::text = 'asc' THEN lower(address_city) END ASC NULLS LAST,
+  CASE WHEN $6::text = 'address_city' AND $7::text = 'desc' THEN lower(address_city) END DESC NULLS LAST,
+  CASE WHEN $6::text = 'created_at' AND $7::text = 'asc' THEN created_at END ASC,
+  CASE WHEN $6::text = 'created_at' AND $7::text = 'desc' THEN created_at END DESC,
+  CASE WHEN $6::text = 'updated_at' AND $7::text = 'asc' THEN updated_at END ASC,
+  CASE WHEN $6::text = 'updated_at' AND $7::text = 'desc' THEN updated_at END DESC,
+  id ASC
+LIMIT $9
+OFFSET $8
 `
 
 type ListProfilesParams struct {
-	PageOffset int32 `json:"page_offset"`
-	PageLimit  int32 `json:"page_limit"`
+	FullNameFilter string `json:"full_name_filter"`
+	CpfFilter      string `json:"cpf_filter"`
+	EmailFilter    string `json:"email_filter"`
+	CityFilter     string `json:"city_filter"`
+	StateFilter    string `json:"state_filter"`
+	SortField      string `json:"sort_field"`
+	SortOrder      string `json:"sort_order"`
+	PageOffset     int32  `json:"page_offset"`
+	PageLimit      int32  `json:"page_limit"`
 }
 
 func (q *Queries) ListProfiles(ctx context.Context, arg ListProfilesParams) ([]Profile, error) {
-	rows, err := q.db.Query(ctx, listProfiles, arg.PageOffset, arg.PageLimit)
+	rows, err := q.db.Query(ctx, listProfiles,
+		arg.FullNameFilter,
+		arg.CpfFilter,
+		arg.EmailFilter,
+		arg.CityFilter,
+		arg.StateFilter,
+		arg.SortField,
+		arg.SortOrder,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -293,27 +295,44 @@ func (q *Queries) ListProfiles(ctx context.Context, arg ListProfilesParams) ([]P
 	return items, nil
 }
 
+const recordProfileAuditEvent = `-- name: RecordProfileAuditEvent :exec
+INSERT INTO profile_audit_events (id, actor_user_id, profile_id, source_profile_id, event_type, outcome, request_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+`
+
+type RecordProfileAuditEventParams struct {
+	ID              pgtype.UUID `json:"id"`
+	ActorUserID     pgtype.UUID `json:"actor_user_id"`
+	ProfileID       pgtype.UUID `json:"profile_id"`
+	SourceProfileID pgtype.UUID `json:"source_profile_id"`
+	EventType       string      `json:"event_type"`
+	Outcome         string      `json:"outcome"`
+	RequestID       string      `json:"request_id"`
+}
+
+func (q *Queries) RecordProfileAuditEvent(ctx context.Context, arg RecordProfileAuditEventParams) error {
+	_, err := q.db.Exec(ctx, recordProfileAuditEvent,
+		arg.ID,
+		arg.ActorUserID,
+		arg.ProfileID,
+		arg.SourceProfileID,
+		arg.EventType,
+		arg.Outcome,
+		arg.RequestID,
+	)
+	return err
+}
+
 const updateProfile = `-- name: UpdateProfile :one
 UPDATE profiles
-SET
-  full_name = $1,
-  social_name = $2,
-  cpf = $3,
-  email = $4,
-  mobile_phone = $5,
-  landline_phone = $6,
-  address_street = $7,
-  address_number = $8,
-  address_complement = $9,
-  address_neighborhood = $10,
-  address_city = $11,
-  address_state = $12,
-  address_postal_code = $13,
-  notes = $14,
-  version = version + 1,
-  updated_at = now()
-WHERE id = $15
-  AND version = $16
+SET full_name = $1, social_name = $2, cpf = $3,
+  email = $4, mobile_phone = $5, landline_phone = $6,
+  address_street = $7, address_number = $8,
+  address_complement = $9, address_neighborhood = $10,
+  address_city = $11, address_state = $12,
+  address_postal_code = $13, notes = $14,
+  version = version + 1, updated_at = now()
+WHERE id = $15 AND version = $16
 RETURNING id, full_name, social_name, cpf, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, version, created_at, updated_at
 `
 
