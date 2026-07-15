@@ -42,6 +42,7 @@ pnpm install --frozen-lockfile
 go mod download
 docker compose up -d db
 make migrate
+make check-config
 ```
 
 Run the API and web app in separate terminals:
@@ -64,9 +65,9 @@ Create a GitHub OAuth App and configure these environment values:
 
 - `AUTH_ENABLED=true`
 - `GITHUB_OAUTH_CLIENT_ID`
-- the GitHub OAuth client secret, supplied through the deployment secret manager;
+- `GITHUB_OAUTH_CLIENT_SECRET`, supplied through the local or deployment secret manager;
 - `GITHUB_OAUTH_REDIRECT_URL`, ending in `/auth/callback`;
-- `AUTH_APPLICATION_URL`, the web application URL used after login;
+- `AUTH_APPLICATION_URL`, the web application URL used after login and the only browser origin trusted for credentialed CORS and state-changing requests;
 - `AUTH_ALLOWED_GITHUB_LOGINS`, a comma-separated allowlist;
 - `AUTH_SUPERADMIN_GITHUB_LOGIN`, which must also appear in the allowlist.
 
@@ -74,12 +75,15 @@ For local testing, use callback `http://localhost:8080/auth/callback` and applic
 
 The first successful login matching `AUTH_SUPERADMIN_GITHUB_LOGIN` creates the initial `SUPERADMIN`. Other allowed first-time users are created as `MEMBER`. Disabled users remain denied even when their GitHub login is allowed.
 
+The complete setup, lifecycle, audit, smoke-test, incident, and recovery procedures are in [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
+
 ## Common commands
 
 ```bash
 make generate
 make check
 make test
+make check-config
 make migrate
 make reset-db
 ```
@@ -95,7 +99,10 @@ docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN -f Dockerfil
 
 - typed environment validation that fails closed in deployed environments;
 - GitHub OAuth with state validation and an explicit login allowlist;
+- exact-origin CSRF validation and credentialed CORS derived from `AUTH_APPLICATION_URL`;
 - opaque, revocable, server-side sessions with a 24-hour lifetime;
+- centralized `MEMBER`, `ADMIN`, and protected `SUPERADMIN` authorization;
+- correlated authentication and administration audit events with observable persistence failures;
 - stable JSON error envelopes with request IDs and safe public messages;
 - generated Go and TypeScript API contracts;
 - deterministic sqlc persistence adapters;
@@ -109,4 +116,4 @@ Private UI/Core versions are pinned only after their releases are published. Per
 
 ## Planning and implementation tracking
 
-Architecture and product decisions live in [`docs/ORCHESTRATION.md`](docs/ORCHESTRATION.md). Delivery conventions and GitHub milestone usage live in [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md).
+Architecture and product decisions live in [`docs/ORCHESTRATION.md`](docs/ORCHESTRATION.md). Delivery conventions and GitHub milestone usage live in [`docs/IMPLEMENTATION.md`](docs/IMPLEMENTATION.md). M2 acceptance evidence lives in [`docs/M2_ACCEPTANCE.md`](docs/M2_ACCEPTANCE.md).

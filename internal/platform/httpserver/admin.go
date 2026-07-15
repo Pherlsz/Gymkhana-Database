@@ -11,7 +11,7 @@ import (
 )
 
 type administrationService interface {
-	ListUsers(context.Context, auth.Session, int32, int32) ([]auth.ManagedUser, error)
+	ListUsers(context.Context, auth.Session, int32, int32, string) ([]auth.ManagedUser, error)
 	UpdateUserAccess(context.Context, auth.Session, auth.UpdateUserAccessParams, string) (auth.ManagedUser, error)
 }
 
@@ -60,7 +60,7 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 			return
 		}
 
-		users, err := administration.ListUsers(r.Context(), actor, limit, offset)
+		users, err := administration.ListUsers(r.Context(), actor, limit, offset, requestIDFromContext(r.Context()))
 		if err != nil {
 			if errors.Is(err, auth.ErrForbidden) {
 				writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "Administrative access is required"})

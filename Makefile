@@ -10,7 +10,7 @@ TERN_VERSION := v2.4.1
 STATICCHECK_VERSION := v0.7.0
 GOVULNCHECK_VERSION := v1.6.0
 
-.PHONY: setup dev dev-api dev-web build build-backend build-frontend generate generate-go generate-ts generate-sql format format-check lint lint-backend lint-frontend test test-backend test-frontend test-race vuln check check-backend check-frontend services-up services-down migrate migrate-status reset-db clean
+.PHONY: setup dev dev-api dev-web build build-backend build-frontend generate generate-go generate-ts generate-sql format format-check lint lint-backend lint-frontend test test-backend test-frontend test-race vuln check check-backend check-frontend check-config services-up services-down migrate migrate-status reset-db clean
 
 setup:
 	@corepack enable
@@ -42,6 +42,9 @@ dev-api:
 
 dev-web:
 	@$(PNPM) dev:web
+
+check-config:
+	@$(GO) run ./cmd/configcheck
 
 build: build-backend build-frontend
 

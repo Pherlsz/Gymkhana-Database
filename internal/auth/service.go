@@ -91,10 +91,13 @@ type OAuthProvider interface {
 	Exchange(context.Context, string) (GitHubIdentity, error)
 }
 
+type AuditFailureHandler func(context.Context, AuditEvent, error)
+
 type ServiceOptions struct {
 	AllowedLogins   []string
 	SuperadminLogin string
 	Now             func() time.Time
+	OnAuditFailure  AuditFailureHandler
 }
 
 type Service struct {
@@ -103,6 +106,7 @@ type Service struct {
 	allowedLogins   map[string]struct{}
 	superadminLogin string
 	now             func() time.Time
+	onAuditFailure  AuditFailureHandler
 }
 
 type LoginResult struct {
@@ -143,6 +147,7 @@ func NewService(provider OAuthProvider, store Store, options ServiceOptions) (*S
 		allowedLogins:   allowedLogins,
 		superadminLogin: superadminLogin,
 		now:             now,
+		onAuditFailure:  options.OnAuditFailure,
 	}, nil
 }
 
@@ -156,6 +161,7 @@ func (service *Service) BeginLogin() (string, string, error) {
 
 func (service *Service) CompleteLogin(ctx context.Context, code, requestID string) (LoginResult, error) {
 	if strings.TrimSpace(code) == "" {
+		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, "")
 		return LoginResult{}, ErrInvalidOAuthCode
 	}
 
@@ -183,6 +189,7 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 		}
 		userID, idErr := NewIdentifier()
 		if idErr != nil {
+			service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Login)
 			return LoginResult{}, fmt.Errorf("generate user id: %w", idErr)
 		}
 		user, err = service.store.CreateUser(ctx, CreateUserParams{ID: userID, Identity: identity, Role: role})
@@ -200,14 +207,17 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 
 	sessionValue, err := NewOpaqueSessionValue()
 	if err != nil {
+		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Login)
 		return LoginResult{}, fmt.Errorf("generate session value: %w", err)
 	}
 	hash, err := HashOpaqueSessionValue(sessionValue)
 	if err != nil {
+		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Login)
 		return LoginResult{}, err
 	}
 	sessionID, err := NewIdentifier()
 	if err != nil {
+		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Login)
 		return LoginResult{}, fmt.Errorf("generate session id: %w", err)
 	}
 	now := service.now().UTC()
@@ -258,6 +268,7 @@ func (service *Service) SignOut(ctx context.Context, sessionValue, requestID str
 		actor = &session.User.ID
 	}
 	if err := service.store.RevokeSessionByTokenHash(ctx, hash[:]); err != nil {
+		service.recordAudit(ctx, actor, actor, AuditEventSignOut, AuditOutcomeFailure, requestID, "")
 		return fmt.Errorf("revoke session: %w", err)
 	}
 	service.recordAudit(ctx, actor, actor, AuditEventSignOut, AuditOutcomeSuccess, requestID, "")
@@ -273,19 +284,29 @@ func (service *Service) recordAudit(
 	requestID string,
 	providerLogin string,
 ) {
-	id, err := NewIdentifier()
-	if err != nil {
-		return
-	}
-	_ = service.store.RecordAuditEvent(ctx, AuditEvent{
-		ID:            id,
+	event := AuditEvent{
 		ActorUserID:   actorUserID,
 		SubjectUserID: subjectUserID,
 		EventType:     eventType,
 		Outcome:       outcome,
 		RequestID:     requestID,
 		ProviderLogin: providerLogin,
-	})
+	}
+	id, err := NewIdentifier()
+	if err != nil {
+		service.reportAuditFailure(ctx, event, fmt.Errorf("generate audit event id: %w", err))
+		return
+	}
+	event.ID = id
+	if err := service.store.RecordAuditEvent(ctx, event); err != nil {
+		service.reportAuditFailure(ctx, event, fmt.Errorf("record audit event: %w", err))
+	}
+}
+
+func (service *Service) reportAuditFailure(ctx context.Context, event AuditEvent, err error) {
+	if service.onAuditFailure != nil {
+		service.onAuditFailure(ctx, event, err)
+	}
 }
 
 func normalizeIdentity(identity GitHubIdentity) GitHubIdentity {

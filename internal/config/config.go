@@ -148,15 +148,21 @@ func (cfg Config) validate() error {
 		return errors.New("AUTH_APPLICATION_URL is required when authentication is enabled")
 	}
 	redirectURL, err := url.Parse(cfg.Auth.GitHubRedirectURL)
-	if err != nil || !redirectURL.IsAbs() || redirectURL.Host == "" {
-		return errors.New("GITHUB_OAUTH_REDIRECT_URL must be an absolute URL")
+	if err != nil || !validHTTPURL(redirectURL) {
+		return errors.New("GITHUB_OAUTH_REDIRECT_URL must be an absolute HTTP(S) URL")
+	}
+	if redirectURL.User != nil || redirectURL.RawQuery != "" || redirectURL.Fragment != "" || redirectURL.Path != "/auth/callback" {
+		return errors.New("GITHUB_OAUTH_REDIRECT_URL must contain only the /auth/callback path")
 	}
 	if outsideDevelopment && redirectURL.Scheme != "https" {
 		return errors.New("GITHUB_OAUTH_REDIRECT_URL must use HTTPS outside local and test environments")
 	}
 	applicationURL, err := url.Parse(cfg.Auth.ApplicationURL)
-	if err != nil || !applicationURL.IsAbs() || applicationURL.Host == "" {
-		return errors.New("AUTH_APPLICATION_URL must be an absolute URL")
+	if err != nil || !validHTTPURL(applicationURL) {
+		return errors.New("AUTH_APPLICATION_URL must be an absolute HTTP(S) URL")
+	}
+	if applicationURL.User != nil || applicationURL.RawQuery != "" || applicationURL.Fragment != "" {
+		return errors.New("AUTH_APPLICATION_URL cannot contain credentials, query parameters, or a fragment")
 	}
 	if outsideDevelopment && applicationURL.Scheme != "https" {
 		return errors.New("AUTH_APPLICATION_URL must use HTTPS outside local and test environments")
@@ -179,6 +185,13 @@ func (cfg Config) validate() error {
 	}
 
 	return nil
+}
+
+func validHTTPURL(value *url.URL) bool {
+	if value == nil || !value.IsAbs() || value.Host == "" {
+		return false
+	}
+	return value.Scheme == "http" || value.Scheme == "https"
 }
 
 func valueOrDefault(key, fallback string) string {

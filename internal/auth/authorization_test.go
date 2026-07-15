@@ -13,11 +13,12 @@ type fakeAdministrationStore struct {
 	updated       ManagedUser
 	updateParams  UpdateUserAccessParams
 	revokedUserID Identifier
+	listErr       error
 	updateErr     error
 }
 
 func (store *fakeAdministrationStore) ListUsers(context.Context, int32, int32) ([]ManagedUser, error) {
-	return store.users, nil
+	return store.users, store.listErr
 }
 
 func (store *fakeAdministrationStore) FindUserByID(context.Context, Identifier) (ManagedUser, error) {
@@ -52,13 +53,54 @@ func newAdministrationService(t *testing.T, store Store) *Service {
 	return service
 }
 
-func TestAdministrationRequiresAdministrativeRole(t *testing.T) {
-	store := &fakeAdministrationStore{}
-	service := newAdministrationService(t, store)
-	actor := Session{User: User{Role: RoleMember, Active: true}}
+func TestAdministrationAuditsListAccess(t *testing.T) {
+	actorID, _ := NewIdentifier()
+	tests := []struct {
+		name        string
+		actor       Session
+		store       *fakeAdministrationStore
+		wantErr     error
+		wantOutcome AuditOutcome
+	}{
+		{
+			name:        "denied",
+			actor:       Session{User: User{ID: actorID, Login: "member", Role: RoleMember, Active: true}},
+			store:       &fakeAdministrationStore{},
+			wantErr:     ErrForbidden,
+			wantOutcome: AuditOutcomeDenied,
+		},
+		{
+			name:        "success",
+			actor:       Session{User: User{ID: actorID, Login: "owner", Role: RoleAdmin, Active: true}},
+			store:       &fakeAdministrationStore{users: []ManagedUser{{User: User{Login: "member"}}}},
+			wantOutcome: AuditOutcomeSuccess,
+		},
+		{
+			name:        "failure",
+			actor:       Session{User: User{ID: actorID, Login: "owner", Role: RoleAdmin, Active: true}},
+			store:       &fakeAdministrationStore{listErr: errors.New("database unavailable")},
+			wantOutcome: AuditOutcomeFailure,
+		},
+	}
 
-	if _, err := service.ListUsers(context.Background(), actor, 100, 0); !errors.Is(err, ErrForbidden) {
-		t.Fatalf("ListUsers() error = %v, want %v", err, ErrForbidden)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			service := newAdministrationService(t, test.store)
+			_, err := service.ListUsers(context.Background(), test.actor, 100, 0, "request-list")
+			if test.wantErr != nil && !errors.Is(err, test.wantErr) {
+				t.Fatalf("ListUsers() error = %v, want %v", err, test.wantErr)
+			}
+			if test.wantErr == nil && test.name == "success" && err != nil {
+				t.Fatalf("ListUsers() error = %v", err)
+			}
+			if len(test.store.audits) != 1 {
+				t.Fatalf("audits = %#v", test.store.audits)
+			}
+			audit := test.store.audits[0]
+			if audit.EventType != AuditEventUserAdministrationAccessed || audit.Outcome != test.wantOutcome || audit.RequestID != "request-list" {
+				t.Fatalf("audit = %#v", audit)
+			}
+		})
 	}
 }
 
@@ -66,7 +108,7 @@ func TestAdministrationRejectsSelfAccessChanges(t *testing.T) {
 	actorID, _ := NewIdentifier()
 	store := &fakeAdministrationStore{}
 	service := newAdministrationService(t, store)
-	actor := Session{User: User{ID: actorID, Role: RoleAdmin, Active: true}}
+	actor := Session{User: User{ID: actorID, Login: "admin", Role: RoleAdmin, Active: true}}
 
 	_, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
 		UserID:  actorID,
@@ -77,6 +119,9 @@ func TestAdministrationRejectsSelfAccessChanges(t *testing.T) {
 	if !errors.Is(err, ErrSelfAccessChange) {
 		t.Fatalf("UpdateUserAccess() error = %v, want %v", err, ErrSelfAccessChange)
 	}
+	if len(store.audits) != 1 || store.audits[0].Outcome != AuditOutcomeDenied {
+		t.Fatalf("audits = %#v", store.audits)
+	}
 }
 
 func TestAdministrationProtectsSuperadminAndRejectsPromotion(t *testing.T) {
@@ -86,7 +131,7 @@ func TestAdministrationProtectsSuperadminAndRejectsPromotion(t *testing.T) {
 		User:    User{ID: targetID, Role: RoleSuperadmin, Active: true},
 		Version: 1,
 	}})
-	actor := Session{User: User{ID: actorID, Role: RoleSuperadmin, Active: true}}
+	actor := Session{User: User{ID: actorID, Login: "owner", Role: RoleSuperadmin, Active: true}}
 
 	_, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
 		UserID:  targetID,
@@ -118,7 +163,7 @@ func TestNoOpAccessChangeDoesNotRevokeSessions(t *testing.T) {
 		Version: 3,
 	}}
 	service := newAdministrationService(t, store)
-	actor := Session{User: User{ID: actorID, Role: RoleAdmin, Active: true}}
+	actor := Session{User: User{ID: actorID, Login: "admin", Role: RoleAdmin, Active: true}}
 
 	updated, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
 		UserID:  targetID,
@@ -134,6 +179,27 @@ func TestNoOpAccessChangeDoesNotRevokeSessions(t *testing.T) {
 	}
 }
 
+func TestAccessChangeFailureIsAudited(t *testing.T) {
+	actorID, _ := NewIdentifier()
+	targetID, _ := NewIdentifier()
+	store := &fakeAdministrationStore{
+		target:    ManagedUser{User: User{ID: targetID, Login: "member", Role: RoleMember, Active: true}, Version: 3},
+		updateErr: ErrUserAccessConflict,
+	}
+	service := newAdministrationService(t, store)
+	actor := Session{User: User{ID: actorID, Login: "owner", Role: RoleSuperadmin, Active: true}}
+
+	_, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
+		UserID: targetID, Role: RoleAdmin, Active: true, Version: 3,
+	}, "request-conflict")
+	if !errors.Is(err, ErrUserAccessConflict) {
+		t.Fatalf("UpdateUserAccess() error = %v", err)
+	}
+	if len(store.audits) != 1 || store.audits[0].Outcome != AuditOutcomeFailure || store.audits[0].RequestID != "request-conflict" {
+		t.Fatalf("audits = %#v", store.audits)
+	}
+}
+
 func TestAccessChangeRevokesSessionsAndRecordsAudit(t *testing.T) {
 	actorID, _ := NewIdentifier()
 	targetID, _ := NewIdentifier()
@@ -142,7 +208,7 @@ func TestAccessChangeRevokesSessionsAndRecordsAudit(t *testing.T) {
 		updated: ManagedUser{User: User{ID: targetID, Login: "member", Role: RoleAdmin, Active: true}, Version: 4},
 	}
 	service := newAdministrationService(t, store)
-	actor := Session{User: User{ID: actorID, Role: RoleSuperadmin, Active: true}}
+	actor := Session{User: User{ID: actorID, Login: "owner", Role: RoleSuperadmin, Active: true}}
 
 	updated, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
 		UserID:  targetID,

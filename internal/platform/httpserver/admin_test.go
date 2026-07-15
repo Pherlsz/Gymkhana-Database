@@ -13,16 +13,18 @@ import (
 
 type fakeAdministrationService struct {
 	fakeAuthenticationService
-	users       []auth.ManagedUser
-	updated     auth.ManagedUser
-	updateInput auth.UpdateUserAccessParams
-	updateActor auth.Session
-	listErr     error
-	updateErr   error
+	users         []auth.ManagedUser
+	updated       auth.ManagedUser
+	updateInput   auth.UpdateUserAccessParams
+	updateActor   auth.Session
+	listRequestID string
+	listErr       error
+	updateErr     error
 }
 
-func (service *fakeAdministrationService) ListUsers(_ context.Context, actor auth.Session, _, _ int32) ([]auth.ManagedUser, error) {
+func (service *fakeAdministrationService) ListUsers(_ context.Context, actor auth.Session, _, _ int32, requestID string) ([]auth.ManagedUser, error) {
 	service.updateActor = actor
+	service.listRequestID = requestID
 	return service.users, service.listErr
 }
 
@@ -58,6 +60,9 @@ func TestAdministrationListsAndUpdatesUsers(t *testing.T) {
 	var listed adminUsersResponse
 	if err := json.Unmarshal(listResponse.Body.Bytes(), &listed); err != nil || len(listed.Users) != 1 {
 		t.Fatalf("listed = %#v, error = %v", listed, err)
+	}
+	if service.listRequestID == "" {
+		t.Fatal("list request ID was not propagated")
 	}
 
 	body := `{"role":"ADMIN","active":true,"version":1}`
