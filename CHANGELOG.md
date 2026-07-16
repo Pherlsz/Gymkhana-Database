@@ -8,6 +8,8 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- Typed custom-data persistence foundations for Profile, document-type, bill-type, and custom-entity targets without free-form JSON as the primary source of truth.
+- Pure Go contracts for field definitions, options, Profile cardinalities, and typed text, integer, decimal, boolean, civil date/month, email, phone, and select values.
 - M4 milestone acceptance coverage for Profile ownership, historical states, printed bill data, civil money, current-use boundaries, URL state, semantic controls, and optimistic-conflict feedback.
 - Milestone-wide validation of document/bill persistence, protected APIs, Profile-integrated UI, deterministic generation, and security gates.
 - Profile-integrated document and bill management with URL-backed sections, filters, sorting, pagination, selection, and forms.
