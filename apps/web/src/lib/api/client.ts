@@ -192,7 +192,13 @@ export type ProfileListSearch = {
   document_mode: "create" | "view" | "edit" | "types" | undefined;
   bill_page: number;
   bill_limit: number;
-  bill_sort: "reference_value" | "type_label" | "competence" | "amount" | "created_at" | "updated_at";
+  bill_sort:
+    | "reference_value"
+    | "type_label"
+    | "competence"
+    | "amount"
+    | "created_at"
+    | "updated_at";
   bill_order: "asc" | "desc";
   bill_reference: string;
   bill_competence: string;
@@ -448,11 +454,7 @@ export async function duplicateBill(id: string): Promise<BillRecord> {
   });
 }
 
-export async function deleteBill(
-  id: string,
-  version: number,
-  confirmation: string,
-): Promise<void> {
+export async function deleteBill(id: string, version: number, confirmation: string): Promise<void> {
   await requestNoContent(
     `/api/v1/bills/${encodeURIComponent(id)}`,
     jsonRequest("DELETE", { version, confirmation }),
