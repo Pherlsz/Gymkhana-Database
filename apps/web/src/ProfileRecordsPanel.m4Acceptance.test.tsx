@@ -192,9 +192,15 @@ describe("M4 Profile records acceptance", () => {
 
     expect(await screen.findByDisplayValue("Titular impresso original")).toBeDisabled();
     expect(screen.getByDisplayValue("Endereço impresso original, 001")).toBeDisabled();
-    expect(screen.getByDisplayValue("000A-99")).toBeDisabled();
-    expect(screen.getByDisplayValue("2026-07")).toBeDisabled();
-    expect(screen.getByDisplayValue("123.40")).toBeDisabled();
+    expect(
+      screen.getAllByDisplayValue("000A-99").filter((element) => element.hasAttribute("disabled")),
+    ).toHaveLength(1);
+    expect(
+      screen.getAllByDisplayValue("2026-07").filter((element) => element.hasAttribute("disabled")),
+    ).toHaveLength(1);
+    expect(
+      screen.getAllByDisplayValue("123.40").filter((element) => element.hasAttribute("disabled")),
+    ).toHaveLength(1);
 
     const holder = screen.getByRole("combobox", { name: "Pessoa em uso" });
     expect(holder.tagName).toBe("SELECT");

@@ -111,6 +111,7 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
     } catch (error) {
       await refresh();
       onNotice(conflictMessage(error));
+      throw error;
     }
   };
   const totalPages = Math.max(
@@ -303,6 +304,7 @@ function BillsSection({ profile, role, search, onSearch, onNotice }: Props) {
     } catch (error) {
       await refresh();
       onNotice(conflictMessage(error));
+      throw error;
     }
   };
   const totalPages = Math.max(1, Math.ceil((records.data?.page.total ?? 0) / search.bill_limit));
@@ -1004,6 +1006,7 @@ function CurrentUseControls(
     queryFn: ({ signal }) => listProfilesForSelection(signal),
   });
   const [holder, setHolder] = useState(props.record.current_use?.holder_profile_id ?? "");
+  const holderAvailable = holders.data?.profiles.some((value) => value.id === holder) ?? false;
   const [error, setError] = useState<string | null>(null);
   const assign = useMutation({
     mutationFn: () =>
@@ -1037,6 +1040,7 @@ function CurrentUseControls(
           Pessoa em uso
           <select value={holder} onChange={(event) => setHolder(event.target.value)}>
             <option value="">Selecione</option>
+            {holder && !holderAvailable ? <option value={holder}>Pessoa atual</option> : null}
             {holders.data?.profiles.map((value) => (
               <option key={value.id} value={value.id}>
                 {value.full_name}
@@ -1562,7 +1566,7 @@ function RecordInlineInput(props: {
       value={value}
       onChange={(event) => setValue(event.target.value)}
       onBlur={() => {
-        if (value !== props.value) void props.onSave(value);
+        if (value !== props.value) void props.onSave(value).catch(() => setValue(props.value));
       }}
     />
   );
