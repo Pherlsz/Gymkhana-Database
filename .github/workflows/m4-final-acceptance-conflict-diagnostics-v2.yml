@@ -1,0 +1,58 @@
+name: M4 final acceptance conflict diagnostics v2
+
+on:
+  pull_request:
+    branches:
+      - agent/m4-final-acceptance
+    paths:
+      - ".github/workflows/m4-final-acceptance-conflict-diagnostics-v2.yml"
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out helper branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/m4-final-acceptance-conflict-fix-v2
+          path: helper
+      - name: Check out product branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/m4-final-acceptance
+          path: product
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install dependencies
+        working-directory: product
+        run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run focused corrected test
+        working-directory: product
+        run: |
+          set +e
+          python3 ../helper/scripts/fix_m4_final_acceptance_v2.py
+          pnpm format
+          pnpm test:web -- apps/web/src/ProfileRecordsPanel.m4Acceptance.test.tsx --reporter=verbose > /tmp/m4-conflict-v2.log 2>&1
+          status=$?
+          cat /tmp/m4-conflict-v2.log
+          exit $status
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-final-acceptance-conflict-diagnostics-v2
+          path: /tmp/m4-conflict-v2.log
+          if-no-files-found: ignore
+          retention-days: 1
