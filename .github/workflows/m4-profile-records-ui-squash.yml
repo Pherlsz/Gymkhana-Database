@@ -1,0 +1,32 @@
+name: M4 profile records UI squash
+
+on:
+  pull_request:
+    branches:
+      - agent/m4-profile-records-ui
+    paths:
+      - ".github/workflows/m4-profile-records-ui-squash.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  squash:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out product branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/m4-profile-records-ui
+          fetch-depth: 0
+      - name: Consolidate against main
+        run: |
+          git fetch origin main
+          test "$(git rev-list --count origin/main..HEAD)" -ge 1
+          git reset --soft origin/main
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(records-ui): integrate Profile document and bill management"
+          test "$(git rev-list --count origin/main..HEAD)" -eq 1
+          git push --force-with-lease origin HEAD:agent/m4-profile-records-ui
