@@ -2,6 +2,7 @@ name: Frontend
 
 on:
   pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - "apps/**"
       - "package.json"
@@ -12,33 +13,23 @@ on:
       - "vitest.setup.ts"
       - "oxlint.json"
       - ".npmrc"
+      - "Makefile"
       - ".github/workflows/frontend.yml"
-  push:
-    branches: [main]
-    paths:
-      - "apps/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "tsconfig.base.json"
-      - "vitest.config.ts"
-      - "vitest.setup.ts"
-      - "oxlint.json"
-      - ".npmrc"
-      - ".github/workflows/frontend.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
   packages: read
 
 concurrency:
-  group: frontend-${{ github.workflow }}-${{ github.ref }}
+  group: frontend-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -57,17 +48,5 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Typecheck
-        run: pnpm typecheck:web
-
-      - name: Lint
-        run: pnpm lint:web
-
-      - name: Check formatting
-        run: pnpm format:check
-
-      - name: Test
-        run: pnpm test:web
-
-      - name: Build
-        run: pnpm build:web
+      - name: Run frontend gate
+        run: make check-frontend

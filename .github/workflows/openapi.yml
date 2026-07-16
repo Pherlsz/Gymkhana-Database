@@ -2,6 +2,7 @@ name: OpenAPI
 
 on:
   pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - "api/**"
       - "apps/web/src/generated/**"
@@ -12,31 +13,21 @@ on:
       - "Makefile"
       - "scripts/configure-private-go.sh"
       - ".github/workflows/openapi.yml"
-  push:
-    branches: [main]
-    paths:
-      - "api/**"
-      - "apps/web/src/generated/**"
-      - "go.mod"
-      - "go.sum"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "Makefile"
-      - "scripts/configure-private-go.sh"
-      - ".github/workflows/openapi.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
   packages: read
 
 concurrency:
-  group: openapi-${{ github.workflow }}-${{ github.ref }}
+  group: openapi-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   generated-contracts:
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
