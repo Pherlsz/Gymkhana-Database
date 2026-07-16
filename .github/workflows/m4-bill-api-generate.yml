@@ -8,6 +8,7 @@ on:
       - ".github/workflows/m4-bill-api-generate.yml"
       - "scripts/generate_m4_bill_go.py"
       - "scripts/generate_m4_bill_openapi.py"
+      - "scripts/postprocess_m4_bill.py"
 
 permissions:
   contents: write
@@ -55,11 +56,15 @@ jobs:
       - name: Generate M4.3 source and contracts
         working-directory: target
         run: |
-          set +e
-          { python3 ../helper/scripts/generate_m4_bill_go.py; python3 ../helper/scripts/generate_m4_bill_openapi.py; make generate-sql generate-go generate-ts; find cmd internal api/generated/go -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w; pnpm exec oxfmt apps/web/src/generated/api.ts --write; } > /tmp/m4-bill-generate.log 2>&1
-          status=$?
-          cat /tmp/m4-bill-generate.log
-          exit $status
+          set -o pipefail
+          {
+            python3 ../helper/scripts/generate_m4_bill_go.py
+            python3 ../helper/scripts/generate_m4_bill_openapi.py
+            python3 ../helper/scripts/postprocess_m4_bill.py
+            make generate-sql generate-go generate-ts
+            find cmd internal api/generated/go -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
+            pnpm exec oxfmt apps/web/src/generated/api.ts --write
+          } 2>&1 | tee /tmp/m4-bill-generate.log
       - name: Upload generator diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -71,11 +76,13 @@ jobs:
       - name: Validate generated implementation
         working-directory: target
         run: |
-          set +e
-          { go test ./...; go vet ./...; pnpm typecheck:web; pnpm test:web -- --run; } > /tmp/m4-bill-validation.log 2>&1
-          status=$?
-          cat /tmp/m4-bill-validation.log
-          exit $status
+          set -o pipefail
+          {
+            go test ./...
+            go vet ./...
+            pnpm typecheck:web
+            pnpm test:web -- --run
+          } 2>&1 | tee /tmp/m4-bill-validation.log
       - name: Upload validation diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -89,8 +96,32 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git status --short
+          required_files=(
+            CHANGELOG.md
+            api/openapi.yaml
+            api/generated/go/api.gen.go
+            apps/web/src/generated/api.ts
+            internal/bill/service.go
+            internal/bill/service_test.go
+            internal/bill/audit_store.go
+            internal/bill/audit_store_test.go
+            internal/platform/httpserver/bill.go
+            internal/platform/httpserver/bill_helpers.go
+            internal/platform/httpserver/bill_test.go
+            database/migrations/007_bill_api_audit.sql
+            internal/platform/postgres/dbgen/bill_audit.sql.go
+          )
+          for file in "${required_files[@]}"; do test -f "$file"; done
           git add -A
-          git status --short
-          git commit -m "feat(bills): complete protected CRUD and current-use API"
+          git diff --cached --name-status | tee /tmp/m4-bill-publish.log
+          for file in "${required_files[@]}"; do git diff --cached --name-only | grep -Fx "$file" >/dev/null; done
+          git commit -m "feat(bills): add protected CRUD and current-use API"
           git push origin HEAD:agent/m4-bill-api
+      - name: Upload publish manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-bill-publish-manifest
+          path: /tmp/m4-bill-publish.log
+          if-no-files-found: ignore
+          retention-days: 1
