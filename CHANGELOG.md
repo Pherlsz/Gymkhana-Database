@@ -8,6 +8,8 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- Profile-integrated document and bill management with URL-backed sections, filters, sorting, pagination, selection, and forms.
+- Responsive record cards, supported desktop inline editing, type administration, current-use workflows, duplication, permanent deletion, and frontend acceptance coverage.
 - Protected bill-type administration and Profile-owned bill CRUD API with centralized role permissions.
 - Bill filtering, sorting, pagination, structured validation, optimistic conflicts, duplication, and explicit permanent-delete confirmation.
 - Printed holder/address/reference preservation with civil competence, canonical decimal amounts, and ISO currency validation.
