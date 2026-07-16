@@ -19,22 +19,22 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Check out helper branch
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: agent/m4-bill-api-generate
           path: helper
       - name: Check out target branch
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           ref: agent/m4-bill-api
           path: target
       - name: Set up Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
         with:
           go-version: 1.26.5
           cache-dependency-path: target/go.sum
       - name: Set up Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: 24
           registry-url: https://npm.pkg.github.com
@@ -56,13 +56,7 @@ jobs:
         working-directory: target
         run: |
           set +e
-          {
-            python3 ../helper/scripts/generate_m4_bill_go.py
-            python3 ../helper/scripts/generate_m4_bill_openapi.py
-            make generate-sql generate-go generate-ts
-            find cmd internal api/generated/go -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
-            pnpm exec oxfmt apps/web/src/generated/api.ts --write
-          } > /tmp/m4-bill-generate.log 2>&1
+          { python3 ../helper/scripts/generate_m4_bill_go.py; python3 ../helper/scripts/generate_m4_bill_openapi.py; make generate-sql generate-go generate-ts; find cmd internal api/generated/go -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w; pnpm exec oxfmt apps/web/src/generated/api.ts --write; } > /tmp/m4-bill-generate.log 2>&1
           status=$?
           cat /tmp/m4-bill-generate.log
           exit $status
@@ -77,10 +71,19 @@ jobs:
       - name: Validate generated implementation
         working-directory: target
         run: |
-          go test ./...
-          go vet ./...
-          pnpm typecheck:web
-          pnpm test:web -- --run
+          set +e
+          { go test ./...; go vet ./...; pnpm typecheck:web; pnpm test:web -- --run; } > /tmp/m4-bill-validation.log 2>&1
+          status=$?
+          cat /tmp/m4-bill-validation.log
+          exit $status
+      - name: Upload validation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-bill-validation-log
+          path: /tmp/m4-bill-validation.log
+          if-no-files-found: ignore
+          retention-days: 1
       - name: Publish target branch
         working-directory: target
         run: |
