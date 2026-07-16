@@ -55,11 +55,25 @@ jobs:
       - name: Generate M4.3 source and contracts
         working-directory: target
         run: |
-          python3 ../helper/scripts/generate_m4_bill_go.py
-          python3 ../helper/scripts/generate_m4_bill_openapi.py
-          make generate-sql generate-go generate-ts
-          find cmd internal api/generated/go -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
-          pnpm exec oxfmt apps/web/src/generated/api.ts --write
+          set +e
+          {
+            python3 ../helper/scripts/generate_m4_bill_go.py
+            python3 ../helper/scripts/generate_m4_bill_openapi.py
+            make generate-sql generate-go generate-ts
+            find cmd internal api/generated/go -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
+            pnpm exec oxfmt apps/web/src/generated/api.ts --write
+          } > /tmp/m4-bill-generate.log 2>&1
+          status=$?
+          cat /tmp/m4-bill-generate.log
+          exit $status
+      - name: Upload generator diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-bill-generate-log
+          path: /tmp/m4-bill-generate.log
+          if-no-files-found: ignore
+          retention-days: 1
       - name: Validate generated implementation
         working-directory: target
         run: |
