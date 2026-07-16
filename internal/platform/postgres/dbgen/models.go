@@ -66,6 +66,19 @@ type Bill struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
+type BillAuditEvent struct {
+	ID              pgtype.UUID        `json:"id"`
+	ActorUserID     pgtype.UUID        `json:"actor_user_id"`
+	BillID          pgtype.UUID        `json:"bill_id"`
+	SourceBillID    pgtype.UUID        `json:"source_bill_id"`
+	BillTypeID      pgtype.UUID        `json:"bill_type_id"`
+	HolderProfileID pgtype.UUID        `json:"holder_profile_id"`
+	EventType       string             `json:"event_type"`
+	Outcome         string             `json:"outcome"`
+	RequestID       string             `json:"request_id"`
+	OccurredAt      pgtype.Timestamptz `json:"occurred_at"`
+}
+
 type BillCurrentUse struct {
 	BillID          pgtype.UUID        `json:"bill_id"`
 	HolderProfileID pgtype.UUID        `json:"holder_profile_id"`

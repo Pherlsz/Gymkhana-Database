@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
+	"github.com/Pherlsz/Gymkhana-Database/internal/bill"
 	"github.com/Pherlsz/Gymkhana-Database/internal/config"
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/httpserver"
@@ -60,6 +61,7 @@ func run() error {
 	}
 	var profileService *profile.Service
 	var documentService *document.Service
+	var billService *bill.Service
 	if pool != nil {
 		profileService, err = profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{OnAuditFailure: func(_ context.Context, event profile.AuditEvent, auditErr error) {
 			logger.Error("profile audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "profile_id", event.ProfileID.String(), "error", auditErr)
@@ -73,8 +75,14 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("configure document service: %w", err)
 		}
+		billService, err = bill.NewService(bill.NewPostgresStore(pool), bill.ServiceOptions{OnAuditFailure: func(_ context.Context, event bill.AuditEvent, auditErr error) {
+			logger.Error("bill audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
+		}})
+		if err != nil {
+			return fmt.Errorf("configure bill service: %w", err)
+		}
 	}
-	server := &http.Server{Addr: cfg.HTTPAddress, Handler: httpserver.New(logger, pool, httpserver.Options{MaxBodyBytes: cfg.HTTPMaxBodyBytes, Auth: authService, Profile: profileService, Document: documentService, SecureCookies: cfg.Auth.SecureCookies, ApplicationURL: cfg.Auth.ApplicationURL}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second}
+	server := &http.Server{Addr: cfg.HTTPAddress, Handler: httpserver.New(logger, pool, httpserver.Options{MaxBodyBytes: cfg.HTTPMaxBodyBytes, Auth: authService, Profile: profileService, Document: documentService, Bill: billService, SecureCookies: cfg.Auth.SecureCookies, ApplicationURL: cfg.Auth.ApplicationURL}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second}
 	serverError := make(chan error, 1)
 	go func() {
 		logger.Info("api listening", "address", cfg.HTTPAddress, "environment", cfg.Environment, "authentication_enabled", cfg.Auth.Enabled)

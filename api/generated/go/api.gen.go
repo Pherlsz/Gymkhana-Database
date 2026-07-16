@@ -22,24 +22,120 @@ const (
 	SessionCookieScopes sessionCookieContextKey = "sessionCookie.Scopes"
 )
 
+// Defines values for BillRecordState.
+const (
+	BillRecordStateARCHIVED BillRecordState = "ARCHIVED"
+	BillRecordStateCURRENT  BillRecordState = "CURRENT"
+	BillRecordStateEXPIRED  BillRecordState = "EXPIRED"
+	BillRecordStateREPLACED BillRecordState = "REPLACED"
+)
+
+// Valid indicates whether the value is a known member of the BillRecordState enum.
+func (e BillRecordState) Valid() bool {
+	switch e {
+	case BillRecordStateARCHIVED:
+		return true
+	case BillRecordStateCURRENT:
+		return true
+	case BillRecordStateEXPIRED:
+		return true
+	case BillRecordStateREPLACED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BillSortField.
+const (
+	BillSortFieldAmount         BillSortField = "amount"
+	BillSortFieldCompetence     BillSortField = "competence"
+	BillSortFieldCreatedAt      BillSortField = "created_at"
+	BillSortFieldReferenceValue BillSortField = "reference_value"
+	BillSortFieldTypeLabel      BillSortField = "type_label"
+	BillSortFieldUpdatedAt      BillSortField = "updated_at"
+)
+
+// Valid indicates whether the value is a known member of the BillSortField enum.
+func (e BillSortField) Valid() bool {
+	switch e {
+	case BillSortFieldAmount:
+		return true
+	case BillSortFieldCompetence:
+		return true
+	case BillSortFieldCreatedAt:
+		return true
+	case BillSortFieldReferenceValue:
+		return true
+	case BillSortFieldTypeLabel:
+		return true
+	case BillSortFieldUpdatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BillStatus.
+const (
+	BillStatusAVAILABLE BillStatus = "AVAILABLE"
+	BillStatusINUSE     BillStatus = "IN_USE"
+)
+
+// Valid indicates whether the value is a known member of the BillStatus enum.
+func (e BillStatus) Valid() bool {
+	switch e {
+	case BillStatusAVAILABLE:
+		return true
+	case BillStatusINUSE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BillTypeSortField.
+const (
+	BillTypeSortFieldCreatedAt    BillTypeSortField = "created_at"
+	BillTypeSortFieldLabel        BillTypeSortField = "label"
+	BillTypeSortFieldTechnicalKey BillTypeSortField = "technical_key"
+	BillTypeSortFieldUpdatedAt    BillTypeSortField = "updated_at"
+)
+
+// Valid indicates whether the value is a known member of the BillTypeSortField enum.
+func (e BillTypeSortField) Valid() bool {
+	switch e {
+	case BillTypeSortFieldCreatedAt:
+		return true
+	case BillTypeSortFieldLabel:
+		return true
+	case BillTypeSortFieldTechnicalKey:
+		return true
+	case BillTypeSortFieldUpdatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DocumentRecordState.
 const (
-	ARCHIVED DocumentRecordState = "ARCHIVED"
-	CURRENT  DocumentRecordState = "CURRENT"
-	EXPIRED  DocumentRecordState = "EXPIRED"
-	REPLACED DocumentRecordState = "REPLACED"
+	DocumentRecordStateARCHIVED DocumentRecordState = "ARCHIVED"
+	DocumentRecordStateCURRENT  DocumentRecordState = "CURRENT"
+	DocumentRecordStateEXPIRED  DocumentRecordState = "EXPIRED"
+	DocumentRecordStateREPLACED DocumentRecordState = "REPLACED"
 )
 
 // Valid indicates whether the value is a known member of the DocumentRecordState enum.
 func (e DocumentRecordState) Valid() bool {
 	switch e {
-	case ARCHIVED:
+	case DocumentRecordStateARCHIVED:
 		return true
-	case CURRENT:
+	case DocumentRecordStateCURRENT:
 		return true
-	case EXPIRED:
+	case DocumentRecordStateEXPIRED:
 		return true
-	case REPLACED:
+	case DocumentRecordStateREPLACED:
 		return true
 	default:
 		return false
@@ -75,16 +171,16 @@ func (e DocumentSortField) Valid() bool {
 
 // Defines values for DocumentStatus.
 const (
-	AVAILABLE DocumentStatus = "AVAILABLE"
-	INUSE     DocumentStatus = "IN_USE"
+	DocumentStatusAVAILABLE DocumentStatus = "AVAILABLE"
+	DocumentStatusINUSE     DocumentStatus = "IN_USE"
 )
 
 // Valid indicates whether the value is a known member of the DocumentStatus enum.
 func (e DocumentStatus) Valid() bool {
 	switch e {
-	case AVAILABLE:
+	case DocumentStatusAVAILABLE:
 		return true
-	case INUSE:
+	case DocumentStatusINUSE:
 		return true
 	default:
 		return false
@@ -239,6 +335,11 @@ type AdminUsersResponse struct {
 	Users []AdminUser `json:"users"`
 }
 
+// AssignBillCurrentUseRequest defines model for AssignBillCurrentUseRequest.
+type AssignBillCurrentUseRequest struct {
+	HolderProfileId openapi_types.UUID `json:"holder_profile_id"`
+}
+
 // AssignDocumentCurrentUseRequest defines model for AssignDocumentCurrentUseRequest.
 type AssignDocumentCurrentUseRequest struct {
 	HolderProfileId openapi_types.UUID `json:"holder_profile_id"`
@@ -256,6 +357,112 @@ type AuthUser struct {
 	DisplayName string   `json:"display_name"`
 	Login       string   `json:"login"`
 	Role        UserRole `json:"role"`
+}
+
+// Bill defines model for Bill.
+type Bill struct {
+	Amount            string             `json:"amount"`
+	BillTypeId        openapi_types.UUID `json:"bill_type_id"`
+	Competence        string             `json:"competence"`
+	CreatedAt         time.Time          `json:"created_at"`
+	Currency          string             `json:"currency"`
+	CurrentUse        BillCurrentUse     `json:"current_use"`
+	Id                openapi_types.UUID `json:"id"`
+	Notes             string             `json:"notes"`
+	OwnerProfileId    openapi_types.UUID `json:"owner_profile_id"`
+	PrintedAddress    string             `json:"printed_address"`
+	PrintedHolderName string             `json:"printed_holder_name"`
+	RecordState       BillRecordState    `json:"record_state"`
+	ReferenceValue    string             `json:"reference_value"`
+	Status            BillStatus         `json:"status"`
+	Type              BillType           `json:"type"`
+	UpdatedAt         time.Time          `json:"updated_at"`
+	Version           int64              `json:"version"`
+}
+
+// BillCurrentUse defines model for BillCurrentUse.
+type BillCurrentUse struct {
+	AssignedAt      time.Time          `json:"assigned_at"`
+	HolderProfileId openapi_types.UUID `json:"holder_profile_id"`
+}
+
+// BillPageMeta defines model for BillPageMeta.
+type BillPageMeta struct {
+	Limit     int32         `json:"limit"`
+	Offset    int32         `json:"offset"`
+	SortField BillSortField `json:"sort_field"`
+	SortOrder SortOrder     `json:"sort_order"`
+	Total     int64         `json:"total"`
+}
+
+// BillPageResponse defines model for BillPageResponse.
+type BillPageResponse struct {
+	Bills []Bill       `json:"bills"`
+	Page  BillPageMeta `json:"page"`
+}
+
+// BillRecordState defines model for BillRecordState.
+type BillRecordState string
+
+// BillSortField defines model for BillSortField.
+type BillSortField string
+
+// BillStatus defines model for BillStatus.
+type BillStatus string
+
+// BillType defines model for BillType.
+type BillType struct {
+	Active             bool               `json:"active"`
+	CreatedAt          time.Time          `json:"created_at"`
+	Id                 openapi_types.UUID `json:"id"`
+	Label              string             `json:"label"`
+	SupportsCurrentUse bool               `json:"supports_current_use"`
+	TechnicalKey       string             `json:"technical_key"`
+	UpdatedAt          time.Time          `json:"updated_at"`
+	Version            int64              `json:"version"`
+}
+
+// BillTypePageResponse defines model for BillTypePageResponse.
+type BillTypePageResponse struct {
+	Page struct {
+		Limit     int32             `json:"limit"`
+		Offset    int32             `json:"offset"`
+		SortField BillTypeSortField `json:"sort_field"`
+		SortOrder SortOrder         `json:"sort_order"`
+		Total     int64             `json:"total"`
+	} `json:"page"`
+	Types []BillType `json:"types"`
+}
+
+// BillTypeSortField defines model for BillTypeSortField.
+type BillTypeSortField string
+
+// BillTypeValuesRequest defines model for BillTypeValuesRequest.
+type BillTypeValuesRequest struct {
+	Active             bool   `json:"active"`
+	Label              string `json:"label"`
+	SupportsCurrentUse bool   `json:"supports_current_use"`
+	TechnicalKey       string `json:"technical_key"`
+}
+
+// BillValuesRequest defines model for BillValuesRequest.
+type BillValuesRequest struct {
+	Amount            string             `json:"amount"`
+	BillTypeId        openapi_types.UUID `json:"bill_type_id"`
+	Competence        string             `json:"competence"`
+	Currency          string             `json:"currency"`
+	Notes             string             `json:"notes"`
+	OwnerProfileId    openapi_types.UUID `json:"owner_profile_id"`
+	PrintedAddress    string             `json:"printed_address"`
+	PrintedHolderName string             `json:"printed_holder_name"`
+	RecordState       BillRecordState    `json:"record_state"`
+	ReferenceValue    string             `json:"reference_value"`
+}
+
+// DeleteBillResourceRequest defines model for DeleteBillResourceRequest.
+type DeleteBillResourceRequest struct {
+	Confirmation string `json:"confirmation"`
+	Version      int64  `json:"version"`
 }
 
 // DeleteDocumentResourceRequest defines model for DeleteDocumentResourceRequest.
@@ -458,6 +665,30 @@ type ProfileValuesRequest struct {
 // SortOrder defines model for SortOrder.
 type SortOrder string
 
+// UpdateBillRequest defines model for UpdateBillRequest.
+type UpdateBillRequest struct {
+	Amount            string             `json:"amount"`
+	BillTypeId        openapi_types.UUID `json:"bill_type_id"`
+	Competence        string             `json:"competence"`
+	Currency          string             `json:"currency"`
+	Notes             string             `json:"notes"`
+	OwnerProfileId    openapi_types.UUID `json:"owner_profile_id"`
+	PrintedAddress    string             `json:"printed_address"`
+	PrintedHolderName string             `json:"printed_holder_name"`
+	RecordState       BillRecordState    `json:"record_state"`
+	ReferenceValue    string             `json:"reference_value"`
+	Version           int64              `json:"version"`
+}
+
+// UpdateBillTypeRequest defines model for UpdateBillTypeRequest.
+type UpdateBillTypeRequest struct {
+	Active             bool   `json:"active"`
+	Label              string `json:"label"`
+	SupportsCurrentUse bool   `json:"supports_current_use"`
+	TechnicalKey       string `json:"technical_key"`
+	Version            int64  `json:"version"`
+}
+
 // UpdateDocumentRequest defines model for UpdateDocumentRequest.
 type UpdateDocumentRequest struct {
 	DocumentDate    string              `json:"document_date"`
@@ -536,6 +767,31 @@ type ListApplicationUsersParams struct {
 	Offset *int32 `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// ListBillTypesParams defines parameters for ListBillTypes.
+type ListBillTypesParams struct {
+	Limit  *int32             `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int32             `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort   *BillTypeSortField `form:"sort,omitempty" json:"sort,omitempty"`
+	Order  *SortOrder         `form:"order,omitempty" json:"order,omitempty"`
+	Label  *string            `form:"label,omitempty" json:"label,omitempty"`
+	Active *bool              `form:"active,omitempty" json:"active,omitempty"`
+}
+
+// ListBillsParams defines parameters for ListBills.
+type ListBillsParams struct {
+	Limit           *int32              `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset          *int32              `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort            *BillSortField      `form:"sort,omitempty" json:"sort,omitempty"`
+	Order           *SortOrder          `form:"order,omitempty" json:"order,omitempty"`
+	OwnerProfileId  *openapi_types.UUID `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
+	BillTypeId      *openapi_types.UUID `form:"bill_type_id,omitempty" json:"bill_type_id,omitempty"`
+	Reference       *string             `form:"reference,omitempty" json:"reference,omitempty"`
+	Competence      *string             `form:"competence,omitempty" json:"competence,omitempty"`
+	RecordState     *BillRecordState    `form:"record_state,omitempty" json:"record_state,omitempty"`
+	Status          *BillStatus         `form:"status,omitempty" json:"status,omitempty"`
+	HolderProfileId *openapi_types.UUID `form:"holder_profile_id,omitempty" json:"holder_profile_id,omitempty"`
+}
+
 // ListDocumentTypesParams defines parameters for ListDocumentTypes.
 type ListDocumentTypesParams struct {
 	Limit  *int32                 `form:"limit,omitempty" json:"limit,omitempty"`
@@ -582,6 +838,27 @@ type CompleteGitHubLoginParams struct {
 // UpdateApplicationUserAccessJSONRequestBody defines body for UpdateApplicationUserAccess for application/json ContentType.
 type UpdateApplicationUserAccessJSONRequestBody = UpdateUserAccessRequest
 
+// CreateBillTypeJSONRequestBody defines body for CreateBillType for application/json ContentType.
+type CreateBillTypeJSONRequestBody = BillTypeValuesRequest
+
+// DeleteBillTypeJSONRequestBody defines body for DeleteBillType for application/json ContentType.
+type DeleteBillTypeJSONRequestBody = DeleteBillResourceRequest
+
+// UpdateBillTypeJSONRequestBody defines body for UpdateBillType for application/json ContentType.
+type UpdateBillTypeJSONRequestBody = UpdateBillTypeRequest
+
+// CreateBillJSONRequestBody defines body for CreateBill for application/json ContentType.
+type CreateBillJSONRequestBody = BillValuesRequest
+
+// DeleteBillJSONRequestBody defines body for DeleteBill for application/json ContentType.
+type DeleteBillJSONRequestBody = DeleteBillResourceRequest
+
+// UpdateBillJSONRequestBody defines body for UpdateBill for application/json ContentType.
+type UpdateBillJSONRequestBody = UpdateBillRequest
+
+// AssignBillCurrentUseJSONRequestBody defines body for AssignBillCurrentUse for application/json ContentType.
+type AssignBillCurrentUseJSONRequestBody = AssignBillCurrentUseRequest
+
 // CreateDocumentTypeJSONRequestBody defines body for CreateDocumentType for application/json ContentType.
 type CreateDocumentTypeJSONRequestBody = DocumentTypeValuesRequest
 
@@ -626,6 +903,45 @@ type ServerInterface interface {
 	// Read the current protected application session
 	// (GET /api/auth/session)
 	GetAuthSession(w http.ResponseWriter, r *http.Request)
+	// List administrable bill types
+	// (GET /api/v1/bill-types)
+	ListBillTypes(w http.ResponseWriter, r *http.Request, params ListBillTypesParams)
+	// Create an administrable bill type
+	// (POST /api/v1/bill-types)
+	CreateBillType(w http.ResponseWriter, r *http.Request)
+	// Permanently delete an unused bill type
+	// (DELETE /api/v1/bill-types/{bill_type_id})
+	DeleteBillType(w http.ResponseWriter, r *http.Request, billTypeId openapi_types.UUID)
+	// Read one bill type
+	// (GET /api/v1/bill-types/{bill_type_id})
+	GetBillType(w http.ResponseWriter, r *http.Request, billTypeId openapi_types.UUID)
+	// Replace bill type settings using optimistic concurrency
+	// (PUT /api/v1/bill-types/{bill_type_id})
+	UpdateBillType(w http.ResponseWriter, r *http.Request, billTypeId openapi_types.UUID)
+	// List Profile-owned bills
+	// (GET /api/v1/bills)
+	ListBills(w http.ResponseWriter, r *http.Request, params ListBillsParams)
+	// Create a Profile-owned bill
+	// (POST /api/v1/bills)
+	CreateBill(w http.ResponseWriter, r *http.Request)
+	// Permanently delete an available bill
+	// (DELETE /api/v1/bills/{bill_id})
+	DeleteBill(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID)
+	// Read one bill
+	// (GET /api/v1/bills/{bill_id})
+	GetBill(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID)
+	// Replace bill values using optimistic concurrency
+	// (PUT /api/v1/bills/{bill_id})
+	UpdateBill(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID)
+	// Return a bill to available status
+	// (DELETE /api/v1/bills/{bill_id}/current-use)
+	ReturnBillCurrentUse(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID)
+	// Assign or replace the current bill holder when supported
+	// (PUT /api/v1/bills/{bill_id}/current-use)
+	AssignBillCurrentUse(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID)
+	// Duplicate a bill into an independent record
+	// (POST /api/v1/bills/{bill_id}/duplicate)
+	DuplicateBill(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID)
 	// List administrable document types
 	// (GET /api/v1/document-types)
 	ListDocumentTypes(w http.ResponseWriter, r *http.Request, params ListDocumentTypesParams)
@@ -821,6 +1137,607 @@ func (siw *ServerInterfaceWrapper) GetAuthSession(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAuthSession(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListBillTypes operation middleware
+func (siw *ServerInterfaceWrapper) ListBillTypes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListBillTypesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "label" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "label", r.URL.Query(), &params.Label, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "label"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "label", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "active" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "active", r.URL.Query(), &params.Active, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "active"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "active", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBillTypes(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateBillType operation middleware
+func (siw *ServerInterfaceWrapper) CreateBillType(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateBillType(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteBillType operation middleware
+func (siw *ServerInterfaceWrapper) DeleteBillType(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bill_type_id" -------------
+	var billTypeId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bill_type_id", r.PathValue("bill_type_id"), &billTypeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bill_type_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteBillType(w, r, billTypeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBillType operation middleware
+func (siw *ServerInterfaceWrapper) GetBillType(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bill_type_id" -------------
+	var billTypeId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bill_type_id", r.PathValue("bill_type_id"), &billTypeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bill_type_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBillType(w, r, billTypeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateBillType operation middleware
+func (siw *ServerInterfaceWrapper) UpdateBillType(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bill_type_id" -------------
+	var billTypeId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bill_type_id", r.PathValue("bill_type_id"), &billTypeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bill_type_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateBillType(w, r, billTypeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListBills operation middleware
+func (siw *ServerInterfaceWrapper) ListBills(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListBillsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "owner_profile_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_profile_id", r.URL.Query(), &params.OwnerProfileId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_profile_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_profile_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "bill_type_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "bill_type_id", r.URL.Query(), &params.BillTypeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "bill_type_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bill_type_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "reference" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "reference", r.URL.Query(), &params.Reference, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "reference"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reference", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "competence" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "competence", r.URL.Query(), &params.Competence, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "competence"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "competence", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "record_state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_state", r.URL.Query(), &params.RecordState, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "holder_profile_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "holder_profile_id", r.URL.Query(), &params.HolderProfileId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "holder_profile_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "holder_profile_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListBills(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateBill operation middleware
+func (siw *ServerInterfaceWrapper) CreateBill(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateBill(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteBill operation middleware
+func (siw *ServerInterfaceWrapper) DeleteBill(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bill_id" -------------
+	var billId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bill_id", r.PathValue("bill_id"), &billId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bill_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteBill(w, r, billId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBill operation middleware
+func (siw *ServerInterfaceWrapper) GetBill(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bill_id" -------------
+	var billId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bill_id", r.PathValue("bill_id"), &billId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bill_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBill(w, r, billId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateBill operation middleware
+func (siw *ServerInterfaceWrapper) UpdateBill(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bill_id" -------------
+	var billId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bill_id", r.PathValue("bill_id"), &billId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bill_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateBill(w, r, billId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReturnBillCurrentUse operation middleware
+func (siw *ServerInterfaceWrapper) ReturnBillCurrentUse(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bill_id" -------------
+	var billId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bill_id", r.PathValue("bill_id"), &billId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bill_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReturnBillCurrentUse(w, r, billId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignBillCurrentUse operation middleware
+func (siw *ServerInterfaceWrapper) AssignBillCurrentUse(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bill_id" -------------
+	var billId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bill_id", r.PathValue("bill_id"), &billId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bill_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignBillCurrentUse(w, r, billId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DuplicateBill operation middleware
+func (siw *ServerInterfaceWrapper) DuplicateBill(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "bill_id" -------------
+	var billId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "bill_id", r.PathValue("bill_id"), &billId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bill_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DuplicateBill(w, r, billId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1921,6 +2838,19 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/admin/users/{user_id}/access", wrapper.UpdateApplicationUserAccess)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/auth/session", wrapper.GetAuthSession)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/bill-types", wrapper.ListBillTypes)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/bill-types", wrapper.CreateBillType)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/bill-types/{bill_type_id}", wrapper.DeleteBillType)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/bill-types/{bill_type_id}", wrapper.GetBillType)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/bill-types/{bill_type_id}", wrapper.UpdateBillType)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/bills", wrapper.ListBills)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/bills", wrapper.CreateBill)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/bills/{bill_id}", wrapper.DeleteBill)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/bills/{bill_id}", wrapper.GetBill)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/bills/{bill_id}", wrapper.UpdateBill)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/bills/{bill_id}/current-use", wrapper.ReturnBillCurrentUse)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/bills/{bill_id}/current-use", wrapper.AssignBillCurrentUse)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/bills/{bill_id}/duplicate", wrapper.DuplicateBill)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/document-types", wrapper.ListDocumentTypes)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/document-types", wrapper.CreateDocumentType)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/document-types/{document_type_id}", wrapper.DeleteDocumentType)
@@ -2216,6 +3146,1329 @@ func (response GetAuthSession401JSONResponse) VisitGetAuthSessionResponse(w http
 type GetAuthSession503JSONResponse struct{ AuthUnavailableJSONResponse }
 
 func (response GetAuthSession503JSONResponse) VisitGetAuthSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBillTypesRequestObject struct {
+	Params ListBillTypesParams
+}
+
+type ListBillTypesResponseObject interface {
+	VisitListBillTypesResponse(w http.ResponseWriter) error
+}
+
+type ListBillTypes200JSONResponse BillTypePageResponse
+
+func (response ListBillTypes200JSONResponse) VisitListBillTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBillTypes400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListBillTypes400JSONResponse) VisitListBillTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBillTypes401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListBillTypes401JSONResponse) VisitListBillTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBillTypes403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListBillTypes403JSONResponse) VisitListBillTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBillTypes503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListBillTypes503JSONResponse) VisitListBillTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBillTypeRequestObject struct {
+	Body *CreateBillTypeJSONRequestBody
+}
+
+type CreateBillTypeResponseObject interface {
+	VisitCreateBillTypeResponse(w http.ResponseWriter) error
+}
+
+type CreateBillType201JSONResponse BillType
+
+func (response CreateBillType201JSONResponse) VisitCreateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBillType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateBillType400JSONResponse) VisitCreateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBillType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateBillType401JSONResponse) VisitCreateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBillType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateBillType403JSONResponse) VisitCreateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBillType409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateBillType409JSONResponse) VisitCreateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBillType422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response CreateBillType422JSONResponse) VisitCreateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBillType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response CreateBillType503JSONResponse) VisitCreateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBillTypeRequestObject struct {
+	BillTypeId openapi_types.UUID `json:"bill_type_id"`
+	Body       *DeleteBillTypeJSONRequestBody
+}
+
+type DeleteBillTypeResponseObject interface {
+	VisitDeleteBillTypeResponse(w http.ResponseWriter) error
+}
+
+type DeleteBillType204Response struct {
+}
+
+func (response DeleteBillType204Response) VisitDeleteBillTypeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteBillType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteBillType400JSONResponse) VisitDeleteBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBillType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteBillType401JSONResponse) VisitDeleteBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBillType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteBillType403JSONResponse) VisitDeleteBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBillType404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteBillType404JSONResponse) VisitDeleteBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBillType409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteBillType409JSONResponse) VisitDeleteBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBillType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response DeleteBillType503JSONResponse) VisitDeleteBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBillTypeRequestObject struct {
+	BillTypeId openapi_types.UUID `json:"bill_type_id"`
+}
+
+type GetBillTypeResponseObject interface {
+	VisitGetBillTypeResponse(w http.ResponseWriter) error
+}
+
+type GetBillType200JSONResponse BillType
+
+func (response GetBillType200JSONResponse) VisitGetBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBillType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetBillType400JSONResponse) VisitGetBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBillType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetBillType401JSONResponse) VisitGetBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBillType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetBillType403JSONResponse) VisitGetBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBillType404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetBillType404JSONResponse) VisitGetBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBillType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetBillType503JSONResponse) VisitGetBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBillTypeRequestObject struct {
+	BillTypeId openapi_types.UUID `json:"bill_type_id"`
+	Body       *UpdateBillTypeJSONRequestBody
+}
+
+type UpdateBillTypeResponseObject interface {
+	VisitUpdateBillTypeResponse(w http.ResponseWriter) error
+}
+
+type UpdateBillType200JSONResponse BillType
+
+func (response UpdateBillType200JSONResponse) VisitUpdateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBillType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateBillType400JSONResponse) VisitUpdateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBillType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateBillType401JSONResponse) VisitUpdateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBillType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateBillType403JSONResponse) VisitUpdateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBillType404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateBillType404JSONResponse) VisitUpdateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBillType409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpdateBillType409JSONResponse) VisitUpdateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBillType422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UpdateBillType422JSONResponse) VisitUpdateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBillType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response UpdateBillType503JSONResponse) VisitUpdateBillTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBillsRequestObject struct {
+	Params ListBillsParams
+}
+
+type ListBillsResponseObject interface {
+	VisitListBillsResponse(w http.ResponseWriter) error
+}
+
+type ListBills200JSONResponse BillPageResponse
+
+func (response ListBills200JSONResponse) VisitListBillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBills400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListBills400JSONResponse) VisitListBillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBills401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListBills401JSONResponse) VisitListBillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBills403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListBills403JSONResponse) VisitListBillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListBills503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListBills503JSONResponse) VisitListBillsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBillRequestObject struct {
+	Body *CreateBillJSONRequestBody
+}
+
+type CreateBillResponseObject interface {
+	VisitCreateBillResponse(w http.ResponseWriter) error
+}
+
+type CreateBill201JSONResponse Bill
+
+func (response CreateBill201JSONResponse) VisitCreateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBill400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateBill400JSONResponse) VisitCreateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBill401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateBill401JSONResponse) VisitCreateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBill403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateBill403JSONResponse) VisitCreateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBill404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateBill404JSONResponse) VisitCreateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBill409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateBill409JSONResponse) VisitCreateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBill422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response CreateBill422JSONResponse) VisitCreateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateBill503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response CreateBill503JSONResponse) VisitCreateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBillRequestObject struct {
+	BillId openapi_types.UUID `json:"bill_id"`
+	Body   *DeleteBillJSONRequestBody
+}
+
+type DeleteBillResponseObject interface {
+	VisitDeleteBillResponse(w http.ResponseWriter) error
+}
+
+type DeleteBill204Response struct {
+}
+
+func (response DeleteBill204Response) VisitDeleteBillResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteBill400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteBill400JSONResponse) VisitDeleteBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBill401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteBill401JSONResponse) VisitDeleteBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBill403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteBill403JSONResponse) VisitDeleteBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBill404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteBill404JSONResponse) VisitDeleteBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBill409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteBill409JSONResponse) VisitDeleteBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteBill503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response DeleteBill503JSONResponse) VisitDeleteBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBillRequestObject struct {
+	BillId openapi_types.UUID `json:"bill_id"`
+}
+
+type GetBillResponseObject interface {
+	VisitGetBillResponse(w http.ResponseWriter) error
+}
+
+type GetBill200JSONResponse Bill
+
+func (response GetBill200JSONResponse) VisitGetBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBill400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetBill400JSONResponse) VisitGetBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBill401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetBill401JSONResponse) VisitGetBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBill403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetBill403JSONResponse) VisitGetBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBill404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetBill404JSONResponse) VisitGetBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetBill503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetBill503JSONResponse) VisitGetBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBillRequestObject struct {
+	BillId openapi_types.UUID `json:"bill_id"`
+	Body   *UpdateBillJSONRequestBody
+}
+
+type UpdateBillResponseObject interface {
+	VisitUpdateBillResponse(w http.ResponseWriter) error
+}
+
+type UpdateBill200JSONResponse Bill
+
+func (response UpdateBill200JSONResponse) VisitUpdateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBill400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateBill400JSONResponse) VisitUpdateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBill401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateBill401JSONResponse) VisitUpdateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBill403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateBill403JSONResponse) VisitUpdateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBill404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateBill404JSONResponse) VisitUpdateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBill409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpdateBill409JSONResponse) VisitUpdateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBill422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UpdateBill422JSONResponse) VisitUpdateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateBill503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response UpdateBill503JSONResponse) VisitUpdateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnBillCurrentUseRequestObject struct {
+	BillId openapi_types.UUID `json:"bill_id"`
+}
+
+type ReturnBillCurrentUseResponseObject interface {
+	VisitReturnBillCurrentUseResponse(w http.ResponseWriter) error
+}
+
+type ReturnBillCurrentUse204Response struct {
+}
+
+func (response ReturnBillCurrentUse204Response) VisitReturnBillCurrentUseResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ReturnBillCurrentUse400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReturnBillCurrentUse400JSONResponse) VisitReturnBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnBillCurrentUse401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReturnBillCurrentUse401JSONResponse) VisitReturnBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnBillCurrentUse403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ReturnBillCurrentUse403JSONResponse) VisitReturnBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnBillCurrentUse404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReturnBillCurrentUse404JSONResponse) VisitReturnBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnBillCurrentUse409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReturnBillCurrentUse409JSONResponse) VisitReturnBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReturnBillCurrentUse503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ReturnBillCurrentUse503JSONResponse) VisitReturnBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignBillCurrentUseRequestObject struct {
+	BillId openapi_types.UUID `json:"bill_id"`
+	Body   *AssignBillCurrentUseJSONRequestBody
+}
+
+type AssignBillCurrentUseResponseObject interface {
+	VisitAssignBillCurrentUseResponse(w http.ResponseWriter) error
+}
+
+type AssignBillCurrentUse200JSONResponse BillCurrentUse
+
+func (response AssignBillCurrentUse200JSONResponse) VisitAssignBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignBillCurrentUse400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AssignBillCurrentUse400JSONResponse) VisitAssignBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignBillCurrentUse401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AssignBillCurrentUse401JSONResponse) VisitAssignBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignBillCurrentUse403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AssignBillCurrentUse403JSONResponse) VisitAssignBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignBillCurrentUse404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AssignBillCurrentUse404JSONResponse) VisitAssignBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignBillCurrentUse409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AssignBillCurrentUse409JSONResponse) VisitAssignBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AssignBillCurrentUse503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response AssignBillCurrentUse503JSONResponse) VisitAssignBillCurrentUseResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateBillRequestObject struct {
+	BillId openapi_types.UUID `json:"bill_id"`
+}
+
+type DuplicateBillResponseObject interface {
+	VisitDuplicateBillResponse(w http.ResponseWriter) error
+}
+
+type DuplicateBill201JSONResponse Bill
+
+func (response DuplicateBill201JSONResponse) VisitDuplicateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateBill400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DuplicateBill400JSONResponse) VisitDuplicateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateBill401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DuplicateBill401JSONResponse) VisitDuplicateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateBill403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DuplicateBill403JSONResponse) VisitDuplicateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateBill404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DuplicateBill404JSONResponse) VisitDuplicateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateBill409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DuplicateBill409JSONResponse) VisitDuplicateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DuplicateBill503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response DuplicateBill503JSONResponse) VisitDuplicateBillResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -4297,6 +6550,45 @@ type StrictServerInterface interface {
 	// Read the current protected application session
 	// (GET /api/auth/session)
 	GetAuthSession(ctx context.Context, request GetAuthSessionRequestObject) (GetAuthSessionResponseObject, error)
+	// List administrable bill types
+	// (GET /api/v1/bill-types)
+	ListBillTypes(ctx context.Context, request ListBillTypesRequestObject) (ListBillTypesResponseObject, error)
+	// Create an administrable bill type
+	// (POST /api/v1/bill-types)
+	CreateBillType(ctx context.Context, request CreateBillTypeRequestObject) (CreateBillTypeResponseObject, error)
+	// Permanently delete an unused bill type
+	// (DELETE /api/v1/bill-types/{bill_type_id})
+	DeleteBillType(ctx context.Context, request DeleteBillTypeRequestObject) (DeleteBillTypeResponseObject, error)
+	// Read one bill type
+	// (GET /api/v1/bill-types/{bill_type_id})
+	GetBillType(ctx context.Context, request GetBillTypeRequestObject) (GetBillTypeResponseObject, error)
+	// Replace bill type settings using optimistic concurrency
+	// (PUT /api/v1/bill-types/{bill_type_id})
+	UpdateBillType(ctx context.Context, request UpdateBillTypeRequestObject) (UpdateBillTypeResponseObject, error)
+	// List Profile-owned bills
+	// (GET /api/v1/bills)
+	ListBills(ctx context.Context, request ListBillsRequestObject) (ListBillsResponseObject, error)
+	// Create a Profile-owned bill
+	// (POST /api/v1/bills)
+	CreateBill(ctx context.Context, request CreateBillRequestObject) (CreateBillResponseObject, error)
+	// Permanently delete an available bill
+	// (DELETE /api/v1/bills/{bill_id})
+	DeleteBill(ctx context.Context, request DeleteBillRequestObject) (DeleteBillResponseObject, error)
+	// Read one bill
+	// (GET /api/v1/bills/{bill_id})
+	GetBill(ctx context.Context, request GetBillRequestObject) (GetBillResponseObject, error)
+	// Replace bill values using optimistic concurrency
+	// (PUT /api/v1/bills/{bill_id})
+	UpdateBill(ctx context.Context, request UpdateBillRequestObject) (UpdateBillResponseObject, error)
+	// Return a bill to available status
+	// (DELETE /api/v1/bills/{bill_id}/current-use)
+	ReturnBillCurrentUse(ctx context.Context, request ReturnBillCurrentUseRequestObject) (ReturnBillCurrentUseResponseObject, error)
+	// Assign or replace the current bill holder when supported
+	// (PUT /api/v1/bills/{bill_id}/current-use)
+	AssignBillCurrentUse(ctx context.Context, request AssignBillCurrentUseRequestObject) (AssignBillCurrentUseResponseObject, error)
+	// Duplicate a bill into an independent record
+	// (POST /api/v1/bills/{bill_id}/duplicate)
+	DuplicateBill(ctx context.Context, request DuplicateBillRequestObject) (DuplicateBillResponseObject, error)
 	// List administrable document types
 	// (GET /api/v1/document-types)
 	ListDocumentTypes(ctx context.Context, request ListDocumentTypesRequestObject) (ListDocumentTypesResponseObject, error)
@@ -4497,6 +6789,389 @@ func (sh *strictHandler) GetAuthSession(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetAuthSessionResponseObject); ok {
 		if err := validResponse.VisitGetAuthSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListBillTypes operation middleware
+func (sh *strictHandler) ListBillTypes(w http.ResponseWriter, r *http.Request, params ListBillTypesParams) {
+	var request ListBillTypesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBillTypes(ctx, request.(ListBillTypesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBillTypes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListBillTypesResponseObject); ok {
+		if err := validResponse.VisitListBillTypesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateBillType operation middleware
+func (sh *strictHandler) CreateBillType(w http.ResponseWriter, r *http.Request) {
+	var request CreateBillTypeRequestObject
+
+	var body CreateBillTypeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateBillType(ctx, request.(CreateBillTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateBillType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateBillTypeResponseObject); ok {
+		if err := validResponse.VisitCreateBillTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteBillType operation middleware
+func (sh *strictHandler) DeleteBillType(w http.ResponseWriter, r *http.Request, billTypeId openapi_types.UUID) {
+	var request DeleteBillTypeRequestObject
+
+	request.BillTypeId = billTypeId
+
+	var body DeleteBillTypeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteBillType(ctx, request.(DeleteBillTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteBillType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteBillTypeResponseObject); ok {
+		if err := validResponse.VisitDeleteBillTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetBillType operation middleware
+func (sh *strictHandler) GetBillType(w http.ResponseWriter, r *http.Request, billTypeId openapi_types.UUID) {
+	var request GetBillTypeRequestObject
+
+	request.BillTypeId = billTypeId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBillType(ctx, request.(GetBillTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBillType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetBillTypeResponseObject); ok {
+		if err := validResponse.VisitGetBillTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateBillType operation middleware
+func (sh *strictHandler) UpdateBillType(w http.ResponseWriter, r *http.Request, billTypeId openapi_types.UUID) {
+	var request UpdateBillTypeRequestObject
+
+	request.BillTypeId = billTypeId
+
+	var body UpdateBillTypeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateBillType(ctx, request.(UpdateBillTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateBillType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateBillTypeResponseObject); ok {
+		if err := validResponse.VisitUpdateBillTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListBills operation middleware
+func (sh *strictHandler) ListBills(w http.ResponseWriter, r *http.Request, params ListBillsParams) {
+	var request ListBillsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListBills(ctx, request.(ListBillsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListBills")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListBillsResponseObject); ok {
+		if err := validResponse.VisitListBillsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateBill operation middleware
+func (sh *strictHandler) CreateBill(w http.ResponseWriter, r *http.Request) {
+	var request CreateBillRequestObject
+
+	var body CreateBillJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateBill(ctx, request.(CreateBillRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateBill")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateBillResponseObject); ok {
+		if err := validResponse.VisitCreateBillResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteBill operation middleware
+func (sh *strictHandler) DeleteBill(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID) {
+	var request DeleteBillRequestObject
+
+	request.BillId = billId
+
+	var body DeleteBillJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteBill(ctx, request.(DeleteBillRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteBill")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteBillResponseObject); ok {
+		if err := validResponse.VisitDeleteBillResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetBill operation middleware
+func (sh *strictHandler) GetBill(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID) {
+	var request GetBillRequestObject
+
+	request.BillId = billId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetBill(ctx, request.(GetBillRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetBill")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetBillResponseObject); ok {
+		if err := validResponse.VisitGetBillResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateBill operation middleware
+func (sh *strictHandler) UpdateBill(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID) {
+	var request UpdateBillRequestObject
+
+	request.BillId = billId
+
+	var body UpdateBillJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateBill(ctx, request.(UpdateBillRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateBill")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateBillResponseObject); ok {
+		if err := validResponse.VisitUpdateBillResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReturnBillCurrentUse operation middleware
+func (sh *strictHandler) ReturnBillCurrentUse(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID) {
+	var request ReturnBillCurrentUseRequestObject
+
+	request.BillId = billId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReturnBillCurrentUse(ctx, request.(ReturnBillCurrentUseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReturnBillCurrentUse")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReturnBillCurrentUseResponseObject); ok {
+		if err := validResponse.VisitReturnBillCurrentUseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AssignBillCurrentUse operation middleware
+func (sh *strictHandler) AssignBillCurrentUse(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID) {
+	var request AssignBillCurrentUseRequestObject
+
+	request.BillId = billId
+
+	var body AssignBillCurrentUseJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AssignBillCurrentUse(ctx, request.(AssignBillCurrentUseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AssignBillCurrentUse")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AssignBillCurrentUseResponseObject); ok {
+		if err := validResponse.VisitAssignBillCurrentUseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DuplicateBill operation middleware
+func (sh *strictHandler) DuplicateBill(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID) {
+	var request DuplicateBillRequestObject
+
+	request.BillId = billId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DuplicateBill(ctx, request.(DuplicateBillRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DuplicateBill")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DuplicateBillResponseObject); ok {
+		if err := validResponse.VisitDuplicateBillResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

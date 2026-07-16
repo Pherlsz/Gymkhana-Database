@@ -309,6 +309,119 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/bill-types": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List administrable bill types */
+    get: operations["listBillTypes"];
+    put?: never;
+    /** Create an administrable bill type */
+    post: operations["createBillType"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bill-types/{bill_type_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_type_id: string;
+      };
+      cookie?: never;
+    };
+    /** Read one bill type */
+    get: operations["getBillType"];
+    /** Replace bill type settings using optimistic concurrency */
+    put: operations["updateBillType"];
+    post?: never;
+    /** Permanently delete an unused bill type */
+    delete: operations["deleteBillType"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bills": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Profile-owned bills */
+    get: operations["listBills"];
+    put?: never;
+    /** Create a Profile-owned bill */
+    post: operations["createBill"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bills/{bill_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    /** Read one bill */
+    get: operations["getBill"];
+    /** Replace bill values using optimistic concurrency */
+    put: operations["updateBill"];
+    post?: never;
+    /** Permanently delete an available bill */
+    delete: operations["deleteBill"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bills/{bill_id}/duplicate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Duplicate a bill into an independent record */
+    post: operations["duplicateBill"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bills/{bill_id}/current-use": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Assign or replace the current bill holder when supported */
+    put: operations["assignBillCurrentUse"];
+    post?: never;
+    /** Return a bill to available status */
+    delete: operations["returnBillCurrentUse"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -586,6 +699,152 @@ export interface components {
     DocumentPageResponse: {
       documents: components["schemas"]["Document"][];
       page: components["schemas"]["DocumentPageMeta"];
+    };
+    /**
+     * @default label
+     * @enum {string}
+     */
+    BillTypeSortField: "label" | "technical_key" | "created_at" | "updated_at";
+    /**
+     * @default reference_value
+     * @enum {string}
+     */
+    BillSortField:
+      | "reference_value"
+      | "type_label"
+      | "competence"
+      | "amount"
+      | "created_at"
+      | "updated_at";
+    /** @enum {string} */
+    BillRecordState: "CURRENT" | "REPLACED" | "EXPIRED" | "ARCHIVED";
+    /** @enum {string} */
+    BillStatus: "AVAILABLE" | "IN_USE";
+    BillTypeValuesRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      supports_current_use: boolean;
+    };
+    UpdateBillTypeRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      supports_current_use: boolean;
+      /** Format: int64 */
+      version: number;
+    };
+    BillType: {
+      /** Format: uuid */
+      id: string;
+      technical_key: string;
+      label: string;
+      active: boolean;
+      supports_current_use: boolean;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    BillValuesRequest: {
+      /** Format: uuid */
+      owner_profile_id: string;
+      /** Format: uuid */
+      bill_type_id: string;
+      printed_holder_name: string;
+      printed_address: string;
+      reference_value: string;
+      competence: string;
+      amount: string;
+      currency: string;
+      notes: string;
+      record_state: components["schemas"]["BillRecordState"];
+    };
+    UpdateBillRequest: {
+      /** Format: uuid */
+      owner_profile_id: string;
+      /** Format: uuid */
+      bill_type_id: string;
+      printed_holder_name: string;
+      printed_address: string;
+      reference_value: string;
+      competence: string;
+      amount: string;
+      currency: string;
+      notes: string;
+      record_state: components["schemas"]["BillRecordState"];
+      /** Format: int64 */
+      version: number;
+    };
+    DeleteBillResourceRequest: {
+      /** Format: int64 */
+      version: number;
+      /** @constant */
+      confirmation: "Confirmar";
+    };
+    AssignBillCurrentUseRequest: {
+      /** Format: uuid */
+      holder_profile_id: string;
+    };
+    BillCurrentUse: {
+      /** Format: uuid */
+      holder_profile_id: string;
+      /** Format: date-time */
+      assigned_at: string;
+    };
+    Bill: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      owner_profile_id: string;
+      /** Format: uuid */
+      bill_type_id: string;
+      printed_holder_name: string;
+      printed_address: string;
+      reference_value: string;
+      competence: string;
+      amount: string;
+      currency: string;
+      notes: string;
+      record_state: components["schemas"]["BillRecordState"];
+      status: components["schemas"]["BillStatus"];
+      type: components["schemas"]["BillType"];
+      current_use: components["schemas"]["BillCurrentUse"];
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    BillPageMeta: {
+      /** Format: int64 */
+      total: number;
+      /** Format: int32 */
+      limit: number;
+      /** Format: int32 */
+      offset: number;
+      sort_field: components["schemas"]["BillSortField"];
+      sort_order: components["schemas"]["SortOrder"];
+    };
+    BillTypePageResponse: {
+      types: components["schemas"]["BillType"][];
+      page: {
+        /** Format: int64 */
+        total: number;
+        /** Format: int32 */
+        limit: number;
+        /** Format: int32 */
+        offset: number;
+        sort_field: components["schemas"]["BillTypeSortField"];
+        sort_order: components["schemas"]["SortOrder"];
+      };
+    };
+    BillPageResponse: {
+      bills: components["schemas"]["Bill"][];
+      page: components["schemas"]["BillPageMeta"];
     };
   };
   responses: {
@@ -1429,6 +1688,400 @@ export interface operations {
     requestBody?: never;
     responses: {
       /** @description Current use returned */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listBillTypes: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: components["schemas"]["BillTypeSortField"];
+        order?: components["schemas"]["SortOrder"];
+        label?: string;
+        active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated bill type list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillTypePageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createBillType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BillTypeValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created bill type */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getBillType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Bill type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateBillType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateBillTypeRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated bill type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteBillType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteBillResourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Bill type permanently deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listBills: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: components["schemas"]["BillSortField"];
+        order?: components["schemas"]["SortOrder"];
+        owner_profile_id?: string;
+        bill_type_id?: string;
+        reference?: string;
+        competence?: string;
+        record_state?: components["schemas"]["BillRecordState"];
+        status?: components["schemas"]["BillStatus"];
+        holder_profile_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated bill list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillPageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BillValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created bill */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Bill"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Bill */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Bill"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateBillRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated bill */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Bill"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteBillResourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Bill permanently deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  duplicateBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Duplicated bill */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Bill"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  assignBillCurrentUse: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssignBillCurrentUseRequest"];
+      };
+    };
+    responses: {
+      /** @description Current bill use */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillCurrentUse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  returnBillCurrentUse: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Bill returned */
       204: {
         headers: {
           [name: string]: unknown;

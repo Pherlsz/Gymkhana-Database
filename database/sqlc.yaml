@@ -4,6 +4,7 @@ sql:
     schema:
       - schema.sql
       - schema_document_audit.sql
+      - schema_bill_audit.sql
     queries: queries
     gen:
       go:

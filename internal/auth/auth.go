@@ -65,6 +65,26 @@ func (role Role) CanManageDocumentCurrentUse() bool {
 	return role.Valid()
 }
 
+func (role Role) CanReadBills() bool {
+	return role.Valid()
+}
+
+func (role Role) CanWriteBills() bool {
+	return role.Valid()
+}
+
+func (role Role) CanDeleteBills() bool {
+	return role == RoleAdmin || role == RoleSuperadmin
+}
+
+func (role Role) CanManageBillTypes() bool {
+	return role == RoleAdmin || role == RoleSuperadmin
+}
+
+func (role Role) CanManageBillCurrentUse() bool {
+	return role.Valid()
+}
+
 type AuditEventType string
 
 const (
