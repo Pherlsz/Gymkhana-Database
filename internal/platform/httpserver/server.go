@@ -27,6 +27,7 @@ type Options struct {
 	Auth           authenticationService
 	Profile        profileService
 	Document       documentService
+	Bill           billService
 	SecureCookies  bool
 	ApplicationURL string
 }
@@ -68,6 +69,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerAdministrationRoutes(mux, logger, settings.Auth)
 	registerProfileRoutes(mux, logger, settings.Auth, settings.Profile)
 	registerDocumentRoutes(mux, logger, settings.Auth, settings.Document)
+	registerBillRoutes(mux, logger, settings.Auth, settings.Bill)
 	mux.HandleFunc("/", fallbackHandler)
 	applicationOrigin := absoluteOrigin(settings.ApplicationURL)
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, browserOriginMiddleware(applicationOrigin, mux)))))

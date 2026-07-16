@@ -8,6 +8,11 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- Protected bill-type administration and Profile-owned bill CRUD API with centralized role permissions.
+- Bill filtering, sorting, pagination, structured validation, optimistic conflicts, duplication, and explicit permanent-delete confirmation.
+- Printed holder/address/reference preservation with civil competence, canonical decimal amounts, and ISO currency validation.
+- Current-use assignment/replacement/return only for bill types that explicitly support it.
+- Durable bill mutation audit events, OpenAPI 0.6.0 contracts, generated clients, and service/HTTP/PostgreSQL coverage.
 - Protected document-type administration and Profile-owned document CRUD API with centralized role permissions.
 - Document filtering, sorting, pagination, structured validation, optimistic conflicts, duplication, and explicit permanent-delete confirmation.
 - Current-use assignment, holder replacement, and return endpoints without creating a historical usage timeline.
