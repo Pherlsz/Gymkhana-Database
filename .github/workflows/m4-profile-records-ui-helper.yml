@@ -51,10 +51,24 @@ jobs:
       - name: Validate frontend
         working-directory: target
         run: |
-          pnpm typecheck:web
-          pnpm lint:web
-          pnpm test:web -- --run
-          pnpm build:web
+          set +e
+          {
+            pnpm typecheck:web &&
+            pnpm lint:web &&
+            pnpm test:web -- --run &&
+            pnpm build:web
+          } > /tmp/m4-profile-records-ui-validation.log 2>&1
+          status=$?
+          cat /tmp/m4-profile-records-ui-validation.log
+          exit $status
+      - name: Upload validation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-profile-records-ui-validation
+          path: /tmp/m4-profile-records-ui-validation.log
+          if-no-files-found: ignore
+          retention-days: 1
       - name: Publish target branch
         working-directory: target
         run: |
