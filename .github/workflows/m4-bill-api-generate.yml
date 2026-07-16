@@ -14,6 +14,10 @@ permissions:
   contents: write
   packages: read
 
+concurrency:
+  group: m4-bill-api-generation
+  cancel-in-progress: true
+
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -24,10 +28,10 @@ jobs:
         with:
           ref: agent/m4-bill-api-generate
           path: helper
-      - name: Check out target branch
+      - name: Check out clean main
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          ref: agent/m4-bill-api
+          ref: main
           path: target
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
@@ -116,7 +120,7 @@ jobs:
           git diff --cached --name-status | tee /tmp/m4-bill-publish.log
           for file in "${required_files[@]}"; do git diff --cached --name-only | grep -Fx "$file" >/dev/null; done
           git commit -m "feat(bills): add protected CRUD and current-use API"
-          git push origin HEAD:agent/m4-bill-api
+          git push --force origin HEAD:agent/m4-bill-api
       - name: Upload publish manifest
         if: always()
         uses: actions/upload-artifact@v4
