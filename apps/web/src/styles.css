@@ -231,3 +231,196 @@ p {
     flex-direction: column;
   }
 }
+
+.profile-sections {
+  display: flex;
+  gap: var(--gym-space-2);
+  overflow: auto;
+  margin-block-end: var(--gym-space-5);
+  padding-block-end: var(--gym-space-2);
+  border-block-end: 1px solid var(--gym-color-border);
+}
+.profile-sections button,
+.type-list-item {
+  min-block-size: 2.5rem;
+  padding: var(--gym-space-2) var(--gym-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--gym-radius-md);
+  background: transparent;
+  color: var(--gym-color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.profile-sections button:hover,
+.profile-sections__active {
+  border-color: var(--gym-color-border);
+  background: var(--gym-color-surface-raised);
+  color: var(--gym-color-text);
+}
+.records-section-header,
+.record-editor__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gym-space-4);
+}
+.records-section-header h3,
+.record-editor__header h3 {
+  margin: 0;
+}
+.records-section-header p {
+  margin-block-start: var(--gym-space-1);
+  color: var(--gym-color-text-muted);
+}
+.record-filters,
+.record-form,
+.type-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gym-space-3);
+  padding: var(--gym-space-4);
+}
+.record-filters label,
+.record-form label,
+.type-form label,
+.current-use label {
+  display: grid;
+  gap: var(--gym-space-2);
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+.record-filters input,
+.record-filters select,
+.record-form input,
+.record-form select,
+.record-form textarea,
+.current-use select,
+.record-delete input,
+.type-form input,
+.type-form select,
+.type-delete input {
+  min-block-size: 2.5rem;
+  padding: var(--gym-space-2) var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+  color: var(--gym-color-text);
+}
+.record-form__wide {
+  grid-column: 1 / -1;
+}
+.records-list {
+  overflow: hidden;
+}
+.records-table-wrap {
+  overflow: auto;
+  max-block-size: 48vh;
+}
+.records-table {
+  inline-size: 100%;
+  min-inline-size: 48rem;
+  border-collapse: collapse;
+}
+.records-table th,
+.records-table td {
+  padding: var(--gym-space-3);
+  border-block-end: 1px solid var(--gym-color-border);
+  text-align: start;
+  vertical-align: middle;
+}
+.records-table th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--gym-color-surface);
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+.records-empty {
+  padding: var(--gym-space-6);
+  color: var(--gym-color-text-muted);
+}
+.records-cards {
+  display: none;
+}
+.records-pagination {
+  justify-content: space-between;
+}
+.record-card,
+.record-editor,
+.current-use,
+.record-delete {
+  padding: var(--gym-space-4);
+}
+.record-editor {
+  border: 1px solid var(--gym-color-border);
+}
+.record-editor__actions {
+  margin-block: var(--gym-space-4);
+}
+.current-use,
+.record-delete {
+  margin-block-start: var(--gym-space-4);
+}
+.record-delete,
+.type-delete {
+  border: 1px solid var(--gym-color-danger, var(--gym-color-border));
+}
+.types-admin {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(18rem, 2fr);
+  gap: var(--gym-space-4);
+}
+.type-list {
+  display: grid;
+  align-content: start;
+  padding: var(--gym-space-2);
+}
+.type-list-item {
+  display: grid;
+  gap: var(--gym-space-1);
+  text-align: start;
+}
+.type-list-item span {
+  font-size: var(--gym-font-size-sm);
+}
+.record-checkbox {
+  display: flex !important;
+  align-items: center;
+  grid-template-columns: auto 1fr;
+}
+.record-checkbox input {
+  min-block-size: auto;
+}
+.type-delete {
+  display: grid;
+  gap: var(--gym-space-2);
+  grid-column: 1 / -1;
+  padding: var(--gym-space-3);
+}
+@media (max-width: 48rem) {
+  .record-filters,
+  .record-form,
+  .type-form,
+  .types-admin {
+    grid-template-columns: 1fr;
+  }
+  .record-form__wide,
+  .type-delete {
+    grid-column: auto;
+  }
+  .records-table-wrap {
+    display: none;
+  }
+  .records-cards {
+    display: grid;
+    gap: var(--gym-space-3);
+    padding: var(--gym-space-3);
+  }
+  .records-pagination,
+  .records-section-header,
+  .record-editor__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
