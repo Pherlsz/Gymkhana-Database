@@ -45,6 +45,26 @@ func (role Role) CanDeleteProfiles() bool {
 	return role == RoleAdmin || role == RoleSuperadmin
 }
 
+func (role Role) CanReadDocuments() bool {
+	return role.Valid()
+}
+
+func (role Role) CanWriteDocuments() bool {
+	return role.Valid()
+}
+
+func (role Role) CanDeleteDocuments() bool {
+	return role == RoleAdmin || role == RoleSuperadmin
+}
+
+func (role Role) CanManageDocumentTypes() bool {
+	return role == RoleAdmin || role == RoleSuperadmin
+}
+
+func (role Role) CanManageDocumentCurrentUse() bool {
+	return role.Valid()
+}
+
 type AuditEventType string
 
 const (

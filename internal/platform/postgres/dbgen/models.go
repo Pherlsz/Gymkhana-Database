@@ -97,6 +97,19 @@ type Document struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
+type DocumentAuditEvent struct {
+	ID               pgtype.UUID        `json:"id"`
+	ActorUserID      pgtype.UUID        `json:"actor_user_id"`
+	DocumentID       pgtype.UUID        `json:"document_id"`
+	SourceDocumentID pgtype.UUID        `json:"source_document_id"`
+	DocumentTypeID   pgtype.UUID        `json:"document_type_id"`
+	HolderProfileID  pgtype.UUID        `json:"holder_profile_id"`
+	EventType        string             `json:"event_type"`
+	Outcome          string             `json:"outcome"`
+	RequestID        string             `json:"request_id"`
+	OccurredAt       pgtype.Timestamptz `json:"occurred_at"`
+}
+
 type DocumentCurrentUse struct {
 	DocumentID      pgtype.UUID        `json:"document_id"`
 	HolderProfileID pgtype.UUID        `json:"holder_profile_id"`

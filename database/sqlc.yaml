@@ -1,7 +1,9 @@
 version: "2"
 sql:
   - engine: postgresql
-    schema: schema.sql
+    schema:
+      - schema.sql
+      - schema_document_audit.sql
     queries: queries
     gen:
       go:

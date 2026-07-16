@@ -196,6 +196,119 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/document-types": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List administrable document types */
+    get: operations["listDocumentTypes"];
+    put?: never;
+    /** Create an administrable document type */
+    post: operations["createDocumentType"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/document-types/{document_type_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_type_id: string;
+      };
+      cookie?: never;
+    };
+    /** Read one document type */
+    get: operations["getDocumentType"];
+    /** Replace document type settings using optimistic concurrency */
+    put: operations["updateDocumentType"];
+    post?: never;
+    /** Permanently delete an unused document type */
+    delete: operations["deleteDocumentType"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Profile-owned documents */
+    get: operations["listDocuments"];
+    put?: never;
+    /** Create a Profile-owned document */
+    post: operations["createDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    /** Read one document */
+    get: operations["getDocument"];
+    /** Replace document values using optimistic concurrency */
+    put: operations["updateDocument"];
+    post?: never;
+    /** Permanently delete an available document */
+    delete: operations["deleteDocument"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}/duplicate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Duplicate a document into an independent record */
+    post: operations["duplicateDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}/current-use": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Assign or replace the current document holder */
+    put: operations["assignDocumentCurrentUse"];
+    post?: never;
+    /** Return a document and remove its current-use relation */
+    delete: operations["returnDocumentCurrentUse"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -331,6 +444,148 @@ export interface components {
       };
       request_id?: string;
       field_errors?: components["schemas"]["FieldError"][];
+    };
+    /** @enum {string} */
+    DocumentUniquenessPolicy: "NONE" | "PER_PROFILE" | "GLOBAL_BY_TYPE";
+    /** @enum {string} */
+    DocumentRecordState: "CURRENT" | "REPLACED" | "EXPIRED" | "ARCHIVED";
+    /** @enum {string} */
+    DocumentStatus: "AVAILABLE" | "IN_USE";
+    /**
+     * @default label
+     * @enum {string}
+     */
+    DocumentTypeSortField: "label" | "technical_key" | "created_at" | "updated_at";
+    /**
+     * @default identifier_value
+     * @enum {string}
+     */
+    DocumentSortField:
+      | "identifier_value"
+      | "type_label"
+      | "document_date"
+      | "created_at"
+      | "updated_at";
+    DocumentTypeValuesRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      uniqueness_policy: components["schemas"]["DocumentUniquenessPolicy"];
+      validation_regex: string;
+      date_required: boolean;
+    };
+    UpdateDocumentTypeRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      uniqueness_policy: components["schemas"]["DocumentUniquenessPolicy"];
+      validation_regex: string;
+      date_required: boolean;
+      /** Format: int64 */
+      version: number;
+    };
+    DeleteDocumentResourceRequest: {
+      /** Format: int64 */
+      version: number;
+      /** @constant */
+      confirmation: "Confirmar";
+    };
+    DocumentType: {
+      /** Format: uuid */
+      id: string;
+      technical_key: string;
+      label: string;
+      active: boolean;
+      uniqueness_policy: components["schemas"]["DocumentUniquenessPolicy"];
+      validation_regex: string;
+      date_required: boolean;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    DocumentValuesRequest: {
+      /** Format: uuid */
+      owner_profile_id: string;
+      /** Format: uuid */
+      document_type_id: string;
+      identifier_value: string;
+      document_date: string;
+      notes: string;
+      record_state: components["schemas"]["DocumentRecordState"];
+    };
+    UpdateDocumentRequest: {
+      /** Format: uuid */
+      owner_profile_id: string;
+      /** Format: uuid */
+      document_type_id: string;
+      identifier_value: string;
+      document_date: string;
+      notes: string;
+      record_state: components["schemas"]["DocumentRecordState"];
+      /** Format: int64 */
+      version: number;
+    };
+    AssignDocumentCurrentUseRequest: {
+      /** Format: uuid */
+      holder_profile_id: string;
+    };
+    DocumentCurrentUse: {
+      /** Format: uuid */
+      holder_profile_id: string;
+      /** Format: date-time */
+      assigned_at: string;
+    };
+    Document: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      owner_profile_id: string;
+      /** Format: uuid */
+      document_type_id: string;
+      identifier_value: string;
+      document_date: string;
+      notes: string;
+      record_state: components["schemas"]["DocumentRecordState"];
+      status: components["schemas"]["DocumentStatus"];
+      type: components["schemas"]["DocumentType"];
+      current_use: components["schemas"]["DocumentCurrentUse"];
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    DocumentTypePageMeta: {
+      /** Format: int64 */
+      total: number;
+      /** Format: int32 */
+      limit: number;
+      /** Format: int32 */
+      offset: number;
+      sort_field: components["schemas"]["DocumentTypeSortField"];
+      sort_order: components["schemas"]["SortOrder"];
+    };
+    DocumentPageMeta: {
+      /** Format: int64 */
+      total: number;
+      /** Format: int32 */
+      limit: number;
+      /** Format: int32 */
+      offset: number;
+      sort_field: components["schemas"]["DocumentSortField"];
+      sort_order: components["schemas"]["SortOrder"];
+    };
+    DocumentTypePageResponse: {
+      types: components["schemas"]["DocumentType"][];
+      page: components["schemas"]["DocumentTypePageMeta"];
+    };
+    DocumentPageResponse: {
+      documents: components["schemas"]["Document"][];
+      page: components["schemas"]["DocumentPageMeta"];
     };
   };
   responses: {
@@ -792,6 +1047,399 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listDocumentTypes: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: components["schemas"]["DocumentTypeSortField"];
+        order?: components["schemas"]["SortOrder"];
+        label?: string;
+        active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated document type list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentTypePageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createDocumentType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentTypeValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created document type */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getDocumentType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Document type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateDocumentType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateDocumentTypeRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated document type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteDocumentType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteDocumentResourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Document type permanently deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listDocuments: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: components["schemas"]["DocumentSortField"];
+        order?: components["schemas"]["SortOrder"];
+        owner_profile_id?: string;
+        document_type_id?: string;
+        identifier?: string;
+        record_state?: components["schemas"]["DocumentRecordState"];
+        status?: components["schemas"]["DocumentStatus"];
+        holder_profile_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated document list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentPageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created document */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Document */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateDocumentRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated document */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteDocumentResourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Document permanently deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  duplicateDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Duplicated document */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  assignDocumentCurrentUse: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssignDocumentCurrentUseRequest"];
+      };
+    };
+    responses: {
+      /** @description Assigned current use */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentCurrentUse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  returnDocumentCurrentUse: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Current use returned */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
       503: components["responses"]["ServiceUnavailable"];
     };
   };
