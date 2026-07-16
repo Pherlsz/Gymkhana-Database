@@ -2,6 +2,7 @@ name: Migrations
 
 on:
   pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - "database/**"
       - "internal/platform/postgres/dbgen/**"
@@ -9,27 +10,20 @@ on:
       - "go.sum"
       - "Makefile"
       - ".github/workflows/migrations.yml"
-  push:
-    branches: [main]
-    paths:
-      - "database/**"
-      - "internal/platform/postgres/dbgen/**"
-      - "go.mod"
-      - "go.sum"
-      - "Makefile"
-      - ".github/workflows/migrations.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: migrations-${{ github.workflow }}-${{ github.ref }}
+  group: migrations-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:17-alpine
@@ -56,10 +50,10 @@ jobs:
           cache: true
 
       - name: Apply migrations
-        run: go run github.com/jackc/tern/v2@v2.4.1 migrate --migrations database/migrations --config database/tern.conf
+        run: make migrate
 
       - name: Check migration status
-        run: go run github.com/jackc/tern/v2@v2.4.1 status --migrations database/migrations --config database/tern.conf
+        run: make migrate-status
 
       - name: Regenerate sqlc output
         run: |

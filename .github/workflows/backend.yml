@@ -2,6 +2,7 @@ name: Backend
 
 on:
   pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - "**/*.go"
       - "go.mod"
@@ -9,27 +10,26 @@ on:
       - "Makefile"
       - "scripts/configure-private-go.sh"
       - ".github/workflows/backend.yml"
-  push:
-    branches: [main]
-    paths:
-      - "**/*.go"
-      - "go.mod"
-      - "go.sum"
-      - "Makefile"
-      - "scripts/configure-private-go.sh"
-      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run Staticcheck and race tests
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: backend-${{ github.workflow }}-${{ github.ref }}
+  group: backend-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -64,13 +64,15 @@ jobs:
       - name: Run tests
         run: go test ./...
 
-      - name: Run race tests
-        run: go test -race ./...
+      - name: Build executables
+        run: go build ./cmd/...
 
       - name: Run Staticcheck
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.full) || (github.event_name == 'pull_request' && github.event.action != 'synchronize') }}
         run: |
           go install honnef.co/go/tools/cmd/staticcheck@v0.7.0
           staticcheck ./...
 
-      - name: Build executables
-        run: go build ./cmd/...
+      - name: Run race tests
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.full) || (github.event_name == 'pull_request' && github.event.action != 'synchronize') }}
+        run: go test -race ./...
