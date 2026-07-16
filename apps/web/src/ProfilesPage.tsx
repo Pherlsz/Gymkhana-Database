@@ -7,6 +7,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
+import { ProfileRecordsPanel } from "./ProfileRecordsPanel";
 import { profilesRoute, useApplicationSession } from "./App";
 import {
   APIRequestError,
@@ -18,6 +19,7 @@ import {
   type Profile,
   type ProfileListSearch,
   type ProfileValuesRequest,
+  type UserRole,
 } from "./lib/api/client";
 
 const emptyValues: ProfileValuesRequest = {
@@ -71,6 +73,64 @@ export function normalizeProfileSearch(search: Record<string, unknown>): Profile
       search.mode === "create" || search.mode === "edit" || search.mode === "view"
         ? search.mode
         : undefined,
+    section:
+      search.section === "documents" || search.section === "bills" ? search.section : "profile",
+    document_page: positiveInteger(search.document_page, 1),
+    document_limit: Math.min(1000, Math.max(100, positiveInteger(search.document_limit, 100))),
+    document_sort: [
+      "identifier_value",
+      "type_label",
+      "document_date",
+      "created_at",
+      "updated_at",
+    ].includes(String(search.document_sort))
+      ? (search.document_sort as ProfileListSearch["document_sort"])
+      : "identifier_value",
+    document_order: search.document_order === "desc" ? "desc" : "asc",
+    document_identifier:
+      typeof search.document_identifier === "string" ? search.document_identifier : "",
+    document_status:
+      search.document_status === "AVAILABLE" || search.document_status === "IN_USE"
+        ? search.document_status
+        : "",
+    document_state: ["CURRENT", "REPLACED", "EXPIRED", "ARCHIVED"].includes(
+      String(search.document_state),
+    )
+      ? (search.document_state as ProfileListSearch["document_state"])
+      : "",
+    document_type: typeof search.document_type === "string" ? search.document_type : "",
+    document_selected:
+      typeof search.document_selected === "string" ? search.document_selected : undefined,
+    document_mode: ["create", "view", "edit", "types"].includes(String(search.document_mode))
+      ? (search.document_mode as ProfileListSearch["document_mode"])
+      : undefined,
+    bill_page: positiveInteger(search.bill_page, 1),
+    bill_limit: Math.min(1000, Math.max(100, positiveInteger(search.bill_limit, 100))),
+    bill_sort: [
+      "reference_value",
+      "type_label",
+      "competence",
+      "amount",
+      "created_at",
+      "updated_at",
+    ].includes(String(search.bill_sort))
+      ? (search.bill_sort as ProfileListSearch["bill_sort"])
+      : "reference_value",
+    bill_order: search.bill_order === "desc" ? "desc" : "asc",
+    bill_reference: typeof search.bill_reference === "string" ? search.bill_reference : "",
+    bill_competence: typeof search.bill_competence === "string" ? search.bill_competence : "",
+    bill_status:
+      search.bill_status === "AVAILABLE" || search.bill_status === "IN_USE"
+        ? search.bill_status
+        : "",
+    bill_state: ["CURRENT", "REPLACED", "EXPIRED", "ARCHIVED"].includes(String(search.bill_state))
+      ? (search.bill_state as ProfileListSearch["bill_state"])
+      : "",
+    bill_type: typeof search.bill_type === "string" ? search.bill_type : "",
+    bill_selected: typeof search.bill_selected === "string" ? search.bill_selected : undefined,
+    bill_mode: ["create", "view", "edit", "types"].includes(String(search.bill_mode))
+      ? (search.bill_mode as ProfileListSearch["bill_mode"])
+      : undefined,
   };
 }
 
@@ -141,11 +201,11 @@ export function ProfilesPage() {
   return (
     <Page.Root maxWidth="lg">
       <Page.Header>
-        <Page.Eyebrow>M3 · Profiles</Page.Eyebrow>
+        <Page.Eyebrow>M4 · Profiles e registros</Page.Eyebrow>
         <Page.Title>Pessoas</Page.Title>
         <Page.Description>
-          Cadastre, filtre, edite e duplique pessoas físicas. Filtros, ordenação e paginação
-          permanecem na URL.
+          Cadastre pessoas e gerencie seus documentos, contas e comprovantes. Todo o estado de
+          navegação permanece na URL.
         </Page.Description>
         <Page.Actions>
           <Button onClick={() => updateSearch({ selected: undefined, mode: "create" })}>
@@ -241,8 +301,22 @@ export function ProfilesPage() {
           canDelete={canDelete}
           mode={search.mode}
           profile={selected}
-          onClose={() => updateSearch({ selected: undefined, mode: undefined })}
-          onEdit={() => updateSearch({ mode: "edit" })}
+          section={search.section}
+          search={search}
+          role={session.user.role}
+          onSearch={updateSearch}
+          onNotice={(message) => setNotice(message)}
+          onClose={() =>
+            updateSearch({
+              selected: undefined,
+              mode: undefined,
+              document_selected: undefined,
+              document_mode: undefined,
+              bill_selected: undefined,
+              bill_mode: undefined,
+            })
+          }
+          onEdit={() => updateSearch({ mode: "edit", section: "profile" })}
           onSaved={async (value, message) => {
             await refresh();
             setNotice(message);
@@ -416,6 +490,11 @@ function ProfilePanel(props: {
   profile: Profile | undefined;
   canDelete: boolean;
   pending: boolean;
+  section: ProfileListSearch["section"];
+  search: ProfileListSearch;
+  role: UserRole;
+  onSearch: (patch: Partial<ProfileListSearch>) => void;
+  onNotice: (message: string) => void;
   onClose: () => void;
   onEdit: () => void;
   onSaved: (value: Profile, message: string) => Promise<void>;
@@ -471,160 +550,198 @@ function ProfilePanel(props: {
         </div>
         <Button onClick={props.onClose}>Fechar</Button>
       </div>
-      {error ? (
-        <Alert title="Não foi possível salvar" tone="danger">
-          {error}
-        </Alert>
+      {props.profile && props.mode !== "create" ? (
+        <nav aria-label="Seções da pessoa" className="profile-sections">
+          <button
+            className={props.section === "profile" ? "profile-sections__active" : undefined}
+            onClick={() => props.onSearch({ section: "profile" })}
+          >
+            Perfil
+          </button>
+          <button
+            className={props.section === "documents" ? "profile-sections__active" : undefined}
+            onClick={() => props.onSearch({ section: "documents" })}
+          >
+            Documentos
+          </button>
+          <button
+            className={props.section === "bills" ? "profile-sections__active" : undefined}
+            onClick={() => props.onSearch({ section: "bills" })}
+          >
+            Contas e comprovantes
+          </button>
+        </nav>
       ) : null}
-      <div className="profile-form">
-        <label>
-          Nome completo
-          <input
-            disabled={!editable}
-            required
-            value={values.full_name}
-            onChange={(event) => set("full_name", event.target.value)}
-          />
-        </label>
-        <label>
-          Nome social
-          <input
-            disabled={!editable}
-            value={values.social_name}
-            onChange={(event) => set("social_name", event.target.value)}
-          />
-        </label>
-        <label>
-          CPF
-          <input
-            disabled={!editable}
-            inputMode="numeric"
-            value={values.cpf}
-            onChange={(event) => set("cpf", event.target.value)}
-          />
-        </label>
-        <label>
-          E-mail
-          <input
-            disabled={!editable}
-            type="email"
-            value={values.email}
-            onChange={(event) => set("email", event.target.value)}
-          />
-        </label>
-        <label>
-          Celular
-          <input
-            disabled={!editable}
-            value={values.mobile_phone}
-            onChange={(event) => set("mobile_phone", event.target.value)}
-          />
-        </label>
-        <label>
-          Telefone fixo/outro
-          <input
-            disabled={!editable}
-            value={values.landline_phone}
-            onChange={(event) => set("landline_phone", event.target.value)}
-          />
-        </label>
-        <label>
-          Logradouro
-          <input
-            disabled={!editable}
-            value={values.address.street}
-            onChange={(event) => setAddress("street", event.target.value)}
-          />
-        </label>
-        <label>
-          Número
-          <input
-            disabled={!editable}
-            value={values.address.number}
-            onChange={(event) => setAddress("number", event.target.value)}
-          />
-        </label>
-        <label>
-          Complemento
-          <input
-            disabled={!editable}
-            value={values.address.complement}
-            onChange={(event) => setAddress("complement", event.target.value)}
-          />
-        </label>
-        <label>
-          Bairro
-          <input
-            disabled={!editable}
-            value={values.address.neighborhood}
-            onChange={(event) => setAddress("neighborhood", event.target.value)}
-          />
-        </label>
-        <label>
-          Cidade
-          <input
-            disabled={!editable}
-            value={values.address.city}
-            onChange={(event) => setAddress("city", event.target.value)}
-          />
-        </label>
-        <label>
-          UF
-          <input
-            disabled={!editable}
-            maxLength={2}
-            value={values.address.state}
-            onChange={(event) => setAddress("state", event.target.value.toUpperCase())}
-          />
-        </label>
-        <label>
-          CEP
-          <input
-            disabled={!editable}
-            inputMode="numeric"
-            value={values.address.postal_code}
-            onChange={(event) => setAddress("postal_code", event.target.value)}
-          />
-        </label>
-        <label className="profile-form__wide">
-          Observações
-          <textarea
-            disabled={!editable}
-            rows={4}
-            value={values.notes}
-            onChange={(event) => set("notes", event.target.value)}
-          />
-        </label>
-      </div>
-      <Inline className="profile-panel__actions">
-        {editable ? (
-          <Button disabled={saving} onClick={() => void submit()}>
-            {saving ? "Salvando" : "Salvar"}
-          </Button>
-        ) : (
-          <Button onClick={props.onEdit}>Editar</Button>
-        )}
-        {props.profile ? (
-          <Button disabled={props.pending} onClick={() => props.onDuplicate(props.profile!)}>
-            Duplicar
-          </Button>
-        ) : null}
-      </Inline>
-      {props.profile && props.canDelete ? (
-        <Surface className="profile-delete" tone="raised">
-          <Stack gap="3">
-            <strong>Exclusão permanente</strong>
-            <span>Digite Confirmar para excluir esta pessoa.</span>
-            <input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />
-            <Button
-              disabled={confirmation !== "Confirmar" || props.pending}
-              onClick={() => props.onDelete(props.profile!, confirmation)}
-            >
-              Excluir permanentemente
-            </Button>
-          </Stack>
-        </Surface>
-      ) : null}
+      {props.profile && props.section !== "profile" && props.mode !== "create" ? (
+        <ProfileRecordsPanel
+          profile={props.profile}
+          role={props.role}
+          search={props.search}
+          section={props.section}
+          onNotice={props.onNotice}
+          onSearch={props.onSearch}
+        />
+      ) : (
+        <>
+          {error ? (
+            <Alert title="Não foi possível salvar" tone="danger">
+              {error}
+            </Alert>
+          ) : null}
+          <div className="profile-form">
+            <label>
+              Nome completo
+              <input
+                disabled={!editable}
+                required
+                value={values.full_name}
+                onChange={(event) => set("full_name", event.target.value)}
+              />
+            </label>
+            <label>
+              Nome social
+              <input
+                disabled={!editable}
+                value={values.social_name}
+                onChange={(event) => set("social_name", event.target.value)}
+              />
+            </label>
+            <label>
+              CPF
+              <input
+                disabled={!editable}
+                inputMode="numeric"
+                value={values.cpf}
+                onChange={(event) => set("cpf", event.target.value)}
+              />
+            </label>
+            <label>
+              E-mail
+              <input
+                disabled={!editable}
+                type="email"
+                value={values.email}
+                onChange={(event) => set("email", event.target.value)}
+              />
+            </label>
+            <label>
+              Celular
+              <input
+                disabled={!editable}
+                value={values.mobile_phone}
+                onChange={(event) => set("mobile_phone", event.target.value)}
+              />
+            </label>
+            <label>
+              Telefone fixo/outro
+              <input
+                disabled={!editable}
+                value={values.landline_phone}
+                onChange={(event) => set("landline_phone", event.target.value)}
+              />
+            </label>
+            <label>
+              Logradouro
+              <input
+                disabled={!editable}
+                value={values.address.street}
+                onChange={(event) => setAddress("street", event.target.value)}
+              />
+            </label>
+            <label>
+              Número
+              <input
+                disabled={!editable}
+                value={values.address.number}
+                onChange={(event) => setAddress("number", event.target.value)}
+              />
+            </label>
+            <label>
+              Complemento
+              <input
+                disabled={!editable}
+                value={values.address.complement}
+                onChange={(event) => setAddress("complement", event.target.value)}
+              />
+            </label>
+            <label>
+              Bairro
+              <input
+                disabled={!editable}
+                value={values.address.neighborhood}
+                onChange={(event) => setAddress("neighborhood", event.target.value)}
+              />
+            </label>
+            <label>
+              Cidade
+              <input
+                disabled={!editable}
+                value={values.address.city}
+                onChange={(event) => setAddress("city", event.target.value)}
+              />
+            </label>
+            <label>
+              UF
+              <input
+                disabled={!editable}
+                maxLength={2}
+                value={values.address.state}
+                onChange={(event) => setAddress("state", event.target.value.toUpperCase())}
+              />
+            </label>
+            <label>
+              CEP
+              <input
+                disabled={!editable}
+                inputMode="numeric"
+                value={values.address.postal_code}
+                onChange={(event) => setAddress("postal_code", event.target.value)}
+              />
+            </label>
+            <label className="profile-form__wide">
+              Observações
+              <textarea
+                disabled={!editable}
+                rows={4}
+                value={values.notes}
+                onChange={(event) => set("notes", event.target.value)}
+              />
+            </label>
+          </div>
+          <Inline className="profile-panel__actions">
+            {editable ? (
+              <Button disabled={saving} onClick={() => void submit()}>
+                {saving ? "Salvando" : "Salvar"}
+              </Button>
+            ) : (
+              <Button onClick={props.onEdit}>Editar</Button>
+            )}
+            {props.profile ? (
+              <Button disabled={props.pending} onClick={() => props.onDuplicate(props.profile!)}>
+                Duplicar
+              </Button>
+            ) : null}
+          </Inline>
+          {props.profile && props.canDelete ? (
+            <Surface className="profile-delete" tone="raised">
+              <Stack gap="3">
+                <strong>Exclusão permanente</strong>
+                <span>Digite Confirmar para excluir esta pessoa.</span>
+                <input
+                  value={confirmation}
+                  onChange={(event) => setConfirmation(event.target.value)}
+                />
+                <Button
+                  disabled={confirmation !== "Confirmar" || props.pending}
+                  onClick={() => props.onDelete(props.profile!, confirmation)}
+                >
+                  Excluir permanentemente
+                </Button>
+              </Stack>
+            </Surface>
+          ) : null}
+        </>
+      )}
     </aside>
   );
 }
