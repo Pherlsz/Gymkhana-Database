@@ -1,0 +1,77 @@
+name: M4 final acceptance validation
+
+on:
+  pull_request:
+    branches:
+      - agent/m4-final-acceptance
+    paths:
+      - ".github/workflows/m4-final-acceptance-validation.yml"
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: m4-final-acceptance-validation
+  cancel-in-progress: true
+
+jobs:
+  deterministic-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: gymkhana
+          POSTGRES_USER: gymkhana
+          POSTGRES_PASSWORD: gymkhana
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gymkhana -d gymkhana"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - name: Check out product branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/m4-final-acceptance
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: 1.26.5
+          cache: true
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Configure private Core access
+        run: scripts/configure-private-go.sh
+        env:
+          GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
+      - name: Install dependencies
+        run: |
+          go mod download
+          pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply migrations
+        run: go run github.com/jackc/tern/v2@v2.4.1 migrate --migrations database/migrations --config database/tern.conf
+      - name: Check migration status
+        run: go run github.com/jackc/tern/v2@v2.4.1 status --migrations database/migrations --config database/tern.conf
+      - name: Verify deterministic sqlc output
+        run: |
+          make generate-sql
+          find internal/platform/postgres/dbgen -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
+          git diff --exit-code -- internal/platform/postgres/dbgen
+      - name: Verify deterministic OpenAPI clients
+        run: |
+          make generate-go generate-ts
+          find api/generated/go -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
+          pnpm exec oxfmt apps/web/src/generated/api.ts --write
+          git diff --exit-code -- api/generated/go apps/web/src/generated/api.ts
