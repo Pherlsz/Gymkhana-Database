@@ -150,21 +150,19 @@ describe("ProfileRecordsPanel", () => {
   it("shows type administration only to administrators", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          jsonResponse({
-            types: [],
-            documents: [],
-            page: {
-              total: 0,
-              limit: 100,
-              offset: 0,
-              sort_field: "identifier_value",
-              sort_order: "asc",
-            },
-          }),
-        ),
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          types: [],
+          documents: [],
+          page: {
+            total: 0,
+            limit: 100,
+            offset: 0,
+            sort_field: "identifier_value",
+            sort_order: "asc",
+          },
+        }),
+      ),
     );
     renderPanel("MEMBER");
     await screen.findByText("Nenhum documento cadastrado para esta pessoa.");
