@@ -210,7 +210,9 @@ describe("M4 Profile records acceptance", () => {
         expect.objectContaining({ method: "DELETE" }),
       ),
     );
-    await waitFor(() => expect(onNotice).toHaveBeenCalledWith("Registro devolvido e disponibilizado."));
+    await waitFor(() =>
+      expect(onNotice).toHaveBeenCalledWith("Registro devolvido e disponibilizado."),
+    );
   });
 
   it("does not fabricate current-use controls for unsupported bill types", async () => {
