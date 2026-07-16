@@ -28,7 +28,29 @@ new_blur = """      onBlur={() => {
 """
 if panel.count(old_blur) != 1:
     raise RuntimeError("inline editor blur anchor not found")
-panel_path.write_text(panel.replace(old_blur, new_blur), encoding="utf-8")
+panel = panel.replace(old_blur, new_blur)
+old_holder_state = """  const [holder, setHolder] = useState(props.record.current_use?.holder_profile_id ?? "");
+  const [error, setError] = useState<string | null>(null);
+"""
+new_holder_state = """  const [holder, setHolder] = useState(props.record.current_use?.holder_profile_id ?? "");
+  const holderAvailable = holders.data?.profiles.some((value) => value.id === holder) ?? false;
+  const [error, setError] = useState<string | null>(null);
+"""
+if panel.count(old_holder_state) != 1:
+    raise RuntimeError("current holder state anchor not found")
+panel = panel.replace(old_holder_state, new_holder_state)
+old_holder_options = """          <select value={holder} onChange={(event) => setHolder(event.target.value)}>
+            <option value="">Selecione</option>
+            {holders.data?.profiles.map((value) => (
+"""
+new_holder_options = """          <select value={holder} onChange={(event) => setHolder(event.target.value)}>
+            <option value="">Selecione</option>
+            {holder && !holderAvailable ? <option value={holder}>Pessoa atual</option> : null}
+            {holders.data?.profiles.map((value) => (
+"""
+if panel.count(old_holder_options) != 1:
+    raise RuntimeError("current holder options anchor not found")
+panel_path.write_text(panel.replace(old_holder_options, new_holder_options), encoding="utf-8")
 
 test_path = Path("apps/web/src/ProfileRecordsPanel.m4Acceptance.test.tsx")
 test = test_path.read_text(encoding="utf-8")
