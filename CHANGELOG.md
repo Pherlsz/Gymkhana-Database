@@ -8,6 +8,8 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- M4 milestone acceptance coverage for Profile ownership, historical states, printed bill data, civil money, current-use boundaries, URL state, semantic controls, and optimistic-conflict feedback.
+- Milestone-wide validation of document/bill persistence, protected APIs, Profile-integrated UI, deterministic generation, and security gates.
 - Profile-integrated document and bill management with URL-backed sections, filters, sorting, pagination, selection, and forms.
 - Responsive record cards, supported desktop inline editing, type administration, current-use workflows, duplication, permanent deletion, and frontend acceptance coverage.
 - Protected bill-type administration and Profile-owned bill CRUD API with centralized role permissions.
