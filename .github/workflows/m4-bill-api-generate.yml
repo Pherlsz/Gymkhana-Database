@@ -8,6 +8,7 @@ on:
       - ".github/workflows/m4-bill-api-generate.yml"
       - "scripts/generate_m4_bill_go.py"
       - "scripts/generate_m4_bill_openapi.py"
+      - "scripts/prepare_m4_bill_generator.py"
       - "scripts/postprocess_m4_bill.py"
 
 permissions:
@@ -62,6 +63,7 @@ jobs:
         run: |
           set -o pipefail
           {
+            python3 ../helper/scripts/prepare_m4_bill_generator.py
             python3 ../helper/scripts/generate_m4_bill_go.py
             python3 ../helper/scripts/generate_m4_bill_openapi.py
             python3 ../helper/scripts/postprocess_m4_bill.py
