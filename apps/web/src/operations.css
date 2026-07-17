@@ -1,0 +1,140 @@
+.operations-creator,
+.operations-workspace,
+.operations-danger-zone {
+  padding: var(--gym-space-5);
+}
+
+.operations-heading {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.operations-heading h2,
+.operations-workspace h3 {
+  margin-block: var(--gym-space-1) var(--gym-space-2);
+}
+
+.operations-muted {
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.operations-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--gym-space-4);
+}
+
+.operations-form-grid label,
+.operations-mapping label,
+.operations-danger-zone > form label {
+  display: grid;
+  gap: var(--gym-space-2);
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.operations-form-grid input,
+.operations-form-grid select,
+.operations-mapping select,
+.operations-danger-zone input,
+.operations-danger-zone select,
+.operations-danger-zone textarea,
+.operations-workspace table select {
+  min-block-size: 2.5rem;
+  padding: var(--gym-space-2) var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+  color: var(--gym-color-text);
+}
+
+.operations-progress {
+  display: grid;
+  gap: var(--gym-space-2);
+  max-inline-size: 36rem;
+  color: var(--gym-color-text-muted);
+}
+
+.operations-progress progress {
+  inline-size: 100%;
+}
+
+.operations-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: var(--gym-space-3);
+  margin: 0;
+}
+
+.operations-summary > div {
+  padding: var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+}
+
+.operations-summary dt {
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.operations-summary dd {
+  margin: var(--gym-space-1) 0 0;
+  font-weight: 700;
+}
+
+.operations-mapping {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--gym-space-3);
+  margin-block: var(--gym-space-4);
+}
+
+.operations-mapping label {
+  padding: var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+}
+
+.operations-danger-zone {
+  border-color: color-mix(
+    in srgb,
+    var(--gym-color-danger, var(--gym-color-border)) 45%,
+    var(--gym-color-border)
+  );
+}
+
+.operations-card {
+  display: grid;
+  gap: var(--gym-space-2);
+  padding: var(--gym-space-4);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+}
+
+.operations-card label {
+  display: grid;
+  gap: var(--gym-space-2);
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.operations-card select {
+  min-block-size: 2.75rem;
+  padding: var(--gym-space-2) var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+  color: var(--gym-color-text);
+}
+
+@media (max-width: 52rem) {
+  .operations-heading {
+    display: grid;
+  }
+
+  .operations-workspace .data-grid__table-wrap {
+    max-block-size: 60vh;
+  }
+}

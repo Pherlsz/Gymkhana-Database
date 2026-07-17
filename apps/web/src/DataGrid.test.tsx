@@ -53,6 +53,53 @@ describe("DataGrid", () => {
     expect(screen.getByRole("row", { name: /Ana/ })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByText("Cartão de Ana")).toBeInTheDocument();
   });
+
+  it("keeps row selection explicit and controlled by the parent", () => {
+    const onChange = vi.fn();
+    const data = [
+      { id: "profile-1", name: "Ana" },
+      { id: "profile-2", name: "Bia" },
+    ];
+    const { rerender } = render(
+      <DataGrid
+        caption="Pessoas"
+        columns={columns}
+        data={data}
+        emptyLabel="Nenhuma pessoa"
+        getRowId={(row) => row.id}
+        loading={false}
+        loadingLabel="Carregando pessoas"
+        renderCard={(row) => <article>Cartão de {row.name}</article>}
+        selection={{ selectedIds: new Set(), onChange, rowLabel: (row) => row.name }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: "Selecionar Ana" }));
+    expect(onChange).toHaveBeenLastCalledWith(new Set(["profile-1"]));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Selecionar Bia no cartão" }));
+    expect(onChange).toHaveBeenLastCalledWith(new Set(["profile-2"]));
+
+    rerender(
+      <DataGrid
+        caption="Pessoas"
+        columns={columns}
+        data={data}
+        emptyLabel="Nenhuma pessoa"
+        getRowId={(row) => row.id}
+        loading={false}
+        loadingLabel="Carregando pessoas"
+        renderCard={(row) => <article>Cartão de {row.name}</article>}
+        selection={{
+          selectedIds: new Set(["profile-1"]),
+          onChange,
+          rowLabel: (row) => row.name,
+        }}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Selecionar todas as linhas de Pessoas" }),
+    );
+    expect(onChange).toHaveBeenLastCalledWith(new Set(["profile-1", "profile-2"]));
+  });
 });
 
 describe("DataGridPagination", () => {
