@@ -59,16 +59,20 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("AttachmentsPanel", () => {
-  it("loads the owner collection and completes a verified upload", async () => {
+  it("covers loading, empty, progress, and verified upload success", async () => {
     attachmentAPI.listAttachments.mockResolvedValue([]);
+    let completeUpload!: (value: AttachmentRecord) => void;
     attachmentAPI.uploadAttachment.mockImplementation(
-      async (_owner: unknown, _file: unknown, progress: (value: number) => void) => {
+      (_owner: unknown, _file: unknown, progress: (value: number) => void) => {
         progress(45);
-        return active;
+        return new Promise<AttachmentRecord>((resolve) => {
+          completeUpload = resolve;
+        });
       },
     );
     renderPanel();
 
+    expect(screen.getByText("Carregando anexos...")).toBeInTheDocument();
     expect(await screen.findByText("Nenhum anexo ativo.")).toBeInTheDocument();
     expect(attachmentAPI.listAttachments).toHaveBeenCalledWith(
       owner,
@@ -78,8 +82,37 @@ describe("AttachmentsPanel", () => {
 
     const file = new File(["%PDF-1.7"], "proof.pdf", { type: "application/pdf" });
     fireEvent.change(screen.getByLabelText("Adicionar arquivo"), { target: { files: [file] } });
+    expect(await screen.findByText("Enviando 45%")).toBeInTheDocument();
+    completeUpload(active);
     expect(await screen.findByText("Arquivo verificado e anexado.")).toBeInTheDocument();
     expect(attachmentAPI.uploadAttachment).toHaveBeenCalledWith(owner, file, expect.any(Function));
+  });
+
+  it("rejects empty files locally and explains expired upload intents", async () => {
+    attachmentAPI.listAttachments.mockResolvedValue([]);
+    attachmentAPI.uploadAttachment.mockRejectedValue(
+      new APIRequestError("expired", {
+        status: 410,
+        code: "conflict",
+        requestId: "request-expired",
+      }),
+    );
+    renderPanel();
+    expect(await screen.findByText("Nenhum anexo ativo.")).toBeInTheDocument();
+
+    const expired = new File(["%PDF-1.7"], "expired.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByLabelText("Adicionar arquivo"), {
+      target: { files: [expired] },
+    });
+    expect(
+      await screen.findByText("O envio expirou. Selecione o arquivo novamente."),
+    ).toBeInTheDocument();
+
+    const calls = attachmentAPI.uploadAttachment.mock.calls.length;
+    const empty = new File([], "empty.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByLabelText("Adicionar arquivo"), { target: { files: [empty] } });
+    expect(await screen.findByText("Selecione um arquivo que não esteja vazio.")).toBeInTheDocument();
+    expect(attachmentAPI.uploadAttachment).toHaveBeenCalledTimes(calls);
   });
 
   it("surfaces an optimistic conflict while trashing", async () => {
