@@ -19,8 +19,10 @@ type ServiceOptions struct {
 	UploadTTL       time.Duration
 	DownloadTTL     time.Duration
 	TrashRetention  time.Duration
-	MaximumFileSize int64
-	CleanupBatch    int
+	MaximumFileSize  int64
+	MaximumTotalBytes int64
+	UploadRateLimit   int
+	CleanupBatch      int
 	Now             func() time.Time
 	OnAuditFailure  AuditFailureHandler
 }
@@ -34,6 +36,7 @@ type CleanupResult struct {
 	ExpiredUploads int
 	Purged         int
 	Failures       int
+	Skipped        bool
 }
 
 type Service struct {
@@ -43,8 +46,10 @@ type Service struct {
 	uploadTTL       time.Duration
 	downloadTTL     time.Duration
 	trashRetention  time.Duration
-	maximumFileSize int64
-	cleanupBatch    int
+	maximumFileSize  int64
+	maximumTotalBytes int64
+	uploadRateLimit   int
+	cleanupBatch      int
 	now             func() time.Time
 	onAuditFailure  AuditFailureHandler
 }
@@ -69,6 +74,18 @@ func NewService(store Store, objects ObjectStore, options ServiceOptions) (*Serv
 	if options.MaximumFileSize <= 0 {
 		return nil, fmt.Errorf("%w: maximum file size must be positive", ErrInvalidServiceSetup)
 	}
+	if options.MaximumTotalBytes == 0 {
+		options.MaximumTotalBytes = 5 << 30
+	}
+	if options.MaximumTotalBytes < options.MaximumFileSize {
+		return nil, fmt.Errorf("%w: total storage quota must cover at least one maximum-sized file", ErrInvalidServiceSetup)
+	}
+	if options.UploadRateLimit == 0 {
+		options.UploadRateLimit = 12
+	}
+	if options.UploadRateLimit < 1 || options.UploadRateLimit > 1000 {
+		return nil, fmt.Errorf("%w: upload rate limit must be between 1 and 1000", ErrInvalidServiceSetup)
+	}
 	if options.CleanupBatch <= 0 {
 		options.CleanupBatch = 100
 	}
@@ -85,8 +102,10 @@ func NewService(store Store, objects ObjectStore, options ServiceOptions) (*Serv
 		uploadTTL:       options.UploadTTL,
 		downloadTTL:     options.DownloadTTL,
 		trashRetention:  options.TrashRetention,
-		maximumFileSize: options.MaximumFileSize,
-		cleanupBatch:    options.CleanupBatch,
+		maximumFileSize:  options.MaximumFileSize,
+		maximumTotalBytes: options.MaximumTotalBytes,
+		uploadRateLimit:   options.UploadRateLimit,
+		cleanupBatch:      options.CleanupBatch,
 		now:             options.Now,
 		onAuditFailure:  options.OnAuditFailure,
 	}, nil
@@ -118,7 +137,11 @@ func (service *Service) CreateUploadIntent(ctx context.Context, actor auth.Sessi
 		ExpiresAt:        now.Add(service.uploadTTL),
 		CreatedAt:        now,
 	}
-	created, err := service.store.CreateUploadIntent(ctx, intent)
+	created, err := service.store.CreateUploadIntent(ctx, intent, UploadLimits{
+		RateWindowStart:   now.Add(-time.Minute),
+		MaximumIntents:    service.uploadRateLimit,
+		MaximumTotalBytes: service.maximumTotalBytes,
+	})
 	if err != nil {
 		service.recordAudit(ctx, &actor.User.ID, nil, &intentID, &normalized.Owner, AuditUploadIntentCreated, mutationOutcome(err), requestID)
 		return UploadGrant{}, err
@@ -248,9 +271,24 @@ func (service *Service) Restore(ctx context.Context, actor auth.Session, id Iden
 	return updated, nil
 }
 
-func (service *Service) Cleanup(ctx context.Context, requestID string) (CleanupResult, error) {
+func (service *Service) Cleanup(ctx context.Context, requestID string) (result CleanupResult, err error) {
+	lease, acquired, err := service.store.AcquireCleanupLease(ctx)
+	if err != nil {
+		return result, err
+	}
+	if !acquired {
+		result.Skipped = true
+		return result, nil
+	}
+	defer func() {
+		releaseCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if releaseErr := lease.Release(releaseCtx); releaseErr != nil && err == nil {
+			err = releaseErr
+		}
+	}()
+
 	now := service.now().UTC()
-	result := CleanupResult{}
 	expired, err := service.store.ListExpiredUploadIntents(ctx, now, service.cleanupBatch)
 	if err != nil {
 		return result, err
@@ -263,6 +301,7 @@ func (service *Service) Cleanup(ctx context.Context, requestID string) (CleanupR
 		}
 		if err := service.store.DeleteExpiredUploadIntent(ctx, intent.ID, now); err != nil {
 			result.Failures++
+			service.recordAudit(ctx, nil, nil, &intent.ID, &intent.Owner, AuditExpiredUploadCleaned, auth.AuditOutcomeFailure, requestID)
 			continue
 		}
 		result.ExpiredUploads++
@@ -280,6 +319,7 @@ func (service *Service) Cleanup(ctx context.Context, requestID string) (CleanupR
 		}
 		if err := service.store.DeletePurged(ctx, value.ID, value.Version); err != nil {
 			result.Failures++
+			service.recordAudit(ctx, nil, &value.ID, nil, &value.Owner, AuditPurged, auth.AuditOutcomeFailure, requestID)
 			continue
 		}
 		result.Purged++
@@ -287,7 +327,6 @@ func (service *Service) Cleanup(ctx context.Context, requestID string) (CleanupR
 	}
 	return result, nil
 }
-
 func (service *Service) normalizeUploadInput(input CreateUploadIntentInput) (CreateUploadIntentInput, error) {
 	validation := &ValidationError{}
 	if !input.Owner.Valid() {
