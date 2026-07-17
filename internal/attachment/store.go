@@ -7,8 +7,13 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 )
 
+type CleanupLease interface {
+	Release(context.Context) error
+}
+
 type Store interface {
-	CreateUploadIntent(context.Context, UploadIntent) (UploadIntent, error)
+	CreateUploadIntent(context.Context, UploadIntent, UploadLimits) (UploadIntent, error)
+	AcquireCleanupLease(context.Context) (CleanupLease, bool, error)
 	GetUploadIntent(context.Context, Identifier) (UploadIntent, error)
 	ConfirmUploadIntent(context.Context, Identifier, auth.Identifier, Identifier, VerifiedObject, time.Time) (Attachment, error)
 	List(context.Context, OwnerReference, bool) ([]Attachment, error)
