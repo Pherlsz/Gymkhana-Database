@@ -36,8 +36,10 @@ func runAttachmentCleanup(ctx context.Context, cfg config.Config, storageCfg con
 		UploadTTL:       storageCfg.UploadTTL,
 		DownloadTTL:     storageCfg.DownloadTTL,
 		TrashRetention:  storageCfg.TrashRetention,
-		MaximumFileSize: storageCfg.MaximumFileSize,
-		CleanupBatch:    storageCfg.CleanupBatch,
+		MaximumFileSize:  storageCfg.MaximumFileSize,
+		MaximumTotalBytes: storageCfg.MaximumTotalBytes,
+		UploadRateLimit:   storageCfg.UploadRateLimit,
+		CleanupBatch:      storageCfg.CleanupBatch,
 		OnAuditFailure: func(_ context.Context, event attachment.AuditEvent, auditErr error) {
 			logger.Error("attachment cleanup audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
 		},
@@ -49,7 +51,7 @@ func runAttachmentCleanup(ctx context.Context, cfg config.Config, storageCfg con
 	if err != nil {
 		return fmt.Errorf("clean attachment storage: %w", err)
 	}
-	logger.Info("worker drain completed", "expired_uploads", result.ExpiredUploads, "purged_attachments", result.Purged, "failures", result.Failures)
+	logger.Info("worker drain completed", "expired_uploads", result.ExpiredUploads, "purged_attachments", result.Purged, "failures", result.Failures, "skipped", result.Skipped)
 	if result.Failures > 0 {
 		return fmt.Errorf("attachment cleanup completed with %d failures", result.Failures)
 	}
