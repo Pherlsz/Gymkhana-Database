@@ -13,17 +13,67 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	attachmentUploadCapacityLockKey int64 = 0x47594d4b55504c44
+	attachmentCleanupLockKey        int64 = 0x47594d4b434c454e
+)
+
 type PostgresStore struct {
 	pool *pgxpool.Pool
+}
+
+type postgresCleanupLease struct {
+	connection *pgxpool.Conn
+}
+
+func (lease *postgresCleanupLease) Release(ctx context.Context) error {
+	var unlocked bool
+	err := lease.connection.QueryRow(ctx, "SELECT pg_advisory_unlock($1)", attachmentCleanupLockKey).Scan(&unlocked)
+	if err != nil || !unlocked {
+		_ = lease.connection.Conn().Close(context.Background())
+		lease.connection.Release()
+		if err != nil {
+			return fmt.Errorf("release attachment cleanup lease: %w", err)
+		}
+		return errors.New("attachment cleanup lease was not held")
+	}
+	lease.connection.Release()
+	return nil
 }
 
 func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 	return &PostgresStore{pool: pool}
 }
 
-func (store *PostgresStore) CreateUploadIntent(ctx context.Context, value UploadIntent) (UploadIntent, error) {
-	owner := ownerDatabaseValues(value.Owner)
-	row := store.pool.QueryRow(ctx, `INSERT INTO attachment_upload_intents
+func (store *PostgresStore) CreateUploadIntent(ctx context.Context, value UploadIntent, limits UploadLimits) (UploadIntent, error) {
+	if limits.MaximumIntents <= 0 || limits.MaximumTotalBytes <= 0 || limits.RateWindowStart.IsZero() {
+		return UploadIntent{}, ErrInvalidInput
+	}
+	var created UploadIntent
+	err := pgx.BeginTxFunc(ctx, store.pool, pgx.TxOptions{}, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", attachmentUploadCapacityLockKey); err != nil {
+			return fmt.Errorf("lock attachment upload capacity: %w", err)
+		}
+		var recentIntents int
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM attachment_upload_intents
+WHERE actor_user_id=$1 AND created_at >= $2`, authDatabaseUUID(value.ActorUserID), limits.RateWindowStart).Scan(&recentIntents); err != nil {
+			return fmt.Errorf("count recent attachment uploads: %w", err)
+		}
+		if recentIntents >= limits.MaximumIntents {
+			return ErrUploadRateLimited
+		}
+		var reservedBytes int64
+		if err := tx.QueryRow(ctx, `SELECT
+COALESCE((SELECT SUM(byte_size)::bigint FROM attachments), 0) +
+COALESCE((SELECT SUM(expected_size)::bigint FROM attachment_upload_intents
+          WHERE consumed_at IS NULL AND expires_at > $1), 0)`, value.CreatedAt).Scan(&reservedBytes); err != nil {
+			return fmt.Errorf("measure attachment storage quota: %w", err)
+		}
+		if value.ExpectedSize > limits.MaximumTotalBytes || reservedBytes > limits.MaximumTotalBytes-value.ExpectedSize {
+			return ErrStorageQuotaExceeded
+		}
+		owner := ownerDatabaseValues(value.Owner)
+		row := tx.QueryRow(ctx, `INSERT INTO attachment_upload_intents
 (id, actor_user_id, owner_kind, document_id, bill_id, custom_target_kind, custom_profile_id,
  custom_document_id, custom_bill_id, custom_entity_id, field_definition_id, original_filename,
  declared_mime, expected_size, object_key, expires_at, created_at)
@@ -31,17 +81,39 @@ VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
 RETURNING id, actor_user_id, owner_kind, document_id, bill_id, custom_target_kind, custom_profile_id,
  custom_document_id, custom_bill_id, custom_entity_id, field_definition_id, original_filename,
  declared_mime, expected_size, object_key, expires_at, consumed_at, created_at`,
-		databaseUUID(value.ID), authDatabaseUUID(value.ActorUserID), string(value.Owner.Kind), owner.documentID,
-		owner.billID, owner.customTargetKind, owner.customProfileID, owner.customDocumentID, owner.customBillID,
-		owner.customEntityID, owner.fieldDefinitionID, value.OriginalFileName, value.DeclaredMIME,
-		value.ExpectedSize, value.ObjectKey, value.ExpiresAt, value.CreatedAt)
-	created, err := scanUploadIntent(row)
+			databaseUUID(value.ID), authDatabaseUUID(value.ActorUserID), string(value.Owner.Kind), owner.documentID,
+			owner.billID, owner.customTargetKind, owner.customProfileID, owner.customDocumentID, owner.customBillID,
+			owner.customEntityID, owner.fieldDefinitionID, value.OriginalFileName, value.DeclaredMIME,
+			value.ExpectedSize, value.ObjectKey, value.ExpiresAt, value.CreatedAt)
+		var err error
+		created, err = scanUploadIntent(row)
+		if err != nil {
+			return mapPostgresError("create attachment upload intent", err)
+		}
+		return nil
+	})
 	if err != nil {
-		return UploadIntent{}, mapPostgresError("create attachment upload intent", err)
+		return UploadIntent{}, err
 	}
 	return created, nil
 }
 
+func (store *PostgresStore) AcquireCleanupLease(ctx context.Context) (CleanupLease, bool, error) {
+	connection, err := store.pool.Acquire(ctx)
+	if err != nil {
+		return nil, false, fmt.Errorf("acquire attachment cleanup connection: %w", err)
+	}
+	var acquired bool
+	if err := connection.QueryRow(ctx, "SELECT pg_try_advisory_lock($1)", attachmentCleanupLockKey).Scan(&acquired); err != nil {
+		connection.Release()
+		return nil, false, fmt.Errorf("acquire attachment cleanup lease: %w", err)
+	}
+	if !acquired {
+		connection.Release()
+		return nil, false, nil
+	}
+	return &postgresCleanupLease{connection: connection}, true, nil
+}
 func (store *PostgresStore) GetUploadIntent(ctx context.Context, id Identifier) (UploadIntent, error) {
 	row := store.pool.QueryRow(ctx, `SELECT id, actor_user_id, owner_kind, document_id, bill_id, custom_target_kind,
  custom_profile_id, custom_document_id, custom_bill_id, custom_entity_id, field_definition_id,
@@ -227,10 +299,13 @@ ORDER BY expires_at, id LIMIT $2`, now, limit)
 }
 
 func (store *PostgresStore) DeleteExpiredUploadIntent(ctx context.Context, id Identifier, now time.Time) error {
-	_, err := store.pool.Exec(ctx, `DELETE FROM attachment_upload_intents
+	command, err := store.pool.Exec(ctx, `DELETE FROM attachment_upload_intents
 WHERE id=$1 AND consumed_at IS NULL AND expires_at<=$2`, databaseUUID(id), now)
 	if err != nil {
 		return fmt.Errorf("delete expired attachment upload intent: %w", err)
+	}
+	if command.RowsAffected() != 1 {
+		return ErrConflict
 	}
 	return nil
 }
@@ -262,10 +337,13 @@ ORDER BY purge_after, id LIMIT $2`, now, limit)
 }
 
 func (store *PostgresStore) DeletePurged(ctx context.Context, id Identifier, version int64) error {
-	_, err := store.pool.Exec(ctx, `DELETE FROM attachments
+	command, err := store.pool.Exec(ctx, `DELETE FROM attachments
 WHERE id=$1 AND version=$2 AND lifecycle_state='TRASHED'`, databaseUUID(id), version)
 	if err != nil {
 		return fmt.Errorf("delete purged attachment metadata: %w", err)
+	}
+	if command.RowsAffected() != 1 {
+		return ErrConflict
 	}
 	return nil
 }
