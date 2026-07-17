@@ -1,7 +1,9 @@
 import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "@pherlsz/gymkhana-ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useState } from "react";
 import { AttachmentsPanel } from "./AttachmentsPanel";
+import { DataGrid, DataGridPagination } from "./DataGrid";
 import {
   APIRequestError,
   assignBillCurrentUse,
@@ -50,6 +52,8 @@ type Props = {
 };
 
 const recordStates = ["CURRENT", "REPLACED", "EXPIRED", "ARCHIVED"] as const;
+const documentColumn = createColumnHelper<DocumentRecord>();
+const billColumn = createColumnHelper<BillRecord>();
 
 export function ProfileRecordsPanel(props: Props) {
   return props.section === "documents" ? (
@@ -142,80 +146,35 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
         <RecordsError title="Não foi possível carregar documentos" error={records.error} />
       ) : null}
       <DocumentFilters search={search} types={types.data?.types ?? []} onSearch={onSearch} />
-      <Surface className="records-list" tone="raised">
-        {records.isLoading ? <p className="records-empty">Carregando documentos...</p> : null}
-        {!records.isLoading && (records.data?.documents.length ?? 0) === 0 ? (
-          <p className="records-empty">Nenhum documento cadastrado para esta pessoa.</p>
-        ) : null}
-        {(records.data?.documents.length ?? 0) > 0 ? (
-          <>
-            <div className="records-table-wrap">
-              <table className="records-table">
-                <thead>
-                  <tr>
-                    <th>Tipo</th>
-                    <th>Identificador</th>
-                    <th>Data</th>
-                    <th>Estado</th>
-                    <th>Status</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.data?.documents.map((value) => (
-                    <tr key={value.id}>
-                      <td>{value.type.label}</td>
-                      <td>
-                        <RecordInlineInput
-                          ariaLabel={`Identificador de ${value.type.label}`}
-                          value={value.identifier_value}
-                          onSave={(next) => inlineUpdate(value, { identifier_value: next })}
-                        />
-                      </td>
-                      <td>
-                        <RecordInlineInput
-                          ariaLabel={`Data de ${value.type.label}`}
-                          type="date"
-                          value={value.document_date}
-                          onSave={(next) => inlineUpdate(value, { document_date: next })}
-                        />
-                      </td>
-                      <td>{recordStateLabel(value.record_state)}</td>
-                      <td>
-                        <RecordStatus value={value.status} />
-                      </td>
-                      <td>
-                        <Button
-                          onClick={() =>
-                            onSearch({ document_selected: value.id, document_mode: "view" })
-                          }
-                        >
-                          Abrir
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="records-cards">
-              {records.data?.documents.map((value) => (
-                <RecordCard
-                  key={value.id}
-                  title={`${value.type.label} · ${value.identifier_value}`}
-                  lines={[
-                    value.document_date || "Data não informada",
-                    recordStateLabel(value.record_state),
-                  ]}
-                  status={value.status}
-                  onOpen={() => onSearch({ document_selected: value.id, document_mode: "view" })}
-                />
-              ))}
-            </div>
-          </>
-        ) : null}
-      </Surface>
-      <Pagination
+      <DataGrid
+        caption={`Documentos de ${profile.full_name}`}
+        cardsClassName="records-cards"
+        className="records-list"
+        columns={createDocumentColumns(inlineUpdate, (value) =>
+          onSearch({ document_selected: value.id, document_mode: "view" }),
+        )}
+        data={records.data?.documents ?? []}
+        emptyLabel="Nenhum documento cadastrado para esta pessoa."
+        getRowId={(value) => value.id}
+        loading={records.isLoading}
+        loadingLabel="Carregando documentos..."
+        renderCard={(value) => (
+          <RecordCard
+            key={value.id}
+            title={`${value.type.label} · ${value.identifier_value}`}
+            lines={[
+              value.document_date || "Data não informada",
+              recordStateLabel(value.record_state),
+            ]}
+            status={value.status}
+            onOpen={() => onSearch({ document_selected: value.id, document_mode: "view" })}
+          />
+        )}
+        selectedRowId={search.document_selected}
+        tableClassName="records-table"
+        tableWrapClassName="records-table-wrap"
+      />
+      <DataGridPagination
         page={search.document_page}
         totalPages={totalPages}
         total={records.data?.page.total ?? 0}
@@ -340,81 +299,32 @@ function BillsSection({ profile, role, search, onSearch, onNotice }: Props) {
         <RecordsError title="Não foi possível carregar contas" error={records.error} />
       ) : null}
       <BillFilters search={search} types={types.data?.types ?? []} onSearch={onSearch} />
-      <Surface className="records-list" tone="raised">
-        {records.isLoading ? <p className="records-empty">Carregando contas...</p> : null}
-        {!records.isLoading && (records.data?.bills.length ?? 0) === 0 ? (
-          <p className="records-empty">Nenhuma conta ou comprovante cadastrado para esta pessoa.</p>
-        ) : null}
-        {(records.data?.bills.length ?? 0) > 0 ? (
-          <>
-            <div className="records-table-wrap">
-              <table className="records-table">
-                <thead>
-                  <tr>
-                    <th>Tipo</th>
-                    <th>Referência</th>
-                    <th>Competência</th>
-                    <th>Valor</th>
-                    <th>Status</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.data?.bills.map((value) => (
-                    <tr key={value.id}>
-                      <td>{value.type.label}</td>
-                      <td>
-                        <RecordInlineInput
-                          ariaLabel={`Referência de ${value.type.label}`}
-                          value={value.reference_value}
-                          onSave={(next) => inlineUpdate(value, { reference_value: next })}
-                        />
-                      </td>
-                      <td>
-                        <RecordInlineInput
-                          ariaLabel={`Competência de ${value.type.label}`}
-                          value={value.competence}
-                          onSave={(next) => inlineUpdate(value, { competence: next })}
-                        />
-                      </td>
-                      <td>
-                        <RecordInlineInput
-                          ariaLabel={`Valor de ${value.type.label}`}
-                          inputMode="decimal"
-                          value={value.amount}
-                          onSave={(next) => inlineUpdate(value, { amount: next })}
-                        />
-                      </td>
-                      <td>
-                        <RecordStatus value={value.status} />
-                      </td>
-                      <td>
-                        <Button
-                          onClick={() => onSearch({ bill_selected: value.id, bill_mode: "view" })}
-                        >
-                          Abrir
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="records-cards">
-              {records.data?.bills.map((value) => (
-                <RecordCard
-                  key={value.id}
-                  title={`${value.type.label} · ${value.reference_value}`}
-                  lines={[value.competence, `${value.currency} ${value.amount}`]}
-                  status={value.status}
-                  onOpen={() => onSearch({ bill_selected: value.id, bill_mode: "view" })}
-                />
-              ))}
-            </div>
-          </>
-        ) : null}
-      </Surface>
-      <Pagination
+      <DataGrid
+        caption={`Contas e comprovantes de ${profile.full_name}`}
+        cardsClassName="records-cards"
+        className="records-list"
+        columns={createBillColumns(inlineUpdate, (value) =>
+          onSearch({ bill_selected: value.id, bill_mode: "view" }),
+        )}
+        data={records.data?.bills ?? []}
+        emptyLabel="Nenhuma conta ou comprovante cadastrado para esta pessoa."
+        getRowId={(value) => value.id}
+        loading={records.isLoading}
+        loadingLabel="Carregando contas..."
+        renderCard={(value) => (
+          <RecordCard
+            key={value.id}
+            title={`${value.type.label} · ${value.reference_value}`}
+            lines={[value.competence, `${value.currency} ${value.amount}`]}
+            status={value.status}
+            onOpen={() => onSearch({ bill_selected: value.id, bill_mode: "view" })}
+          />
+        )}
+        selectedRowId={search.bill_selected}
+        tableClassName="records-table"
+        tableWrapClassName="records-table-wrap"
+      />
+      <DataGridPagination
         page={search.bill_page}
         totalPages={totalPages}
         total={records.data?.page.total ?? 0}
@@ -1521,6 +1431,102 @@ function RecordStatus({ value }: { value: "AVAILABLE" | "IN_USE" }) {
     </StatusBadge>
   );
 }
+
+function createDocumentColumns(
+  onSave: (value: DocumentRecord, patch: Partial<DocumentValuesRequest>) => Promise<void>,
+  onOpen: (value: DocumentRecord) => void,
+) {
+  return [
+    documentColumn.accessor((value) => value.type.label, {
+      id: "type",
+      header: "Tipo",
+    }),
+    documentColumn.accessor("identifier_value", {
+      header: "Identificador",
+      cell: ({ row }) => (
+        <RecordInlineInput
+          ariaLabel={`Identificador de ${row.original.type.label}`}
+          value={row.original.identifier_value}
+          onSave={(next) => onSave(row.original, { identifier_value: next })}
+        />
+      ),
+    }),
+    documentColumn.accessor("document_date", {
+      header: "Data",
+      cell: ({ row }) => (
+        <RecordInlineInput
+          ariaLabel={`Data de ${row.original.type.label}`}
+          type="date"
+          value={row.original.document_date}
+          onSave={(next) => onSave(row.original, { document_date: next })}
+        />
+      ),
+    }),
+    documentColumn.accessor("record_state", {
+      header: "Estado",
+      cell: ({ getValue }) => recordStateLabel(getValue()),
+    }),
+    documentColumn.accessor("status", {
+      header: "Status",
+      cell: ({ getValue }) => <RecordStatus value={getValue()} />,
+    }),
+    documentColumn.display({
+      id: "actions",
+      header: "",
+      cell: ({ row }) => <Button onClick={() => onOpen(row.original)}>Abrir</Button>,
+    }),
+  ];
+}
+
+function createBillColumns(
+  onSave: (value: BillRecord, patch: Partial<BillValuesRequest>) => Promise<void>,
+  onOpen: (value: BillRecord) => void,
+) {
+  return [
+    billColumn.accessor((value) => value.type.label, { id: "type", header: "Tipo" }),
+    billColumn.accessor("reference_value", {
+      header: "Referência",
+      cell: ({ row }) => (
+        <RecordInlineInput
+          ariaLabel={`Referência de ${row.original.type.label}`}
+          value={row.original.reference_value}
+          onSave={(next) => onSave(row.original, { reference_value: next })}
+        />
+      ),
+    }),
+    billColumn.accessor("competence", {
+      header: "Competência",
+      cell: ({ row }) => (
+        <RecordInlineInput
+          ariaLabel={`Competência de ${row.original.type.label}`}
+          value={row.original.competence}
+          onSave={(next) => onSave(row.original, { competence: next })}
+        />
+      ),
+    }),
+    billColumn.accessor("amount", {
+      header: "Valor",
+      cell: ({ row }) => (
+        <RecordInlineInput
+          ariaLabel={`Valor de ${row.original.type.label}`}
+          inputMode="decimal"
+          value={row.original.amount}
+          onSave={(next) => onSave(row.original, { amount: next })}
+        />
+      ),
+    }),
+    billColumn.accessor("status", {
+      header: "Status",
+      cell: ({ getValue }) => <RecordStatus value={getValue()} />,
+    }),
+    billColumn.display({
+      id: "actions",
+      header: "",
+      cell: ({ row }) => <Button onClick={() => onOpen(row.original)}>Abrir</Button>,
+    }),
+  ];
+}
+
 function RecordCard(props: {
   title: string;
   lines: string[];
@@ -1538,30 +1544,6 @@ function RecordCard(props: {
         <Button onClick={props.onOpen}>Abrir</Button>
       </Stack>
     </Surface>
-  );
-}
-function Pagination(props: {
-  page: number;
-  totalPages: number;
-  total: number;
-  label: string;
-  onPage: (page: number) => void;
-}) {
-  return (
-    <Inline align="center" className="records-pagination">
-      <Button disabled={props.page <= 1} onClick={() => props.onPage(props.page - 1)}>
-        Anterior
-      </Button>
-      <span>
-        Página {props.page} de {props.totalPages} · {props.total} {props.label}
-      </span>
-      <Button
-        disabled={props.page >= props.totalPages}
-        onClick={() => props.onPage(props.page + 1)}
-      >
-        Próxima
-      </Button>
-    </Inline>
   );
 }
 

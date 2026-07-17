@@ -30,6 +30,7 @@ type Options struct {
 	Bill           billService
 	CustomData     customDataService
 	Attachment     attachmentService
+	Search         searchService
 	SecureCookies  bool
 	ApplicationURL string
 }
@@ -74,6 +75,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerBillRoutes(mux, logger, settings.Auth, settings.Bill)
 	registerCustomDataRoutes(mux, logger, settings.Auth, settings.CustomData)
 	registerAttachmentRoutes(mux, logger, settings.Auth, settings.Attachment)
+	registerSearchRoutes(mux, logger, settings.Auth, settings.Search)
 	mux.HandleFunc("/", fallbackHandler)
 	applicationOrigin := absoluteOrigin(settings.ApplicationURL)
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, browserOriginMiddleware(applicationOrigin, mux)))))

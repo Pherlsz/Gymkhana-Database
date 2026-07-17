@@ -1,12 +1,8 @@
 import { Alert, Button, Inline, Page, Stack, Surface } from "@pherlsz/gymkhana-ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
+import { DataGrid, DataGridPagination } from "./DataGrid";
 import { ProfileRecordsPanel } from "./ProfileRecordsPanel";
 import { profilesRoute, useApplicationSession } from "./App";
 import {
@@ -191,11 +187,6 @@ export function ProfilesPage() {
       ),
     [],
   );
-  const table = useReactTable({
-    data: query.data?.profiles ?? [],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
   const totalPages = Math.max(1, Math.ceil((query.data?.page.total ?? 0) / search.limit));
 
   return (
@@ -229,70 +220,34 @@ export function ProfilesPage() {
             search={search}
             onChange={(patch) => updateSearch({ ...patch, page: 1 })}
           />
-          <Surface className="profiles-grid" tone="raised">
-            {query.isLoading ? <p className="profiles-empty">Carregando pessoas...</p> : null}
-            {!query.isLoading && (query.data?.profiles.length ?? 0) === 0 ? (
-              <p className="profiles-empty">Nenhuma pessoa encontrada.</p>
-            ) : null}
-            {(query.data?.profiles.length ?? 0) > 0 ? (
-              <>
-                <div className="profiles-table-wrap">
-                  <table className="profiles-table">
-                    <thead>
-                      {table.getHeaderGroups().map((group) => (
-                        <tr key={group.id}>
-                          {group.headers.map((header) => (
-                            <th key={header.id}>
-                              {header.isPlaceholder
-                                ? null
-                                : flexRender(header.column.columnDef.header, header.getContext())}
-                            </th>
-                          ))}
-                        </tr>
-                      ))}
-                    </thead>
-                    <tbody>
-                      {table.getRowModel().rows.map((row) => (
-                        <tr key={row.id}>
-                          {row.getVisibleCells().map((cell) => (
-                            <td key={cell.id}>
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="profiles-cards">
-                  {query.data?.profiles.map((value) => (
-                    <ProfileCard
-                      key={value.id}
-                      value={value}
-                      onOpen={() => updateSearch({ selected: value.id, mode: "view" })}
-                    />
-                  ))}
-                </div>
-              </>
-            ) : null}
-          </Surface>
-          <Inline align="center" className="profiles-pagination">
-            <Button
-              disabled={search.page <= 1}
-              onClick={() => updateSearch({ page: search.page - 1 })}
-            >
-              Anterior
-            </Button>
-            <span>
-              Página {search.page} de {totalPages} · {query.data?.page.total ?? 0} pessoas
-            </span>
-            <Button
-              disabled={search.page >= totalPages}
-              onClick={() => updateSearch({ page: search.page + 1 })}
-            >
-              Próxima
-            </Button>
-          </Inline>
+          <DataGrid
+            caption="Pessoas"
+            cardsClassName="profiles-cards"
+            className="profiles-grid"
+            columns={columns}
+            data={query.data?.profiles ?? []}
+            emptyLabel="Nenhuma pessoa encontrada."
+            getRowId={(value) => value.id}
+            loading={query.isLoading}
+            loadingLabel="Carregando pessoas..."
+            renderCard={(value) => (
+              <ProfileCard
+                key={value.id}
+                value={value}
+                onOpen={() => updateSearch({ selected: value.id, mode: "view" })}
+              />
+            )}
+            selectedRowId={search.selected}
+            tableClassName="profiles-table"
+            tableWrapClassName="profiles-table-wrap"
+          />
+          <DataGridPagination
+            label="pessoas"
+            onPage={(page) => updateSearch({ page })}
+            page={search.page}
+            total={query.data?.page.total ?? 0}
+            totalPages={totalPages}
+          />
         </Stack>
       </Page.Content>
       {search.mode ? (

@@ -85,6 +85,18 @@ func (role Role) CanManageBillCurrentUse() bool {
 	return role.Valid()
 }
 
+func (role Role) CanReadCustomData() bool {
+	return role.Valid()
+}
+
+func (role Role) CanReadAttachments() bool {
+	return role.Valid()
+}
+
+func (role Role) CanSearch() bool {
+	return role.Valid()
+}
+
 type AuditEventType string
 
 const (

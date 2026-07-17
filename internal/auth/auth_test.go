@@ -23,6 +23,14 @@ func TestRolesExposeStablePermissions(t *testing.T) {
 	if !RoleAdmin.CanManageUsers() || !RoleSuperadmin.CanManageUsers() {
 		t.Fatal("administrative role cannot manage users")
 	}
+	for _, role := range []Role{RoleMember, RoleAdmin, RoleSuperadmin} {
+		if !role.CanReadCustomData() || !role.CanReadAttachments() || !role.CanSearch() {
+			t.Fatalf("role %q cannot use authorized Search modules", role)
+		}
+	}
+	if Role("UNKNOWN").CanSearch() || Role("UNKNOWN").CanReadCustomData() || Role("UNKNOWN").CanReadAttachments() {
+		t.Fatal("unknown role received read or Search permissions")
+	}
 }
 
 func TestAuditValuesAreExplicit(t *testing.T) {

@@ -25,6 +25,10 @@ const (
 	ErrorCodeAuthUnavailable   ErrorCode = "auth_unavailable"
 	ErrorCodeNotFound          ErrorCode = "not_found"
 	ErrorCodeMethodNotAllowed  ErrorCode = "method_not_allowed"
+	ErrorCodeRateLimited       ErrorCode = "rate_limited"
+	ErrorCodeQueryTooCostly    ErrorCode = "query_too_costly"
+	ErrorCodeResultSetTooLarge ErrorCode = "result_set_too_large"
+	ErrorCodeSearchTimeout     ErrorCode = "search_timeout"
 	ErrorCodeInternal          ErrorCode = "internal_error"
 )
 
