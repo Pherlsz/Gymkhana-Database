@@ -13,6 +13,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/attachment"
 	"github.com/Pherlsz/Gymkhana-Database/internal/config"
 	"github.com/Pherlsz/Gymkhana-Database/internal/googleforms"
+	"github.com/Pherlsz/Gymkhana-Database/internal/matching"
 	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/logging"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/postgres"
@@ -92,6 +93,17 @@ func run() error {
 	if err := client.Start(rootCtx); err != nil {
 		return fmt.Errorf("start operations worker: %w", err)
 	}
+	matchingService, matchingClient, err := matching.NewRuntime(pool, matching.ServiceOptions{
+		OnAuditFailure: func(_ context.Context, event matching.AuditEvent, auditErr error) {
+			logger.Error("matching audit event was not persisted", "event_type", event.EventType, "request_id", event.RequestID, "error", auditErr)
+		},
+	}, true)
+	if err != nil {
+		return fmt.Errorf("configure matching worker: %w", err)
+	}
+	if err := matchingClient.Start(rootCtx); err != nil {
+		return fmt.Errorf("start matching worker: %w", err)
+	}
 	var googleFormsService *googleforms.Service
 	var googleFormsClient interface {
 		Start(context.Context) error
@@ -120,8 +132,8 @@ func run() error {
 		}
 	}
 	cleanupDone := make(chan struct{})
-	go runCleanupScheduler(rootCtx, logger, service, attachmentCleanup, queryCleanup, googleFormsService, cfg.GoogleForms.SyncInterval, cleanupDone)
-	logger.Info("operations worker started", "queue", operations.OperationsQueue)
+	go runCleanupScheduler(rootCtx, logger, service, attachmentCleanup, queryCleanup, matchingService, googleFormsService, cfg.GoogleForms.SyncInterval, cleanupDone)
+	logger.Info("operations worker started", "queues", []string{operations.OperationsQueue, matching.Queue})
 	select {
 	case <-rootCtx.Done():
 	case <-client.Stopped():
@@ -131,6 +143,10 @@ func run() error {
 	case <-googleFormsStopped(googleFormsClient):
 		if rootCtx.Err() == nil {
 			return errors.New("google forms worker stopped unexpectedly")
+		}
+	case <-matchingClient.Stopped():
+		if rootCtx.Err() == nil {
+			return errors.New("matching worker stopped unexpectedly")
 		}
 	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
@@ -143,6 +159,9 @@ func run() error {
 			return fmt.Errorf("stop Google Forms worker: %w", err)
 		}
 	}
+	if err := matchingClient.Stop(shutdownCtx); err != nil && !errors.Is(err, context.Canceled) {
+		return fmt.Errorf("stop matching worker: %w", err)
+	}
 	select {
 	case <-cleanupDone:
 	case <-shutdownCtx.Done():
@@ -151,7 +170,7 @@ func run() error {
 	return nil
 }
 
-func runCleanupScheduler(ctx context.Context, logger *slog.Logger, service *operations.Service, attachmentCleanup *attachment.Service, queryCleanup *queryengine.Service, googleForms *googleforms.Service, googleFormsInterval time.Duration, done chan<- struct{}) {
+func runCleanupScheduler(ctx context.Context, logger *slog.Logger, service *operations.Service, attachmentCleanup *attachment.Service, queryCleanup *queryengine.Service, matchingCleanup *matching.Service, googleForms *googleforms.Service, googleFormsInterval time.Duration, done chan<- struct{}) {
 	defer close(done)
 	scheduleCleanup := func() {
 		if err := service.ScheduleCleanup(ctx); err != nil && !errors.Is(err, context.Canceled) {
@@ -168,6 +187,12 @@ func runCleanupScheduler(ctx context.Context, logger *slog.Logger, service *oper
 			logger.Error("Query Engine cleanup failed", "error", err)
 		} else if err == nil && deleted > 0 {
 			logger.Info("Query Engine cleanup completed", "expired_executions", deleted)
+		}
+		deleted, err = matchingCleanup.Cleanup(ctx)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			logger.Error("matching cleanup failed", "error", err)
+		} else if err == nil && deleted > 0 {
+			logger.Info("matching cleanup completed", "expired_analyses", deleted)
 		}
 	}
 	scheduleGoogleForms := func() {

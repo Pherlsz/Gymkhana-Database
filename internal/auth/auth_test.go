@@ -27,11 +27,14 @@ func TestRolesExposeStablePermissions(t *testing.T) {
 		t.Fatal("Google Forms administration permissions are not role-scoped")
 	}
 	for _, role := range []Role{RoleMember, RoleAdmin, RoleSuperadmin} {
-		if !role.CanReadCustomData() || !role.CanReadAttachments() || !role.CanSearch() || !role.CanUseOperations() {
+		if !role.CanReadCustomData() || !role.CanReadAttachments() || !role.CanSearch() || !role.CanUseOperations() || !role.CanReviewProfileMatches() {
 			t.Fatalf("role %q cannot use authorized Search or Operations modules", role)
 		}
 	}
-	if Role("UNKNOWN").CanSearch() || Role("UNKNOWN").CanUseOperations() || Role("UNKNOWN").CanManageGoogleForms() || Role("UNKNOWN").CanReadCustomData() || Role("UNKNOWN").CanReadAttachments() {
+	if RoleMember.CanMergeProfiles() || !RoleAdmin.CanMergeProfiles() || !RoleSuperadmin.CanMergeProfiles() {
+		t.Fatal("Profile merge permissions are not administrative")
+	}
+	if Role("UNKNOWN").CanSearch() || Role("UNKNOWN").CanUseOperations() || Role("UNKNOWN").CanManageGoogleForms() || Role("UNKNOWN").CanReadCustomData() || Role("UNKNOWN").CanReadAttachments() || Role("UNKNOWN").CanReviewProfileMatches() || Role("UNKNOWN").CanMergeProfiles() {
 		t.Fatal("unknown role received read, Search, or Operations permissions")
 	}
 }
