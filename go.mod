@@ -8,6 +8,7 @@ require (
 	github.com/Pherlsz/Gymkhana-Core v0.2.1
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/oapi-codegen/runtime v1.5.0
+	github.com/riverqueue/river v0.40.0
 )
 
 require (
