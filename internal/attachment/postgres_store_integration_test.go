@@ -70,7 +70,7 @@ VALUES($1,$2,$3,$4,'NONE')`, databaseUUID(documentID), databaseUUID(profileID), 
 		_, _ = pool.Exec(context.Background(), "DELETE FROM document_types WHERE id=$1", databaseUUID(typeID))
 		_, _ = pool.Exec(context.Background(), "DELETE FROM profiles WHERE id=$1", databaseUUID(profileID))
 		_, _ = pool.Exec(context.Background(), "DELETE FROM app_users WHERE id=$1", databaseUUID(actorID))
-	})
+	}()
 
 	store := NewPostgresStore(pool)
 	now := time.Now().UTC()
