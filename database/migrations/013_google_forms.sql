@@ -17,11 +17,12 @@ CREATE TABLE google_forms_oauth_states (
   session_id UUID NOT NULL REFERENCES app_sessions(id) ON DELETE CASCADE,
   verifier_ciphertext BYTEA NOT NULL CHECK (octet_length(verifier_ciphertext) BETWEEN 32 AND 512),
   verifier_nonce BYTEA NOT NULL CHECK (octet_length(verifier_nonce) = 12),
-  token_key_version INTEGER NOT NULL CHECK (token_key_version BETWEEN 1 AND 65535),
-  return_path TEXT NOT NULL DEFAULT '/google-forms' CHECK (
-    return_path ~ '^/[A-Za-z0-9/_?=&.%-]{0,500}$'
-    AND return_path !~ '^//'
-  ),
+	token_key_version INTEGER NOT NULL CHECK (token_key_version BETWEEN 1 AND 65535),
+	return_path TEXT NOT NULL DEFAULT '/google-forms' CHECK (
+		char_length(return_path) BETWEEN 1 AND 500
+		AND return_path ~ '^/[A-Za-z0-9/_?=&.%-]*$'
+		AND return_path !~ '^//'
+	),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ NOT NULL,
   consumed_at TIMESTAMPTZ,
