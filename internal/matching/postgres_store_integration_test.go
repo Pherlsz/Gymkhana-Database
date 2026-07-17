@@ -503,7 +503,7 @@ WHERE analysis_id=$1 AND case_id=$2`, matchingUUID(suppressedAnalysisID), matchi
 		}
 		if !errors.Is(attempt.err, ErrConflict) && !errors.Is(attempt.err, ErrNotFound) &&
 			!errors.Is(attempt.err, ErrInvalidState) && !errors.Is(attempt.err, ErrStalePreview) {
-			t.Fatalf("unexpected concurrent merge loser = %#v", attempt)
+			t.Fatalf("unexpected concurrent merge loser: error=%T %v; attempt=%#v", attempt.err, attempt.err, attempt)
 		}
 	}
 	if successes != 1 || winner.result.SurvivorProfileID != survivorID || winner.result.SourceProfileID != sourceID || winner.result.SurvivorVersion != 2 {
@@ -892,6 +892,7 @@ func TestNormalizePostgresMatchingErrors(t *testing.T) {
 		{name: "deadline", err: context.DeadlineExceeded, want: ErrTimeout},
 		{name: "statement timeout", err: fmt.Errorf("query: %w", &pgconn.PgError{Code: "57014"}), want: ErrTimeout},
 		{name: "serialization", err: fmt.Errorf("merge: %w", &pgconn.PgError{Code: "40001"}), want: ErrConflict},
+		{name: "opaque serialization wrapper", err: errors.New("driver wrapper (SQLSTATE 40001)"), want: ErrConflict},
 		{name: "deadlock", err: fmt.Errorf("merge: %w", &pgconn.PgError{Code: "40P01"}), want: ErrConflict},
 		{name: "commit rollback", err: pgx.ErrTxCommitRollback, want: ErrConflict},
 	}

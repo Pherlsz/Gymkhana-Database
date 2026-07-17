@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
@@ -336,16 +337,26 @@ func normalizePostgresError(err error) error {
 	if errors.Is(err, pgx.ErrTxCommitRollback) {
 		return ErrConflict
 	}
+	databaseCode := ""
 	var databaseError interface{ SQLState() string }
 	if errors.As(err, &databaseError) {
-		switch databaseError.SQLState() {
-		case "57014":
-			return ErrTimeout
-		case "23505", "40001", "40P01":
-			return ErrConflict
-		case "23503", "23514", "23P01":
-			return ErrDependencyConflict
+		databaseCode = databaseError.SQLState()
+	}
+	if databaseCode == "" {
+		for _, code := range []string{"57014", "23505", "40001", "40P01", "23503", "23514", "23P01"} {
+			if strings.Contains(err.Error(), "(SQLSTATE "+code+")") {
+				databaseCode = code
+				break
+			}
 		}
+	}
+	switch databaseCode {
+	case "57014":
+		return ErrTimeout
+	case "23505", "40001", "40P01":
+		return ErrConflict
+	case "23503", "23514", "23P01":
+		return ErrDependencyConflict
 	}
 	return err
 }
