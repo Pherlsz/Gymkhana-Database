@@ -113,6 +113,57 @@ p {
 .profiles-grid {
   overflow: hidden;
 }
+
+.data-grid {
+  overflow: hidden;
+}
+
+.data-grid__status {
+  margin: 0;
+  padding: 1.5rem;
+  color: var(--gym-color-text-muted);
+}
+
+.data-grid__table-wrap {
+  overflow-x: auto;
+}
+
+.data-grid__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-grid__table th,
+.data-grid__table td {
+  padding: 0.75rem;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--gym-color-border);
+}
+
+.data-grid__table tbody tr[aria-selected="true"] {
+  background: color-mix(in srgb, var(--gym-color-accent) 10%, transparent);
+}
+
+.data-grid__cards {
+  display: none;
+}
+
+.data-grid__pagination {
+  justify-content: space-between;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 .profiles-table-wrap {
   overflow: auto;
   max-block-size: 65vh;
@@ -412,12 +463,21 @@ p {
   .records-table-wrap {
     display: none;
   }
+  .data-grid__table-wrap {
+    display: none;
+  }
   .records-cards {
     display: grid;
     gap: var(--gym-space-3);
     padding: var(--gym-space-3);
   }
+  .data-grid__cards {
+    display: grid;
+    gap: var(--gym-space-3);
+    padding: var(--gym-space-3);
+  }
   .records-pagination,
+  .data-grid__pagination,
   .records-section-header,
   .record-editor__header {
     align-items: stretch;

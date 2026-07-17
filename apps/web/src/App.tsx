@@ -21,6 +21,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { AdminUsersPanel } from "./AdminUsersPanel";
 import { CustomDataPage } from "./CustomDataPage";
 import { ProfilesPage, normalizeProfileSearch } from "./ProfilesPage";
+import { SearchPage, normalizeGlobalSearch } from "./SearchPage";
 import {
   APIRequestError,
   apiURL,
@@ -63,7 +64,13 @@ const customDataRoute = createRoute({
   path: "/custom-data",
   component: CustomDataPage,
 });
-const routeTree = rootRoute.addChildren([homeRoute, profilesRoute, customDataRoute]);
+export const searchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/search",
+  validateSearch: normalizeGlobalSearch,
+  component: SearchPage,
+});
+const routeTree = rootRoute.addChildren([homeRoute, profilesRoute, searchRoute, customDataRoute]);
 const router = createRouter({ routeTree });
 declare module "@tanstack/react-router" {
   interface Register {
@@ -177,6 +184,14 @@ function AuthenticatedShell() {
               search={normalizeProfileSearch({})}
             >
               Pessoas
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeGlobalSearch({})}
+              to="/search"
+            >
+              Buscar
             </Link>
             <Link
               activeProps={{ className: "app-nav__link app-nav__link--active" }}

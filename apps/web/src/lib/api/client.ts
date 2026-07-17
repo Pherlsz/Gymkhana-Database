@@ -1,4 +1,5 @@
 import type { components, paths } from "../../generated/api";
+import type { paths as searchPaths } from "../../generated/search-api";
 
 type LiveHealthResponse =
   paths["/health/live"]["get"]["responses"][200]["content"]["application/json"];
@@ -62,6 +63,13 @@ export type CreateCustomEntityRequest = components["schemas"]["CreateCustomEntit
 export type UpdateCustomEntityRequest = components["schemas"]["UpdateCustomEntityRequest"];
 export type CustomTargetKind = components["schemas"]["CustomTargetKind"];
 export type CustomValueTargetKind = "profile" | "document" | "bill" | "custom_entity";
+export type SearchCatalogResponse =
+  searchPaths["/api/v1/search/catalog"]["get"]["responses"][200]["content"]["application/json"];
+export type SearchRequest =
+  searchPaths["/api/v1/search"]["post"]["requestBody"]["content"]["application/json"];
+export type SearchPageResponse =
+  searchPaths["/api/v1/search"]["post"]["responses"][200]["content"]["application/json"];
+export type SearchResult = SearchPageResponse["results"][number];
 
 type UpdateUserAccessRequest =
   paths["/api/admin/users/{user_id}/access"]["patch"]["requestBody"]["content"]["application/json"];
@@ -491,6 +499,20 @@ export async function assignBillCurrentUse(
 export async function returnBillCurrentUse(id: string): Promise<void> {
   await requestNoContent(`/api/v1/bills/${encodeURIComponent(id)}/current-use`, {
     method: "DELETE",
+  });
+}
+
+export async function getSearchCatalog(signal?: AbortSignal): Promise<SearchCatalogResponse> {
+  return requestJSON<SearchCatalogResponse>("/api/v1/search/catalog", signal ? { signal } : {});
+}
+
+export async function executeSearch(
+  request: SearchRequest,
+  signal?: AbortSignal,
+): Promise<SearchPageResponse> {
+  return requestJSON<SearchPageResponse>("/api/v1/search", {
+    ...jsonRequest("POST", request),
+    ...(signal ? { signal } : {}),
   });
 }
 

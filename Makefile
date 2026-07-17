@@ -10,7 +10,7 @@ TERN_VERSION := v2.4.1
 STATICCHECK_VERSION := v0.7.0
 GOVULNCHECK_VERSION := v1.6.0
 
-.PHONY: setup dev dev-api dev-web build build-backend build-frontend generate generate-go generate-ts generate-sql format format-check lint lint-backend lint-frontend test test-backend test-frontend test-race vuln check check-backend check-frontend check-config services-up services-down migrate migrate-status reset-db clean
+.PHONY: setup dev dev-api dev-web build build-backend build-frontend generate generate-go generate-ts generate-sql format format-check lint lint-backend lint-frontend test test-backend test-frontend test-race vuln check check-backend check-frontend check-config services-up services-down migrate migrate-down-one migrate-status reset-db clean
 
 setup:
 	@corepack enable
@@ -25,6 +25,9 @@ services-down:
 
 migrate:
 	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --migrations database/migrations --config database/tern.conf
+
+migrate-down-one:
+	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --destination -1 --migrations database/migrations --config database/tern.conf
 
 migrate-status:
 	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) status --migrations database/migrations --config database/tern.conf
@@ -58,8 +61,10 @@ generate: generate-go generate-ts generate-sql
 
 generate-go:
 	@mkdir -p api/generated/attachments
+	@mkdir -p api/generated/search
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-codegen.yaml api/openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-attachments-codegen.yaml api/attachments.openapi.yaml
+	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-search-codegen.yaml api/search.openapi.yaml
 
 generate-ts:
 	@$(PNPM) generate:openapi:ts

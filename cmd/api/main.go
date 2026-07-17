@@ -21,6 +21,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/logging"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/postgres"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
+	"github.com/Pherlsz/Gymkhana-Database/internal/search"
 )
 
 func main() {
@@ -79,6 +80,7 @@ func run() error {
 	var billService *bill.Service
 	var customDataService *customdata.Service
 	var attachmentService *attachment.Service
+	var searchService *search.Service
 	if pool != nil {
 		profileService, err = profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{OnAuditFailure: func(_ context.Context, event profile.AuditEvent, auditErr error) {
 			logger.Error("profile audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "profile_id", event.ProfileID.String(), "error", auditErr)
@@ -130,6 +132,10 @@ func run() error {
 				return fmt.Errorf("configure attachment service: %w", err)
 			}
 		}
+		searchService, err = search.NewService(search.NewPostgresStore(pool), search.ServiceOptions{})
+		if err != nil {
+			return fmt.Errorf("configure Search service: %w", err)
+		}
 	}
 	server := &http.Server{
 		Addr: cfg.HTTPAddress,
@@ -141,6 +147,7 @@ func run() error {
 			Bill:           billService,
 			CustomData:     customDataService,
 			Attachment:     attachmentService,
+			Search:         searchService,
 			SecureCookies:  cfg.Auth.SecureCookies,
 			ApplicationURL: cfg.Auth.ApplicationURL,
 		}),

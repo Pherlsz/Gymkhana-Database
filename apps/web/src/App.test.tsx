@@ -123,4 +123,85 @@ describe("App", () => {
       ),
     );
   });
+
+  it("executes global Search with catalog filters and URL-backed terms", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/search?q=Ana&page=1&limit=50&sort=relevance&order=desc",
+    );
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/api/auth/session"))
+        return Promise.resolve(jsonResponse(authenticatedSession()));
+      if (url.endsWith("/api/v1/search/catalog"))
+        return Promise.resolve(
+          jsonResponse({
+            modules: [{ key: "profiles", label: "Pessoas" }],
+            fields: [
+              {
+                key: "profile.full_name",
+                module: "profiles",
+                label: "Nome completo",
+                kind: "text",
+              },
+            ],
+            limits: {
+              maximum_terms: 5,
+              maximum_term_length: 128,
+              maximum_fields: 40,
+              maximum_page_size: 100,
+              maximum_offset: 10000,
+            },
+          }),
+        );
+      if (url.endsWith("/api/v1/search") && init?.method === "POST")
+        return Promise.resolve(
+          jsonResponse({
+            results: [
+              {
+                module: "profiles",
+                entity_kind: "profile",
+                entity_id: "019bf789-4400-7f12-9abc-123456789abc",
+                profile_id: "019bf789-4400-7f12-9abc-123456789abc",
+                target_kind: "profile",
+                target_id: "019bf789-4400-7f12-9abc-123456789abc",
+                entity_label: "Ana da Silva",
+                field_key: "profile.full_name",
+                field_label: "Nome completo",
+                preview: "Ana da Silva",
+                score: 1080,
+                updated_at: "2026-07-17T12:00:00Z",
+              },
+            ],
+            page: { total: 1, limit: 50, offset: 0, sort: "relevance", sort_order: "desc" },
+          }),
+        );
+      return Promise.resolve(jsonResponse({ status: "ok" }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Buscar dados autorizados" }),
+    ).toBeInTheDocument();
+    expect(await screen.findAllByText("Ana da Silva")).not.toHaveLength(0);
+    expect(screen.getByRole("table", { name: "Resultados da busca global" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Documentos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /physical/i })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/search"),
+        expect.objectContaining({ method: "POST" }),
+      ),
+    );
+
+    fireEvent.change(screen.getByLabelText("Termos — um por linha"), {
+      target: { value: "Ana Maria\n001" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
+    await waitFor(() =>
+      expect(new URLSearchParams(window.location.search).get("q")).toBe("Ana Maria\n001"),
+    );
+  });
 });

@@ -55,6 +55,12 @@ jobs:
       - name: Check migration status
         run: make migrate-status
 
+      - name: Verify latest migration rollback and reapply
+        run: |
+          make migrate-down-one
+          make migrate
+          make migrate-status
+
       - name: Regenerate sqlc output
         run: |
           make generate-sql

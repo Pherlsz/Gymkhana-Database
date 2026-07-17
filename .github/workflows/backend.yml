@@ -155,7 +155,7 @@ jobs:
       - name: Apply migrations
         run: go run github.com/jackc/tern/v2@v2.4.1 migrate --migrations database/migrations --config database/tern.conf
 
-      - name: Run attachment PostgreSQL integration tests
-        run: go test -tags=integration ./internal/attachment
+      - name: Run PostgreSQL integration tests
+        run: go test -tags=integration ./internal/attachment ./internal/search
         env:
           DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
