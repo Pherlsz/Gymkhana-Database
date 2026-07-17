@@ -110,7 +110,9 @@ describe("AttachmentsPanel", () => {
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Mostrar lixeira" }));
     fireEvent.click(await screen.findByRole("button", { name: "Restaurar" }));
-    await waitFor(() => expect(attachmentAPI.restoreAttachment.mock.calls[0]?.[0]).toEqual(trashed));
+    await waitFor(() =>
+      expect(attachmentAPI.restoreAttachment.mock.calls[0]?.[0]).toEqual(trashed),
+    );
     expect(await screen.findByText("Anexo restaurado.")).toBeInTheDocument();
   });
 });
