@@ -16,15 +16,15 @@ const DeleteConfirmation = "Confirmar"
 type AuditFailureHandler func(context.Context, AuditEvent, error)
 
 type ServiceOptions struct {
-	UploadTTL       time.Duration
-	DownloadTTL     time.Duration
-	TrashRetention  time.Duration
-	MaximumFileSize  int64
+	UploadTTL         time.Duration
+	DownloadTTL       time.Duration
+	TrashRetention    time.Duration
+	MaximumFileSize   int64
 	MaximumTotalBytes int64
 	UploadRateLimit   int
 	CleanupBatch      int
-	Now             func() time.Time
-	OnAuditFailure  AuditFailureHandler
+	Now               func() time.Time
+	OnAuditFailure    AuditFailureHandler
 }
 
 type UploadGrant struct {
@@ -40,18 +40,18 @@ type CleanupResult struct {
 }
 
 type Service struct {
-	store           Store
-	audit           AuditStore
-	objects         ObjectStore
-	uploadTTL       time.Duration
-	downloadTTL     time.Duration
-	trashRetention  time.Duration
-	maximumFileSize  int64
+	store             Store
+	audit             AuditStore
+	objects           ObjectStore
+	uploadTTL         time.Duration
+	downloadTTL       time.Duration
+	trashRetention    time.Duration
+	maximumFileSize   int64
 	maximumTotalBytes int64
 	uploadRateLimit   int
 	cleanupBatch      int
-	now             func() time.Time
-	onAuditFailure  AuditFailureHandler
+	now               func() time.Time
+	onAuditFailure    AuditFailureHandler
 }
 
 func NewService(store Store, objects ObjectStore, options ServiceOptions) (*Service, error) {
@@ -96,18 +96,18 @@ func NewService(store Store, objects ObjectStore, options ServiceOptions) (*Serv
 		options.Now = time.Now
 	}
 	return &Service{
-		store:           store,
-		audit:           audit,
-		objects:         objects,
-		uploadTTL:       options.UploadTTL,
-		downloadTTL:     options.DownloadTTL,
-		trashRetention:  options.TrashRetention,
-		maximumFileSize:  options.MaximumFileSize,
+		store:             store,
+		audit:             audit,
+		objects:           objects,
+		uploadTTL:         options.UploadTTL,
+		downloadTTL:       options.DownloadTTL,
+		trashRetention:    options.TrashRetention,
+		maximumFileSize:   options.MaximumFileSize,
 		maximumTotalBytes: options.MaximumTotalBytes,
 		uploadRateLimit:   options.UploadRateLimit,
 		cleanupBatch:      options.CleanupBatch,
-		now:             options.Now,
-		onAuditFailure:  options.OnAuditFailure,
+		now:               options.Now,
+		onAuditFailure:    options.OnAuditFailure,
 	}, nil
 }
 
