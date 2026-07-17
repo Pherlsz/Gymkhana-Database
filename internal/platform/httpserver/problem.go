@@ -33,6 +33,10 @@ const (
 	ErrorCodeQueryCancelled    ErrorCode = "query_cancelled"
 	ErrorCodeQueryExpired      ErrorCode = "query_expired"
 	ErrorCodeQueryCatalogStale ErrorCode = "query_catalog_stale"
+	ErrorCodeMatchingTimeout   ErrorCode = "matching_timeout"
+	ErrorCodeMatchingCancelled ErrorCode = "matching_cancelled"
+	ErrorCodeMatchingStale     ErrorCode = "matching_stale_preview"
+	ErrorCodeMatchingConflict  ErrorCode = "matching_dependency_conflict"
 	ErrorCodeInternal          ErrorCode = "internal_error"
 )
 

@@ -1,0 +1,579 @@
+openapi: 3.1.0
+info:
+  title: Gymkhana Database Matching API
+  version: 0.11.0
+  description: On-demand, explainable Profile duplicate review and explicit transactional merge. The API never makes or applies merge decisions automatically.
+servers:
+  - url: /
+paths:
+  /api/v1/matching/catalog:
+    get:
+      operationId: getMatchingCatalog
+      summary: Read the authorized evidence catalog and fixed runtime limits
+      tags: [Matching]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Matching evidence labels, role capability and limits
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchingCatalog" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/matching/analyses:
+    post:
+      operationId: startMatchingAnalysis
+      summary: Request one bounded on-demand Profile duplicate analysis
+      tags: [Matching]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StartAnalysisRequest" }
+      responses:
+        "202":
+          description: Newly queued or idempotently replayed analysis
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchingAnalysis" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/matching/analyses/{analysis_id}:
+    get:
+      operationId: getMatchingAnalysis
+      summary: Read one actor-scoped analysis
+      tags: [Matching]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/AnalysisID"
+      responses:
+        "200":
+          description: Current analysis state and safe counts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchingAnalysis" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/matching/analyses/{analysis_id}/cancel:
+    post:
+      operationId: cancelMatchingAnalysis
+      summary: Cancel one queued or running actor-scoped analysis
+      tags: [Matching]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/AnalysisID"
+      responses:
+        "200":
+          description: Cancelled analysis
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchingAnalysis" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/matching/cases:
+    get:
+      operationId: listMatchingCases
+      summary: List authorized persistent Profile duplicate review cases
+      tags: [Matching]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: state
+          in: query
+          description: Comma-separated case states; defaults to PENDING
+          schema:
+            type: array
+            maxItems: 4
+            uniqueItems: true
+            items: { $ref: "#/components/schemas/CaseState" }
+          style: form
+          explode: false
+        - name: score_band
+          in: query
+          description: Comma-separated score bands
+          schema:
+            type: array
+            maxItems: 3
+            uniqueItems: true
+            items: { $ref: "#/components/schemas/ScoreBand" }
+          style: form
+          explode: false
+        - name: sort
+          in: query
+          schema: { $ref: "#/components/schemas/CaseSort" }
+        - name: order
+          in: query
+          schema: { $ref: "#/components/schemas/SortOrder" }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Deterministically ordered case page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchingCasePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/matching/cases/{case_id}:
+    get:
+      operationId: getMatchingCase
+      summary: Read one authorized case with complete Profile comparison values
+      tags: [Matching]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/CaseID"
+      responses:
+        "200":
+          description: Matching case and evidence
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchingCase" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/matching/cases/{case_id}/dismiss:
+    post:
+      operationId: dismissMatchingCase
+      summary: Record an explicit version-sensitive NOT_DUPLICATE decision
+      tags: [Matching]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/CaseID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DismissCaseRequest" }
+      responses:
+        "200":
+          description: Dismissed case
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MatchingCase" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/matching/cases/{case_id}/merge-preview:
+    post:
+      operationId: previewProfileMerge
+      summary: Preview explicit Profile field precedence and dependency movement
+      tags: [Matching]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/CaseID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MergePreviewRequest" }
+      responses:
+        "200":
+          description: Side-effect-free merge preview and topology fingerprint
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MergePreview" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/matching/cases/{case_id}/merge:
+    post:
+      operationId: mergeProfiles
+      summary: Confirm one explicit ADMIN/SUPERADMIN Profile merge
+      description: The confirmation must exactly name the survivor as returned by the latest preview. No field winner is inferred.
+      tags: [Matching]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - $ref: "#/components/parameters/CaseID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MergeProfilesRequest" }
+      responses:
+        "200":
+          description: New or idempotently replayed atomic merge result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MergeResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: gymkhana_session
+  parameters:
+    AnalysisID:
+      name: analysis_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CaseID:
+      name: case_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 100 }
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0, maximum: 10000, default: 0 }
+  responses:
+    BadRequest:
+      description: Invalid JSON, identifier, pagination, version, choices, fingerprint, idempotency key or confirmation
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unauthorized:
+      description: Authentication is required
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Forbidden:
+      description: Current role cannot access Matching or perform the requested merge action
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: Actor-scoped analysis or authorized case was not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Conflict:
+      description: State/version/preview changed or dependency collisions block merge
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    RateLimited:
+      description: Persistent per-user on-demand analysis rate was exceeded
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unavailable:
+      description: Matching is unavailable or exceeded its safe timeout
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+  schemas:
+    ErrorCode:
+      type: string
+      enum:
+        - bad_request
+        - invalid_json
+        - unauthorized
+        - forbidden
+        - not_found
+        - conflict
+        - rate_limited
+        - matching_timeout
+        - matching_cancelled
+        - matching_stale_preview
+        - matching_dependency_conflict
+        - internal_error
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code: { $ref: "#/components/schemas/ErrorCode" }
+            message: { type: string }
+        request_id: { type: string }
+    IdempotencyKey:
+      type: string
+      minLength: 8
+      maxLength: 128
+      pattern: "^[A-Za-z0-9._:-]+$"
+    Fingerprint:
+      type: string
+      pattern: "^[a-f0-9]{64}$"
+    EvidenceKind:
+      type: string
+      enum: [CPF_EXACT, EMAIL_EXACT, MOBILE_EXACT, LANDLINE_EXACT, NAME_EXACT, NAME_SIMILAR, POSTAL_EXACT, CITY_EXACT, ADDRESS_SIMILAR]
+    EvidenceDefinition:
+      type: object
+      additionalProperties: false
+      required: [kind, label]
+      properties:
+        kind: { $ref: "#/components/schemas/EvidenceKind" }
+        label: { type: string, minLength: 1, maxLength: 120 }
+    MatchingCatalog:
+      type: object
+      additionalProperties: false
+      required: [evidence, can_merge, maximum_candidates, maximum_page_size, maximum_analyses_per_window, analysis_window_seconds]
+      properties:
+        evidence:
+          type: array
+          minItems: 9
+          maxItems: 9
+          items: { $ref: "#/components/schemas/EvidenceDefinition" }
+        can_merge: { type: boolean }
+        maximum_candidates: { type: integer, minimum: 1, maximum: 2000 }
+        maximum_page_size: { type: integer, minimum: 1, maximum: 100 }
+        maximum_analyses_per_window: { type: integer, minimum: 1, maximum: 100 }
+        analysis_window_seconds: { type: integer, minimum: 60 }
+    StartAnalysisRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key]
+      properties:
+        idempotency_key: { $ref: "#/components/schemas/IdempotencyKey" }
+    AnalysisState:
+      type: string
+      enum: [QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED]
+    MatchingAnalysis:
+      type: object
+      additionalProperties: false
+      required: [id, state, profiles_scanned, candidate_count, refreshed_count, expires_at, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/AnalysisState" }
+        profiles_scanned: { type: integer, minimum: 0 }
+        candidate_count: { type: integer, minimum: 0, maximum: 2000 }
+        refreshed_count: { type: integer, minimum: 0, maximum: 2000 }
+        error_code: { type: string, maxLength: 80 }
+        cancel_requested_at: { type: string, format: date-time }
+        started_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        version: { type: integer, format: int64, minimum: 1 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ScoreBand:
+      type: string
+      enum: [LOW, MEDIUM, HIGH]
+    CaseState:
+      type: string
+      enum: [PENDING, NOT_DUPLICATE, MERGED, STALE]
+    CaseSort:
+      type: string
+      enum: [score, updated_at, created_at]
+      default: score
+    SortOrder:
+      type: string
+      enum: [asc, desc]
+      default: desc
+    Evidence:
+      type: object
+      additionalProperties: false
+      required: [kind, strength, contribution]
+      properties:
+        kind: { $ref: "#/components/schemas/EvidenceKind" }
+        strength: { type: integer, minimum: 0, maximum: 100 }
+        contribution: { type: integer, minimum: 0, maximum: 100 }
+    MatchingProfile:
+      type: object
+      additionalProperties: false
+      required: [id, full_name, version, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        full_name: { type: string, minLength: 1, maxLength: 200 }
+        social_name: { type: string, maxLength: 200 }
+        cpf: { type: string, pattern: "^[0-9]{11}$" }
+        email: { type: string, format: email, maxLength: 320 }
+        mobile_phone: { type: string }
+        landline_phone: { type: string }
+        address_street: { type: string, maxLength: 200 }
+        address_number: { type: string, maxLength: 30 }
+        address_complement: { type: string, maxLength: 100 }
+        address_neighborhood: { type: string, maxLength: 100 }
+        address_city: { type: string, maxLength: 100 }
+        address_state: { type: string, pattern: "^[A-Z]{2}$" }
+        address_postal_code: { type: string, pattern: "^[0-9]{8}$" }
+        notes: { type: string, maxLength: 5000 }
+        version: { type: integer, format: int64, minimum: 1 }
+        updated_at: { type: string, format: date-time }
+    MatchingCase:
+      type: object
+      additionalProperties: false
+      required: [id, left_profile_id, right_profile_id, left_profile_version, right_profile_version, score, score_band, state, evidence, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        left_profile_id: { type: string, format: uuid }
+        right_profile_id: { type: string, format: uuid }
+        left_profile_version: { type: integer, format: int64, minimum: 1 }
+        right_profile_version: { type: integer, format: int64, minimum: 1 }
+        score: { type: integer, minimum: 0, maximum: 100 }
+        score_band: { $ref: "#/components/schemas/ScoreBand" }
+        state: { $ref: "#/components/schemas/CaseState" }
+        evidence:
+          type: array
+          maxItems: 9
+          items: { $ref: "#/components/schemas/Evidence" }
+        left: { $ref: "#/components/schemas/MatchingProfile" }
+        right: { $ref: "#/components/schemas/MatchingProfile" }
+        merged_survivor_id: { type: string, format: uuid }
+        merged_source_id: { type: string, format: uuid }
+        merged_at: { type: string, format: date-time }
+        version: { type: integer, format: int64, minimum: 1 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    MatchingCasePage:
+      type: object
+      additionalProperties: false
+      required: [cases, total, limit, offset]
+      properties:
+        cases:
+          type: array
+          maxItems: 100
+          items: { $ref: "#/components/schemas/MatchingCase" }
+        total: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        offset: { type: integer, minimum: 0, maximum: 10000 }
+    DismissCaseRequest:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version: { type: integer, format: int64, minimum: 1 }
+    FieldSource:
+      type: string
+      enum: [SURVIVOR, SOURCE]
+    FieldChoice:
+      type: object
+      additionalProperties: false
+      required: [field_key, source]
+      properties:
+        field_key:
+          type: string
+          minLength: 2
+          maxLength: 80
+          pattern: "^[a-z][a-z0-9_.-]+$"
+        source: { $ref: "#/components/schemas/FieldSource" }
+    MergePreviewRequest:
+      type: object
+      additionalProperties: false
+      required: [survivor_profile_id, source_profile_id, survivor_version, source_version, choices]
+      properties:
+        survivor_profile_id: { type: string, format: uuid }
+        source_profile_id: { type: string, format: uuid }
+        survivor_version: { type: integer, format: int64, minimum: 1 }
+        source_version: { type: integer, format: int64, minimum: 1 }
+        choices:
+          type: array
+          maxItems: 270
+          items: { $ref: "#/components/schemas/FieldChoice" }
+    MergeField:
+      type: object
+      additionalProperties: false
+      required: [key, label, kind, survivor_value, source_value, conflict, choice_required]
+      properties:
+        key: { type: string, minLength: 2, maxLength: 80 }
+        label: { type: string, minLength: 1, maxLength: 120 }
+        kind: { type: string, minLength: 1, maxLength: 40 }
+        survivor_value: { type: string, nullable: true, maxLength: 5000 }
+        source_value: { type: string, nullable: true, maxLength: 5000 }
+        conflict: { type: boolean }
+        choice_required: { type: boolean }
+        selected_source: { $ref: "#/components/schemas/FieldSource" }
+    DependencyKind:
+      type: string
+      enum: [DOCUMENT_OWNER, DOCUMENT_HOLDER, BILL_OWNER, BILL_HOLDER, CUSTOM_ENTITY_OWNER, CUSTOM_PROFILE_VALUE, ATTACHMENT_INTENT, ATTACHMENT]
+    DependencyCount:
+      type: object
+      additionalProperties: false
+      required: [kind, count]
+      properties:
+        kind: { $ref: "#/components/schemas/DependencyKind" }
+        count: { type: integer, minimum: 0 }
+    DependencyConflictKind:
+      type: string
+      enum: [DOCUMENT_UNIQUENESS, CUSTOM_ENTITY_CARDINALITY]
+    DependencyConflict:
+      type: object
+      additionalProperties: false
+      required: [kind, count]
+      properties:
+        kind: { $ref: "#/components/schemas/DependencyConflictKind" }
+        count: { type: integer, minimum: 1 }
+    MergePreview:
+      type: object
+      additionalProperties: false
+      required: [case_id, survivor, source, fields, dependencies, conflicts, unresolved_field_count, preview_fingerprint, confirmation, generated_at]
+      properties:
+        case_id: { type: string, format: uuid }
+        survivor: { $ref: "#/components/schemas/MatchingProfile" }
+        source: { $ref: "#/components/schemas/MatchingProfile" }
+        fields:
+          type: array
+          minItems: 14
+          maxItems: 270
+          items: { $ref: "#/components/schemas/MergeField" }
+        dependencies:
+          type: array
+          minItems: 8
+          maxItems: 8
+          items: { $ref: "#/components/schemas/DependencyCount" }
+        conflicts:
+          type: array
+          maxItems: 2
+          items: { $ref: "#/components/schemas/DependencyConflict" }
+        unresolved_field_count: { type: integer, minimum: 0, maximum: 270 }
+        preview_fingerprint: { $ref: "#/components/schemas/Fingerprint" }
+        confirmation: { type: string, minLength: 9, maxLength: 208 }
+        generated_at: { type: string, format: date-time }
+    MergeProfilesRequest:
+      type: object
+      additionalProperties: false
+      required: [survivor_profile_id, source_profile_id, survivor_version, source_version, choices, preview_fingerprint, idempotency_key, confirmation]
+      properties:
+        survivor_profile_id: { type: string, format: uuid }
+        source_profile_id: { type: string, format: uuid }
+        survivor_version: { type: integer, format: int64, minimum: 1 }
+        source_version: { type: integer, format: int64, minimum: 1 }
+        choices:
+          type: array
+          maxItems: 270
+          items: { $ref: "#/components/schemas/FieldChoice" }
+        preview_fingerprint: { $ref: "#/components/schemas/Fingerprint" }
+        idempotency_key: { $ref: "#/components/schemas/IdempotencyKey" }
+        confirmation: { type: string, minLength: 9, maxLength: 208 }
+    MergeResult:
+      type: object
+      additionalProperties: false
+      required: [case_id, survivor_profile_id, source_profile_id, survivor_version, moved_dependencies, merged_at]
+      properties:
+        case_id: { type: string, format: uuid }
+        survivor_profile_id: { type: string, format: uuid }
+        source_profile_id: { type: string, format: uuid }
+        survivor_version: { type: integer, format: int64, minimum: 1 }
+        moved_dependencies:
+          type: array
+          minItems: 8
+          maxItems: 8
+          items: { $ref: "#/components/schemas/DependencyCount" }
+        merged_at: { type: string, format: date-time }

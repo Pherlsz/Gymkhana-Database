@@ -21,6 +21,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { AdminUsersPanel } from "./AdminUsersPanel";
 import { CustomDataPage } from "./CustomDataPage";
 import { GoogleFormsPage } from "./GoogleFormsPage";
+import { MatchingPage, normalizeMatchingSearch } from "./MatchingPage";
 import { ProfilesPage, normalizeProfileSearch } from "./ProfilesPage";
 import { OperationsPage, normalizeOperationsSearch } from "./OperationsPage";
 import { QueryPage } from "./QueryPage";
@@ -91,6 +92,12 @@ export const queryRoute = createRoute({
   validateSearch: normalizeQuerySearch,
   component: QueryPage,
 });
+export const matchingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/matching",
+  validateSearch: normalizeMatchingSearch,
+  component: MatchingPage,
+});
 const routeTree = rootRoute.addChildren([
   homeRoute,
   profilesRoute,
@@ -99,6 +106,7 @@ const routeTree = rootRoute.addChildren([
   operationsRoute,
   googleFormsRoute,
   queryRoute,
+  matchingRoute,
 ]);
 const router = createRouter({ routeTree });
 declare module "@tanstack/react-router" {
@@ -229,6 +237,14 @@ function AuthenticatedShell() {
               to="/query"
             >
               Consultar
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeMatchingSearch({})}
+              to="/matching"
+            >
+              Duplicidades
             </Link>
             <Link
               activeProps={{ className: "app-nav__link app-nav__link--active" }}

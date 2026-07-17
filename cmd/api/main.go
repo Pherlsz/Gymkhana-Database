@@ -18,6 +18,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/customdata"
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
 	"github.com/Pherlsz/Gymkhana-Database/internal/googleforms"
+	"github.com/Pherlsz/Gymkhana-Database/internal/matching"
 	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/httpserver"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/logging"
@@ -87,6 +88,7 @@ func run() error {
 	var operationsService *operations.Service
 	var googleFormsService *googleforms.Service
 	var queryService *queryengine.Service
+	var matchingService *matching.Service
 	if pool != nil {
 		profileService, err = profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{OnAuditFailure: func(_ context.Context, event profile.AuditEvent, auditErr error) {
 			logger.Error("profile audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "profile_id", event.ProfileID.String(), "error", auditErr)
@@ -179,6 +181,14 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("configure Query Engine service: %w", err)
 		}
+		matchingService, _, err = matching.NewRuntime(pool, matching.ServiceOptions{
+			OnAuditFailure: func(_ context.Context, event matching.AuditEvent, auditErr error) {
+				logger.Error("matching audit event was not persisted", "event_type", event.EventType, "request_id", event.RequestID, "error", auditErr)
+			},
+		}, false)
+		if err != nil {
+			return fmt.Errorf("configure matching service: %w", err)
+		}
 	}
 	server := &http.Server{
 		Addr: cfg.HTTPAddress,
@@ -194,6 +204,7 @@ func run() error {
 			Operations:     operationsService,
 			GoogleForms:    googleFormsService,
 			Query:          queryService,
+			Matching:       matchingService,
 			SecureCookies:  cfg.Auth.SecureCookies,
 			ApplicationURL: cfg.Auth.ApplicationURL,
 		}),

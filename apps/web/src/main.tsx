@@ -10,6 +10,7 @@ import "./search.css";
 import "./operations.css";
 import "./google-forms.css";
 import "./query.css";
+import "./matching.css";
 
 const root = document.getElementById("root");
 

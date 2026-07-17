@@ -101,6 +101,14 @@ func (role Role) CanUseOperations() bool {
 	return role.Valid()
 }
 
+func (role Role) CanReviewProfileMatches() bool {
+	return role.Valid()
+}
+
+func (role Role) CanMergeProfiles() bool {
+	return role == RoleAdmin || role == RoleSuperadmin
+}
+
 func (role Role) CanManageGoogleForms() bool {
 	return role == RoleAdmin || role == RoleSuperadmin
 }
