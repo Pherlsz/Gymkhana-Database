@@ -114,6 +114,30 @@ p {
   overflow: hidden;
 }
 
+.profiles-bulk-delete {
+  display: grid;
+  gap: var(--gym-space-3);
+  padding: var(--gym-space-4);
+  border-color: var(--gym-color-danger, var(--gym-color-border));
+}
+
+.profiles-bulk-delete label {
+  display: grid;
+  gap: var(--gym-space-2);
+  max-inline-size: 24rem;
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.profiles-bulk-delete input {
+  min-block-size: 2.5rem;
+  padding: var(--gym-space-2) var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+  color: var(--gym-color-text);
+}
+
 .data-grid {
   overflow: hidden;
 }
@@ -145,8 +169,41 @@ p {
   background: color-mix(in srgb, var(--gym-color-accent) 10%, transparent);
 }
 
+.data-grid__selection {
+  inline-size: 2.75rem;
+  text-align: center !important;
+}
+
+.data-grid__selection input {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+}
+
 .data-grid__cards {
   display: none;
+}
+
+.data-grid__card-shell {
+  position: relative;
+}
+
+.data-grid__card-selection {
+  position: absolute;
+  inset-block-start: var(--gym-space-3);
+  inset-inline-end: var(--gym-space-3);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+}
+
+.data-grid__card-selection input {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
 }
 
 .data-grid__pagination {
