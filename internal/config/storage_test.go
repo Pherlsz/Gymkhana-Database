@@ -62,7 +62,6 @@ func TestLoadStorageRejectsUnsafeOrUnboundedValues(t *testing.T) {
 	}
 }
 
-
 func TestLoadStorageRejectsQuotaBelowFileLimit(t *testing.T) {
 	clearStorageEnvironment(t)
 	t.Setenv("ATTACHMENT_MAX_FILE_BYTES", "100")
