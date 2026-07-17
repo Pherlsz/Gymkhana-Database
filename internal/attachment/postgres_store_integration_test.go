@@ -63,7 +63,7 @@ VALUES($1,$2,$3,true,'NONE',false)`, databaseUUID(typeID), technicalKey, "Attach
 VALUES($1,$2,$3,$4,'NONE')`, databaseUUID(documentID), databaseUUID(profileID), databaseUUID(typeID), technicalKey); err != nil {
 		t.Fatalf("insert document: %v", err)
 	}
-	t.Cleanup(func() {
+	defer func() {
 		_, _ = pool.Exec(context.Background(), "DELETE FROM attachment_upload_intents WHERE actor_user_id=$1", databaseUUID(actorID))
 		_, _ = pool.Exec(context.Background(), "DELETE FROM attachments WHERE document_id=$1", databaseUUID(documentID))
 		_, _ = pool.Exec(context.Background(), "DELETE FROM documents WHERE id=$1", databaseUUID(documentID))
