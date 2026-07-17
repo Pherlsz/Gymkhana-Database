@@ -80,3 +80,21 @@ func TestVerifyObjectDetectsDOCXContainer(t *testing.T) {
 		t.Fatalf("DetectedMIME = %q, want %q", verified.DetectedMIME, mime)
 	}
 }
+
+func TestVerifyObjectAcceptsWebMDocTypeAndRejectsGenericEBML(t *testing.T) {
+	webm := []byte{0x1a, 0x45, 0xdf, 0xa3, 0x87, 0x42, 0x82, 0x84, 'w', 'e', 'b', 'm'}
+	verified, err := VerifyObject(bytes.NewReader(webm), "video/webm", int64(len(webm)), 1024)
+	if err != nil || verified.DetectedMIME != "video/webm" {
+		t.Fatalf("WebM VerifyObject() = %#v, %v", verified, err)
+	}
+
+	matroska := []byte{0x1a, 0x45, 0xdf, 0xa3, 0x8b, 0x42, 0x82, 0x88, 'm', 'a', 't', 'r', 'o', 's', 'k', 'a'}
+	if _, err := VerifyObject(bytes.NewReader(matroska), "video/webm", int64(len(matroska)), 1024); !errors.Is(err, ErrUnsupportedFile) {
+		t.Fatalf("Matroska VerifyObject() error = %v, want ErrUnsupportedFile", err)
+	}
+
+	generic := []byte{0x1a, 0x45, 0xdf, 0xa3, 0x80}
+	if _, err := VerifyObject(bytes.NewReader(generic), "video/webm", int64(len(generic)), 1024); !errors.Is(err, ErrUnsupportedFile) {
+		t.Fatalf("generic EBML VerifyObject() error = %v, want ErrUnsupportedFile", err)
+	}
+}
