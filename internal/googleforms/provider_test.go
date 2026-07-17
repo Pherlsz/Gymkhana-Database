@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestGoogleProviderOAuthAndFormsFlow(t *testing.T) {
@@ -152,5 +154,69 @@ func TestFormFingerprintIgnoresTitleButDetectsTypeChange(t *testing.T) {
 	}
 	if first.Fingerprint == third.Fingerprint {
 		t.Fatal("question type change did not alter schema fingerprint")
+	}
+}
+
+func TestProviderFormReferenceAndQuestionNormalizationAreBounded(t *testing.T) {
+	const formID = "form_identifier_123"
+	for _, reference := range []string{
+		formID,
+		"https://docs.google.com/forms/d/" + formID + "/edit",
+		"https://forms.google.com/forms/d/" + formID + "/viewform",
+	} {
+		parsed, err := providerFormID(reference)
+		if err != nil || parsed != formID {
+			t.Fatalf("providerFormID(%q) = %q, %v", reference, parsed, err)
+		}
+	}
+	for _, reference := range []string{
+		"http://docs.google.com/forms/d/" + formID,
+		"https://docs.google.com.evil.test/forms/d/" + formID,
+		"https://example.test/forms/d/" + formID,
+		"https://docs.google.com/forms/d/short/edit",
+	} {
+		if _, err := providerFormID(reference); !errors.Is(err, ErrInvalidInput) {
+			t.Fatalf("providerFormID(%q) error = %v", reference, err)
+		}
+	}
+
+	payload := providerForm{FormID: formID, RevisionID: "revision"}
+	payload.Info.Title = "Formulário"
+	payload.Items = []providerItem{{
+		ItemID: "item", Title: strings.Repeat("á", 510),
+		QuestionItem: &providerQuestionItem{Question: providerQuestion{QuestionID: "question", TextQuestion: json.RawMessage(`{}`)}},
+	}}
+	form, err := normalizeProviderForm(payload)
+	if err != nil {
+		t.Fatalf("normalizeProviderForm() error = %v", err)
+	}
+	if !utf8.ValidString(form.Questions[0].Title) || utf8.RuneCountInString(form.Questions[0].Title) != 500 {
+		t.Fatalf("normalized title is not a valid 500-rune string: %q", form.Questions[0].Title)
+	}
+}
+
+func TestProviderErrorsDoNotExposeResponsePayloads(t *testing.T) {
+	const secret = "provider-secret-answer"
+	response := &http.Response{
+		StatusCode: http.StatusForbidden,
+		Header:     make(http.Header),
+		Body:       io.NopCloser(strings.NewReader(`{"error":{"status":"PERMISSION_DENIED","message":"` + secret + `"}}`)),
+	}
+	err := classifyProviderResponse(response)
+	if !errors.Is(err, ErrProvider) || errors.Is(err, ErrNeedsReauth) {
+		t.Fatalf("classifyProviderResponse() error = %v", err)
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("provider error exposed response payload: %v", err)
+	}
+}
+
+func TestProviderRetryJitterIsBounded(t *testing.T) {
+	const base = time.Second
+	for range 100 {
+		delay := jitteredProviderDelay(base)
+		if delay < 750*time.Millisecond || delay > 1250*time.Millisecond {
+			t.Fatalf("jitteredProviderDelay() = %v", delay)
+		}
 	}
 }

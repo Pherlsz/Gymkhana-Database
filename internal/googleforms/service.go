@@ -170,6 +170,7 @@ func (service *Service) CompleteOAuth(ctx context.Context, actor auth.Session, s
 		ConnectedAt: &connectedAt, CreatedAt: now, UpdatedAt: now,
 	})
 	if err != nil {
+		_ = service.provider.Revoke(ctx, token.RefreshToken)
 		service.audit(ctx, &actor.User.ID, nil, nil, nil, AuditConnectionFailed, auth.AuditOutcomeFailure, nil, requestID)
 		return Connection{}, "", err
 	}
@@ -421,10 +422,13 @@ func (service *Service) RequestSync(ctx context.Context, actor auth.Session, sou
 	}
 	jobID, err := service.jobs.EnqueueSync(ctx, run.ID)
 	if err != nil {
-		return SyncRun{}, err
+		_, failErr := service.store.FailSync(ctx, run.ID, "enqueue_failed", service.now().UTC())
+		return SyncRun{}, errors.Join(err, failErr)
 	}
 	if err := service.store.SetSyncJob(ctx, run.ID, jobID, now); err != nil {
-		return SyncRun{}, err
+		cancelErr := service.jobs.Cancel(ctx, jobID)
+		_, failErr := service.store.FailSync(ctx, run.ID, "enqueue_failed", service.now().UTC())
+		return SyncRun{}, errors.Join(err, cancelErr, failErr)
 	}
 	run.RiverJobID = jobID
 	run.Version++
@@ -541,10 +545,25 @@ func safeReturnPath(value string) (string, error) {
 		return "", ErrInvalidInput
 	}
 	parsed, err := url.Parse(value)
-	if err != nil || parsed.IsAbs() || parsed.Host != "" || parsed.Fragment != "" || parsed.Path == "" {
+	if err != nil || parsed.IsAbs() || parsed.Host != "" || parsed.Fragment != "" || parsed.Path != "/google-forms" {
 		return "", ErrInvalidInput
 	}
-	return value, nil
+	query := parsed.Query()
+	for key, values := range query {
+		if len(values) != 1 || values[0] == "" || (key != "tab" && key != "source") {
+			return "", ErrInvalidInput
+		}
+	}
+	if tab := query.Get("tab"); tab != "" && tab != "sources" && tab != "history" {
+		return "", ErrInvalidInput
+	}
+	if source := query.Get("source"); source != "" {
+		if _, err := ParseIdentifier(source); err != nil {
+			return "", ErrInvalidInput
+		}
+	}
+	parsed.RawQuery = query.Encode()
+	return parsed.String(), nil
 }
 
 func providerFormID(reference string) (string, error) {

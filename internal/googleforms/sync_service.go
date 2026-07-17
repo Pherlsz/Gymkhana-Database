@@ -18,6 +18,15 @@ func (service *Service) Sync(ctx context.Context, id Identifier) error {
 	now := service.now().UTC()
 	run, source, connection, actor, err := service.store.BeginSync(ctx, id, now)
 	if err != nil {
+		if terminalSyncStartError(err) {
+			changed, markErr := service.store.FailSync(ctx, id, syncErrorCode(err), now)
+			if markErr != nil {
+				return errors.Join(err, markErr)
+			}
+			if changed {
+				service.audit(ctx, nil, nil, nil, &id, AuditSyncFailed, auth.AuditOutcomeFailure, nil, workerRequestID("sync", id))
+			}
+		}
 		return err
 	}
 	service.audit(ctx, run.ActorUserID, nil, nil, &run.ID, AuditSyncStarted, auth.AuditOutcomeSuccess, nil, workerRequestID("sync", run.ID))
@@ -169,10 +178,13 @@ func (service *Service) EnqueueDueSources(ctx context.Context) (int, error) {
 		}
 		jobID, enqueueErr := service.jobs.EnqueueSync(ctx, run.ID)
 		if enqueueErr != nil {
-			return queued, enqueueErr
+			_, failErr := service.store.FailSync(ctx, run.ID, "enqueue_failed", service.now().UTC())
+			return queued, errors.Join(enqueueErr, failErr)
 		}
 		if setErr := service.store.SetSyncJob(ctx, run.ID, jobID, now); setErr != nil {
-			return queued, setErr
+			cancelErr := service.jobs.Cancel(ctx, jobID)
+			_, failErr := service.store.FailSync(ctx, run.ID, "enqueue_failed", service.now().UTC())
+			return queued, errors.Join(setErr, cancelErr, failErr)
 		}
 		service.audit(ctx, nil, nil, nil, &run.ID, AuditSyncRequested, auth.AuditOutcomeSuccess, nil, workerRequestID("due", run.ID))
 		queued++
@@ -212,6 +224,13 @@ func syncErrorCode(err error) string {
 	default:
 		return "sync_failed"
 	}
+}
+
+func terminalSyncStartError(err error) bool {
+	return errors.Is(err, ErrCancelled) || errors.Is(err, ErrForbidden) ||
+		errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalidInput) ||
+		errors.Is(err, ErrInvalidState) || errors.Is(err, ErrNeedsReauth) ||
+		errors.Is(err, ErrSchemaDrift) || errors.Is(err, ErrUnsupportedForm)
 }
 
 func workerRequestID(kind string, id Identifier) string {

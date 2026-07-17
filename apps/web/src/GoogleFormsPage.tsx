@@ -26,6 +26,11 @@ import { getOperationsCatalog } from "./lib/api/operations";
 export function GoogleFormsPage() {
   const session = useApplicationSession();
   const queryClient = useQueryClient();
+  const initialSearch = new URLSearchParams(window.location.search);
+  const [tab, setTab] = useState<"sources" | "history">(
+    initialSearch.get("tab") === "history" ? "history" : "sources",
+  );
+  const [selectedSourceID, setSelectedSourceID] = useState(initialSearch.get("source") ?? "");
   const canManage = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN";
   const status = useQuery({
     queryKey: ["google-forms-status"],
@@ -60,7 +65,18 @@ export function GoogleFormsPage() {
       queryClient.invalidateQueries({ queryKey: ["operation-imports"] }),
     ]);
   };
-  const oauthResult = new URLSearchParams(window.location.search).get("google_forms");
+  const oauthResult = initialSearch.get("google_forms");
+  const selectedSource = sources.data?.sources.find((value) => value.id === selectedSourceID);
+  const visibleSources = selectedSourceID
+    ? selectedSource
+      ? [selectedSource]
+      : []
+    : (sources.data?.sources ?? []);
+  const navigate = (nextTab: "sources" | "history", nextSource = selectedSourceID) => {
+    setTab(nextTab);
+    setSelectedSourceID(nextSource);
+    replaceGoogleFormsSearch(nextTab, nextSource);
+  };
 
   if (!canManage) {
     return (
@@ -118,13 +134,31 @@ export function GoogleFormsPage() {
               onDisconnected={() => void refresh()}
             />
           ) : null}
-          {status.data?.connected && catalog.data ? (
+          {status.data?.connected ? (
+            <Inline aria-label="Seções do Google Forms" role="tablist">
+              <Button
+                aria-selected={tab === "sources"}
+                onClick={() => navigate("sources")}
+                role="tab"
+              >
+                Fontes
+              </Button>
+              <Button
+                aria-selected={tab === "history"}
+                onClick={() => navigate("history")}
+                role="tab"
+              >
+                Histórico
+              </Button>
+            </Inline>
+          ) : null}
+          {status.data?.connected && tab === "sources" && catalog.data ? (
             <SourceCreator
               modules={catalog.data.modules.filter((value) => value.can_import)}
               onCreated={() => void refresh()}
             />
           ) : null}
-          {status.data?.connected ? (
+          {status.data?.connected && tab === "sources" ? (
             <Page.Section
               description="Cada fonte pertence ao administrador conectado; alterações de tipo ou obrigatoriedade pausam a sincronização."
               title="Fontes configuradas"
@@ -134,8 +168,30 @@ export function GoogleFormsPage() {
                   {googleFormsError(sources.error)}
                 </Alert>
               ) : null}
+              {(sources.data?.sources.length ?? 0) > 1 ? (
+                <label>
+                  Fonte selecionada
+                  <select
+                    aria-label="Fonte selecionada"
+                    value={selectedSourceID}
+                    onChange={(event) => navigate("sources", event.target.value)}
+                  >
+                    <option value="">Todas as fontes</option>
+                    {sources.data?.sources.map((source) => (
+                      <option key={source.id} value={source.id}>
+                        {source.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {selectedSourceID && sources.data && !selectedSource ? (
+                <Alert title="Fonte não encontrada" tone="warning">
+                  A fonte informada na URL não pertence a esta conexão ou não está mais disponível.
+                </Alert>
+              ) : null}
               <Stack gap="4">
-                {(sources.data?.sources ?? []).map((source) => (
+                {visibleSources.map((source) => (
                   <SourceCard
                     catalog={catalog.data?.modules.find((value) => value.id === source.module)}
                     key={source.id}
@@ -151,7 +207,7 @@ export function GoogleFormsPage() {
               </Stack>
             </Page.Section>
           ) : null}
-          {status.data?.connected ? (
+          {status.data?.connected && tab === "history" ? (
             <SyncHistory
               error={syncs.error}
               loading={syncs.isLoading}
@@ -168,7 +224,7 @@ export function GoogleFormsPage() {
 
 function ConnectionSetup({ onConnected }: { onConnected: () => void }) {
   const mutation = useMutation({
-    mutationFn: beginGoogleFormsOAuth,
+    mutationFn: () => beginGoogleFormsOAuth(googleFormsReturnPath()),
     onSuccess: onConnected,
   });
   return (
@@ -629,4 +685,24 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
     new Date(value),
   );
+}
+
+function replaceGoogleFormsSearch(tab: "sources" | "history", sourceID: string) {
+  const target = new URL(window.location.href);
+  target.searchParams.delete("google_forms");
+  target.searchParams.set("tab", tab);
+  if (sourceID) target.searchParams.set("source", sourceID);
+  else target.searchParams.delete("source");
+  window.history.replaceState({}, "", `${target.pathname}${target.search}${target.hash}`);
+}
+
+function googleFormsReturnPath() {
+  const current = new URL(window.location.href);
+  const parameters = new URLSearchParams();
+  const tab = current.searchParams.get("tab");
+  const source = current.searchParams.get("source");
+  if (tab === "sources" || tab === "history") parameters.set("tab", tab);
+  if (source && /^[0-9a-f-]{36}$/i.test(source)) parameters.set("source", source);
+  const query = parameters.toString();
+  return query ? `/google-forms?${query}` : "/google-forms";
 }

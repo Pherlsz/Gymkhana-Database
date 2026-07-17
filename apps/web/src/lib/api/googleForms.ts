@@ -61,10 +61,10 @@ export function getGoogleFormsStatus(signal?: AbortSignal): Promise<GoogleFormsS
   return requestJSON("/api/v1/google-forms/status", signal ? { signal } : {});
 }
 
-export async function beginGoogleFormsOAuth(): Promise<void> {
+export async function beginGoogleFormsOAuth(returnPath = "/google-forms"): Promise<void> {
   const value = await requestJSON<{ authorization_url: string }>(
     "/api/v1/google-forms/oauth/start",
-    jsonRequest("POST", { return_path: "/google-forms" }),
+    jsonRequest("POST", { return_path: returnPath }),
   );
   window.location.assign(value.authorization_url);
 }
