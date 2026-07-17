@@ -118,8 +118,10 @@ func run() error {
 				UploadTTL:       storageCfg.UploadTTL,
 				DownloadTTL:     storageCfg.DownloadTTL,
 				TrashRetention:  storageCfg.TrashRetention,
-				MaximumFileSize: storageCfg.MaximumFileSize,
-				CleanupBatch:    storageCfg.CleanupBatch,
+				MaximumFileSize:  storageCfg.MaximumFileSize,
+				MaximumTotalBytes: storageCfg.MaximumTotalBytes,
+				UploadRateLimit:   storageCfg.UploadRateLimit,
+				CleanupBatch:      storageCfg.CleanupBatch,
 				OnAuditFailure: func(_ context.Context, event attachment.AuditEvent, auditErr error) {
 					logger.Error("attachment audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
 				},
