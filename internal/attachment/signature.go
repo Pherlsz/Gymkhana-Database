@@ -87,7 +87,10 @@ func detectMIME(path string, prefix []byte, declaredMIME string) (string, error)
 	case len(prefix) >= 12 && bytes.Equal(prefix[4:8], []byte("ftyp")):
 		return "video/mp4", nil
 	case bytes.HasPrefix(prefix, []byte{0x1a, 0x45, 0xdf, 0xa3}):
-		return "video/webm", nil
+		if documentType, ok := ebmlDocumentType(prefix); ok && documentType == "webm" {
+			return "video/webm", nil
+		}
+		return "", ErrUnsupportedFile
 	case bytes.HasPrefix(prefix, []byte{'P', 'K', 0x03, 0x04}):
 		return detectOfficeOpenXML(path)
 	case validText(prefix):
@@ -98,6 +101,53 @@ func detectMIME(path string, prefix []byte, declaredMIME string) (string, error)
 	default:
 		return "", ErrUnsupportedFile
 	}
+}
+
+func ebmlDocumentType(value []byte) (string, bool) {
+	if len(value) < 6 || !bytes.HasPrefix(value, []byte{0x1a, 0x45, 0xdf, 0xa3}) {
+		return "", false
+	}
+	headerSize, width, ok := decodeEBMLSize(value[4:])
+	if !ok || headerSize <= 0 {
+		return "", false
+	}
+	start := 4 + width
+	end := start + headerSize
+	if end > len(value) {
+		return "", false
+	}
+	for index := start; index+3 <= end; index++ {
+		if value[index] != 0x42 || value[index+1] != 0x82 {
+			continue
+		}
+		size, sizeWidth, ok := decodeEBMLSize(value[index+2 : end])
+		contentStart := index + 2 + sizeWidth
+		if !ok || size < 1 || size > 16 || contentStart+size > end {
+			return "", false
+		}
+		return strings.ToLower(string(value[contentStart : contentStart+size])), true
+	}
+	return "", false
+}
+
+func decodeEBMLSize(value []byte) (int, int, bool) {
+	if len(value) == 0 || value[0] == 0 {
+		return 0, 0, false
+	}
+	marker := byte(0x80)
+	width := 1
+	for width <= 8 && value[0]&marker == 0 {
+		marker >>= 1
+		width++
+	}
+	if width > 8 || len(value) < width {
+		return 0, 0, false
+	}
+	size := int(value[0] & (marker - 1))
+	for index := 1; index < width; index++ {
+		size = size<<8 | int(value[index])
+	}
+	return size, width, true
 }
 
 func detectOfficeOpenXML(path string) (string, error) {

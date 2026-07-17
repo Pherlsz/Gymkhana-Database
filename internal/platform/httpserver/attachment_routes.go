@@ -297,6 +297,10 @@ func writeAttachmentError(w http.ResponseWriter, r *http.Request, logger *slog.L
 			fields = append(fields, FieldProblem{Field: field.Field, Code: field.Code, Message: "Attachment field is invalid"})
 		}
 		writeProblem(w, r, Problem{Status: http.StatusUnprocessableEntity, Code: ErrorCodeValidation, Message: "Attachment validation failed", FieldErrors: fields})
+	case errors.Is(err, attachment.ErrUploadRateLimited):
+		writeProblem(w, r, Problem{Status: http.StatusUnprocessableEntity, Code: ErrorCodeValidation, Message: "Attachment upload rate limit exceeded", FieldErrors: []FieldProblem{{Field: "upload_rate", Code: "rate_limited", Message: "Wait before creating another upload"}}})
+	case errors.Is(err, attachment.ErrStorageQuotaExceeded):
+		writeProblem(w, r, Problem{Status: http.StatusUnprocessableEntity, Code: ErrorCodeValidation, Message: "Attachment storage quota exceeded", FieldErrors: []FieldProblem{{Field: "storage_quota", Code: "quota_exceeded", Message: "Remove files or increase the configured quota"}}})
 	case errors.Is(err, attachment.ErrForbidden):
 		writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "This attachment operation is not allowed"})
 	case errors.Is(err, attachment.ErrUploadIntentNotFound), errors.Is(err, attachment.ErrUploadObjectNotFound), errors.Is(err, attachment.ErrAttachmentNotFound):

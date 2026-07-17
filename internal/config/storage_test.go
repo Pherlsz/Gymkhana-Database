@@ -20,8 +20,8 @@ func TestLoadStorageDefaultsToDisabledSafeConfiguration(t *testing.T) {
 	if cfg.TrashRetention != 7*24*time.Hour {
 		t.Fatalf("TrashRetention = %s", cfg.TrashRetention)
 	}
-	if cfg.MaximumFileSize != 50<<20 {
-		t.Fatalf("MaximumFileSize = %d", cfg.MaximumFileSize)
+	if cfg.MaximumFileSize != 50<<20 || cfg.MaximumTotalBytes != 5<<30 || cfg.UploadRateLimit != 12 {
+		t.Fatalf("attachment limits = file:%d total:%d rate:%d", cfg.MaximumFileSize, cfg.MaximumTotalBytes, cfg.UploadRateLimit)
 	}
 }
 
@@ -62,6 +62,15 @@ func TestLoadStorageRejectsUnsafeOrUnboundedValues(t *testing.T) {
 	}
 }
 
+func TestLoadStorageRejectsQuotaBelowFileLimit(t *testing.T) {
+	clearStorageEnvironment(t)
+	t.Setenv("ATTACHMENT_MAX_FILE_BYTES", "100")
+	t.Setenv("ATTACHMENT_MAX_TOTAL_BYTES", "99")
+	if _, err := LoadStorage(); err == nil {
+		t.Fatal("LoadStorage() error = nil")
+	}
+}
+
 func clearStorageEnvironment(t *testing.T) {
 	t.Helper()
 	for _, name := range []string{
@@ -74,6 +83,8 @@ func clearStorageEnvironment(t *testing.T) {
 		"ATTACHMENT_DOWNLOAD_TTL",
 		"ATTACHMENT_TRASH_RETENTION",
 		"ATTACHMENT_MAX_FILE_BYTES",
+		"ATTACHMENT_MAX_TOTAL_BYTES",
+		"ATTACHMENT_UPLOAD_RATE_LIMIT",
 		"ATTACHMENT_CLEANUP_BATCH",
 	} {
 		t.Setenv(name, "")

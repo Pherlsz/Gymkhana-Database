@@ -142,6 +142,12 @@ type CreateUploadIntentInput struct {
 	ExpectedSize     int64
 }
 
+type UploadLimits struct {
+	RateWindowStart   time.Time
+	MaximumIntents    int
+	MaximumTotalBytes int64
+}
+
 type SignedRequest struct {
 	URL       string
 	Method    string

@@ -10,19 +10,25 @@ import (
 	"time"
 )
 
-const defaultAttachmentMaxFileBytes int64 = 50 << 20
+const (
+	defaultAttachmentMaxFileBytes  int64 = 50 << 20
+	defaultAttachmentMaxTotalBytes int64 = 5 << 30
+	defaultAttachmentUploadRate          = 12
+)
 
 type StorageConfig struct {
-	Enabled         bool
-	Endpoint        string
-	Bucket          string
-	AccessKeyID     string
-	SecretAccessKey string
-	UploadTTL       time.Duration
-	DownloadTTL     time.Duration
-	TrashRetention  time.Duration
-	MaximumFileSize int64
-	CleanupBatch    int
+	Enabled           bool
+	Endpoint          string
+	Bucket            string
+	AccessKeyID       string
+	SecretAccessKey   string
+	UploadTTL         time.Duration
+	DownloadTTL       time.Duration
+	TrashRetention    time.Duration
+	MaximumFileSize   int64
+	MaximumTotalBytes int64
+	UploadRateLimit   int
+	CleanupBatch      int
 }
 
 func LoadStorage() (StorageConfig, error) {
@@ -46,21 +52,31 @@ func LoadStorage() (StorageConfig, error) {
 	if err != nil {
 		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_MAX_FILE_BYTES: %w", err)
 	}
+	maximumTotalBytes, err := strconv.ParseInt(valueOrDefault("ATTACHMENT_MAX_TOTAL_BYTES", strconv.FormatInt(defaultAttachmentMaxTotalBytes, 10)), 10, 64)
+	if err != nil {
+		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_MAX_TOTAL_BYTES: %w", err)
+	}
+	uploadRateLimit, err := strconv.Atoi(valueOrDefault("ATTACHMENT_UPLOAD_RATE_LIMIT", strconv.Itoa(defaultAttachmentUploadRate)))
+	if err != nil {
+		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_UPLOAD_RATE_LIMIT: %w", err)
+	}
 	cleanupBatch, err := strconv.Atoi(valueOrDefault("ATTACHMENT_CLEANUP_BATCH", "100"))
 	if err != nil {
 		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_CLEANUP_BATCH: %w", err)
 	}
 	cfg := StorageConfig{
-		Enabled:         enabled,
-		Endpoint:        strings.TrimSpace(os.Getenv("R2_ENDPOINT")),
-		Bucket:          strings.TrimSpace(os.Getenv("R2_BUCKET")),
-		AccessKeyID:     strings.TrimSpace(os.Getenv("R2_ACCESS_KEY_ID")),
-		SecretAccessKey: strings.TrimSpace(os.Getenv("R2_SECRET_ACCESS_KEY")),
-		UploadTTL:       uploadTTL,
-		DownloadTTL:     downloadTTL,
-		TrashRetention:  trashRetention,
-		MaximumFileSize: maximumFileSize,
-		CleanupBatch:    cleanupBatch,
+		Enabled:           enabled,
+		Endpoint:          strings.TrimSpace(os.Getenv("R2_ENDPOINT")),
+		Bucket:            strings.TrimSpace(os.Getenv("R2_BUCKET")),
+		AccessKeyID:       strings.TrimSpace(os.Getenv("R2_ACCESS_KEY_ID")),
+		SecretAccessKey:   strings.TrimSpace(os.Getenv("R2_SECRET_ACCESS_KEY")),
+		UploadTTL:         uploadTTL,
+		DownloadTTL:       downloadTTL,
+		TrashRetention:    trashRetention,
+		MaximumFileSize:   maximumFileSize,
+		MaximumTotalBytes: maximumTotalBytes,
+		UploadRateLimit:   uploadRateLimit,
+		CleanupBatch:      cleanupBatch,
 	}
 	if err := cfg.validate(); err != nil {
 		return StorageConfig{}, err
@@ -80,6 +96,12 @@ func (cfg StorageConfig) validate() error {
 	}
 	if cfg.MaximumFileSize <= 0 {
 		return errors.New("ATTACHMENT_MAX_FILE_BYTES must be positive")
+	}
+	if cfg.MaximumTotalBytes < cfg.MaximumFileSize {
+		return errors.New("ATTACHMENT_MAX_TOTAL_BYTES must be at least ATTACHMENT_MAX_FILE_BYTES")
+	}
+	if cfg.UploadRateLimit < 1 || cfg.UploadRateLimit > 1000 {
+		return errors.New("ATTACHMENT_UPLOAD_RATE_LIMIT must be between 1 and 1000")
 	}
 	if cfg.CleanupBatch <= 0 || cfg.CleanupBatch > 1000 {
 		return errors.New("ATTACHMENT_CLEANUP_BATCH must be between 1 and 1000")

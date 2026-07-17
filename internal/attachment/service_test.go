@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 
@@ -135,6 +136,63 @@ func TestServiceCleanupIsRetrySafeForExpiredAndTrashedObjects(t *testing.T) {
 	}
 }
 
+func TestServiceEnforcesUploadRateAndStorageQuota(t *testing.T) {
+	now := time.Date(2026, time.July, 17, 4, 0, 0, 0, time.UTC)
+	owner := OwnerReference{Kind: OwnerDocument, ID: testIdentifier(40)}
+	input := CreateUploadIntentInput{Owner: owner, OriginalFileName: "document.pdf", DeclaredMIME: "application/pdf", ExpectedSize: 6}
+
+	rateStore := newMemoryStore()
+	rateService, err := NewService(rateStore, newMemoryObjects(), ServiceOptions{
+		UploadTTL: 10 * time.Minute, DownloadTTL: 5 * time.Minute, TrashRetention: 7 * 24 * time.Hour,
+		MaximumFileSize: 10, MaximumTotalBytes: 20, UploadRateLimit: 1, CleanupBatch: 100,
+		Now: func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("NewService(rate) error = %v", err)
+	}
+	if _, err := rateService.CreateUploadIntent(context.Background(), testActor(1), input, "rate-1"); err != nil {
+		t.Fatalf("first CreateUploadIntent() error = %v", err)
+	}
+	if _, err := rateService.CreateUploadIntent(context.Background(), testActor(1), input, "rate-2"); !errors.Is(err, ErrUploadRateLimited) {
+		t.Fatalf("second CreateUploadIntent() error = %v, want ErrUploadRateLimited", err)
+	}
+
+	quotaStore := newMemoryStore()
+	quotaService, err := NewService(quotaStore, newMemoryObjects(), ServiceOptions{
+		UploadTTL: 10 * time.Minute, DownloadTTL: 5 * time.Minute, TrashRetention: 7 * 24 * time.Hour,
+		MaximumFileSize: 10, MaximumTotalBytes: 10, UploadRateLimit: 100, CleanupBatch: 100,
+		Now: func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("NewService(quota) error = %v", err)
+	}
+	if _, err := quotaService.CreateUploadIntent(context.Background(), testActor(2), input, "quota-1"); err != nil {
+		t.Fatalf("first quota CreateUploadIntent() error = %v", err)
+	}
+	if _, err := quotaService.CreateUploadIntent(context.Background(), testActor(3), input, "quota-2"); !errors.Is(err, ErrStorageQuotaExceeded) {
+		t.Fatalf("second quota CreateUploadIntent() error = %v, want ErrStorageQuotaExceeded", err)
+	}
+}
+
+func TestServiceCleanupSkipsWhenAnotherWorkerOwnsLease(t *testing.T) {
+	now := time.Date(2026, time.July, 17, 5, 0, 0, 0, time.UTC)
+	store := newMemoryStore()
+	service := newTestService(t, store, newMemoryObjects(), &now)
+	lease, acquired, err := store.AcquireCleanupLease(context.Background())
+	if err != nil || !acquired {
+		t.Fatalf("AcquireCleanupLease() = %v, %t", err, acquired)
+	}
+	defer lease.Release(context.Background())
+
+	result, err := service.Cleanup(context.Background(), "concurrent-cleanup")
+	if err != nil {
+		t.Fatalf("Cleanup() error = %v", err)
+	}
+	if !result.Skipped || result.ExpiredUploads != 0 || result.Purged != 0 || result.Failures != 0 {
+		t.Fatalf("Cleanup() result = %#v, want skipped", result)
+	}
+}
+
 func newTestService(t *testing.T, store *memoryStore, objects *memoryObjects, now *time.Time) *Service {
 	t.Helper()
 	service, err := NewService(store, objects, ServiceOptions{
@@ -187,18 +245,65 @@ func (objects *memoryObjects) Delete(_ context.Context, key string) error {
 }
 
 type memoryStore struct {
+	mu          sync.Mutex
+	cleanupHeld bool
 	intents     map[Identifier]UploadIntent
 	attachments map[Identifier]Attachment
 	audits      []AuditEvent
+}
+
+type memoryCleanupLease struct {
+	store *memoryStore
+}
+
+func (lease *memoryCleanupLease) Release(context.Context) error {
+	lease.store.mu.Lock()
+	defer lease.store.mu.Unlock()
+	if !lease.store.cleanupHeld {
+		return ErrConflict
+	}
+	lease.store.cleanupHeld = false
+	return nil
 }
 
 func newMemoryStore() *memoryStore {
 	return &memoryStore{intents: map[Identifier]UploadIntent{}, attachments: map[Identifier]Attachment{}}
 }
 
-func (store *memoryStore) CreateUploadIntent(_ context.Context, value UploadIntent) (UploadIntent, error) {
+func (store *memoryStore) CreateUploadIntent(_ context.Context, value UploadIntent, limits UploadLimits) (UploadIntent, error) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	recent := 0
+	var reserved int64
+	for _, intent := range store.intents {
+		if intent.ActorUserID == value.ActorUserID && !intent.CreatedAt.Before(limits.RateWindowStart) {
+			recent++
+		}
+		if intent.ConsumedAt == nil && intent.ExpiresAt.After(value.CreatedAt) {
+			reserved += intent.ExpectedSize
+		}
+	}
+	if recent >= limits.MaximumIntents {
+		return UploadIntent{}, ErrUploadRateLimited
+	}
+	for _, attachment := range store.attachments {
+		reserved += attachment.ByteSize
+	}
+	if value.ExpectedSize > limits.MaximumTotalBytes || reserved > limits.MaximumTotalBytes-value.ExpectedSize {
+		return UploadIntent{}, ErrStorageQuotaExceeded
+	}
 	store.intents[value.ID] = value
 	return value, nil
+}
+
+func (store *memoryStore) AcquireCleanupLease(context.Context) (CleanupLease, bool, error) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	if store.cleanupHeld {
+		return nil, false, nil
+	}
+	store.cleanupHeld = true
+	return &memoryCleanupLease{store: store}, true, nil
 }
 
 func (store *memoryStore) GetUploadIntent(_ context.Context, id Identifier) (UploadIntent, error) {
@@ -302,9 +407,10 @@ func (store *memoryStore) ListExpiredUploadIntents(_ context.Context, now time.T
 
 func (store *memoryStore) DeleteExpiredUploadIntent(_ context.Context, id Identifier, now time.Time) error {
 	value, ok := store.intents[id]
-	if ok && value.ConsumedAt == nil && !value.ExpiresAt.After(now) {
-		delete(store.intents, id)
+	if !ok || value.ConsumedAt != nil || value.ExpiresAt.After(now) {
+		return ErrConflict
 	}
+	delete(store.intents, id)
 	return nil
 }
 
@@ -323,9 +429,10 @@ func (store *memoryStore) ListPurgeDue(_ context.Context, now time.Time, limit i
 
 func (store *memoryStore) DeletePurged(_ context.Context, id Identifier, version int64) error {
 	value, ok := store.attachments[id]
-	if ok && value.Version == version && value.LifecycleState == LifecycleTrashed {
-		delete(store.attachments, id)
+	if !ok || value.Version != version || value.LifecycleState != LifecycleTrashed {
+		return ErrConflict
 	}
+	delete(store.attachments, id)
 	return nil
 }
 
