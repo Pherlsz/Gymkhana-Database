@@ -183,6 +183,7 @@ func (store *PostgresStore) SaveOAuthState(ctx context.Context, value OAuthState
 func (store *PostgresStore) ConsumeOAuthState(ctx context.Context, stateHash [32]byte, ownerID, sessionID auth.Identifier, now time.Time) (OAuthState, error) {
 	var value OAuthState
 	var databaseOwner, databaseSession pgtype.UUID
+	var databaseHash []byte
 	var keyVersion int
 	var consumedAt pgtype.Timestamptz
 	err := store.pool.QueryRow(ctx, `UPDATE google_forms_oauth_states
@@ -192,7 +193,7 @@ func (store *PostgresStore) ConsumeOAuthState(ctx context.Context, stateHash [32
 RETURNING state_hash, owner_user_id, session_id, verifier_ciphertext,
           verifier_nonce, token_key_version, return_path, created_at, expires_at, consumed_at`,
 		stateHash[:], authDatabaseUUID(ownerID), authDatabaseUUID(sessionID), now).Scan(
-		&value.StateHash, &databaseOwner, &databaseSession, &value.VerifierCiphertext,
+		&databaseHash, &databaseOwner, &databaseSession, &value.VerifierCiphertext,
 		&value.VerifierNonce, &keyVersion, &value.ReturnPath, &value.CreatedAt,
 		&value.ExpiresAt, &consumedAt,
 	)
@@ -202,6 +203,10 @@ RETURNING state_hash, owner_user_id, session_id, verifier_ciphertext,
 	if err != nil {
 		return OAuthState{}, fmt.Errorf("consume oauth state: %w", err)
 	}
+	if len(databaseHash) != sha256.Size {
+		return OAuthState{}, fmt.Errorf("consume oauth state: %w", ErrOAuthState)
+	}
+	copy(value.StateHash[:], databaseHash)
 	value.OwnerUserID = authIdentifierFromUUID(databaseOwner)
 	value.SessionID = authIdentifierFromUUID(databaseSession)
 	value.TokenKeyVersion = uint16(keyVersion)
