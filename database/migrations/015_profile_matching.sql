@@ -192,13 +192,6 @@ ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now();
 
 DELETE FROM app_metadata WHERE key = 'schema.profile_matching';
 
-ALTER TABLE profile_audit_events
-  DROP CONSTRAINT profile_audit_events_event_type_check;
-ALTER TABLE profile_audit_events
-  ADD CONSTRAINT profile_audit_events_event_type_check CHECK (
-    event_type IN ('PROFILE_CREATED', 'PROFILE_UPDATED', 'PROFILE_DUPLICATED', 'PROFILE_DELETED')
-  );
-
 DROP TABLE matching_audit_events;
 DROP TABLE matching_rate_limits;
 DROP TABLE matching_merge_receipt_counts;

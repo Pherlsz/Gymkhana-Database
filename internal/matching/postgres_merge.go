@@ -78,7 +78,12 @@ func (store *PostgresStore) PreviewMerge(ctx context.Context, input MergePreview
 	return value.preview, nil
 }
 
-func (store *PostgresStore) Merge(ctx context.Context, actorID auth.Identifier, input MergeInput, requestID string, now time.Time) (MergeResult, bool, error) {
+func (store *PostgresStore) Merge(ctx context.Context, actorID auth.Identifier, input MergeInput, requestID string, now time.Time) (result MergeResult, created bool, err error) {
+	defer func() {
+		if err != nil {
+			err = normalizePostgresError(err)
+		}
+	}()
 	if store == nil || store.pool == nil || actorID == (auth.Identifier{}) || now.IsZero() ||
 		!strings.HasPrefix(input.Confirmation, MergeConfirmation+" ") || input.PreviewFingerprint == ([sha256.Size]byte{}) ||
 		!validIdempotencyKey(input.IdempotencyKey) || len(requestID) < 1 || len(requestID) > 128 {
@@ -111,7 +116,8 @@ func (store *PostgresStore) Merge(ctx context.Context, actorID auth.Identifier, 
 		return MergeResult{}, false, err
 	}
 	var lockedCase pgtype.UUID
-	if err := tx.QueryRow(ctx, `SELECT id FROM matching_cases WHERE id=$1 FOR UPDATE`, matchingUUID(input.CaseID)).Scan(&lockedCase); err != nil {
+	var band ScoreBand
+	if err := tx.QueryRow(ctx, `SELECT id,score_band FROM matching_cases WHERE id=$1 FOR UPDATE`, matchingUUID(input.CaseID)).Scan(&lockedCase, &band); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return MergeResult{}, false, ErrNotFound
 		}
@@ -215,6 +221,16 @@ FROM matching_cases WHERE id=$8`, matchingUUID(decisionID), matchingAuthUUID(act
 VALUES($1,$2,$3,$4,'PROFILE_MERGED','SUCCESS',$5,$6)`, matchingUUID(profileAuditID), matchingAuthUUID(actorID),
 		matchingUUID(input.SurvivorID), matchingUUID(input.SourceID), requestID, now); err != nil {
 		return MergeResult{}, false, fmt.Errorf("record profile merge audit: %w", err)
+	}
+	matchingAuditID, err := NewIdentifier()
+	if err != nil {
+		return MergeResult{}, false, fmt.Errorf("generate matching merge audit identifier: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO matching_audit_events
+(id,actor_user_id,case_id,event_type,outcome,score_band,affected_count,request_id,created_at)
+VALUES($1,$2,$3,'MERGE_COMPLETED','SUCCESS',$4,1,$5,$6)`, matchingUUID(matchingAuditID), matchingAuthUUID(actorID),
+		matchingUUID(input.CaseID), band, requestID, now); err != nil {
+		return MergeResult{}, false, fmt.Errorf("record matching merge audit: %w", err)
 	}
 	receiptID, err := NewIdentifier()
 	if err != nil {

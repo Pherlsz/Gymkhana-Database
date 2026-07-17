@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
+	"github.com/jackc/pgx/v5"
 )
 
 type CreateAnalysisInput struct {
@@ -16,6 +17,7 @@ type CreateAnalysisInput struct {
 
 type Store interface {
 	CreateAnalysis(context.Context, CreateAnalysisInput, time.Time, int) (Analysis, bool, error)
+	CreateAnalysisWithJob(context.Context, CreateAnalysisInput, time.Time, int, AnalysisJobInserter) (Analysis, bool, error)
 	AttachAnalysisJob(context.Context, Identifier, auth.Identifier, int64) (Analysis, error)
 	GetAnalysis(context.Context, Identifier, auth.Identifier) (Analysis, error)
 	RequestAnalysisCancellation(context.Context, Identifier, auth.Identifier, time.Time) (Analysis, error)
@@ -31,7 +33,12 @@ type Store interface {
 	RecordAudit(context.Context, AuditEvent) error
 }
 
+type AnalysisJobInserter interface {
+	EnqueueAnalysisTx(context.Context, pgx.Tx, Identifier) (int64, error)
+}
+
 type Jobs interface {
+	AnalysisJobInserter
 	EnqueueAnalysis(context.Context, Identifier) (int64, error)
 	Cancel(context.Context, int64) error
 }

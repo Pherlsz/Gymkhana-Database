@@ -136,6 +136,10 @@ Configuration, key rotation, smoke testing, and recovery procedures are in [`doc
 
 The authenticated Query Engine builds permission-filtered, typed, read-only relational plans without accepting SQL or physical schema paths. Its supported v1 nodes, limits, retention, safe error surface, M14 boundary, and rollback procedure are documented in [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md).
 
+## Profile Matching
+
+The authenticated Matching workspace generates bounded, explainable Profile candidates on demand, persists human review decisions and permits only ADMIN/SUPERADMIN to perform an explicit previewed transactional merge. Candidate rules, permissions, dependency movement, recovery and rollback are documented in [`docs/MATCHING.md`](docs/MATCHING.md).
+
 ## Common commands
 
 ```bash
@@ -228,4 +232,5 @@ Private UI/Core versions are pinned only after their releases are published. Per
 - [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) is an operational runbook for the implemented authentication feature.
 - [`docs/GOOGLE_FORMS.md`](docs/GOOGLE_FORMS.md) is the activation, rotation, smoke-test, and recovery runbook for Google Forms ingestion.
 - [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md) defines the QueryPlan v1 security, execution, retention, M14, and rollback boundaries.
+- [`docs/MATCHING.md`](docs/MATCHING.md) defines Profile candidate evidence, review lifecycle, explicit merge invariants, operations, and rollback boundaries.
 - New milestone-status, acceptance-tracking, continuation, or next-action documents must not be created.

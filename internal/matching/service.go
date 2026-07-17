@@ -93,9 +93,9 @@ func (service *Service) StartAnalysis(ctx context.Context, actor auth.Session, i
 		return Analysis{}, fmt.Errorf("generate matching analysis identifier: %w", err)
 	}
 	now := service.now().UTC()
-	analysis, created, err := service.store.CreateAnalysis(ctx, CreateAnalysisInput{
+	analysis, created, err := service.store.CreateAnalysisWithJob(ctx, CreateAnalysisInput{
 		ID: id, ActorUserID: actor.User.ID, IdempotencyKey: idempotencyKey, ExpiresAt: now.Add(service.retention),
-	}, now.Truncate(AnalysisWindow), service.maximumRate)
+	}, now.Truncate(AnalysisWindow), service.maximumRate, service.jobs)
 	if err != nil {
 		outcome := auth.AuditOutcomeFailure
 		if errors.Is(err, ErrRateLimited) || errors.Is(err, ErrConflict) {
@@ -105,18 +105,34 @@ func (service *Service) StartAnalysis(ctx context.Context, actor auth.Session, i
 		return Analysis{}, err
 	}
 	if !created {
+		if analysis.RiverJobID == 0 && !analysis.State.Terminal() {
+			return service.enqueueAnalysis(ctx, actor, analysis, requestID)
+		}
 		return analysis, nil
 	}
+	service.audit(ctx, &actor.User.ID, &analysis.ID, nil, AuditAnalysisCreated, auth.AuditOutcomeSuccess, nil, nil, "", requestID)
+	return analysis, nil
+}
+
+func (service *Service) enqueueAnalysis(ctx context.Context, actor auth.Session, analysis Analysis, requestID string) (Analysis, error) {
 	jobID, err := service.jobs.EnqueueAnalysis(ctx, analysis.ID)
 	if err != nil {
-		_ = service.store.FailAnalysis(ctx, analysis.ID, "queue_unavailable", AnalysisFailed, now)
+		if analysis.State == AnalysisQueued {
+			_ = service.store.FailAnalysis(ctx, analysis.ID, "queue_unavailable", AnalysisFailed, service.now().UTC())
+		}
 		service.audit(ctx, &actor.User.ID, &analysis.ID, nil, AuditAnalysisFailed, auth.AuditOutcomeFailure, nil, nil, "queue_unavailable", requestID)
 		return Analysis{}, fmt.Errorf("enqueue matching analysis: %w", err)
 	}
 	analysis, err = service.store.AttachAnalysisJob(ctx, analysis.ID, actor.User.ID, jobID)
 	if err != nil {
+		if errors.Is(err, ErrConflict) {
+			current, currentErr := service.store.GetAnalysis(ctx, analysis.ID, actor.User.ID)
+			if currentErr == nil && current.RiverJobID > 0 {
+				return current, nil
+			}
+		}
 		_ = service.jobs.Cancel(ctx, jobID)
-		_ = service.store.FailAnalysis(ctx, analysis.ID, "queue_conflict", AnalysisFailed, now)
+		_ = service.store.FailAnalysis(ctx, analysis.ID, "queue_conflict", AnalysisFailed, service.now().UTC())
 		return Analysis{}, err
 	}
 	service.audit(ctx, &actor.User.ID, &analysis.ID, nil, AuditAnalysisCreated, auth.AuditOutcomeSuccess, nil, nil, "", requestID)
@@ -217,7 +233,6 @@ func (service *Service) DismissCase(ctx context.Context, actor auth.Session, id 
 		service.audit(ctx, &actor.User.ID, nil, &id, AuditCaseDismissed, auditOutcome(err), nil, nil, publicErrorCode(err), requestID)
 		return Case{}, err
 	}
-	service.audit(ctx, &actor.User.ID, nil, &id, AuditCaseDismissed, auth.AuditOutcomeSuccess, &value.ScoreBand, nil, "", requestID)
 	return value, nil
 }
 
@@ -256,8 +271,6 @@ func (service *Service) Merge(ctx context.Context, actor auth.Session, input Mer
 		service.audit(ctx, &actor.User.ID, nil, &input.CaseID, AuditMergeDenied, auditOutcome(err), nil, nil, publicErrorCode(err), requestID)
 		return MergeResult{}, err
 	}
-	affected := 1
-	service.audit(ctx, &actor.User.ID, nil, &input.CaseID, AuditMergeCompleted, auth.AuditOutcomeSuccess, nil, &affected, "", requestID)
 	return result, nil
 }
 
@@ -274,10 +287,16 @@ func canMerge(actor auth.Session) bool {
 }
 
 func normalizeCaseListOptions(options CaseListOptions) (CaseListOptions, error) {
+	if options.Sort == "" {
+		options.Sort = CaseSortScore
+	}
+	if options.Order == "" {
+		options.Order = SortDescending
+	}
 	if options.Limit == 0 {
 		options.Limit = MaximumCasePageSize
 	}
-	if options.Limit < 1 || options.Limit > MaximumCasePageSize || options.Offset < 0 || options.Offset > 10_000 {
+	if !options.Sort.Valid() || !options.Order.Valid() || options.Limit < 1 || options.Limit > MaximumCasePageSize || options.Offset < 0 || options.Offset > 10_000 {
 		return CaseListOptions{}, ErrInvalidInput
 	}
 	if len(options.States) == 0 {

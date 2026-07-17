@@ -60,12 +60,17 @@ type matchingMergeRequest struct {
 }
 
 type matchingCatalogResponse struct {
-	Evidence                 []matching.EvidenceDefinition `json:"evidence"`
-	CanMerge                 bool                          `json:"can_merge"`
-	MaximumCandidates        int                           `json:"maximum_candidates"`
-	MaximumPageSize          int                           `json:"maximum_page_size"`
-	MaximumAnalysesPerWindow int                           `json:"maximum_analyses_per_window"`
-	AnalysisWindowSeconds    int                           `json:"analysis_window_seconds"`
+	Evidence                 []matchingEvidenceDefinitionResponse `json:"evidence"`
+	CanMerge                 bool                                 `json:"can_merge"`
+	MaximumCandidates        int                                  `json:"maximum_candidates"`
+	MaximumPageSize          int                                  `json:"maximum_page_size"`
+	MaximumAnalysesPerWindow int                                  `json:"maximum_analyses_per_window"`
+	AnalysisWindowSeconds    int                                  `json:"analysis_window_seconds"`
+}
+
+type matchingEvidenceDefinitionResponse struct {
+	Kind  matching.EvidenceKind `json:"kind"`
+	Label string                `json:"label"`
 }
 
 type matchingAnalysisResponse struct {
@@ -148,26 +153,36 @@ type matchingMergeFieldResponse struct {
 	SelectedSource matching.FieldSource `json:"selected_source,omitempty"`
 }
 
+type matchingDependencyCountResponse struct {
+	Kind  string `json:"kind"`
+	Count int    `json:"count"`
+}
+
+type matchingDependencyConflictResponse struct {
+	Kind  string `json:"kind"`
+	Count int    `json:"count"`
+}
+
 type matchingMergePreviewResponse struct {
-	CaseID               string                        `json:"case_id"`
-	Survivor             matchingProfileResponse       `json:"survivor"`
-	Source               matchingProfileResponse       `json:"source"`
-	Fields               []matchingMergeFieldResponse  `json:"fields"`
-	Dependencies         []matching.DependencyCount    `json:"dependencies"`
-	Conflicts            []matching.DependencyConflict `json:"conflicts"`
-	UnresolvedFieldCount int                           `json:"unresolved_field_count"`
-	PreviewFingerprint   string                        `json:"preview_fingerprint"`
-	Confirmation         string                        `json:"confirmation"`
-	GeneratedAt          time.Time                     `json:"generated_at"`
+	CaseID               string                               `json:"case_id"`
+	Survivor             matchingProfileResponse              `json:"survivor"`
+	Source               matchingProfileResponse              `json:"source"`
+	Fields               []matchingMergeFieldResponse         `json:"fields"`
+	Dependencies         []matchingDependencyCountResponse    `json:"dependencies"`
+	Conflicts            []matchingDependencyConflictResponse `json:"conflicts"`
+	UnresolvedFieldCount int                                  `json:"unresolved_field_count"`
+	PreviewFingerprint   string                               `json:"preview_fingerprint"`
+	Confirmation         string                               `json:"confirmation"`
+	GeneratedAt          time.Time                            `json:"generated_at"`
 }
 
 type matchingMergeResultResponse struct {
-	CaseID            string                     `json:"case_id"`
-	SurvivorProfileID string                     `json:"survivor_profile_id"`
-	SourceProfileID   string                     `json:"source_profile_id"`
-	SurvivorVersion   int64                      `json:"survivor_version"`
-	MovedDependencies []matching.DependencyCount `json:"moved_dependencies"`
-	MergedAt          time.Time                  `json:"merged_at"`
+	CaseID            string                            `json:"case_id"`
+	SurvivorProfileID string                            `json:"survivor_profile_id"`
+	SourceProfileID   string                            `json:"source_profile_id"`
+	SurvivorVersion   int64                             `json:"survivor_version"`
+	MovedDependencies []matchingDependencyCountResponse `json:"moved_dependencies"`
+	MergedAt          time.Time                         `json:"merged_at"`
 }
 
 func registerMatchingRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service matchingService) {
@@ -181,8 +196,12 @@ func registerMatchingRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			writeMatchingError(w, r, logger, "read Matching catalog", err)
 			return
 		}
+		evidence := make([]matchingEvidenceDefinitionResponse, 0, len(catalog))
+		for _, definition := range catalog {
+			evidence = append(evidence, matchingEvidenceDefinitionResponse{Kind: definition.Kind, Label: definition.Label})
+		}
 		writeJSON(w, http.StatusOK, matchingCatalogResponse{
-			Evidence: catalog, CanMerge: actor.User.Role.CanMergeProfiles(), MaximumCandidates: matching.MaximumCandidates,
+			Evidence: evidence, CanMerge: actor.User.Role.CanMergeProfiles(), MaximumCandidates: matching.MaximumCandidates,
 			MaximumPageSize: matching.MaximumCasePageSize, MaximumAnalysesPerWindow: matching.MaximumAnalysisRate,
 			AnalysisWindowSeconds: int(matching.AnalysisWindow.Seconds()),
 		})
@@ -355,7 +374,7 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 		}
 		writeJSON(w, http.StatusOK, matchingMergeResultResponse{
 			CaseID: value.CaseID.String(), SurvivorProfileID: value.SurvivorProfileID.String(), SourceProfileID: value.SourceProfileID.String(),
-			SurvivorVersion: value.SurvivorVersion, MovedDependencies: value.MovedDependencies, MergedAt: value.MergedAt,
+			SurvivorVersion: value.SurvivorVersion, MovedDependencies: matchingDependencyCounts(value.MovedDependencies), MergedAt: value.MergedAt,
 		})
 	})
 }
@@ -434,6 +453,9 @@ func matchingCaseOptions(r *http.Request) (matching.CaseListOptions, *Problem) {
 			*destination = value
 		}
 	}
+	if limit < 1 || limit > matching.MaximumCasePageSize || offset < 0 || offset > 10_000 {
+		return matching.CaseListOptions{}, &Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Paginação de matching inválida"}
+	}
 	states := make([]matching.CaseState, 0)
 	for _, raw := range splitMatchingFilter(r.URL.Query().Get("state")) {
 		states = append(states, matching.CaseState(raw))
@@ -442,7 +464,18 @@ func matchingCaseOptions(r *http.Request) (matching.CaseListOptions, *Problem) {
 	for _, raw := range splitMatchingFilter(r.URL.Query().Get("score_band")) {
 		bands = append(bands, matching.ScoreBand(raw))
 	}
-	return matching.CaseListOptions{States: states, Bands: bands, Limit: limit, Offset: offset}, nil
+	sort := matching.CaseSort(strings.ToLower(strings.TrimSpace(r.URL.Query().Get("sort"))))
+	if sort == "" {
+		sort = matching.CaseSortScore
+	}
+	order := matching.SortOrder(strings.ToLower(strings.TrimSpace(r.URL.Query().Get("order"))))
+	if order == "" {
+		order = matching.SortDescending
+	}
+	if !sort.Valid() || !order.Valid() {
+		return matching.CaseListOptions{}, &Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Ordenação de matching inválida"}
+	}
+	return matching.CaseListOptions{States: states, Bands: bands, Sort: sort, Order: order, Limit: limit, Offset: offset}, nil
 }
 
 func splitMatchingFilter(value string) []string {
@@ -515,8 +548,8 @@ func matchingProfileFromDomain(value matching.ProfileSnapshot, detailed bool) ma
 func matchingPreviewFromDomain(value matching.MergePreview) matchingMergePreviewResponse {
 	response := matchingMergePreviewResponse{
 		CaseID: value.CaseID.String(), Survivor: matchingProfileFromDomain(value.Survivor, true), Source: matchingProfileFromDomain(value.Source, true),
-		Fields: make([]matchingMergeFieldResponse, 0, len(value.Fields)), Dependencies: value.Dependencies,
-		Conflicts: value.Conflicts, UnresolvedFieldCount: value.UnresolvedFieldCount,
+		Fields: make([]matchingMergeFieldResponse, 0, len(value.Fields)), Dependencies: matchingDependencyCounts(value.Dependencies),
+		Conflicts: matchingDependencyConflicts(value.Conflicts), UnresolvedFieldCount: value.UnresolvedFieldCount,
 		PreviewFingerprint: hex.EncodeToString(value.PreviewFingerprint[:]), Confirmation: value.Confirmation, GeneratedAt: value.GeneratedAt,
 	}
 	for _, field := range value.Fields {
@@ -526,6 +559,22 @@ func matchingPreviewFromDomain(value matching.MergePreview) matchingMergePreview
 		})
 	}
 	return response
+}
+
+func matchingDependencyCounts(values []matching.DependencyCount) []matchingDependencyCountResponse {
+	result := make([]matchingDependencyCountResponse, 0, len(values))
+	for _, value := range values {
+		result = append(result, matchingDependencyCountResponse{Kind: value.Kind, Count: value.Count})
+	}
+	return result
+}
+
+func matchingDependencyConflicts(values []matching.DependencyConflict) []matchingDependencyConflictResponse {
+	result := make([]matchingDependencyConflictResponse, 0, len(values))
+	for _, value := range values {
+		result = append(result, matchingDependencyConflictResponse{Kind: value.Kind, Count: value.Count})
+	}
+	return result
 }
 
 func writeMatchingError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, operation string, err error) {

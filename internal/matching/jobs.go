@@ -63,6 +63,28 @@ func (jobs *RiverJobs) EnqueueAnalysis(ctx context.Context, id Identifier) (int6
 	return result.Job.ID, nil
 }
 
+func (jobs *RiverJobs) EnqueueAnalysisTx(ctx context.Context, tx pgx.Tx, id Identifier) (int64, error) {
+	if tx == nil || id.IsZero() {
+		return 0, ErrInvalidInput
+	}
+	client, err := jobs.readyClient()
+	if err != nil {
+		return 0, err
+	}
+	result, err := client.InsertTx(ctx, tx, AnalysisArgs{AnalysisID: id.String()}, &river.InsertOpts{
+		MaxAttempts: 5,
+		Queue:       Queue,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("enqueue matching analysis transaction: %w", err)
+	}
+	if result == nil || result.Job == nil || result.Job.ID <= 0 {
+		return 0, fmt.Errorf("enqueue matching analysis transaction: %w", ErrInvalidState)
+	}
+	return result.Job.ID, nil
+}
+
 func (jobs *RiverJobs) Cancel(ctx context.Context, jobID int64) error {
 	if jobID <= 0 {
 		return ErrInvalidInput

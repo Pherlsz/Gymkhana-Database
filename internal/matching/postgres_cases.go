@@ -46,6 +46,7 @@ func (store *PostgresStore) ListCases(ctx context.Context, options CaseListOptio
 	if err != nil {
 		return CasePage{}, err
 	}
+	selectedOrder, outerOrder := matchingCaseOrder(normalized.Sort, normalized.Order)
 	states := make([]string, len(normalized.States))
 	for index, state := range normalized.States {
 		states[index] = string(state)
@@ -62,12 +63,12 @@ WHERE state=ANY($1::text[]) AND (cardinality($2::text[])=0 OR score_band=ANY($2:
 	rows, err := store.pool.Query(ctx, `WITH selected AS (
   SELECT * FROM matching_cases
   WHERE state=ANY($1::text[]) AND (cardinality($2::text[])=0 OR score_band=ANY($2::text[]))
-  ORDER BY score DESC, updated_at DESC, id DESC
+  ORDER BY `+selectedOrder+`
   LIMIT $3 OFFSET $4
 )
 SELECT `+caseDetailColumns+`
 FROM selected matching_case`+caseDetailJoins+`
-ORDER BY matching_case.score DESC, matching_case.updated_at DESC, matching_case.id DESC, evidence.evidence_kind`,
+ORDER BY `+outerOrder+`, evidence.evidence_kind`,
 		states, bands, normalized.Limit, normalized.Offset)
 	if err != nil {
 		return CasePage{}, fmt.Errorf("list matching cases: %w", err)
@@ -77,6 +78,24 @@ ORDER BY matching_case.score DESC, matching_case.updated_at DESC, matching_case.
 		return CasePage{}, err
 	}
 	return CasePage{Cases: values, Total: total, Limit: normalized.Limit, Offset: normalized.Offset}, nil
+}
+
+func matchingCaseOrder(sort CaseSort, order SortOrder) (string, string) {
+	direction := "DESC"
+	if order == SortAscending {
+		direction = "ASC"
+	}
+	switch sort {
+	case CaseSortUpdatedAt:
+		return "updated_at " + direction + ", id " + direction,
+			"matching_case.updated_at " + direction + ", matching_case.id " + direction
+	case CaseSortCreatedAt:
+		return "created_at " + direction + ", id " + direction,
+			"matching_case.created_at " + direction + ", matching_case.id " + direction
+	default:
+		return "score " + direction + ", updated_at DESC, id DESC",
+			"matching_case.score " + direction + ", matching_case.updated_at DESC, matching_case.id DESC"
+	}
 }
 
 func (store *PostgresStore) GetCase(ctx context.Context, id Identifier) (Case, error) {
@@ -192,15 +211,16 @@ func (store *PostgresStore) DismissCase(ctx context.Context, id Identifier, acto
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
 	var state CaseState
+	var band ScoreBand
 	var storedVersion, leftVersion, rightVersion, currentLeftVersion, currentRightVersion int64
-	err = tx.QueryRow(ctx, `SELECT matching_case.state, matching_case.version,
+	err = tx.QueryRow(ctx, `SELECT matching_case.state, matching_case.score_band, matching_case.version,
        matching_case.left_profile_version, matching_case.right_profile_version,
        left_profile.version, right_profile.version
 FROM matching_cases matching_case
 JOIN profiles left_profile ON left_profile.id=matching_case.left_profile_id
 JOIN profiles right_profile ON right_profile.id=matching_case.right_profile_id
 WHERE matching_case.id=$1 FOR UPDATE OF matching_case, left_profile, right_profile`, matchingUUID(id)).Scan(
-		&state, &storedVersion, &leftVersion, &rightVersion, &currentLeftVersion, &currentRightVersion)
+		&state, &band, &storedVersion, &leftVersion, &rightVersion, &currentLeftVersion, &currentRightVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Case{}, ErrNotFound
 	}
@@ -231,6 +251,16 @@ WHERE id=$1 AND version=$4`, matchingUUID(id), matchingAuthUUID(actorID), now, v
 VALUES($1,$2,$3,'NOT_DUPLICATE',$4,$5,$6,$7)`,
 		matchingUUID(decisionID), matchingUUID(id), matchingAuthUUID(actorID), leftVersion, rightVersion, requestID, now); err != nil {
 		return Case{}, fmt.Errorf("record matching dismissal decision: %w", err)
+	}
+	auditID, err := NewIdentifier()
+	if err != nil {
+		return Case{}, fmt.Errorf("generate matching dismissal audit identifier: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO matching_audit_events
+(id,actor_user_id,case_id,event_type,outcome,score_band,request_id,created_at)
+VALUES($1,$2,$3,'CASE_DISMISSED','SUCCESS',$4,$5,$6)`, matchingUUID(auditID), matchingAuthUUID(actorID),
+		matchingUUID(id), band, requestID, now); err != nil {
+		return Case{}, fmt.Errorf("record matching dismissal audit: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return Case{}, normalizePostgresError(err)

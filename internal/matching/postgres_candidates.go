@@ -106,6 +106,14 @@ const candidateEvidenceQuery = `WITH exact_pairs AS (
   SELECT left_id, right_id, left_version, right_version, least(100,raw_score)::integer AS score
   FROM raw_scores
   WHERE raw_score >= 50
+    AND NOT EXISTS (
+      SELECT 1 FROM matching_cases reviewed_case
+      WHERE reviewed_case.left_profile_id=raw_scores.left_id
+        AND reviewed_case.right_profile_id=raw_scores.right_id
+        AND reviewed_case.left_profile_version=raw_scores.left_version
+        AND reviewed_case.right_profile_version=raw_scores.right_version
+        AND reviewed_case.state='NOT_DUPLICATE'
+    )
   ORDER BY least(100,raw_score) DESC, left_id, right_id
   LIMIT $1
 )
@@ -277,6 +285,16 @@ VALUES($1,$2,false) ON CONFLICT (analysis_id,case_id) DO NOTHING`, matchingUUID(
 		if _, err := tx.Exec(ctx, `INSERT INTO matching_analysis_cases(analysis_id,case_id,refreshed)
 VALUES($1,$2,false) ON CONFLICT (analysis_id,case_id) DO NOTHING`, matchingUUID(analysisID), caseID); err != nil {
 			return false, fmt.Errorf("link suppressed matching case to analysis: %w", err)
+		}
+		return false, nil
+	}
+	if !created && !versionsChanged {
+		if oldState != CasePending || oldScore != candidate.Score {
+			return false, ErrInvalidState
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO matching_analysis_cases(analysis_id,case_id,refreshed)
+VALUES($1,$2,false) ON CONFLICT (analysis_id,case_id) DO NOTHING`, matchingUUID(analysisID), caseID); err != nil {
+			return false, fmt.Errorf("link unchanged matching case to analysis: %w", err)
 		}
 		return false, nil
 	}

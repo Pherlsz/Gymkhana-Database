@@ -256,9 +256,32 @@ type AnalysisStats struct {
 type CaseListOptions struct {
 	States []CaseState
 	Bands  []ScoreBand
+	Sort   CaseSort
+	Order  SortOrder
 	Limit  int
 	Offset int
 }
+
+type CaseSort string
+
+const (
+	CaseSortScore     CaseSort = "score"
+	CaseSortUpdatedAt CaseSort = "updated_at"
+	CaseSortCreatedAt CaseSort = "created_at"
+)
+
+func (value CaseSort) Valid() bool {
+	return value == CaseSortScore || value == CaseSortUpdatedAt || value == CaseSortCreatedAt
+}
+
+type SortOrder string
+
+const (
+	SortAscending  SortOrder = "asc"
+	SortDescending SortOrder = "desc"
+)
+
+func (value SortOrder) Valid() bool { return value == SortAscending || value == SortDescending }
 
 type CasePage struct {
 	Cases  []Case

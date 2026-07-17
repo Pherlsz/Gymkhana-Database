@@ -61,6 +61,29 @@ func scanAnalysis(row rowScanner) (Analysis, error) {
 }
 
 func (store *PostgresStore) CreateAnalysis(ctx context.Context, input CreateAnalysisInput, window time.Time, maximumRate int) (Analysis, bool, error) {
+	return store.createAnalysis(ctx, input, window, maximumRate, nil)
+}
+
+func (store *PostgresStore) CreateAnalysisWithJob(
+	ctx context.Context,
+	input CreateAnalysisInput,
+	window time.Time,
+	maximumRate int,
+	jobs AnalysisJobInserter,
+) (Analysis, bool, error) {
+	if jobs == nil {
+		return Analysis{}, false, ErrInvalidInput
+	}
+	return store.createAnalysis(ctx, input, window, maximumRate, jobs)
+}
+
+func (store *PostgresStore) createAnalysis(
+	ctx context.Context,
+	input CreateAnalysisInput,
+	window time.Time,
+	maximumRate int,
+	jobs AnalysisJobInserter,
+) (Analysis, bool, error) {
 	if store == nil || store.pool == nil || input.ID.IsZero() || input.ActorUserID == (auth.Identifier{}) ||
 		!validIdempotencyKey(input.IdempotencyKey) || input.ExpiresAt.IsZero() || window.IsZero() || maximumRate < 1 {
 		return Analysis{}, false, ErrInvalidInput
@@ -70,6 +93,12 @@ func (store *PostgresStore) CreateAnalysis(ctx context.Context, input CreateAnal
 		return Analysis{}, false, fmt.Errorf("begin matching analysis creation: %w", err)
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
+	var actorExists bool
+	if err := tx.QueryRow(ctx, `SELECT true FROM app_users WHERE id=$1 FOR UPDATE`, matchingAuthUUID(input.ActorUserID)).Scan(&actorExists); errors.Is(err, pgx.ErrNoRows) {
+		return Analysis{}, false, ErrForbidden
+	} else if err != nil {
+		return Analysis{}, false, fmt.Errorf("serialize matching analysis creation: %w", err)
+	}
 	existing, err := scanAnalysis(tx.QueryRow(ctx, analysisSelect+` WHERE actor_user_id=$1 AND idempotency_key=$2 FOR UPDATE`, matchingAuthUUID(input.ActorUserID), input.IdempotencyKey))
 	if err == nil {
 		if err := tx.Commit(ctx); err != nil {
@@ -103,6 +132,22 @@ RETURNING id, actor_user_id, idempotency_key, state, river_job_id,
 		matchingUUID(input.ID), matchingAuthUUID(input.ActorUserID), input.IdempotencyKey, input.ExpiresAt))
 	if err != nil {
 		return Analysis{}, false, normalizePostgresError(err)
+	}
+	if jobs != nil {
+		jobID, enqueueErr := jobs.EnqueueAnalysisTx(ctx, tx, input.ID)
+		if enqueueErr != nil {
+			return Analysis{}, false, fmt.Errorf("enqueue matching analysis transactionally: %w", enqueueErr)
+		}
+		created, err = scanAnalysis(tx.QueryRow(ctx, `UPDATE matching_analyses
+SET river_job_id=$2, version=version+1, updated_at=now()
+WHERE id=$1 AND river_job_id IS NULL
+RETURNING id, actor_user_id, idempotency_key, state, river_job_id,
+          profiles_scanned, candidate_count, refreshed_count, error_code,
+          cancel_requested_at, started_at, completed_at, expires_at, version, created_at, updated_at`,
+			matchingUUID(input.ID), jobID))
+		if err != nil {
+			return Analysis{}, false, fmt.Errorf("attach transactional matching analysis job: %w", err)
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return Analysis{}, false, normalizePostgresError(err)
