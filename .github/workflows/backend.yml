@@ -47,6 +47,24 @@ jobs:
         env:
           GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
 
+      - name: Normalize Go module metadata
+        id: modules
+        continue-on-error: true
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      - name: Preserve normalized Go module metadata
+        if: ${{ steps.modules.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: normalized-go-module-metadata
+          path: |
+            go.mod
+            go.sum
+          retention-days: 1
+          if-no-files-found: error
+
       - name: Download dependencies
         run: go mod download
 
@@ -109,6 +127,10 @@ jobs:
       - name: Build executables
         run: go build ./cmd/...
 
+      - name: Fail when Go module metadata differs
+        if: ${{ steps.modules.outcome == 'failure' }}
+        run: exit 1
+
       - name: Run Staticcheck
         if: ${{ (github.event_name == 'workflow_dispatch' && inputs.full) || (github.event_name == 'pull_request' && github.event.action != 'synchronize') }}
         run: |
@@ -153,9 +175,9 @@ jobs:
           GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Apply migrations
-        run: go run github.com/jackc/tern/v2@v2.4.1 migrate --migrations database/migrations --config database/tern.conf
+        run: make migrate
 
       - name: Run PostgreSQL integration tests
-        run: go test -tags=integration ./internal/attachment ./internal/search
+        run: go test -tags=integration ./internal/attachment ./internal/search ./internal/operations
         env:
           DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
