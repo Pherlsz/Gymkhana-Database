@@ -531,19 +531,24 @@ SET profile_id=$2, version=version+1, updated_at=$3 WHERE id=$1`, matchingUUID(*
 
 func moveProfileDependencies(ctx context.Context, tx pgx.Tx, sourceID, survivorID Identifier, now time.Time) error {
 	statements := []struct {
-		query string
-		name  string
+		query     string
+		name      string
+		updatedAt bool
 	}{
-		{`UPDATE documents SET owner_profile_id=$2,version=version+1,updated_at=$3 WHERE owner_profile_id=$1`, "document owners"},
-		{`UPDATE document_current_uses SET holder_profile_id=$2 WHERE holder_profile_id=$1`, "document holders"},
-		{`UPDATE bills SET owner_profile_id=$2,version=version+1,updated_at=$3 WHERE owner_profile_id=$1`, "bill owners"},
-		{`UPDATE bill_current_uses SET holder_profile_id=$2 WHERE holder_profile_id=$1`, "bill holders"},
-		{`UPDATE custom_entities SET owner_profile_id=$2,version=version+1,updated_at=$3 WHERE owner_profile_id=$1`, "custom entity owners"},
-		{`UPDATE attachment_upload_intents SET custom_profile_id=$2 WHERE custom_profile_id=$1`, "attachment intents"},
-		{`UPDATE attachments SET custom_profile_id=$2,version=version+1,updated_at=$3 WHERE custom_profile_id=$1`, "attachments"},
+		{`UPDATE documents SET owner_profile_id=$2,version=version+1,updated_at=$3 WHERE owner_profile_id=$1`, "document owners", true},
+		{`UPDATE document_current_uses SET holder_profile_id=$2 WHERE holder_profile_id=$1`, "document holders", false},
+		{`UPDATE bills SET owner_profile_id=$2,version=version+1,updated_at=$3 WHERE owner_profile_id=$1`, "bill owners", true},
+		{`UPDATE bill_current_uses SET holder_profile_id=$2 WHERE holder_profile_id=$1`, "bill holders", false},
+		{`UPDATE custom_entities SET owner_profile_id=$2,version=version+1,updated_at=$3 WHERE owner_profile_id=$1`, "custom entity owners", true},
+		{`UPDATE attachment_upload_intents SET custom_profile_id=$2 WHERE custom_profile_id=$1`, "attachment intents", false},
+		{`UPDATE attachments SET custom_profile_id=$2,version=version+1,updated_at=$3 WHERE custom_profile_id=$1`, "attachments", true},
 	}
 	for _, statement := range statements {
-		if _, err := tx.Exec(ctx, statement.query, matchingUUID(sourceID), matchingUUID(survivorID), now); err != nil {
+		arguments := []any{matchingUUID(sourceID), matchingUUID(survivorID)}
+		if statement.updatedAt {
+			arguments = append(arguments, now)
+		}
+		if _, err := tx.Exec(ctx, statement.query, arguments...); err != nil {
 			return fmt.Errorf("move merged Profile %s: %w", statement.name, normalizePostgresError(err))
 		}
 	}
