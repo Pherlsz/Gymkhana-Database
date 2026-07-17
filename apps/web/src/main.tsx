@@ -4,7 +4,6 @@ import { ThemeProvider } from "@pherlsz/gymkhana-ui";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
-import { ProfileAttachmentsBridge } from "./ProfileAttachmentsPortal";
 import "./styles.css";
 import "./attachments.css";
 
@@ -18,7 +17,6 @@ createRoot(root).render(
   <StrictMode>
     <ThemeProvider density="comfortable" theme="system">
       <App />
-      <ProfileAttachmentsBridge />
     </ThemeProvider>
   </StrictMode>,
 );
