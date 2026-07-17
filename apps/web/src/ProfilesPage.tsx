@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DataGrid, DataGridPagination } from "./DataGrid";
 import { ProfileRecordsPanel } from "./ProfileRecordsPanel";
 import { profilesRoute, useApplicationSession } from "./App";
+import { bulkDeleteOperationRecords } from "./lib/api/operations";
 import {
   APIRequestError,
   createProfile,
@@ -136,6 +137,24 @@ export function ProfilesPage() {
   const navigate = profilesRoute.useNavigate();
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState<string | null>(null);
+  const [bulkSelection, setBulkSelection] = useState<Set<string>>(new Set());
+  const [bulkConfirmation, setBulkConfirmation] = useState("");
+  useEffect(() => {
+    // Selection is intentionally page-scoped. Mobile cards remain read-only,
+    // and moving to another result set must not leave invisible destructive scope.
+    setBulkSelection(new Set());
+    setBulkConfirmation("");
+  }, [
+    search.page,
+    search.limit,
+    search.sort,
+    search.order,
+    search.full_name,
+    search.cpf,
+    search.email,
+    search.city,
+    search.state,
+  ]);
   const query = useQuery({
     queryKey: ["profiles", search],
     queryFn: ({ signal }) => listProfiles(search, signal),
@@ -164,6 +183,23 @@ export function ProfilesPage() {
       await refresh();
       setNotice("Pessoa excluída permanentemente.");
       updateSearch({ selected: undefined, mode: undefined });
+    },
+  });
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async () => {
+      const current = new Map(query.data?.profiles.map((value) => [value.id, value]) ?? []);
+      const items = [...bulkSelection].map((id) => {
+        const value = current.get(id);
+        if (!value) throw new Error("A seleção mudou. Selecione os registros novamente.");
+        return { id: value.id, version: value.version };
+      });
+      return bulkDeleteOperationRecords("PROFILES", items, bulkConfirmation);
+    },
+    onSuccess: async (result) => {
+      setBulkSelection(new Set());
+      setBulkConfirmation("");
+      setNotice(`${result.deleted} pessoa(s) excluída(s) permanentemente.`);
+      await refresh();
     },
   });
   const columns = useMemo(
@@ -237,10 +273,64 @@ export function ProfilesPage() {
                 onOpen={() => updateSearch({ selected: value.id, mode: "view" })}
               />
             )}
+            selection={
+              canDelete
+                ? {
+                    selectedIds: bulkSelection,
+                    onChange: (selectedIds) => {
+                      setBulkSelection(selectedIds);
+                      setBulkConfirmation("");
+                      bulkDeleteMutation.reset();
+                    },
+                    rowLabel: (value) => value.full_name,
+                  }
+                : undefined
+            }
             selectedRowId={search.selected}
             tableClassName="profiles-table"
             tableWrapClassName="profiles-table-wrap"
           />
+          {canDelete && bulkSelection.size > 0 ? (
+            <Surface className="profiles-bulk-delete" tone="raised">
+              <Stack gap="3">
+                <strong>Excluir {bulkSelection.size} pessoa(s) selecionada(s)</strong>
+                <span className="authentication-panel__description">
+                  A seleção não altera dados. Para excluir toda a seleção em uma única transação,
+                  digite Confirmar.
+                </span>
+                <label>
+                  Confirmação
+                  <input
+                    autoComplete="off"
+                    value={bulkConfirmation}
+                    onChange={(event) => setBulkConfirmation(event.target.value)}
+                  />
+                </label>
+                {bulkDeleteMutation.isError ? (
+                  <Alert title="Nenhuma pessoa foi excluída" tone="danger">
+                    {errorMessage(bulkDeleteMutation.error)}
+                  </Alert>
+                ) : null}
+                <Inline>
+                  <Button
+                    disabled={bulkConfirmation !== "Confirmar" || bulkDeleteMutation.isPending}
+                    onClick={() => bulkDeleteMutation.mutate()}
+                  >
+                    Excluir seleção
+                  </Button>
+                  <Button
+                    disabled={bulkDeleteMutation.isPending}
+                    onClick={() => {
+                      setBulkSelection(new Set());
+                      setBulkConfirmation("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </Inline>
+              </Stack>
+            </Surface>
+          ) : null}
           <DataGridPagination
             label="pessoas"
             onPage={(page) => updateSearch({ page })}
