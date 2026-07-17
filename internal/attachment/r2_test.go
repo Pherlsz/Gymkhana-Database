@@ -49,6 +49,33 @@ func TestR2PresignUploadUsesOpaquePrivateObjectPath(t *testing.T) {
 	}
 }
 
+func TestR2OperationUploadSignsDeclaredContentLength(t *testing.T) {
+	store, err := NewR2Store(R2Options{
+		Endpoint:        "https://account.r2.cloudflarestorage.com",
+		Bucket:          "private-files",
+		AccessKeyID:     "access-key",
+		SecretAccessKey: "secret-key",
+		Now:             func() time.Time { return time.Date(2026, time.July, 17, 3, 0, 0, 0, time.UTC) },
+	})
+	if err != nil {
+		t.Fatalf("NewR2Store() error = %v", err)
+	}
+	signed, err := store.PresignOperationUpload(context.Background(), "operations/imports/object", 12345, 10*time.Minute)
+	if err != nil {
+		t.Fatalf("PresignOperationUpload() error = %v", err)
+	}
+	parsed, err := url.Parse(signed.URL)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+	if signed.Headers["Content-Length"] != "12345" {
+		t.Fatalf("content-length header = %q", signed.Headers["Content-Length"])
+	}
+	if headers := parsed.Query().Get("X-Amz-SignedHeaders"); !strings.Contains(headers, "content-length") {
+		t.Fatalf("signed headers = %q", headers)
+	}
+}
+
 func TestR2PresignDownloadSetsResponseMetadata(t *testing.T) {
 	store, err := NewR2Store(R2Options{
 		Endpoint:        "https://account.r2.cloudflarestorage.com",
