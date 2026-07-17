@@ -57,7 +57,9 @@ build-frontend:
 generate: generate-go generate-ts generate-sql
 
 generate-go:
+	@mkdir -p api/generated/attachments
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-codegen.yaml api/openapi.yaml
+	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-attachments-codegen.yaml api/attachments.openapi.yaml
 
 generate-ts:
 	@$(PNPM) generate:openapi:ts
@@ -66,11 +68,11 @@ generate-sql:
 	@$(GO) run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION) generate -f database/sqlc.yaml
 
 format:
-	@gofmt -w $$(find cmd internal api/generated/go -type f -name '*.go' 2>/dev/null)
+	@gofmt -w $$(find cmd internal api/generated -type f -name '*.go' 2>/dev/null)
 	@$(PNPM) format
 
 format-check:
-	@unformatted="$$(gofmt -l $$(find cmd internal api/generated/go -type f -name '*.go' 2>/dev/null))"; \
+	@unformatted="$$(gofmt -l $$(find cmd internal api/generated -type f -name '*.go' 2>/dev/null))"; \
 	if [ -n "$$unformatted" ]; then echo "Unformatted Go files:"; echo "$$unformatted"; exit 1; fi
 	@$(PNPM) format:check
 

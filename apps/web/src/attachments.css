@@ -1,0 +1,111 @@
+.attachments-panel {
+  margin-block-start: var(--gym-space-4);
+  padding: var(--gym-space-4);
+}
+
+.attachments-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gym-space-4);
+}
+
+.attachments-panel__header h3 {
+  margin: 0;
+}
+
+.attachments-panel__header p,
+.attachments-panel__upload small,
+.attachment-card__metadata span,
+.attachments-panel__empty {
+  color: var(--gym-color-text-muted);
+}
+
+.attachments-panel__header p {
+  margin-block-start: var(--gym-space-1);
+}
+
+.attachments-panel__trash-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gym-space-2);
+  min-block-size: 2.5rem;
+  white-space: nowrap;
+}
+
+.attachments-panel__upload {
+  display: grid;
+  gap: var(--gym-space-2);
+  padding: var(--gym-space-4);
+  border: 1px dashed var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+}
+
+.attachments-panel__upload input[type="file"] {
+  inline-size: 100%;
+  min-block-size: 2.5rem;
+  padding: var(--gym-space-2);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+  color: var(--gym-color-text);
+}
+
+.attachments-panel__progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--gym-space-3);
+}
+
+.attachments-panel__progress progress {
+  inline-size: 100%;
+}
+
+.attachments-panel__list {
+  display: grid;
+  gap: var(--gym-space-3);
+}
+
+.attachment-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gym-space-4);
+  padding: var(--gym-space-4);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+}
+
+.attachment-card__metadata {
+  display: grid;
+  gap: var(--gym-space-1);
+  min-inline-size: 0;
+}
+
+.attachment-card__metadata strong {
+  overflow-wrap: anywhere;
+}
+
+.attachment-card__actions {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 48rem) {
+  .attachments-panel__header,
+  .attachment-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .attachments-panel__trash-toggle {
+    white-space: normal;
+  }
+
+  .attachment-card__actions {
+    justify-content: flex-start;
+  }
+}

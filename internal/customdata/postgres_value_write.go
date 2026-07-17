@@ -36,7 +36,7 @@ func (store *PostgresStore) ReplaceValues(ctx context.Context, target TargetRefe
 		}
 		activeIDs := make([]Identifier, 0, len(definitions))
 		for _, definition := range definitions {
-			if definition.Values.Active {
+			if definition.Values.Active && definition.Values.Kind != FieldAttachment {
 				activeIDs = append(activeIDs, definition.ID)
 			}
 		}
@@ -108,7 +108,7 @@ func (store *PostgresStore) normalizeReplacementValues(ctx context.Context, tx p
 		result = append(result, normalized)
 	}
 	for _, definition := range definitions {
-		if definition.Values.Active && definition.Values.Required {
+		if definition.Values.Active && definition.Values.Required && definition.Values.Kind != FieldAttachment {
 			if _, provided := seen[definition.ID]; !provided {
 				validation.add(definition.Values.TechnicalKey, "required")
 			}

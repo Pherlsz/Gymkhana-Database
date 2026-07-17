@@ -29,6 +29,7 @@ type Options struct {
 	Document       documentService
 	Bill           billService
 	CustomData     customDataService
+	Attachment     attachmentService
 	SecureCookies  bool
 	ApplicationURL string
 }
@@ -72,6 +73,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerDocumentRoutes(mux, logger, settings.Auth, settings.Document)
 	registerBillRoutes(mux, logger, settings.Auth, settings.Bill)
 	registerCustomDataRoutes(mux, logger, settings.Auth, settings.CustomData)
+	registerAttachmentRoutes(mux, logger, settings.Auth, settings.Attachment)
 	mux.HandleFunc("/", fallbackHandler)
 	applicationOrigin := absoluteOrigin(settings.ApplicationURL)
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, browserOriginMiddleware(applicationOrigin, mux)))))
@@ -88,6 +90,7 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), requestIDKey, requestID)))
 	})
 }
+
 func bodyLimitMiddleware(limit int64, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Body != nil {
@@ -96,6 +99,7 @@ func bodyLimitMiddleware(limit int64, next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
 func browserOriginMiddleware(applicationOrigin string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := strings.TrimSpace(r.Header.Get("Origin"))
@@ -123,6 +127,7 @@ func browserOriginMiddleware(applicationOrigin string, next http.Handler) http.H
 		next.ServeHTTP(w, r)
 	})
 }
+
 func absoluteOrigin(value string) string {
 	parsed, err := url.Parse(value)
 	if err != nil || !parsed.IsAbs() || parsed.Host == "" {
@@ -130,6 +135,7 @@ func absoluteOrigin(value string) string {
 	}
 	return (&url.URL{Scheme: strings.ToLower(parsed.Scheme), Host: strings.ToLower(parsed.Host)}).String()
 }
+
 func isSafeMethod(method string) bool {
 	switch method {
 	case http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodTrace:
@@ -138,6 +144,7 @@ func isSafeMethod(method string) bool {
 		return false
 	}
 }
+
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -147,6 +154,7 @@ func securityHeaders(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
 func recoverMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -158,15 +166,18 @@ func recoverMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
 func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
 }
+
 func requestIDFromContext(ctx context.Context) string {
 	requestID, _ := ctx.Value(requestIDKey).(string)
 	return requestID
 }
+
 func newRequestID() string {
 	var value [16]byte
 	if _, err := rand.Read(value[:]); err != nil {

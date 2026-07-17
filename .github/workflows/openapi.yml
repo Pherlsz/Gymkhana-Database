@@ -62,8 +62,15 @@ jobs:
       - name: Regenerate OpenAPI clients
         run: |
           make generate-go generate-ts
-          find api/generated/go -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
-          pnpm exec oxfmt apps/web/src/generated/api.ts --write
+          find api/generated -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
+          pnpm exec oxfmt apps/web/src/generated/api.ts apps/web/src/generated/attachments-api.ts --write
 
       - name: Verify generated files
-        run: git diff --exit-code -- api/generated/go apps/web/src/generated/api.ts
+        shell: bash
+        run: |
+          status="$(git status --porcelain -- api/generated apps/web/src/generated)"
+          if [ -n "$status" ]; then
+            echo "Generated contract drift:"
+            echo "$status"
+            exit 1
+          fi

@@ -1,6 +1,7 @@
 import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "@pherlsz/gymkhana-ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { AttachmentsPanel } from "./AttachmentsPanel";
 import {
   getCustomValues,
   listCustomFields,
@@ -41,6 +42,14 @@ export function CustomValuesPanel(props: Props) {
     () => (fields.data?.fields ?? []).filter((field) => field.active),
     [fields.data?.fields],
   );
+  const scalarFields = useMemo(
+    () => activeFields.filter((field) => field.field_kind !== "ATTACHMENT"),
+    [activeFields],
+  );
+  const attachmentFields = useMemo(
+    () => activeFields.filter((field) => field.field_kind === "ATTACHMENT"),
+    [activeFields],
+  );
 
   useEffect(() => {
     if (values.data) setDraft(draftFromValueSet(values.data));
@@ -53,7 +62,7 @@ export function CustomValuesPanel(props: Props) {
         props.valueTargetKind,
         props.valueTargetId,
         values.data.version,
-        customInputsFromDraft(activeFields, draft),
+        customInputsFromDraft(scalarFields, draft),
       );
     },
     onSuccess: async (updated) => {
@@ -88,50 +97,67 @@ export function CustomValuesPanel(props: Props) {
   }
 
   return (
-    <Surface className="custom-values" tone="raised">
-      <Stack gap="4">
-        <Inline align="center" className="custom-values__header">
-          <div>
-            <strong>Dados personalizados</strong>
-            <p>Campos tipados definidos pela administração.</p>
-          </div>
-          <StatusBadge tone={editing ? "info" : "neutral"}>
-            {editing ? "Editando" : "Somente leitura"}
-          </StatusBadge>
-        </Inline>
-        {save.isError ? (
-          <Alert title="Não foi possível salvar" tone="danger">
-            {customDataError(save.error)}
-          </Alert>
-        ) : null}
-        <CustomFieldInputGrid
-          disabled={!editing || save.isPending}
-          draft={draft}
-          fields={activeFields}
-          onChange={setDraft}
+    <Stack gap="4">
+      {scalarFields.length > 0 ? (
+        <Surface className="custom-values" tone="raised">
+          <Stack gap="4">
+            <Inline align="center" className="custom-values__header">
+              <div>
+                <strong>Dados personalizados</strong>
+                <p>Campos tipados definidos pela administração.</p>
+              </div>
+              <StatusBadge tone={editing ? "info" : "neutral"}>
+                {editing ? "Editando" : "Somente leitura"}
+              </StatusBadge>
+            </Inline>
+            {save.isError ? (
+              <Alert title="Não foi possível salvar" tone="danger">
+                {customDataError(save.error)}
+              </Alert>
+            ) : null}
+            <CustomFieldInputGrid
+              disabled={!editing || save.isPending}
+              draft={draft}
+              fields={scalarFields}
+              onChange={setDraft}
+            />
+            <Inline>
+              {editing ? (
+                <>
+                  <Button disabled={save.isPending} onClick={() => save.mutate()}>
+                    {save.isPending ? "Salvando" : "Salvar dados personalizados"}
+                  </Button>
+                  <Button
+                    disabled={save.isPending}
+                    onClick={() => {
+                      setDraft(values.data ? draftFromValueSet(values.data) : {});
+                      setEditing(false);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setEditing(true)}>Editar dados personalizados</Button>
+              )}
+            </Inline>
+          </Stack>
+        </Surface>
+      ) : null}
+      {attachmentFields.map((field) => (
+        <AttachmentsPanel
+          key={field.id}
+          description="Campo de anexo privado. O arquivo é verificado antes de aparecer no registro."
+          owner={{
+            owner_kind: "CUSTOM_FIELD",
+            owner_id: props.valueTargetId,
+            custom_target_kind: attachmentTargetKind(props.valueTargetKind),
+            field_definition_id: field.id,
+          }}
+          title={field.label}
         />
-        <Inline>
-          {editing ? (
-            <>
-              <Button disabled={save.isPending} onClick={() => save.mutate()}>
-                {save.isPending ? "Salvando" : "Salvar dados personalizados"}
-              </Button>
-              <Button
-                disabled={save.isPending}
-                onClick={() => {
-                  setDraft(values.data ? draftFromValueSet(values.data) : {});
-                  setEditing(false);
-                }}
-              >
-                Cancelar
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setEditing(true)}>Editar dados personalizados</Button>
-          )}
-        </Inline>
-      </Stack>
-    </Surface>
+      ))}
+    </Stack>
   );
 }
 
@@ -171,6 +197,7 @@ function CustomFieldControl(props: {
   });
   const label = `${props.field.label}${props.field.required ? " *" : ""}`;
 
+  if (props.field.field_kind === "ATTACHMENT") return null;
   if (props.field.field_kind === "BOOLEAN") {
     return (
       <label>
@@ -325,6 +352,7 @@ export function draftFromStoredValues(
 }
 
 function inputFromDraft(field: CustomField, value: CustomDraftValue): CustomValueInput[] {
+  if (field.field_kind === "ATTACHMENT") return [];
   const base: CustomValueInput = { field_definition_id: field.id, field_kind: field.field_kind };
   if (field.field_kind === "BOOLEAN") {
     return typeof value === "boolean" ? [{ ...base, boolean: value }] : [];
@@ -365,4 +393,17 @@ export function customDataError(error: unknown): string {
     return error.fieldErrors.map((field) => `${field.field}: ${field.message}`).join(" · ");
   }
   return error instanceof Error ? error.message : "Erro inesperado.";
+}
+
+function attachmentTargetKind(value: CustomValueTargetKind) {
+  switch (value) {
+    case "profile":
+      return "PROFILE" as const;
+    case "document":
+      return "DOCUMENT" as const;
+    case "bill":
+      return "BILL" as const;
+    case "custom_entity":
+      return "CUSTOM_ENTITY" as const;
+  }
 }
