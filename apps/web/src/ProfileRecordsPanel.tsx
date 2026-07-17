@@ -244,8 +244,7 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
           onDelete={(value, confirmation) => deleteMutation.mutate({ value, confirmation })}
         />
       ) : null}
-      {selected &&
-      (search.document_mode === "view" || search.document_mode === "edit") ? (
+      {selected && (search.document_mode === "view" || search.document_mode === "edit") ? (
         <AttachmentsPanel
           key={`document-attachments:${selected.id}`}
           owner={{ owner_kind: "DOCUMENT", owner_id: selected.id }}
