@@ -240,6 +240,7 @@ export function QueryPage() {
     idempotency.current = null;
   };
   const changePlan = () => {
+    setRecoveryIssues([]);
     setResultPage(1);
     execution.reset();
     validation.reset();

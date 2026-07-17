@@ -286,9 +286,6 @@ func (store *PostgresStore) ExecuteReadOnly(ctx context.Context, plan CompiledPl
 		return nil, normalizeQueryExecutionError(err)
 	}
 	defer rows.Close()
-	if len(rows.FieldDescriptions()) != len(plan.Columns)+3 {
-		return nil, ErrUnsafeResult
-	}
 	result := make([]RawResultRow, 0, plan.MaximumRows)
 	for rows.Next() {
 		values, err := rows.Values()
@@ -327,6 +324,9 @@ func (store *PostgresStore) ExecuteReadOnly(ctx context.Context, plan CompiledPl
 	}
 	if err := rows.Err(); err != nil {
 		return nil, normalizeQueryExecutionError(err)
+	}
+	if len(rows.FieldDescriptions()) != len(plan.Columns)+3 {
+		return nil, ErrUnsafeResult
 	}
 	rows.Close()
 	if err := tx.Commit(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
