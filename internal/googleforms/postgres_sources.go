@@ -271,7 +271,7 @@ func (store *PostgresStore) UpdateSource(ctx context.Context, id Identifier, own
 	seconds := int(input.PollInterval / time.Second)
 	if _, err := tx.Exec(ctx, `UPDATE google_forms_sources
    SET state=$4, sync_mode=$5, poll_interval_seconds=$6,
-       next_sync_at=CASE WHEN $4='ACTIVE' AND $5='POLL' THEN $7::timestamptz+make_interval(secs=>$6) ELSE NULL END,
+       next_sync_at=CASE WHEN $4='ACTIVE' AND $5='POLL' THEN $7::timestamptz+make_interval(secs=>$6::integer) ELSE NULL END,
        error_code=NULL, version=version+1, updated_at=$7
  WHERE id=$1 AND owner_user_id=$2 AND version=$3`, databaseUUID(id), authDatabaseUUID(ownerID), version,
 		nextState, input.SyncMode, seconds, now); err != nil {
