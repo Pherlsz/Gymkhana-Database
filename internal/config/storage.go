@@ -17,15 +17,15 @@ const (
 )
 
 type StorageConfig struct {
-	Enabled         bool
-	Endpoint        string
-	Bucket          string
-	AccessKeyID     string
-	SecretAccessKey string
-	UploadTTL       time.Duration
-	DownloadTTL     time.Duration
-	TrashRetention  time.Duration
-	MaximumFileSize  int64
+	Enabled           bool
+	Endpoint          string
+	Bucket            string
+	AccessKeyID       string
+	SecretAccessKey   string
+	UploadTTL         time.Duration
+	DownloadTTL       time.Duration
+	TrashRetention    time.Duration
+	MaximumFileSize   int64
 	MaximumTotalBytes int64
 	UploadRateLimit   int
 	CleanupBatch      int
@@ -65,15 +65,15 @@ func LoadStorage() (StorageConfig, error) {
 		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_CLEANUP_BATCH: %w", err)
 	}
 	cfg := StorageConfig{
-		Enabled:         enabled,
-		Endpoint:        strings.TrimSpace(os.Getenv("R2_ENDPOINT")),
-		Bucket:          strings.TrimSpace(os.Getenv("R2_BUCKET")),
-		AccessKeyID:     strings.TrimSpace(os.Getenv("R2_ACCESS_KEY_ID")),
-		SecretAccessKey: strings.TrimSpace(os.Getenv("R2_SECRET_ACCESS_KEY")),
-		UploadTTL:       uploadTTL,
-		DownloadTTL:     downloadTTL,
-		TrashRetention:  trashRetention,
-		MaximumFileSize:  maximumFileSize,
+		Enabled:           enabled,
+		Endpoint:          strings.TrimSpace(os.Getenv("R2_ENDPOINT")),
+		Bucket:            strings.TrimSpace(os.Getenv("R2_BUCKET")),
+		AccessKeyID:       strings.TrimSpace(os.Getenv("R2_ACCESS_KEY_ID")),
+		SecretAccessKey:   strings.TrimSpace(os.Getenv("R2_SECRET_ACCESS_KEY")),
+		UploadTTL:         uploadTTL,
+		DownloadTTL:       downloadTTL,
+		TrashRetention:    trashRetention,
+		MaximumFileSize:   maximumFileSize,
 		MaximumTotalBytes: maximumTotalBytes,
 		UploadRateLimit:   uploadRateLimit,
 		CleanupBatch:      cleanupBatch,
