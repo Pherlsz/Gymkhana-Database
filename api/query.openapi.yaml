@@ -1,0 +1,699 @@
+openapi: 3.1.0
+info:
+  title: Gymkhana Database Query API
+  version: 0.10.0
+  description: Permission-filtered logical Query Engine. Clients can submit only identifiers advertised by the authorized catalog; SQL and physical schema names are never accepted.
+servers:
+  - url: /
+paths:
+  /api/v1/query/catalog:
+    get:
+      operationId: getQueryCatalog
+      summary: Read the authorized logical Query catalog
+      tags: [Query]
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Permission-filtered entities, fields, relations, operators, and limits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryCatalog"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /api/v1/query/validate:
+    post:
+      operationId: validateQueryPlan
+      summary: Validate and estimate a logical QueryPlan without executing it
+      tags: [Query]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryPlan"
+      responses:
+        "200":
+          description: Validated plan fingerprint, cost, and result columns
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanEstimate"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/CatalogStale"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /api/v1/query/executions:
+    post:
+      operationId: executeQueryPlan
+      summary: Execute a bounded logical QueryPlan in a read-only transaction
+      description: The owner-scoped idempotency key replays the same execution and conflicts if reused for a different plan.
+      tags: [Query]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecuteQueryRequest"
+      responses:
+        "200":
+          description: New or idempotently replayed execution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryExecution"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /api/v1/query/executions/{execution_id}/result:
+    get:
+      operationId: getQueryResult
+      summary: Read one owner-scoped, permission-revalidated result page
+      tags: [Query]
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 500
+            default: 0
+      responses:
+        "200":
+          description: Typed relational result page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryResultPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/Expired"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: gymkhana_session
+  responses:
+    BadRequest:
+      description: Invalid JSON, identifier, pagination, plan envelope, or idempotency key
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication is required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: The current user cannot access Query or the requested logical scope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: The execution does not exist for this owner
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: The catalog is stale, the idempotency key conflicts, or another execution is active
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    CatalogStale:
+      description: The plan was built from an older authorized catalog
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Expired:
+      description: The owner-scoped materialized result has expired
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Logical identifiers, shape, values, cardinality, or estimated cost exceed safe limits
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimited:
+      description: The persistent per-user Query execution limit was reached
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServiceUnavailable:
+      description: Query is unavailable or exceeded its safe read-only timeout
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    LogicalKey:
+      type: string
+      minLength: 2
+      maxLength: 200
+      pattern: "^[a-z][A-Za-z0-9_.-]+$"
+    CatalogVersion:
+      type: string
+      pattern: "^[a-f0-9]{64}$"
+    Fingerprint:
+      type: string
+      pattern: "^[a-f0-9]{64}$"
+    ValueKind:
+      type: string
+      enum:
+        [
+          text,
+          long_text,
+          identifier,
+          integer,
+          decimal,
+          boolean,
+          civil_date,
+          civil_month,
+          timestamp,
+          enum,
+        ]
+    QueryOperator:
+      type: string
+      enum: [eq, neq, contains, starts_with, gt, gte, lt, lte, between, in, is_null, not_null]
+    EntityDefinition:
+      type: object
+      additionalProperties: false
+      required: [key, label, kind, navigable, default_sort]
+      properties:
+        key:
+          $ref: "#/components/schemas/LogicalKey"
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        kind:
+          $ref: "#/components/schemas/LogicalKey"
+        navigable:
+          type: boolean
+        default_sort:
+          $ref: "#/components/schemas/LogicalKey"
+    OptionDefinition:
+      type: object
+      additionalProperties: false
+      required: [key, label]
+      properties:
+        key:
+          type: string
+          minLength: 2
+          maxLength: 64
+          pattern: "^[a-z][a-z0-9_]+$"
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+    FieldDefinition:
+      type: object
+      additionalProperties: false
+      required: [key, entity, label, kind, nullable, projectable, filterable, sortable, operators]
+      properties:
+        key:
+          $ref: "#/components/schemas/LogicalKey"
+        entity:
+          $ref: "#/components/schemas/LogicalKey"
+        label:
+          type: string
+          minLength: 1
+          maxLength: 160
+        kind:
+          $ref: "#/components/schemas/ValueKind"
+        nullable:
+          type: boolean
+        projectable:
+          type: boolean
+        filterable:
+          type: boolean
+        sortable:
+          type: boolean
+        operators:
+          type: array
+          items:
+            $ref: "#/components/schemas/QueryOperator"
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/OptionDefinition"
+    RelationDefinition:
+      type: object
+      additionalProperties: false
+      required: [key, from_entity, to_entity, label, cardinality]
+      properties:
+        key:
+          $ref: "#/components/schemas/LogicalKey"
+        from_entity:
+          $ref: "#/components/schemas/LogicalKey"
+        to_entity:
+          $ref: "#/components/schemas/LogicalKey"
+        label:
+          type: string
+          minLength: 1
+          maxLength: 160
+        cardinality:
+          type: string
+          enum: [ONE, MANY]
+    OperatorDefinition:
+      type: object
+      additionalProperties: false
+      required: [key, label, minimum_values, maximum_values]
+      properties:
+        key:
+          $ref: "#/components/schemas/QueryOperator"
+        label:
+          type: string
+        minimum_values:
+          type: integer
+          minimum: 0
+        maximum_values:
+          type: integer
+          minimum: 0
+          maximum: 25
+    CatalogLimits:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          maximum_projections,
+          maximum_filter_nodes,
+          maximum_filter_depth,
+          maximum_relation_depth,
+          maximum_predicate_values,
+          maximum_sort_fields,
+          maximum_rows,
+          maximum_page_size,
+        ]
+      properties:
+        maximum_projections:
+          type: integer
+          minimum: 1
+        maximum_filter_nodes:
+          type: integer
+          minimum: 1
+        maximum_filter_depth:
+          type: integer
+          minimum: 1
+        maximum_relation_depth:
+          type: integer
+          minimum: 1
+        maximum_predicate_values:
+          type: integer
+          minimum: 1
+        maximum_sort_fields:
+          type: integer
+          minimum: 1
+        maximum_rows:
+          type: integer
+          minimum: 1
+        maximum_page_size:
+          type: integer
+          minimum: 1
+    QueryCatalog:
+      type: object
+      additionalProperties: false
+      required: [version, entities, fields, relations, operators, limits]
+      properties:
+        version:
+          $ref: "#/components/schemas/CatalogVersion"
+        entities:
+          type: array
+          items:
+            $ref: "#/components/schemas/EntityDefinition"
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldDefinition"
+        relations:
+          type: array
+          items:
+            $ref: "#/components/schemas/RelationDefinition"
+        operators:
+          type: array
+          items:
+            $ref: "#/components/schemas/OperatorDefinition"
+        limits:
+          $ref: "#/components/schemas/CatalogLimits"
+    FilterKind:
+      type: string
+      enum: [predicate, group, relation, not]
+    Conjunction:
+      type: string
+      enum: [AND, OR]
+    FilterNode:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind:
+          $ref: "#/components/schemas/FilterKind"
+        conjunction:
+          $ref: "#/components/schemas/Conjunction"
+        field:
+          $ref: "#/components/schemas/LogicalKey"
+        operator:
+          $ref: "#/components/schemas/QueryOperator"
+        values:
+          type: array
+          maxItems: 25
+          items:
+            type: string
+            maxLength: 500
+        relation:
+          $ref: "#/components/schemas/LogicalKey"
+        children:
+          type: array
+          maxItems: 40
+          items:
+            $ref: "#/components/schemas/FilterNode"
+    SortDirection:
+      type: string
+      enum: [asc, desc]
+    QuerySort:
+      type: object
+      additionalProperties: false
+      required: [field, direction]
+      properties:
+        field:
+          $ref: "#/components/schemas/LogicalKey"
+        direction:
+          $ref: "#/components/schemas/SortDirection"
+    QueryPlan:
+      type: object
+      additionalProperties: false
+      required: [version, catalog_version, root_entity, projections, maximum_rows]
+      properties:
+        version:
+          type: string
+          enum: [v1]
+        catalog_version:
+          $ref: "#/components/schemas/CatalogVersion"
+        root_entity:
+          $ref: "#/components/schemas/LogicalKey"
+        projections:
+          type: array
+          minItems: 1
+          maxItems: 20
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/LogicalKey"
+        filter:
+          $ref: "#/components/schemas/FilterNode"
+        sort:
+          type: array
+          maxItems: 3
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/QuerySort"
+        maximum_rows:
+          type: integer
+          minimum: 1
+          maximum: 500
+    ResultColumn:
+      type: object
+      additionalProperties: false
+      required: [position, field_key, label, kind]
+      properties:
+        position:
+          type: integer
+          minimum: 0
+          maximum: 19
+        field_key:
+          $ref: "#/components/schemas/LogicalKey"
+        label:
+          type: string
+          minLength: 1
+          maxLength: 160
+        kind:
+          $ref: "#/components/schemas/ValueKind"
+    PlanEstimate:
+      type: object
+      additionalProperties: false
+      required: [valid, fingerprint, cost, columns]
+      properties:
+        valid:
+          type: boolean
+          const: true
+        fingerprint:
+          $ref: "#/components/schemas/Fingerprint"
+        cost:
+          type: integer
+          minimum: 1
+        columns:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/ResultColumn"
+    ExecuteQueryRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, plan]
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 8
+          maxLength: 128
+          pattern: "^[A-Za-z0-9._:-]+$"
+        plan:
+          $ref: "#/components/schemas/QueryPlan"
+    ExecutionState:
+      type: string
+      enum: [RUNNING, COMPLETED, FAILED, CANCELLED]
+    QueryExecution:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          state,
+          catalog_version,
+          root_entity,
+          maximum_rows,
+          row_count,
+          column_count,
+          started_at,
+          expires_at,
+          version,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ExecutionState"
+        catalog_version:
+          $ref: "#/components/schemas/CatalogVersion"
+        root_entity:
+          $ref: "#/components/schemas/LogicalKey"
+        maximum_rows:
+          type: integer
+          minimum: 1
+          maximum: 500
+        row_count:
+          type: integer
+          minimum: 0
+          maximum: 500
+        column_count:
+          type: integer
+          minimum: 0
+          maximum: 20
+        error_code:
+          type: string
+          maxLength: 80
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+    ResultCell:
+      type: object
+      additionalProperties: false
+      required: [column_position, kind, is_null]
+      properties:
+        column_position:
+          type: integer
+          minimum: 0
+          maximum: 19
+        kind:
+          $ref: "#/components/schemas/ValueKind"
+        is_null:
+          type: boolean
+        text_value:
+          type: string
+          maxLength: 5000
+        integer_value:
+          type: integer
+          format: int64
+        decimal_value:
+          type: string
+          pattern: "^-?[0-9]{1,28}(\\.[0-9]{1,10})?$"
+        boolean_value:
+          type: boolean
+        civil_date_value:
+          type: string
+          format: date
+        timestamp_value:
+          type: string
+          format: date-time
+    ResultRow:
+      type: object
+      additionalProperties: false
+      required: [position, entity_kind, entity_id, entity_label, updated_at, cells]
+      properties:
+        position:
+          type: integer
+          minimum: 0
+          maximum: 499
+        entity_kind:
+          $ref: "#/components/schemas/LogicalKey"
+        entity_id:
+          type: string
+          minLength: 1
+          maxLength: 200
+        entity_label:
+          type: string
+          minLength: 1
+          maxLength: 300
+        updated_at:
+          type: string
+          format: date-time
+        cells:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/ResultCell"
+    QueryResultPage:
+      type: object
+      additionalProperties: false
+      required: [execution, columns, rows, total, limit, offset]
+      properties:
+        execution:
+          $ref: "#/components/schemas/QueryExecution"
+        columns:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/ResultColumn"
+        rows:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ResultRow"
+        total:
+          type: integer
+          minimum: 0
+          maximum: 500
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+          maximum: 500
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, code, message]
+      properties:
+        field:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+        request_id:
+          type: string
+        field_errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"

@@ -11,7 +11,7 @@
     "format": "oxfmt apps scripts .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml --write",
     "format:check": "oxfmt apps scripts .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml --check",
     "test:web": "vitest run",
-    "generate:openapi:ts": "openapi-typescript api/openapi.yaml -o apps/web/src/generated/api.ts && openapi-typescript api/attachments.openapi.yaml -o apps/web/src/generated/attachments-api.ts && openapi-typescript api/search.openapi.yaml -o apps/web/src/generated/search-api.ts && openapi-typescript api/operations.openapi.yaml -o apps/web/src/generated/operations-api.ts && openapi-typescript api/google-forms.openapi.yaml -o apps/web/src/generated/google-forms-api.ts",
+    "generate:openapi:ts": "openapi-typescript api/openapi.yaml -o apps/web/src/generated/api.ts && openapi-typescript api/attachments.openapi.yaml -o apps/web/src/generated/attachments-api.ts && openapi-typescript api/search.openapi.yaml -o apps/web/src/generated/search-api.ts && openapi-typescript api/operations.openapi.yaml -o apps/web/src/generated/operations-api.ts && openapi-typescript api/google-forms.openapi.yaml -o apps/web/src/generated/google-forms-api.ts && openapi-typescript api/query.openapi.yaml -o apps/web/src/generated/query-api.ts",
     "check:web": "pnpm typecheck:web && pnpm lint:web && pnpm format:check && pnpm test:web && pnpm build:web"
   },
   "devDependencies": {

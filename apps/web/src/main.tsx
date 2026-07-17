@@ -9,6 +9,7 @@ import "./attachments.css";
 import "./search.css";
 import "./operations.css";
 import "./google-forms.css";
+import "./query.css";
 
 const root = document.getElementById("root");
 

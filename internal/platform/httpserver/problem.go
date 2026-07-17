@@ -29,6 +29,10 @@ const (
 	ErrorCodeQueryTooCostly    ErrorCode = "query_too_costly"
 	ErrorCodeResultSetTooLarge ErrorCode = "result_set_too_large"
 	ErrorCodeSearchTimeout     ErrorCode = "search_timeout"
+	ErrorCodeQueryTimeout      ErrorCode = "query_timeout"
+	ErrorCodeQueryCancelled    ErrorCode = "query_cancelled"
+	ErrorCodeQueryExpired      ErrorCode = "query_expired"
+	ErrorCodeQueryCatalogStale ErrorCode = "query_catalog_stale"
 	ErrorCodeInternal          ErrorCode = "internal_error"
 )
 

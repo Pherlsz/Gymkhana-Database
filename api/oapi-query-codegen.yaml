@@ -1,0 +1,8 @@
+package: queryopenapi
+output: api/generated/query/query.gen.go
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true
+output-options:
+  skip-prune: true
