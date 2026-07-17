@@ -33,10 +33,10 @@ func runAttachmentCleanup(ctx context.Context, cfg config.Config, storageCfg con
 		return fmt.Errorf("configure private object storage: %w", err)
 	}
 	service, err := attachment.NewService(attachment.NewPostgresStore(pool), objects, attachment.ServiceOptions{
-		UploadTTL:       storageCfg.UploadTTL,
-		DownloadTTL:     storageCfg.DownloadTTL,
-		TrashRetention:  storageCfg.TrashRetention,
-		MaximumFileSize:  storageCfg.MaximumFileSize,
+		UploadTTL:         storageCfg.UploadTTL,
+		DownloadTTL:       storageCfg.DownloadTTL,
+		TrashRetention:    storageCfg.TrashRetention,
+		MaximumFileSize:   storageCfg.MaximumFileSize,
 		MaximumTotalBytes: storageCfg.MaximumTotalBytes,
 		UploadRateLimit:   storageCfg.UploadRateLimit,
 		CleanupBatch:      storageCfg.CleanupBatch,
