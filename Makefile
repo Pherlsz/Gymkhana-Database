@@ -25,12 +25,14 @@ services-down:
 
 migrate:
 	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --migrations database/migrations --config database/tern.conf
+	@$(GO) run ./cmd/river-migrate -action migrate
 
 migrate-down-one:
 	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --destination -1 --migrations database/migrations --config database/tern.conf
 
 migrate-status:
 	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) status --migrations database/migrations --config database/tern.conf
+	@$(GO) run ./cmd/river-migrate -action validate
 
 reset-db:
 	@docker compose down -v
@@ -62,9 +64,11 @@ generate: generate-go generate-ts generate-sql
 generate-go:
 	@mkdir -p api/generated/attachments
 	@mkdir -p api/generated/search
+	@mkdir -p api/generated/operations
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-codegen.yaml api/openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-attachments-codegen.yaml api/attachments.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-search-codegen.yaml api/search.openapi.yaml
+	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-operations-codegen.yaml api/operations.openapi.yaml
 
 generate-ts:
 	@$(PNPM) generate:openapi:ts
