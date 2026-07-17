@@ -111,7 +111,9 @@ describe("AttachmentsPanel", () => {
     const calls = attachmentAPI.uploadAttachment.mock.calls.length;
     const empty = new File([], "empty.pdf", { type: "application/pdf" });
     fireEvent.change(screen.getByLabelText("Adicionar arquivo"), { target: { files: [empty] } });
-    expect(await screen.findByText("Selecione um arquivo que não esteja vazio.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Selecione um arquivo que não esteja vazio."),
+    ).toBeInTheDocument();
     expect(attachmentAPI.uploadAttachment).toHaveBeenCalledTimes(calls);
   });
 
