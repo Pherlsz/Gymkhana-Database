@@ -1,4 +1,4 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
   title: Gymkhana Database Matching API
   version: 0.11.0
@@ -495,8 +495,8 @@ components:
         key: { type: string, minLength: 2, maxLength: 80 }
         label: { type: string, minLength: 1, maxLength: 120 }
         kind: { type: string, minLength: 1, maxLength: 40 }
-        survivor_value: { type: [string, "null"], maxLength: 5000 }
-        source_value: { type: [string, "null"], maxLength: 5000 }
+        survivor_value: { type: string, nullable: true, maxLength: 5000 }
+        source_value: { type: string, nullable: true, maxLength: 5000 }
         conflict: { type: boolean }
         choice_required: { type: boolean }
         selected_source: { $ref: "#/components/schemas/FieldSource" }

@@ -92,7 +92,7 @@ func TestServiceMergeRequiresAdministrativeExplicitPreview(t *testing.T) {
 	if result, err := service.Merge(context.Background(), admin, merge, "merge-request"); err != nil || result.SurvivorProfileID != survivorID {
 		t.Fatalf("Merge(admin) = %#v, error=%v", result, err)
 	}
-	if result, err := service.Merge(context.Background(), matchingActor(auth.RoleSuperAdmin), merge, "superadmin-merge"); err != nil || result.SurvivorProfileID != survivorID {
+	if result, err := service.Merge(context.Background(), matchingActor(auth.RoleSuperadmin), merge, "superadmin-merge"); err != nil || result.SurvivorProfileID != survivorID {
 		t.Fatalf("Merge(superadmin) = %#v, error=%v", result, err)
 	}
 	merge.Confirmation = "MESCLAR"
