@@ -20,6 +20,8 @@ var (
 	ErrInvalidState         = errors.New("attachment lifecycle state is invalid")
 	ErrInvalidConfirmation  = errors.New("attachment confirmation is invalid")
 	ErrStorageUnavailable   = errors.New("attachment storage is unavailable")
+	ErrUploadRateLimited     = errors.New("attachment upload rate limit exceeded")
+	ErrStorageQuotaExceeded  = errors.New("attachment storage quota exceeded")
 	ErrInvalidServiceSetup  = errors.New("attachment service setup is invalid")
 )
 
