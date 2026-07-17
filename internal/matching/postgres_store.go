@@ -8,7 +8,6 @@ import (
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -334,9 +333,12 @@ func normalizePostgresError(err error) error {
 	if errors.Is(err, context.DeadlineExceeded) {
 		return ErrTimeout
 	}
-	var databaseError *pgconn.PgError
+	if errors.Is(err, pgx.ErrTxCommitRollback) {
+		return ErrConflict
+	}
+	var databaseError interface{ SQLState() string }
 	if errors.As(err, &databaseError) {
-		switch databaseError.Code {
+		switch databaseError.SQLState() {
 		case "57014":
 			return ErrTimeout
 		case "23505", "40001", "40P01":

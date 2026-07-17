@@ -175,7 +175,9 @@ func TestMatchingHTTPExposesExplainableReviewAndExplicitMerge(t *testing.T) {
 }
 
 func TestMatchingHTTPRequiresAuthenticationAndConfiguredService(t *testing.T) {
-	handler := New(authTestLogger(), nil, Options{Auth: &fakeAdministrationService{}, Matching: &fakeMatchingHTTPService{}})
+	handler := New(authTestLogger(), nil, Options{Auth: &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{
+		sessionErr: auth.ErrUnauthenticated,
+	}}, Matching: &fakeMatchingHTTPService{}})
 	response := serveMatchingRequest(handler, http.MethodGet, "/api/v1/matching/catalog", "")
 	if response.Code != http.StatusUnauthorized {
 		t.Fatalf("unauthenticated response = %d, %s", response.Code, response.Body.String())
