@@ -97,6 +97,10 @@ func (role Role) CanSearch() bool {
 	return role.Valid()
 }
 
+func (role Role) CanUseOperations() bool {
+	return role.Valid()
+}
+
 type AuditEventType string
 
 const (
