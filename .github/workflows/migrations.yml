@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: migrations-${{ github.event.pull_request.number || github.ref }}
@@ -48,6 +49,11 @@ jobs:
         with:
           go-version: 1.26.5
           cache: true
+
+      - name: Configure private Core access
+        run: scripts/configure-private-go.sh
+        env:
+          GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Apply migrations
         run: make migrate
