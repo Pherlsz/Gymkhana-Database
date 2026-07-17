@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -42,6 +43,18 @@ type AuthConfig struct {
 	SecureCookies      bool
 }
 
+type GoogleFormsConfig struct {
+	Enabled             bool
+	ClientID            string
+	ClientSecret        string
+	RedirectURL         string
+	TokenEncryptionKey  [32]byte
+	TokenEncryptionKeys map[uint16][32]byte
+	TokenKeyVersion     uint16
+	SyncInterval        time.Duration
+	ResponsePageSize    int
+}
+
 type Config struct {
 	Environment      Environment
 	HTTPAddress      string
@@ -50,6 +63,7 @@ type Config struct {
 	LogLevel         LogLevel
 	ShutdownTimeout  time.Duration
 	Auth             AuthConfig
+	GoogleForms      GoogleFormsConfig
 }
 
 func Load() (Config, error) {
@@ -69,6 +83,30 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("parse AUTH_ENABLED: %w", err)
 	}
+	googleFormsEnabled, err := strconv.ParseBool(valueOrDefault("GOOGLE_FORMS_ENABLED", "false"))
+	if err != nil {
+		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_ENABLED: %w", err)
+	}
+	googleFormsKeyVersion, err := strconv.ParseUint(valueOrDefault("GOOGLE_FORMS_TOKEN_KEY_VERSION", "1"), 10, 16)
+	if err != nil {
+		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_TOKEN_KEY_VERSION: %w", err)
+	}
+	googleFormsSyncInterval, err := time.ParseDuration(valueOrDefault("GOOGLE_FORMS_SYNC_INTERVAL", "15m"))
+	if err != nil {
+		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_SYNC_INTERVAL: %w", err)
+	}
+	googleFormsPageSize, err := strconv.Atoi(valueOrDefault("GOOGLE_FORMS_RESPONSE_PAGE_SIZE", "100"))
+	if err != nil {
+		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_RESPONSE_PAGE_SIZE: %w", err)
+	}
+	googleFormsKey, err := decodeEncryptionKey(strings.TrimSpace(os.Getenv("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY")))
+	if err != nil {
+		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY: %w", err)
+	}
+	googleFormsKeys, err := decodeEncryptionKeys(strings.TrimSpace(os.Getenv("GOOGLE_FORMS_TOKEN_DECRYPTION_KEYS")), uint16(googleFormsKeyVersion), googleFormsKey)
+	if err != nil {
+		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_TOKEN_DECRYPTION_KEYS: %w", err)
+	}
 
 	cfg := Config{
 		Environment:      environment,
@@ -86,6 +124,17 @@ func Load() (Config, error) {
 			AllowedLogins:      commaSeparatedValues(os.Getenv("AUTH_ALLOWED_GITHUB_LOGINS")),
 			SuperadminLogin:    strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_SUPERADMIN_GITHUB_LOGIN"))),
 			SecureCookies:      environment == EnvironmentStaging || environment == EnvironmentProduction,
+		},
+		GoogleForms: GoogleFormsConfig{
+			Enabled:             googleFormsEnabled,
+			ClientID:            strings.TrimSpace(os.Getenv("GOOGLE_FORMS_OAUTH_CLIENT_ID")),
+			ClientSecret:        strings.TrimSpace(os.Getenv("GOOGLE_FORMS_OAUTH_CLIENT_SECRET")),
+			RedirectURL:         strings.TrimSpace(os.Getenv("GOOGLE_FORMS_OAUTH_REDIRECT_URL")),
+			TokenEncryptionKey:  googleFormsKey,
+			TokenEncryptionKeys: googleFormsKeys,
+			TokenKeyVersion:     uint16(googleFormsKeyVersion),
+			SyncInterval:        googleFormsSyncInterval,
+			ResponsePageSize:    googleFormsPageSize,
 		},
 	}
 
@@ -118,6 +167,12 @@ func (cfg Config) validate() error {
 	if cfg.ShutdownTimeout > 5*time.Minute {
 		return errors.New("SHUTDOWN_TIMEOUT cannot exceed 5m")
 	}
+	if cfg.GoogleForms.SyncInterval < 5*time.Minute || cfg.GoogleForms.SyncInterval > 24*time.Hour {
+		return errors.New("GOOGLE_FORMS_SYNC_INTERVAL must be between 5m and 24h")
+	}
+	if cfg.GoogleForms.ResponsePageSize < 1 || cfg.GoogleForms.ResponsePageSize > 500 {
+		return errors.New("GOOGLE_FORMS_RESPONSE_PAGE_SIZE must be between 1 and 500")
+	}
 
 	switch cfg.LogLevel {
 	case LogLevelDebug, LogLevelInfo, LogLevelWarn, LogLevelError:
@@ -133,6 +188,9 @@ func (cfg Config) validate() error {
 		return errors.New("AUTH_ENABLED must be true outside local and test environments")
 	}
 	if !cfg.Auth.Enabled {
+		if cfg.GoogleForms.Enabled {
+			return errors.New("GOOGLE_FORMS_ENABLED requires authentication")
+		}
 		return nil
 	}
 	if cfg.DatabaseURL == "" {
@@ -183,8 +241,79 @@ func (cfg Config) validate() error {
 	if !allowed {
 		return errors.New("AUTH_SUPERADMIN_GITHUB_LOGIN must be included in AUTH_ALLOWED_GITHUB_LOGINS")
 	}
+	if !cfg.GoogleForms.Enabled {
+		return nil
+	}
+	if cfg.GoogleForms.ClientID == "" || cfg.GoogleForms.ClientSecret == "" {
+		return errors.New("Google Forms OAuth client credentials are required when Google Forms is enabled")
+	}
+	if cfg.GoogleForms.TokenKeyVersion == 0 {
+		return errors.New("GOOGLE_FORMS_TOKEN_KEY_VERSION must be positive")
+	}
+	if cfg.GoogleForms.TokenEncryptionKey == ([32]byte{}) {
+		return errors.New("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY is required when Google Forms is enabled")
+	}
+	if key, exists := cfg.GoogleForms.TokenEncryptionKeys[cfg.GoogleForms.TokenKeyVersion]; !exists || key != cfg.GoogleForms.TokenEncryptionKey {
+		return errors.New("GOOGLE_FORMS_TOKEN_DECRYPTION_KEYS must retain the current encryption key")
+	}
+	formsRedirectURL, err := url.Parse(cfg.GoogleForms.RedirectURL)
+	if err != nil || !validHTTPURL(formsRedirectURL) {
+		return errors.New("GOOGLE_FORMS_OAUTH_REDIRECT_URL must be an absolute HTTP(S) URL")
+	}
+	if formsRedirectURL.User != nil || formsRedirectURL.RawQuery != "" || formsRedirectURL.Fragment != "" || formsRedirectURL.Path != "/api/v1/google-forms/oauth/callback" {
+		return errors.New("GOOGLE_FORMS_OAUTH_REDIRECT_URL must contain only the /api/v1/google-forms/oauth/callback path")
+	}
+	if outsideDevelopment && formsRedirectURL.Scheme != "https" {
+		return errors.New("GOOGLE_FORMS_OAUTH_REDIRECT_URL must use HTTPS outside local and test environments")
+	}
 
 	return nil
+}
+
+func decodeEncryptionKey(value string) ([32]byte, error) {
+	if value == "" {
+		return [32]byte{}, nil
+	}
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		decoded, err = base64.RawStdEncoding.DecodeString(value)
+	}
+	if err != nil || len(decoded) != 32 {
+		return [32]byte{}, errors.New("must be base64-encoded 32 bytes")
+	}
+	var key [32]byte
+	copy(key[:], decoded)
+	return key, nil
+}
+
+func decodeEncryptionKeys(value string, currentVersion uint16, currentKey [32]byte) (map[uint16][32]byte, error) {
+	result := make(map[uint16][32]byte)
+	if currentVersion > 0 && currentKey != ([32]byte{}) {
+		result[currentVersion] = currentKey
+	}
+	if value == "" {
+		return result, nil
+	}
+	for _, item := range strings.Split(value, ",") {
+		parts := strings.SplitN(strings.TrimSpace(item), ":", 2)
+		if len(parts) != 2 {
+			return nil, errors.New("must use version:base64 entries")
+		}
+		parsed, err := strconv.ParseUint(strings.TrimSpace(parts[0]), 10, 16)
+		if err != nil || parsed == 0 {
+			return nil, errors.New("contains an invalid key version")
+		}
+		key, err := decodeEncryptionKey(strings.TrimSpace(parts[1]))
+		if err != nil || key == ([32]byte{}) {
+			return nil, errors.New("contains an invalid encryption key")
+		}
+		version := uint16(parsed)
+		if existing, duplicate := result[version]; duplicate && existing != key {
+			return nil, errors.New("contains conflicting keys for one version")
+		}
+		result[version] = key
+	}
+	return result, nil
 }
 
 func validHTTPURL(value *url.URL) bool {

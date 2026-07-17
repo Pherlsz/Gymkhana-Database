@@ -64,11 +64,12 @@ type ExportDataset struct {
 }
 
 type CleanupCandidate struct {
-	Kind        string
-	ID          Identifier
-	ActorUserID auth.Identifier
-	Module      Module
-	ObjectKey   string
+	Kind                   string
+	ID                     Identifier
+	ActorUserID            auth.Identifier
+	Module                 Module
+	ObjectKey              string
+	RequiresObjectDeletion bool
 }
 
 type AuditEventType string

@@ -305,7 +305,7 @@ func (service *Service) SaveMapping(ctx context.Context, actor auth.Session, id 
 	if err != nil {
 		return Import{}, err
 	}
-	if err := validateMapping(catalog, mapping); err != nil {
+	if err := ValidateMapping(catalog, mapping); err != nil {
 		return Import{}, err
 	}
 	mapped, err := service.store.SaveMapping(ctx, id, actor.User.ID, version, mapping, service.now().UTC())
@@ -315,7 +315,9 @@ func (service *Service) SaveMapping(ctx context.Context, actor auth.Session, id 
 	return mapped, err
 }
 
-func validateMapping(catalog ModuleCatalog, mapping []MappingInput) error {
+// ValidateMapping applies the same allowlisted logical-field constraints to
+// interactive XLSX mappings and provider-backed staging sources.
+func ValidateMapping(catalog ModuleCatalog, mapping []MappingInput) error {
 	if !catalog.ID.Valid() || !catalog.CanImport || len(mapping) == 0 || len(mapping) > MaximumColumns {
 		return ErrInvalidMapping
 	}
@@ -408,7 +410,10 @@ func (service *Service) Preview(ctx context.Context, actor auth.Session, id Iden
 		row.ValidationErrorCount = 0
 		row.DecisionRequired = false
 		row.Outcome = nil
-		if rowHasFormula(row) {
+		if sourceErrors := rowSourceErrorCount(row); sourceErrors > 0 {
+			row.ProposedAction = ActionError
+			row.ValidationErrorCount = sourceErrors
+		} else if rowHasFormula(row) {
 			row.ProposedAction = ActionError
 			row.ValidationErrorCount++
 			markFormulaErrors(&row)
@@ -711,9 +716,11 @@ func (service *Service) Cleanup(ctx context.Context) (int, error) {
 	}
 	cleaned := 0
 	for _, candidate := range candidates {
-		if err := service.objects.Delete(ctx, candidate.ObjectKey); err != nil {
-			releaseErr := service.store.ReleaseCleanupCandidate(ctx, candidate)
-			return cleaned, errors.Join(err, releaseErr)
+		if candidate.RequiresObjectDeletion {
+			if err := service.objects.Delete(ctx, candidate.ObjectKey); err != nil {
+				releaseErr := service.store.ReleaseCleanupCandidate(ctx, candidate)
+				return cleaned, errors.Join(err, releaseErr)
+			}
 		}
 		if err := service.store.MarkObjectDeleted(ctx, candidate, now); err != nil {
 			return cleaned, err
@@ -954,6 +961,16 @@ func rowHasFormula(row Row) bool {
 		}
 	}
 	return false
+}
+
+func rowSourceErrorCount(row Row) int {
+	count := 0
+	for _, cell := range row.Cells {
+		if cell.ValidationCode != "" {
+			count++
+		}
+	}
+	return count
 }
 
 func markFormulaErrors(row *Row) {

@@ -1,6 +1,11 @@
 package config
 
-import "testing"
+import (
+	"bytes"
+	"encoding/base64"
+	"testing"
+	"time"
+)
 
 var configurationKeys = []string{
 	"APP_ENV",
@@ -16,6 +21,25 @@ var configurationKeys = []string{
 	"AUTH_APPLICATION_URL",
 	"AUTH_ALLOWED_GITHUB_LOGINS",
 	"AUTH_SUPERADMIN_GITHUB_LOGIN",
+	"GOOGLE_FORMS_ENABLED",
+	"GOOGLE_FORMS_OAUTH_CLIENT_ID",
+	"GOOGLE_FORMS_OAUTH_CLIENT_SECRET",
+	"GOOGLE_FORMS_OAUTH_REDIRECT_URL",
+	"GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY",
+	"GOOGLE_FORMS_TOKEN_DECRYPTION_KEYS",
+	"GOOGLE_FORMS_TOKEN_KEY_VERSION",
+	"GOOGLE_FORMS_SYNC_INTERVAL",
+	"GOOGLE_FORMS_RESPONSE_PAGE_SIZE",
+}
+
+func setValidGoogleForms(t *testing.T) {
+	t.Helper()
+	setValidLocalAuthentication(t)
+	t.Setenv("GOOGLE_FORMS_ENABLED", "true")
+	t.Setenv("GOOGLE_FORMS_OAUTH_CLIENT_ID", "forms-client-id")
+	t.Setenv("GOOGLE_FORMS_OAUTH_CLIENT_SECRET", "forms-client-secret")
+	t.Setenv("GOOGLE_FORMS_OAUTH_REDIRECT_URL", "http://localhost:8080/api/v1/google-forms/oauth/callback")
+	t.Setenv("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY", base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{1}, 32)))
 }
 
 func clearConfiguration(t *testing.T) {
@@ -60,6 +84,9 @@ func TestLoadUsesSafeTypedDefaults(t *testing.T) {
 	if cfg.Auth.Enabled {
 		t.Fatal("authentication is enabled by default in local development")
 	}
+	if cfg.GoogleForms.Enabled || cfg.GoogleForms.SyncInterval != 15*time.Minute || cfg.GoogleForms.ResponsePageSize != 100 {
+		t.Fatalf("GoogleForms defaults = %#v", cfg.GoogleForms)
+	}
 }
 
 func TestLoadRejectsInvalidTypedValues(t *testing.T) {
@@ -74,6 +101,10 @@ func TestLoadRejectsInvalidTypedValues(t *testing.T) {
 		{name: "log level", key: "LOG_LEVEL", value: "verbose"},
 		{name: "shutdown timeout", key: "SHUTDOWN_TIMEOUT", value: "10m"},
 		{name: "auth enabled", key: "AUTH_ENABLED", value: "sometimes"},
+		{name: "google forms enabled", key: "GOOGLE_FORMS_ENABLED", value: "sometimes"},
+		{name: "google forms key version", key: "GOOGLE_FORMS_TOKEN_KEY_VERSION", value: "zero"},
+		{name: "google forms interval", key: "GOOGLE_FORMS_SYNC_INTERVAL", value: "later"},
+		{name: "google forms page size", key: "GOOGLE_FORMS_RESPONSE_PAGE_SIZE", value: "many"},
 	}
 
 	for _, test := range tests {
@@ -84,6 +115,68 @@ func TestLoadRejectsInvalidTypedValues(t *testing.T) {
 				t.Fatal("Load() error = nil, want validation error")
 			}
 		})
+	}
+}
+
+func TestLoadValidatesEnabledGoogleForms(t *testing.T) {
+	clearConfiguration(t)
+	setValidGoogleForms(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !cfg.GoogleForms.Enabled || cfg.GoogleForms.TokenKeyVersion != 1 {
+		t.Fatalf("GoogleForms = %#v", cfg.GoogleForms)
+	}
+	if cfg.GoogleForms.TokenEncryptionKey == ([32]byte{}) {
+		t.Fatal("Google Forms token key was not decoded")
+	}
+}
+
+func TestLoadRejectsUnsafeGoogleFormsConfiguration(t *testing.T) {
+	tests := []struct {
+		name  string
+		key   string
+		value string
+	}{
+		{name: "missing client", key: "GOOGLE_FORMS_OAUTH_CLIENT_ID", value: ""},
+		{name: "missing secret", key: "GOOGLE_FORMS_OAUTH_CLIENT_SECRET", value: ""},
+		{name: "wrong redirect path", key: "GOOGLE_FORMS_OAUTH_REDIRECT_URL", value: "http://localhost:8080/forms/callback"},
+		{name: "redirect query", key: "GOOGLE_FORMS_OAUTH_REDIRECT_URL", value: "http://localhost:8080/api/v1/google-forms/oauth/callback?code=test"},
+		{name: "short key", key: "GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY", value: base64.StdEncoding.EncodeToString(make([]byte, 16))},
+		{name: "zero key version", key: "GOOGLE_FORMS_TOKEN_KEY_VERSION", value: "0"},
+		{name: "short interval", key: "GOOGLE_FORMS_SYNC_INTERVAL", value: "1m"},
+		{name: "large page", key: "GOOGLE_FORMS_RESPONSE_PAGE_SIZE", value: "501"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			clearConfiguration(t)
+			setValidGoogleForms(t)
+			t.Setenv(test.key, test.value)
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() error = nil, want Google Forms validation error")
+			}
+		})
+	}
+
+	clearConfiguration(t)
+	t.Setenv("GOOGLE_FORMS_ENABLED", "true")
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() error = nil, want authentication dependency error")
+	}
+}
+
+func TestDecodeEncryptionKeysRetainsPreviousVersions(t *testing.T) {
+	current := [32]byte{1}
+	previous := make([]byte, 32)
+	previous[0] = 2
+	keys, err := decodeEncryptionKeys("1:"+base64.StdEncoding.EncodeToString(previous), 2, current)
+	if err != nil {
+		t.Fatalf("decodeEncryptionKeys() error = %v", err)
+	}
+	if len(keys) != 2 || keys[2] != current || keys[1][0] != 2 {
+		t.Fatalf("decodeEncryptionKeys() = %#v", keys)
 	}
 }
 

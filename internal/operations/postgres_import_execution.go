@@ -46,7 +46,7 @@ func (store *PostgresStore) SavePreview(ctx context.Context, id Identifier, acto
  WHERE import_id=$1`, databaseUUID(id)); err != nil {
 		return Import{}, fmt.Errorf("clear previous preview: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `UPDATE operation_import_cells SET validation_code=NULL WHERE import_id=$1`, databaseUUID(id)); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE operation_import_cells SET validation_code=source_validation_code WHERE import_id=$1`, databaseUUID(id)); err != nil {
 		return Import{}, fmt.Errorf("clear previous cell validation: %w", err)
 	}
 	for _, row := range preview {

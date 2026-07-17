@@ -65,10 +65,12 @@ generate-go:
 	@mkdir -p api/generated/attachments
 	@mkdir -p api/generated/search
 	@mkdir -p api/generated/operations
+	@mkdir -p api/generated/googleforms
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-codegen.yaml api/openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-attachments-codegen.yaml api/attachments.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-search-codegen.yaml api/search.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-operations-codegen.yaml api/operations.openapi.yaml
+	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-google-forms-codegen.yaml api/google-forms.openapi.yaml
 
 generate-ts:
 	@$(PNPM) generate:openapi:ts

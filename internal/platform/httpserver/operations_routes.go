@@ -120,9 +120,9 @@ type operationImportResponse struct {
 	ID                   string                    `json:"id"`
 	Module               operations.Module         `json:"module"`
 	SourceKind           operations.SourceKind     `json:"source_kind"`
-	OriginalFilename     string                    `json:"original_filename"`
-	DeclaredSize         int64                     `json:"declared_size"`
-	ActualSize           int64                     `json:"actual_size"`
+	OriginalFilename     *string                   `json:"original_filename,omitempty"`
+	DeclaredSize         *int64                    `json:"declared_size,omitempty"`
+	ActualSize           *int64                    `json:"actual_size,omitempty"`
 	State                operations.ImportState    `json:"state"`
 	Stage                operations.Stage          `json:"stage"`
 	SelectedSheetIndex   *int                      `json:"selected_sheet_index,omitempty"`
@@ -659,7 +659,6 @@ func operationCatalogFromDomain(catalog []operations.ModuleCatalog) operationCat
 func operationImportFromDomain(value operations.Import) operationImportResponse {
 	response := operationImportResponse{
 		ID: value.ID.String(), Module: value.Module, SourceKind: value.SourceKind,
-		OriginalFilename: value.OriginalFilename, DeclaredSize: value.DeclaredSize, ActualSize: value.ActualSize,
 		State: value.State, Stage: value.Stage, SelectedSheetIndex: value.SelectedSheetIndex,
 		MappingVersion: value.MappingVersion, UnresolvedCount: value.UnresolvedCount,
 		ValidationErrorCount: value.ValidationErrorCount, InsertedCount: value.InsertedCount,
@@ -668,6 +667,13 @@ func operationImportFromDomain(value operations.Import) operationImportResponse 
 		CancelledAt: value.CancelledAt, CompletedAt: value.CompletedAt, Version: value.Version,
 		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Sheets: make([]operationSheetResponse, 0, len(value.Sheets)),
 		Columns: make([]operationColumnResponse, 0, len(value.Columns)), Preview: make([]operationRowResponse, 0, len(value.Preview)),
+	}
+	if value.SourceKind == operations.SourceXLSX {
+		response.OriginalFilename = &value.OriginalFilename
+		response.DeclaredSize = &value.DeclaredSize
+		if value.ActualSize > 0 {
+			response.ActualSize = &value.ActualSize
+		}
 	}
 	for _, sheet := range value.Sheets {
 		response.Sheets = append(response.Sheets, operationSheetResponse{Index: sheet.Index, Name: sheet.Name, RowCount: sheet.RowCount, ColumnCount: sheet.ColumnCount})

@@ -338,12 +338,17 @@ RETURNING value.id, value.actor_user_id, value.module, value.object_key`, now, l
 	for rows.Next() {
 		value := CleanupCandidate{Kind: "IMPORT"}
 		var id, actorID pgtype.UUID
-		if err := rows.Scan(&id, &actorID, &value.Module, &value.ObjectKey); err != nil {
+		var objectKey pgtype.Text
+		if err := rows.Scan(&id, &actorID, &value.Module, &objectKey); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan expired import: %w", err)
 		}
 		value.ID = identifierFromUUID(id)
 		value.ActorUserID = authIdentifierFromUUID(actorID)
+		if objectKey.Valid {
+			value.ObjectKey = objectKey.String
+			value.RequiresObjectDeletion = true
+		}
 		result = append(result, value)
 	}
 	if err := rows.Err(); err != nil {
@@ -381,6 +386,7 @@ RETURNING value.id, value.actor_user_id, value.module, value.object_key`, now, r
 			}
 			value.ID = identifierFromUUID(id)
 			value.ActorUserID = authIdentifierFromUUID(actorID)
+			value.RequiresObjectDeletion = true
 			result = append(result, value)
 		}
 		if err := rows.Err(); err != nil {

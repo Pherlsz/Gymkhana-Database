@@ -374,11 +374,11 @@ export interface components {
       module: components["schemas"]["Module"];
       /** @enum {string} */
       source_kind: "XLSX" | "GOOGLE_FORMS";
-      original_filename: string;
+      original_filename?: string;
       /** Format: int64 */
-      declared_size: number;
+      declared_size?: number;
       /** Format: int64 */
-      actual_size: number;
+      actual_size?: number;
       state: components["schemas"]["ImportState"];
       stage: components["schemas"]["ImportStage"];
       selected_sheet_index?: number;

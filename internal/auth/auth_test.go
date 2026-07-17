@@ -23,12 +23,15 @@ func TestRolesExposeStablePermissions(t *testing.T) {
 	if !RoleAdmin.CanManageUsers() || !RoleSuperadmin.CanManageUsers() {
 		t.Fatal("administrative role cannot manage users")
 	}
+	if RoleMember.CanManageGoogleForms() || !RoleAdmin.CanManageGoogleForms() || !RoleSuperadmin.CanManageGoogleForms() {
+		t.Fatal("Google Forms administration permissions are not role-scoped")
+	}
 	for _, role := range []Role{RoleMember, RoleAdmin, RoleSuperadmin} {
 		if !role.CanReadCustomData() || !role.CanReadAttachments() || !role.CanSearch() || !role.CanUseOperations() {
 			t.Fatalf("role %q cannot use authorized Search or Operations modules", role)
 		}
 	}
-	if Role("UNKNOWN").CanSearch() || Role("UNKNOWN").CanUseOperations() || Role("UNKNOWN").CanReadCustomData() || Role("UNKNOWN").CanReadAttachments() {
+	if Role("UNKNOWN").CanSearch() || Role("UNKNOWN").CanUseOperations() || Role("UNKNOWN").CanManageGoogleForms() || Role("UNKNOWN").CanReadCustomData() || Role("UNKNOWN").CanReadAttachments() {
 		t.Fatal("unknown role received read, Search, or Operations permissions")
 	}
 }
