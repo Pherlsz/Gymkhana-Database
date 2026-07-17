@@ -1,0 +1,858 @@
+openapi: 3.1.0
+info:
+  title: Gymkhana Database Operations API
+  version: 0.9.0
+  description: Authorized, bounded and asynchronous XLSX import, export and bulk-operation contract.
+servers:
+  - url: /
+tags:
+  - name: Operations
+paths:
+  /api/v1/operations/catalog:
+    get:
+      operationId: getOperationsCatalog
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Permission-filtered logical field catalog and limits
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationsCatalog" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/imports:
+    get:
+      operationId: listOperationImports
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses:
+        "200":
+          description: Imports created by the authenticated actor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+    post:
+      operationId: createOperationImport
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateImportRequest" }
+      responses:
+        "201":
+          description: Upload intent and private presigned target
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportUploadGrant" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/imports/{import_id}:
+    parameters:
+      - { $ref: "#/components/parameters/ImportID" }
+    get:
+      operationId: getOperationImport
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Import state, staged catalog, preview and outcomes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationImport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/imports/{import_id}/confirm:
+    parameters:
+      - { $ref: "#/components/parameters/ImportID" }
+    post:
+      operationId: confirmOperationImport
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "202":
+          description: Upload verified and parsing queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationImport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/imports/{import_id}/sheet:
+    parameters:
+      - { $ref: "#/components/parameters/ImportID" }
+    put:
+      operationId: selectOperationImportSheet
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SelectSheetRequest" }
+      responses:
+        "200":
+          description: Selected sheet and invalidated prior mapping
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationImport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/imports/{import_id}/mapping:
+    parameters:
+      - { $ref: "#/components/parameters/ImportID" }
+    put:
+      operationId: saveOperationImportMapping
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveMappingRequest" }
+      responses:
+        "200":
+          description: Logical field mapping saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationImport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/imports/{import_id}/preview:
+    parameters:
+      - { $ref: "#/components/parameters/ImportID" }
+    post:
+      operationId: previewOperationImport
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VersionRequest" }
+      responses:
+        "200":
+          description: Deterministic bounded preview with required decisions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationImport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/imports/{import_id}/decisions:
+    parameters:
+      - { $ref: "#/components/parameters/ImportID" }
+    put:
+      operationId: saveOperationImportDecisions
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveDecisionsRequest" }
+      responses:
+        "200":
+          description: Explicit update or skip decisions saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationImport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/imports/{import_id}/execute:
+    parameters:
+      - { $ref: "#/components/parameters/ImportID" }
+    post:
+      operationId: executeOperationImport
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VersionRequest" }
+      responses:
+        "202":
+          description: Idempotent batch execution queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationImport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/imports/{import_id}/cancel:
+    parameters:
+      - { $ref: "#/components/parameters/ImportID" }
+    post:
+      operationId: cancelOperationImport
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VersionRequest" }
+      responses:
+        "200":
+          description: Import cancelled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationImport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/imports/{import_id}/report:
+    parameters:
+      - { $ref: "#/components/parameters/ImportID" }
+    get:
+      operationId: getOperationImportReport
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Aggregate import outcome report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/exports:
+    get:
+      operationId: listOperationExports
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses:
+        "200":
+          description: Exports created by the authenticated actor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExportPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+    post:
+      operationId: createOperationExport
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateExportRequest" }
+      responses:
+        "202":
+          description: Full-table authorized export queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationExport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/exports/{export_id}:
+    parameters:
+      - { $ref: "#/components/parameters/ExportID" }
+    get:
+      operationId: getOperationExport
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Export state and metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OperationExport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/exports/{export_id}/download:
+    parameters:
+      - { $ref: "#/components/parameters/ExportID" }
+    post:
+      operationId: downloadOperationExport
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Short-lived private download URL
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExportDownloadGrant" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /api/v1/operations/bulk-delete:
+    post:
+      operationId: bulkDeleteOperationRecords
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkDeleteRequest" }
+      responses:
+        "200":
+          description: Transactional bulk deletion result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BulkDeleteResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: gymkhana_session
+  parameters:
+    ImportID:
+      name: import_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ExportID:
+      name: export_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0, maximum: 10000, default: 0 }
+  responses:
+    BadRequest:
+      description: Invalid JSON, identifier, pagination or request shape
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Unauthorized:
+      description: Authentication is required
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Forbidden:
+      description: The actor lacks permission for the module or action
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    NotFound:
+      description: The actor does not own the operation or it does not exist
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Conflict:
+      description: Stale version, stale preview, terminal state or unresolved decision
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    ValidationError:
+      description: Workbook limits, supported format, mapping or row validation failed
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    RateLimited:
+      description: Per-actor persistent rate or active-operation quota reached
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    ServiceUnavailable:
+      description: Object storage, operation queue or module is unavailable
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  schemas:
+    Module:
+      type: string
+      enum: [PROFILES, DOCUMENTS, BILLS]
+    FieldKind:
+      type: string
+      enum: [TEXT, IDENTIFIER, INTEGER, DECIMAL, BOOLEAN, CIVIL_DATE, CIVIL_MONTH]
+    ImportState:
+      type: string
+      enum:
+        [
+          UPLOADING,
+          UPLOADED,
+          PARSING,
+          MAPPING,
+          PREVIEW_READY,
+          DECISIONS_REQUIRED,
+          READY,
+          QUEUED,
+          RUNNING,
+          COMPLETED,
+          FAILED,
+          CANCELLED,
+          EXPIRED,
+        ]
+    ImportStage:
+      type: string
+      enum: [UPLOAD, PARSE, MAP, PREVIEW, EXECUTE, REPORT, CLEANUP]
+    ExportState:
+      type: string
+      enum: [QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED, EXPIRED]
+    RowAction:
+      type: string
+      enum: [CREATE, UPDATE, LINK, SKIP, ERROR]
+    ValueKind:
+      type: string
+      enum: [EMPTY, TEXT, NUMBER, BOOLEAN, DATE]
+    OutcomeKind:
+      type: string
+      enum: [INSERTED, UPDATED, LINKED, SKIPPED, ERRORED, CONFLICTED]
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+        request_id: { type: string }
+        field_errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [field, code, message]
+            properties:
+              field: { type: string }
+              code: { type: string }
+              message: { type: string }
+    OperationsCatalog:
+      type: object
+      additionalProperties: false
+      required: [modules, limits]
+      properties:
+        modules:
+          type: array
+          items: { $ref: "#/components/schemas/CatalogModule" }
+        limits: { $ref: "#/components/schemas/OperationLimits" }
+    CatalogModule:
+      type: object
+      additionalProperties: false
+      required:
+        [id, label, can_import, can_export, can_duplicate, can_delete, can_bulk_delete, fields]
+      properties:
+        id: { $ref: "#/components/schemas/Module" }
+        label: { type: string }
+        can_import: { type: boolean }
+        can_export: { type: boolean }
+        can_duplicate: { type: boolean }
+        can_delete: { type: boolean }
+        can_bulk_delete: { type: boolean }
+        fields:
+          type: array
+          items: { $ref: "#/components/schemas/CatalogField" }
+    CatalogField:
+      type: object
+      additionalProperties: false
+      required: [id, label, kind, required, importable, exportable]
+      properties:
+        id:
+          type: string
+          pattern: "^(?:[a-z][a-z0-9_]{0,127}|custom:[a-z][a-z0-9_]{1,63})$"
+        label: { type: string }
+        kind: { $ref: "#/components/schemas/FieldKind" }
+        required: { type: boolean }
+        importable: { type: boolean }
+        exportable: { type: boolean }
+    OperationLimits:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          maximum_file_size,
+          maximum_rows,
+          maximum_columns,
+          maximum_cells,
+          maximum_preview_rows,
+          maximum_bulk_selection,
+        ]
+      properties:
+        maximum_file_size: { type: integer, format: int64, minimum: 1 }
+        maximum_rows: { type: integer, minimum: 1 }
+        maximum_columns: { type: integer, minimum: 1 }
+        maximum_cells: { type: integer, minimum: 1 }
+        maximum_preview_rows: { type: integer, minimum: 1 }
+        maximum_bulk_selection: { type: integer, minimum: 1 }
+    CreateImportRequest:
+      type: object
+      additionalProperties: false
+      required: [module, original_filename, declared_size, idempotency_key]
+      properties:
+        module: { $ref: "#/components/schemas/Module" }
+        original_filename: { type: string, minLength: 1, maxLength: 255, pattern: "(?i)\\.xlsx$" }
+        declared_size: { type: integer, format: int64, minimum: 1, maximum: 26214400 }
+        idempotency_key: { type: string, minLength: 8, maxLength: 128 }
+    ImportUploadGrant:
+      type: object
+      additionalProperties: false
+      required: [import, upload_url, method, headers, expires_at]
+      properties:
+        import: { $ref: "#/components/schemas/OperationImport" }
+        upload_url: { type: string, format: uri }
+        method: { type: string, enum: [PUT] }
+        headers:
+          type: object
+          additionalProperties: { type: string }
+        expires_at: { type: string, format: date-time }
+    OperationImport:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          module,
+          source_kind,
+          original_filename,
+          declared_size,
+          actual_size,
+          state,
+          stage,
+          mapping_version,
+          unresolved_count,
+          validation_error_count,
+          inserted_count,
+          updated_count,
+          linked_count,
+          skipped_count,
+          errored_count,
+          conflicted_count,
+          expires_at,
+          version,
+          created_at,
+          updated_at,
+          sheets,
+          columns,
+          preview,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        module: { $ref: "#/components/schemas/Module" }
+        source_kind: { type: string, enum: [XLSX, GOOGLE_FORMS] }
+        original_filename: { type: string }
+        declared_size: { type: integer, format: int64 }
+        actual_size: { type: integer, format: int64 }
+        state: { $ref: "#/components/schemas/ImportState" }
+        stage: { $ref: "#/components/schemas/ImportStage" }
+        selected_sheet_index: { type: integer, minimum: 0 }
+        mapping_version: { type: integer, format: int64, minimum: 0 }
+        unresolved_count: { type: integer, minimum: 0 }
+        validation_error_count: { type: integer, minimum: 0 }
+        inserted_count: { type: integer, minimum: 0 }
+        updated_count: { type: integer, minimum: 0 }
+        linked_count: { type: integer, minimum: 0 }
+        skipped_count: { type: integer, minimum: 0 }
+        errored_count: { type: integer, minimum: 0 }
+        conflicted_count: { type: integer, minimum: 0 }
+        error_code: { type: string }
+        expires_at: { type: string, format: date-time }
+        cancelled_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+        version: { type: integer, format: int64, minimum: 1 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        sheets:
+          type: array
+          items: { $ref: "#/components/schemas/ImportSheet" }
+        columns:
+          type: array
+          items: { $ref: "#/components/schemas/ImportColumn" }
+        preview:
+          type: array
+          maxItems: 200
+          items: { $ref: "#/components/schemas/ImportRow" }
+    ImportSheet:
+      type: object
+      additionalProperties: false
+      required: [index, name, row_count, column_count]
+      properties:
+        index: { type: integer, minimum: 0 }
+        name: { type: string }
+        row_count: { type: integer, minimum: 0 }
+        column_count: { type: integer, minimum: 1, maximum: 256 }
+    ImportColumn:
+      type: object
+      additionalProperties: false
+      required: [sheet_index, source_column, source_header]
+      properties:
+        sheet_index: { type: integer, minimum: 0 }
+        source_column: { type: integer, minimum: 0, maximum: 255 }
+        source_header: { type: string }
+        target_field: { type: string }
+    ImportRow:
+      type: object
+      additionalProperties: false
+      required:
+        [sheet_index, row_number, proposed_action, validation_error_count, decision_required, cells]
+      properties:
+        sheet_index: { type: integer, minimum: 0 }
+        row_number: { type: integer, minimum: 2 }
+        proposed_action: { $ref: "#/components/schemas/RowAction" }
+        decision: { $ref: "#/components/schemas/RowAction" }
+        target_id: { type: string, format: uuid }
+        target_version: { type: integer, format: int64, minimum: 1 }
+        validation_error_count: { type: integer, minimum: 0 }
+        decision_required: { type: boolean }
+        cells:
+          type: array
+          maxItems: 256
+          items: { $ref: "#/components/schemas/ImportCell" }
+        outcome: { $ref: "#/components/schemas/ImportOutcome" }
+    ImportCell:
+      type: object
+      additionalProperties: false
+      required: [source_column, raw_value, value_kind, formula_present]
+      properties:
+        source_column: { type: integer, minimum: 0, maximum: 255 }
+        raw_value: { type: string, maxLength: 32768 }
+        value_kind: { $ref: "#/components/schemas/ValueKind" }
+        formula_present: { type: boolean }
+        validation_code: { type: string }
+    ImportOutcome:
+      type: object
+      additionalProperties: false
+      required: [kind, committed_at]
+      properties:
+        kind: { $ref: "#/components/schemas/OutcomeKind" }
+        target_id: { type: string, format: uuid }
+        error_code: { type: string }
+        committed_at: { type: string, format: date-time }
+    ImportPage:
+      type: object
+      additionalProperties: false
+      required: [imports, total, limit, offset]
+      properties:
+        imports:
+          type: array
+          items: { $ref: "#/components/schemas/OperationImport" }
+        total: { type: integer, format: int64, minimum: 0 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        offset: { type: integer, minimum: 0, maximum: 10000 }
+    VersionRequest:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version: { type: integer, format: int64, minimum: 1 }
+    SelectSheetRequest:
+      type: object
+      additionalProperties: false
+      required: [version, sheet_index]
+      properties:
+        version: { type: integer, format: int64, minimum: 1 }
+        sheet_index: { type: integer, minimum: 0 }
+    SaveMappingRequest:
+      type: object
+      additionalProperties: false
+      required: [version, mapping]
+      properties:
+        version: { type: integer, format: int64, minimum: 1 }
+        mapping:
+          type: array
+          minItems: 1
+          maxItems: 256
+          items:
+            type: object
+            additionalProperties: false
+            required: [source_column, target_field]
+            properties:
+              source_column: { type: integer, minimum: 0, maximum: 255 }
+              target_field:
+                { type: string, pattern: "^(?:[a-z][a-z0-9_]{0,127}|custom:[a-z][a-z0-9_]{1,63})$" }
+    SaveDecisionsRequest:
+      type: object
+      additionalProperties: false
+      required: [version, decisions]
+      properties:
+        version: { type: integer, format: int64, minimum: 1 }
+        decisions:
+          type: array
+          minItems: 1
+          maxItems: 10000
+          items:
+            type: object
+            additionalProperties: false
+            required: [row_number, action]
+            properties:
+              row_number: { type: integer, minimum: 2 }
+              action: { type: string, enum: [UPDATE, LINK, SKIP] }
+              target_id: { type: string, format: uuid }
+              target_version: { type: integer, format: int64, minimum: 1 }
+    ImportReport:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          import_id,
+          state,
+          inserted,
+          updated,
+          linked,
+          skipped,
+          errored,
+          conflicted,
+          decisions,
+          unresolved,
+          validation_errors,
+          rows,
+        ]
+      properties:
+        import_id: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ImportState" }
+        inserted: { type: integer, minimum: 0 }
+        updated: { type: integer, minimum: 0 }
+        linked: { type: integer, minimum: 0 }
+        skipped: { type: integer, minimum: 0 }
+        errored: { type: integer, minimum: 0 }
+        conflicted: { type: integer, minimum: 0 }
+        decisions: { type: integer, minimum: 0 }
+        unresolved: { type: integer, minimum: 0 }
+        validation_errors: { type: integer, minimum: 0 }
+        rows:
+          type: array
+          maxItems: 500
+          items: { $ref: "#/components/schemas/ImportReportRow" }
+    ImportReportRow:
+      type: object
+      additionalProperties: false
+      required: [sheet_index, row_number]
+      properties:
+        sheet_index: { type: integer, minimum: 0 }
+        row_number: { type: integer, minimum: 2 }
+        outcome: { $ref: "#/components/schemas/OutcomeKind" }
+        error_code: { type: string }
+    CreateExportRequest:
+      type: object
+      additionalProperties: false
+      required: [module, idempotency_key]
+      properties:
+        module: { $ref: "#/components/schemas/Module" }
+        idempotency_key: { type: string, minLength: 8, maxLength: 128 }
+    OperationExport:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          module,
+          state,
+          filename,
+          row_count,
+          byte_size,
+          expires_at,
+          version,
+          created_at,
+          updated_at,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        module: { $ref: "#/components/schemas/Module" }
+        state: { $ref: "#/components/schemas/ExportState" }
+        filename: { type: string }
+        row_count: { type: integer, minimum: 0 }
+        byte_size: { type: integer, format: int64, minimum: 0 }
+        error_code: { type: string }
+        expires_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+        version: { type: integer, format: int64, minimum: 1 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ExportPage:
+      type: object
+      additionalProperties: false
+      required: [exports, total, limit, offset]
+      properties:
+        exports:
+          type: array
+          items: { $ref: "#/components/schemas/OperationExport" }
+        total: { type: integer, format: int64, minimum: 0 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        offset: { type: integer, minimum: 0, maximum: 10000 }
+    ExportDownloadGrant:
+      type: object
+      additionalProperties: false
+      required: [url, method, expires_at]
+      properties:
+        url: { type: string, format: uri }
+        method: { type: string, enum: [GET] }
+        expires_at: { type: string, format: date-time }
+    BulkDeleteRequest:
+      type: object
+      additionalProperties: false
+      required: [module, items, confirmation]
+      properties:
+        module: { $ref: "#/components/schemas/Module" }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, version]
+            properties:
+              id: { type: string, format: uuid }
+              version: { type: integer, format: int64, minimum: 1 }
+        confirmation: { type: string, const: Confirmar }
+    BulkDeleteResult:
+      type: object
+      additionalProperties: false
+      required: [module, deleted]
+      properties:
+        module: { $ref: "#/components/schemas/Module" }
+        deleted: { type: integer, minimum: 1, maximum: 500 }
