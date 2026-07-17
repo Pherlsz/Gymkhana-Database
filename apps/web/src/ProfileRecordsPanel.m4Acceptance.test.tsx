@@ -228,10 +228,14 @@ describe("M4 Profile records acceptance", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderRecords("bills", { bill_selected: "bill-1", bill_mode: "view" });
 
-    expect(await screen.findByRole("heading", { name: "Anexos da conta ou comprovante" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Anexos da conta ou comprovante" }),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringMatching(/\/api\/v1\/attachments\?.*owner_kind=BILL.*owner_id=bill-1.*include_trashed=false/),
+        expect.stringMatching(
+          /\/api\/v1\/attachments\?.*owner_kind=BILL.*owner_id=bill-1.*include_trashed=false/,
+        ),
         expect.objectContaining({ credentials: "include" }),
       ),
     );
