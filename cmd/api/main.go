@@ -17,6 +17,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/config"
 	"github.com/Pherlsz/Gymkhana-Database/internal/customdata"
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
+	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/httpserver"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/logging"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/postgres"
@@ -81,6 +82,7 @@ func run() error {
 	var customDataService *customdata.Service
 	var attachmentService *attachment.Service
 	var searchService *search.Service
+	var operationsService *operations.Service
 	if pool != nil {
 		profileService, err = profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{OnAuditFailure: func(_ context.Context, event profile.AuditEvent, auditErr error) {
 			logger.Error("profile audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "profile_id", event.ProfileID.String(), "error", auditErr)
@@ -131,6 +133,16 @@ func run() error {
 			if err != nil {
 				return fmt.Errorf("configure attachment service: %w", err)
 			}
+			operationsService, _, err = operations.NewRuntime(pool, objects, operations.ServiceOptions{
+				UploadTTL: storageCfg.UploadTTL, DownloadTTL: storageCfg.DownloadTTL,
+				CleanupBatch: storageCfg.CleanupBatch,
+				OnAuditFailure: func(_ context.Context, event operations.AuditEvent, auditErr error) {
+					logger.Error("operation audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
+				},
+			}, false)
+			if err != nil {
+				return fmt.Errorf("configure operations service: %w", err)
+			}
 		}
 		searchService, err = search.NewService(search.NewPostgresStore(pool), search.ServiceOptions{})
 		if err != nil {
@@ -148,6 +160,7 @@ func run() error {
 			CustomData:     customDataService,
 			Attachment:     attachmentService,
 			Search:         searchService,
+			Operations:     operationsService,
 			SecureCookies:  cfg.Auth.SecureCookies,
 			ApplicationURL: cfg.Auth.ApplicationURL,
 		}),
