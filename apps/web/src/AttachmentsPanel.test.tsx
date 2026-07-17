@@ -85,7 +85,7 @@ describe("AttachmentsPanel", () => {
   it("surfaces an optimistic conflict while trashing", async () => {
     attachmentAPI.listAttachments.mockResolvedValue([active]);
     attachmentAPI.trashAttachment.mockRejectedValue(
-      new APIRequestError("conflict", { status: 409 }),
+      new APIRequestError("conflict", { status: 409, code: "conflict", requestId: undefined }),
     );
     renderPanel();
 
