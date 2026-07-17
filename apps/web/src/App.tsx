@@ -19,6 +19,7 @@ import {
 } from "@tanstack/react-router";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { AdminUsersPanel } from "./AdminUsersPanel";
+import { CustomDataPage } from "./CustomDataPage";
 import { ProfilesPage, normalizeProfileSearch } from "./ProfilesPage";
 import {
   APIRequestError,
@@ -57,7 +58,12 @@ export const profilesRoute = createRoute({
   validateSearch: normalizeProfileSearch,
   component: ProfilesPage,
 });
-const routeTree = rootRoute.addChildren([homeRoute, profilesRoute]);
+const customDataRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/custom-data",
+  component: CustomDataPage,
+});
+const routeTree = rootRoute.addChildren([homeRoute, profilesRoute, customDataRoute]);
 const router = createRouter({ routeTree });
 declare module "@tanstack/react-router" {
   interface Register {
@@ -171,6 +177,13 @@ function AuthenticatedShell() {
               search={normalizeProfileSearch({})}
             >
               Pessoas
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              to="/custom-data"
+            >
+              Dados personalizados
             </Link>
           </nav>
         </Inline>
