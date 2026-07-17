@@ -104,7 +104,9 @@ describe("AttachmentsPanel", () => {
     renderPanel();
 
     fireEvent.click(await screen.findByRole("button", { name: "Mover para lixeira" }));
-    expect(await screen.findByText("Anexo movido para a lixeira por sete dias.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Anexo movido para a lixeira por sete dias."),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Mostrar lixeira" }));
     fireEvent.click(await screen.findByRole("button", { name: "Restaurar" }));
