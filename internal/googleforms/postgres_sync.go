@@ -477,7 +477,7 @@ RETURNING id, source_id, owner_user_id, actor_user_id, trigger_kind,
 	       END,
 	       last_synced_at=$5,
 	       next_sync_at=CASE WHEN state='ACTIVE' AND sync_mode='POLL'
-	         THEN $5+make_interval(secs=>poll_interval_seconds) ELSE NULL END,
+         THEN $5::timestamptz+make_interval(secs=>poll_interval_seconds) ELSE NULL END,
 	       error_code=NULL, version=version+1, updated_at=$5
 	 WHERE id=$1`, databaseUUID(run.SourceID), optionalTime(cursor), nextPageToken,
 		optionalTime(run.CursorStartedAt), now); err != nil {

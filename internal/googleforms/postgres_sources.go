@@ -224,7 +224,7 @@ func (store *PostgresStore) SaveMapping(ctx context.Context, id Identifier, owne
 	}
 	if _, err := tx.Exec(ctx, `UPDATE google_forms_sources
    SET state=$3, error_code=NULL,
-       next_sync_at=CASE WHEN $3='ACTIVE' AND sync_mode='POLL' THEN $4+make_interval(secs=>poll_interval_seconds) ELSE NULL END,
+       next_sync_at=CASE WHEN $3='ACTIVE' AND sync_mode='POLL' THEN $4::timestamptz+make_interval(secs=>poll_interval_seconds) ELSE NULL END,
        version=version+1, updated_at=$4
  WHERE id=$1 AND owner_user_id=$2`, databaseUUID(id), authDatabaseUUID(ownerID), nextState, now); err != nil {
 		return Source{}, fmt.Errorf("finish source mapping: %w", err)
@@ -271,7 +271,7 @@ func (store *PostgresStore) UpdateSource(ctx context.Context, id Identifier, own
 	seconds := int(input.PollInterval / time.Second)
 	if _, err := tx.Exec(ctx, `UPDATE google_forms_sources
    SET state=$4, sync_mode=$5, poll_interval_seconds=$6,
-       next_sync_at=CASE WHEN $4='ACTIVE' AND $5='POLL' THEN $7+make_interval(secs=>$6) ELSE NULL END,
+       next_sync_at=CASE WHEN $4='ACTIVE' AND $5='POLL' THEN $7::timestamptz+make_interval(secs=>$6) ELSE NULL END,
        error_code=NULL, version=version+1, updated_at=$7
  WHERE id=$1 AND owner_user_id=$2 AND version=$3`, databaseUUID(id), authDatabaseUUID(ownerID), version,
 		nextState, input.SyncMode, seconds, now); err != nil {
