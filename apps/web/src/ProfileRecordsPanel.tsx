@@ -1,6 +1,7 @@
 import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "@pherlsz/gymkhana-ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { AttachmentsPanel } from "./AttachmentsPanel";
 import {
   APIRequestError,
   assignBillCurrentUse,
@@ -243,6 +244,15 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
           onDelete={(value, confirmation) => deleteMutation.mutate({ value, confirmation })}
         />
       ) : null}
+      {selected &&
+      (search.document_mode === "view" || search.document_mode === "edit") ? (
+        <AttachmentsPanel
+          key={`document-attachments:${selected.id}`}
+          owner={{ owner_kind: "DOCUMENT", owner_id: selected.id }}
+          title="Anexos do documento"
+          description="Arquivos privados vinculados exclusivamente a este documento."
+        />
+      ) : null}
     </Stack>
   );
 }
@@ -432,6 +442,14 @@ function BillsSection({ profile, role, search, onSearch, onNotice }: Props) {
           }}
           onDuplicate={(value) => duplicateMutation.mutate(value.id)}
           onDelete={(value, confirmation) => deleteMutation.mutate({ value, confirmation })}
+        />
+      ) : null}
+      {selected && (search.bill_mode === "view" || search.bill_mode === "edit") ? (
+        <AttachmentsPanel
+          key={`bill-attachments:${selected.id}`}
+          owner={{ owner_kind: "BILL", owner_id: selected.id }}
+          title="Anexos da conta ou comprovante"
+          description="Arquivos privados vinculados exclusivamente a este registro."
         />
       ) : null}
     </Stack>
