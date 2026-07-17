@@ -143,8 +143,8 @@ type CreateUploadIntentInput struct {
 }
 
 type UploadLimits struct {
-	RateWindowStart  time.Time
-	MaximumIntents   int
+	RateWindowStart   time.Time
+	MaximumIntents    int
 	MaximumTotalBytes int64
 }
 
