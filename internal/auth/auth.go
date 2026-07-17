@@ -101,6 +101,10 @@ func (role Role) CanUseOperations() bool {
 	return role.Valid()
 }
 
+func (role Role) CanManageGoogleForms() bool {
+	return role == RoleAdmin || role == RoleSuperadmin
+}
+
 type AuditEventType string
 
 const (

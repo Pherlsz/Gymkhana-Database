@@ -551,13 +551,13 @@ type OperationExport struct {
 
 // OperationImport defines model for OperationImport.
 type OperationImport struct {
-	ActualSize           int64                     `json:"actual_size"`
+	ActualSize           *int64                    `json:"actual_size,omitempty"`
 	CancelledAt          *time.Time                `json:"cancelled_at,omitempty"`
 	Columns              []ImportColumn            `json:"columns"`
 	CompletedAt          *time.Time                `json:"completed_at,omitempty"`
 	ConflictedCount      int                       `json:"conflicted_count"`
 	CreatedAt            time.Time                 `json:"created_at"`
-	DeclaredSize         int64                     `json:"declared_size"`
+	DeclaredSize         *int64                    `json:"declared_size,omitempty"`
 	ErrorCode            *string                   `json:"error_code,omitempty"`
 	ErroredCount         int                       `json:"errored_count"`
 	ExpiresAt            time.Time                 `json:"expires_at"`
@@ -566,7 +566,7 @@ type OperationImport struct {
 	LinkedCount          int                       `json:"linked_count"`
 	MappingVersion       int64                     `json:"mapping_version"`
 	Module               Module                    `json:"module"`
-	OriginalFilename     string                    `json:"original_filename"`
+	OriginalFilename     *string                   `json:"original_filename,omitempty"`
 	Preview              []ImportRow               `json:"preview"`
 	SelectedSheetIndex   *int                      `json:"selected_sheet_index,omitempty"`
 	Sheets               []ImportSheet             `json:"sheets"`

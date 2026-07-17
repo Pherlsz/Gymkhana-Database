@@ -1,0 +1,531 @@
+openapi: 3.1.0
+info:
+  title: Gymkhana Database Google Forms API
+  version: 0.10.0
+  description: Owner-scoped, read-only Google Forms ingestion with encrypted OAuth credentials and durable staging.
+servers:
+  - url: /
+tags:
+  - name: Google Forms
+paths:
+  /api/v1/google-forms/status:
+    get:
+      operationId: getGoogleFormsStatus
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Feature and owner connection status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GoogleFormsStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/v1/google-forms/oauth/start:
+    post:
+      operationId: startGoogleFormsOAuth
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OAuthStartRequest" }
+      responses:
+        "201":
+          description: Short-lived Google authorization URL
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OAuthStart" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/google-forms/oauth/callback:
+    get:
+      operationId: completeGoogleFormsOAuth
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - name: state
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 256 }
+        - name: code
+          in: query
+          schema: { type: string, maxLength: 4096 }
+        - name: error
+          in: query
+          schema: { type: string, maxLength: 200 }
+      responses:
+        "302":
+          description: Redirect to the allowlisted application return path
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/Validation" }
+        "502": { $ref: "#/components/responses/Provider" }
+  /api/v1/google-forms/connection:
+    delete:
+      operationId: disconnectGoogleForms
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VersionRequest" }
+      responses:
+        "200":
+          description: Locally disconnected and provider token revoked
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Connection" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "502": { $ref: "#/components/responses/Provider" }
+  /api/v1/google-forms/sources:
+    get:
+      operationId: listGoogleFormsSources
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+      responses:
+        "200":
+          description: Sources owned by the authenticated administrator
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SourcePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createGoogleFormsSource
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateSourceRequest" }
+      responses:
+        "201":
+          description: Form schema registered as an owner-scoped source
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Source" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/Validation" }
+        "502": { $ref: "#/components/responses/Provider" }
+  /api/v1/google-forms/sources/{source_id}:
+    parameters:
+      - { $ref: "#/components/parameters/SourceID" }
+    get:
+      operationId: getGoogleFormsSource
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Source schema and mapping
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Source" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateGoogleFormsSource
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateSourceRequest" }
+      responses:
+        "200":
+          description: Polling and enabled state updated optimistically
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Source" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/google-forms/sources/{source_id}/mapping:
+    parameters:
+      - { $ref: "#/components/parameters/SourceID" }
+    put:
+      operationId: saveGoogleFormsMapping
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SaveMappingRequest" }
+      responses:
+        "200":
+          description: Allowlisted logical-field mapping saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Source" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/google-forms/sources/{source_id}/refresh:
+    parameters:
+      - { $ref: "#/components/parameters/SourceID" }
+    post:
+      operationId: refreshGoogleFormsSource
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Latest schema loaded and drift reported
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RefreshResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "502": { $ref: "#/components/responses/Provider" }
+  /api/v1/google-forms/sources/{source_id}/syncs:
+    parameters:
+      - { $ref: "#/components/parameters/SourceID" }
+    post:
+      operationId: createGoogleFormsSync
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateSyncRequest" }
+      responses:
+        "202":
+          description: Idempotent response synchronization queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SyncRun" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/google-forms/syncs:
+    get:
+      operationId: listGoogleFormsSyncs
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Offset" }
+        - name: source_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Owner-scoped synchronization history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SyncPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/v1/google-forms/syncs/{sync_id}/cancel:
+    parameters:
+      - { $ref: "#/components/parameters/SyncID" }
+    post:
+      operationId: cancelGoogleFormsSync
+      tags: [Google Forms]
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VersionRequest" }
+      responses:
+        "200":
+          description: Queued or running synchronization cancelled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SyncRun" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: gymkhana_session
+  parameters:
+    SourceID:
+      name: source_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SyncID:
+      name: sync_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0, maximum: 10000, default: 0 }
+  responses:
+    BadRequest:
+      description: Invalid identifier, JSON or input
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Unauthorized:
+      description: Authentication is required
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Forbidden:
+      description: Active ADMIN or SUPERADMIN ownership is required
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    NotFound:
+      description: Owner-scoped resource was not found
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Conflict:
+      description: Version, state, schema or connection requires review
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Validation:
+      description: Unsupported form or insufficient scopes
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Provider:
+      description: Google OAuth or Forms API failed safely
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Unavailable:
+      description: Integration is feature-disabled
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+        request_id: { type: string }
+    Module:
+      type: string
+      enum: [PROFILES, DOCUMENTS, BILLS]
+    ConnectionState:
+      type: string
+      enum: [ACTIVE, NEEDS_REAUTH, DISCONNECTED]
+    SourceState:
+      type: string
+      enum: [DRAFT, ACTIVE, PAUSED, SCHEMA_DRIFT, NEEDS_REAUTH, ERROR]
+    SyncMode:
+      type: string
+      enum: [MANUAL, POLL]
+    SyncState:
+      type: string
+      enum: [QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED]
+    TriggerKind:
+      type: string
+      enum: [MANUAL, SCHEDULED]
+    AnswerKind:
+      type: string
+      enum: [TEXT, DATE, TIME, SCALE, UNSUPPORTED]
+    VersionRequest:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version: { type: integer, format: int64, minimum: 1 }
+    OAuthStartRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        return_path:
+          type: string
+          pattern: "^/(?!/)[A-Za-z0-9/_?=&.%-]{0,500}$"
+    OAuthStart:
+      type: object
+      additionalProperties: false
+      required: [authorization_url, expires_at]
+      properties:
+        authorization_url: { type: string, format: uri }
+        expires_at: { type: string, format: date-time }
+    GoogleFormsStatus:
+      type: object
+      additionalProperties: false
+      required: [enabled, connected]
+      properties:
+        enabled: { type: boolean }
+        connected: { type: boolean }
+        connection: { $ref: "#/components/schemas/Connection" }
+    Connection:
+      type: object
+      additionalProperties: false
+      required: [id, state, granted_scopes, version, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        state: { $ref: "#/components/schemas/ConnectionState" }
+        granted_scopes:
+          type: array
+          minItems: 0
+          maxItems: 2
+          uniqueItems: true
+          items: { type: string }
+        error_code: { type: string }
+        connected_at: { type: string, format: date-time }
+        disconnected_at: { type: string, format: date-time }
+        version: { type: integer, format: int64, minimum: 1 }
+        updated_at: { type: string, format: date-time }
+    CreateSourceRequest:
+      type: object
+      additionalProperties: false
+      required: [form_reference, module]
+      properties:
+        form_reference: { type: string, minLength: 10, maxLength: 1000 }
+        module: { $ref: "#/components/schemas/Module" }
+    MappingItem:
+      type: object
+      additionalProperties: false
+      required: [question_id, target_field]
+      properties:
+        question_id: { type: string, minLength: 1, maxLength: 300 }
+        target_field: { type: string, minLength: 1, maxLength: 120 }
+    SaveMappingRequest:
+      type: object
+      additionalProperties: false
+      required: [version, mapping]
+      properties:
+        version: { type: integer, format: int64, minimum: 1 }
+        mapping:
+          type: array
+          minItems: 1
+          maxItems: 256
+          items: { $ref: "#/components/schemas/MappingItem" }
+    UpdateSourceRequest:
+      type: object
+      additionalProperties: false
+      required: [version, sync_mode, poll_interval_seconds, enabled]
+      properties:
+        version: { type: integer, format: int64, minimum: 1 }
+        sync_mode: { $ref: "#/components/schemas/SyncMode" }
+        poll_interval_seconds: { type: integer, minimum: 300, maximum: 86400 }
+        enabled: { type: boolean }
+    Question:
+      type: object
+      additionalProperties: false
+      required: [id, position, title, answer_kind, required, supported]
+      properties:
+        id: { type: string }
+        position: { type: integer, minimum: 0, maximum: 255 }
+        title: { type: string }
+        answer_kind: { $ref: "#/components/schemas/AnswerKind" }
+        required: { type: boolean }
+        supported: { type: boolean }
+        unsupported_code: { type: string }
+        target_field: { type: string }
+    Source:
+      type: object
+      additionalProperties: false
+      required:
+        [id, provider_form_id, title, module, state, schema_revision, sync_mode, poll_interval_seconds, pagination_pending, version, created_at, updated_at, questions]
+      properties:
+        id: { type: string, format: uuid }
+        provider_form_id: { type: string }
+        title: { type: string }
+        module: { $ref: "#/components/schemas/Module" }
+        state: { $ref: "#/components/schemas/SourceState" }
+        schema_revision: { type: string }
+        sync_mode: { $ref: "#/components/schemas/SyncMode" }
+        poll_interval_seconds: { type: integer, minimum: 300, maximum: 86400 }
+        cursor_submitted_at: { type: string, format: date-time }
+        pagination_pending: { type: boolean }
+        last_synced_at: { type: string, format: date-time }
+        next_sync_at: { type: string, format: date-time }
+        error_code: { type: string }
+        version: { type: integer, format: int64, minimum: 1 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        questions:
+          type: array
+          maxItems: 256
+          items: { $ref: "#/components/schemas/Question" }
+    SourcePage:
+      type: object
+      additionalProperties: false
+      required: [sources, total, limit, offset]
+      properties:
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/Source" }
+        total: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        offset: { type: integer, minimum: 0 }
+    RefreshResult:
+      type: object
+      additionalProperties: false
+      required: [source, drifted]
+      properties:
+        source: { $ref: "#/components/schemas/Source" }
+        drifted: { type: boolean }
+    CreateSyncRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key]
+      properties:
+        idempotency_key: { type: string, minLength: 8, maxLength: 128 }
+    SyncRun:
+      type: object
+      additionalProperties: false
+      required:
+        [id, source_id, trigger_kind, state, received_count, staged_count, duplicate_count, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        source_id: { type: string, format: uuid }
+        trigger_kind: { $ref: "#/components/schemas/TriggerKind" }
+        state: { $ref: "#/components/schemas/SyncState" }
+        operation_import_id: { type: string, format: uuid }
+        received_count: { type: integer, minimum: 0 }
+        staged_count: { type: integer, minimum: 0 }
+        duplicate_count: { type: integer, minimum: 0 }
+        error_code: { type: string }
+        started_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+        version: { type: integer, format: int64, minimum: 1 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    SyncPage:
+      type: object
+      additionalProperties: false
+      required: [runs, total, limit, offset]
+      properties:
+        runs:
+          type: array
+          items: { $ref: "#/components/schemas/SyncRun" }
+        total: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        offset: { type: integer, minimum: 0 }

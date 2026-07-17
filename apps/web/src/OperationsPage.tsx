@@ -103,7 +103,10 @@ export function OperationsPage() {
   );
   const importColumns = useMemo(
     () => [
-      importColumn.accessor("original_filename", { header: "Arquivo" }),
+      importColumn.accessor((value) => value.original_filename ?? "Google Forms", {
+        id: "source",
+        header: "Origem",
+      }),
       importColumn.accessor("module", {
         header: "Módulo",
         cell: ({ getValue }) => moduleLabels.get(getValue()) ?? getValue(),
@@ -176,7 +179,7 @@ export function OperationsPage() {
               loadingLabel="Carregando importações…"
               renderCard={(value) => (
                 <article className="operations-card" key={value.id}>
-                  <strong>{value.original_filename}</strong>
+                  <strong>{value.original_filename ?? "Google Forms"}</strong>
                   <span>{moduleLabels.get(value.module) ?? value.module}</span>
                   <OperationStatus value={value.state} />
                   <span>{importResultLabel(value)}</span>
@@ -339,7 +342,7 @@ function ImportWorkspace({
         <Inline align="center" className="operations-heading">
           <div>
             <span className="operations-muted">Importação selecionada</span>
-            <h2>{value.original_filename}</h2>
+            <h2>{value.original_filename ?? "Importação do Google Forms"}</h2>
           </div>
           <Inline>
             <OperationStatus value={value.state} />

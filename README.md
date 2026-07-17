@@ -126,6 +126,12 @@ The first successful login matching `AUTH_SUPERADMIN_GITHUB_LOGIN` creates the i
 
 The complete setup, lifecycle, audit, smoke-test, incident, and recovery procedures are in [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
 
+## Google Forms ingestion
+
+Owner-scoped Google Forms ingestion is disabled by default. It uses only the Forms body/response read-only scopes and feeds normalized responses into the existing Operations preview, decision, execution, and report flow. Production activation requires an owner-created Google Cloud OAuth client, the enabled Google Forms API, an exact callback URI, and secret-manager values.
+
+Configuration, key rotation, smoke testing, and recovery procedures are in [`docs/GOOGLE_FORMS.md`](docs/GOOGLE_FORMS.md).
+
 ## Common commands
 
 ```bash
@@ -216,4 +222,5 @@ Private UI/Core versions are pinned only after their releases are published. Per
 - [Issue #31](https://github.com/Pherlsz/Gymkhana-Database/issues/31) is the only live project checklist and continuation tracker.
 - GitHub milestones summarize one delivery stage and derive progress from its parent and executable issues; they do not replace #31.
 - [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) is an operational runbook for the implemented authentication feature.
+- [`docs/GOOGLE_FORMS.md`](docs/GOOGLE_FORMS.md) is the activation, rotation, smoke-test, and recovery runbook for Google Forms ingestion.
 - New milestone-status, acceptance-tracking, continuation, or next-action documents must not be created.

@@ -17,6 +17,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/config"
 	"github.com/Pherlsz/Gymkhana-Database/internal/customdata"
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
+	"github.com/Pherlsz/Gymkhana-Database/internal/googleforms"
 	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/httpserver"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/logging"
@@ -83,6 +84,7 @@ func run() error {
 	var attachmentService *attachment.Service
 	var searchService *search.Service
 	var operationsService *operations.Service
+	var googleFormsService *googleforms.Service
 	if pool != nil {
 		profileService, err = profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{OnAuditFailure: func(_ context.Context, event profile.AuditEvent, auditErr error) {
 			logger.Error("profile audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "profile_id", event.ProfileID.String(), "error", auditErr)
@@ -144,6 +146,25 @@ func run() error {
 				return fmt.Errorf("configure operations service: %w", err)
 			}
 		}
+		if cfg.GoogleForms.Enabled {
+			if operationsService == nil {
+				return errors.New("google forms requires the operations runtime and private storage")
+			}
+			googleFormsService, _, err = googleforms.NewRuntime(pool, operationsService, googleforms.RuntimeOptions{
+				Service: googleforms.ServiceOptions{
+					Enabled: true, ResponsePageSize: cfg.GoogleForms.ResponsePageSize,
+					OnAuditFailure: func(_ context.Context, event googleforms.AuditEvent, auditErr error) {
+						logger.Error("Google Forms audit event was not persisted", "event_type", event.EventType, "request_id", event.RequestID, "error", auditErr)
+					},
+				},
+				ClientID: cfg.GoogleForms.ClientID, ClientSecret: cfg.GoogleForms.ClientSecret,
+				RedirectURL: cfg.GoogleForms.RedirectURL, KeyVersion: cfg.GoogleForms.TokenKeyVersion,
+				Keys: cfg.GoogleForms.TokenEncryptionKeys,
+			}, false)
+			if err != nil {
+				return fmt.Errorf("configure Google Forms service: %w", err)
+			}
+		}
 		searchService, err = search.NewService(search.NewPostgresStore(pool), search.ServiceOptions{})
 		if err != nil {
 			return fmt.Errorf("configure Search service: %w", err)
@@ -161,6 +182,7 @@ func run() error {
 			Attachment:     attachmentService,
 			Search:         searchService,
 			Operations:     operationsService,
+			GoogleForms:    googleFormsService,
 			SecureCookies:  cfg.Auth.SecureCookies,
 			ApplicationURL: cfg.Auth.ApplicationURL,
 		}),

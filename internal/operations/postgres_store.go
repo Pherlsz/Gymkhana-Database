@@ -42,14 +42,15 @@ type rowScanner interface {
 func scanImport(row rowScanner) (Import, error) {
 	var value Import
 	var id, actorID pgtype.UUID
-	var actualSize, riverJobID pgtype.Int8
+	var originalFilename, objectKey pgtype.Text
+	var declaredSize, actualSize, riverJobID pgtype.Int8
 	var selectedSheet pgtype.Int4
 	var sha []byte
 	var errorCode pgtype.Text
 	var cancelledAt, completedAt pgtype.Timestamptz
 	if err := row.Scan(
-		&id, &actorID, &value.Module, &value.SourceKind, &value.OriginalFilename,
-		&value.DeclaredSize, &actualSize, &sha, &value.ObjectKey, &value.IdempotencyKey,
+		&id, &actorID, &value.Module, &value.SourceKind, &originalFilename,
+		&declaredSize, &actualSize, &sha, &objectKey, &value.IdempotencyKey,
 		&value.State, &value.Stage, &selectedSheet, &value.MappingVersion, &value.UnresolvedCount,
 		&value.ValidationErrorCount, &value.InsertedCount, &value.UpdatedCount, &value.LinkedCount, &value.SkippedCount,
 		&value.ErroredCount, &value.ConflictedCount, &riverJobID, &errorCode, &value.ExpiresAt,
@@ -59,10 +60,19 @@ func scanImport(row rowScanner) (Import, error) {
 	}
 	value.ID = identifierFromUUID(id)
 	value.ActorUserID = authIdentifierFromUUID(actorID)
+	if originalFilename.Valid {
+		value.OriginalFilename = originalFilename.String
+	}
+	if declaredSize.Valid {
+		value.DeclaredSize = declaredSize.Int64
+	}
 	if actualSize.Valid {
 		value.ActualSize = actualSize.Int64
 	}
 	copy(value.ContentSHA256[:], sha)
+	if objectKey.Valid {
+		value.ObjectKey = objectKey.String
+	}
 	if selectedSheet.Valid {
 		index := int(selectedSheet.Int32)
 		value.SelectedSheetIndex = &index
@@ -596,7 +606,7 @@ RETURNING id, actor_user_id, module, source_kind, original_filename,
  WHERE import_id=$1`, databaseUUID(id)); err != nil {
 		return Import{}, fmt.Errorf("clear preview after sheet selection: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `UPDATE operation_import_cells SET validation_code=NULL WHERE import_id=$1`, databaseUUID(id)); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE operation_import_cells SET validation_code=source_validation_code WHERE import_id=$1`, databaseUUID(id)); err != nil {
 		return Import{}, fmt.Errorf("clear validation after sheet selection: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -660,6 +670,9 @@ func (store *PostgresStore) SaveMapping(ctx context.Context, id Identifier, acto
        validation_error_count=0, decision_required=false, source_fingerprint=NULL
  WHERE import_id=$1`, databaseUUID(id)); err != nil {
 		return Import{}, fmt.Errorf("clear import preview rows: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE operation_import_cells SET validation_code=source_validation_code WHERE import_id=$1`, databaseUUID(id)); err != nil {
+		return Import{}, fmt.Errorf("clear import validation: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `UPDATE operation_imports
    SET state='MAPPING', stage='MAP', mapping_version=mapping_version+1,
@@ -767,7 +780,7 @@ func (store *PostgresStore) loadRows(ctx context.Context, id Identifier, preview
 		rowNumbers = append(rowNumbers, int32(mapped.Row.RowNumber))
 	}
 	cells, err := store.pool.Query(ctx, `SELECT c.row_number, c.source_column, c.raw_value,
-       c.value_kind, c.formula_present, c.validation_code, columns.target_field
+	       c.value_kind, c.formula_present, c.source_validation_code, columns.target_field
   FROM operation_import_cells c
   JOIN operation_imports i ON i.id=c.import_id AND i.selected_sheet_index=c.sheet_index
   JOIN operation_import_columns columns

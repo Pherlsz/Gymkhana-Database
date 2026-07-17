@@ -558,9 +558,6 @@ components:
           id,
           module,
           source_kind,
-          original_filename,
-          declared_size,
-          actual_size,
           state,
           stage,
           mapping_version,
@@ -584,9 +581,9 @@ components:
         id: { type: string, format: uuid }
         module: { $ref: "#/components/schemas/Module" }
         source_kind: { type: string, enum: [XLSX, GOOGLE_FORMS] }
-        original_filename: { type: string }
-        declared_size: { type: integer, format: int64 }
-        actual_size: { type: integer, format: int64 }
+        original_filename: { type: string, minLength: 1 }
+        declared_size: { type: integer, format: int64, minimum: 1 }
+        actual_size: { type: integer, format: int64, minimum: 1 }
         state: { $ref: "#/components/schemas/ImportState" }
         stage: { $ref: "#/components/schemas/ImportStage" }
         selected_sheet_index: { type: integer, minimum: 0 }

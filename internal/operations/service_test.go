@@ -14,20 +14,20 @@ func TestValidateMappingRejectsDuplicateTargetsAndIncompleteMoneyPair(t *testing
 	if !ok {
 		t.Fatal("profiles catalog is unavailable")
 	}
-	if err := validateMapping(profiles, []MappingInput{
+	if err := ValidateMapping(profiles, []MappingInput{
 		{SourceColumn: 0, TargetField: "full_name"},
 		{SourceColumn: 1, TargetField: "full_name"},
 	}); !errors.Is(err, ErrInvalidMapping) {
 		t.Fatalf("duplicate mapping error = %v", err)
 	}
-	if err := validateMapping(profiles, []MappingInput{
+	if err := ValidateMapping(profiles, []MappingInput{
 		{SourceColumn: 0, TargetField: "full_name"},
 		{SourceColumn: 1, TargetField: "profiles.full_name;drop table profiles"},
 	}); !errors.Is(err, ErrInvalidMapping) {
 		t.Fatalf("physical/SQL mapping error = %v", err)
 	}
 	profiles.Fields = append(profiles.Fields, Field{ID: CustomFieldPrefix + "member_code", Label: "Código", Kind: FieldText, Importable: true})
-	if err := validateMapping(profiles, []MappingInput{
+	if err := ValidateMapping(profiles, []MappingInput{
 		{SourceColumn: 0, TargetField: "full_name"},
 		{SourceColumn: 1, TargetField: CustomFieldPrefix + "member_code"},
 	}); err != nil {
@@ -38,7 +38,7 @@ func TestValidateMappingRejectsDuplicateTargetsAndIncompleteMoneyPair(t *testing
 	if !ok {
 		t.Fatal("bills catalog is unavailable")
 	}
-	if err := validateMapping(bills, []MappingInput{
+	if err := ValidateMapping(bills, []MappingInput{
 		{SourceColumn: 0, TargetField: "owner_profile_id"},
 		{SourceColumn: 1, TargetField: "bill_type_id"},
 		{SourceColumn: 2, TargetField: "amount"},

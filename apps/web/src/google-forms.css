@@ -1,0 +1,76 @@
+.google-forms-panel,
+.google-forms-source,
+.google-forms-sync {
+  padding: var(--gym-space-5);
+}
+
+.google-forms-heading {
+  justify-content: space-between;
+  gap: var(--gym-space-4);
+}
+
+.google-forms-heading h2,
+.google-forms-heading h3 {
+  margin: 0 0 var(--gym-space-1);
+}
+
+.google-forms-muted {
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.google-forms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--gym-space-3);
+}
+
+.google-forms-grid label,
+.google-forms-mapping label {
+  display: grid;
+  gap: var(--gym-space-2);
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.google-forms-grid input,
+.google-forms-grid select,
+.google-forms-mapping select {
+  min-block-size: 2.5rem;
+  inline-size: 100%;
+  padding: var(--gym-space-2) var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+  color: var(--gym-color-text);
+}
+
+.google-forms-mapping {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--gym-space-3);
+}
+
+.google-forms-mapping label {
+  padding: var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+}
+
+.google-forms-unsupported {
+  min-block-size: 2.5rem;
+  display: flex;
+  align-items: center;
+  color: var(--gym-color-text-muted);
+}
+
+@media (max-width: 56rem) {
+  .google-forms-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .google-forms-heading > * {
+    inline-size: 100%;
+  }
+}

@@ -20,6 +20,7 @@ import {
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { AdminUsersPanel } from "./AdminUsersPanel";
 import { CustomDataPage } from "./CustomDataPage";
+import { GoogleFormsPage } from "./GoogleFormsPage";
 import { ProfilesPage, normalizeProfileSearch } from "./ProfilesPage";
 import { OperationsPage, normalizeOperationsSearch } from "./OperationsPage";
 import { SearchPage, normalizeGlobalSearch } from "./SearchPage";
@@ -77,12 +78,18 @@ export const operationsRoute = createRoute({
   validateSearch: normalizeOperationsSearch,
   component: OperationsPage,
 });
+export const googleFormsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/google-forms",
+  component: GoogleFormsPage,
+});
 const routeTree = rootRoute.addChildren([
   homeRoute,
   profilesRoute,
   searchRoute,
   customDataRoute,
   operationsRoute,
+  googleFormsRoute,
 ]);
 const router = createRouter({ routeTree });
 declare module "@tanstack/react-router" {
@@ -221,6 +228,15 @@ function AuthenticatedShell() {
             >
               Operações
             </Link>
+            {canManageUsers(session.user.role) ? (
+              <Link
+                activeProps={{ className: "app-nav__link app-nav__link--active" }}
+                className="app-nav__link"
+                to="/google-forms"
+              >
+                Google Forms
+              </Link>
+            ) : null}
           </nav>
         </Inline>
         <Inline align="center">

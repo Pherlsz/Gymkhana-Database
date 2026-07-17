@@ -7,6 +7,8 @@ import { App } from "./App";
 import "./styles.css";
 import "./attachments.css";
 import "./search.css";
+import "./operations.css";
+import "./google-forms.css";
 
 const root = document.getElementById("root");
 

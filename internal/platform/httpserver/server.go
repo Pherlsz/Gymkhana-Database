@@ -32,6 +32,7 @@ type Options struct {
 	Attachment     attachmentService
 	Search         searchService
 	Operations     operationsService
+	GoogleForms    googleFormsService
 	SecureCookies  bool
 	ApplicationURL string
 }
@@ -78,6 +79,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerAttachmentRoutes(mux, logger, settings.Auth, settings.Attachment)
 	registerSearchRoutes(mux, logger, settings.Auth, settings.Search)
 	registerOperationsRoutes(mux, logger, settings.Auth, settings.Operations)
+	registerGoogleFormsRoutes(mux, logger, settings.Auth, settings.GoogleForms, settings.ApplicationURL)
 	mux.HandleFunc("/", fallbackHandler)
 	applicationOrigin := absoluteOrigin(settings.ApplicationURL)
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, browserOriginMiddleware(applicationOrigin, mux)))))

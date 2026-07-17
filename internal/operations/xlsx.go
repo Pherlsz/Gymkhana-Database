@@ -544,8 +544,10 @@ func WriteWorkbook(sheetName string, headers []string, rows [][]string) ([]byte,
 		{"xl/worksheets/sheet1.xml", worksheetDocumentXML(headers, rows)},
 	}
 	for _, file := range files {
-		header := &zip.FileHeader{Name: file.name, Method: zip.Deflate}
-		header.SetModTime(time.Date(1980, 1, 1, 0, 0, 0, 0, time.UTC))
+		header := &zip.FileHeader{
+			Name: file.name, Method: zip.Deflate,
+			Modified: time.Date(1980, 1, 1, 0, 0, 0, 0, time.UTC),
+		}
 		writer, err := archive.CreateHeader(header)
 		if err != nil {
 			return nil, fmt.Errorf("create XLSX entry: %w", err)
