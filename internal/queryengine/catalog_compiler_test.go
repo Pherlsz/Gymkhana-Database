@@ -2,6 +2,7 @@ package queryengine
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -59,6 +60,28 @@ func TestCatalogIsDeterministicPermissionFilteredAndLogical(t *testing.T) {
 	if _, err := loadCatalog(context.Background(), store, auth.Role("UNKNOWN")); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("loadCatalog(unknown role) error = %v", err)
 	}
+	for _, role := range []auth.Role{auth.RoleMember, auth.RoleAdmin, auth.RoleSuperadmin} {
+		permitted, err := loadCatalog(context.Background(), store, role)
+		if err != nil || len(permitted.Public.Entities) != 5 || len(permitted.Public.Relations) == 0 {
+			t.Fatalf("loadCatalog(%s) = %d entities/%d relations, error=%v", role, len(permitted.Public.Entities), len(permitted.Public.Relations), err)
+		}
+	}
+	encoded, err := json.Marshal(first.Public)
+	if err != nil || strings.Contains(string(encoded), "custom_field_values") || strings.Contains(string(encoded), "JOIN ") || strings.Contains(string(encoded), "technical_key") {
+		t.Fatalf("serialized catalog leaked physical metadata: %s, error=%v", encoded, err)
+	}
+	fullName := first.Fields["profile.full_name"].Public
+	if containsOperator(fullName.Operators, OperatorIsNull) || containsOperator(fullName.Operators, OperatorNotNull) {
+		t.Fatalf("non-null field exposes null operators: %#v", fullName.Operators)
+	}
+	store.definitions = CatalogDefinitions{}
+	changed, err := loadCatalog(context.Background(), store, auth.RoleMember)
+	if err != nil || changed.Public.Version == first.Public.Version {
+		t.Fatalf("dynamic catalog did not refresh: %q / %q, error=%v", first.Public.Version, changed.Public.Version, err)
+	}
+	if _, exists := changed.Entities["custom_entity."+testEntityID]; exists {
+		t.Fatal("removed dynamic definition remained in catalog")
+	}
 }
 
 func TestCompilerBuildsParameterizedNestedPlanWithoutMutatingInput(t *testing.T) {
@@ -69,6 +92,7 @@ func TestCompilerBuildsParameterizedNestedPlanWithoutMutatingInput(t *testing.T)
 	}
 	injected := "  Ana%' OR true --  "
 	plan := QueryPlan{
+		Version:        PlanVersionV1,
 		CatalogVersion: catalog.Public.Version,
 		RootEntity:     "profiles",
 		Projections:    []string{"profile.full_name", "profile.email"},
@@ -105,7 +129,12 @@ func TestCompilerRejectsStaleInvalidAndOverCostPlans(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadCatalog() error = %v", err)
 	}
-	base := QueryPlan{CatalogVersion: catalog.Public.Version, RootEntity: "bills", Projections: []string{"bill.amount"}, MaximumRows: 10}
+	base := QueryPlan{Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "bills", Projections: []string{"bill.amount"}, MaximumRows: 10}
+	missingVersion := base
+	missingVersion.Version = ""
+	if _, _, err := compilePlan(missingVersion, catalog, defaultMaximumCost); validationCode(err, "version") != "unsupported" {
+		t.Fatalf("unversioned compilePlan() error = %#v", err)
+	}
 	stale := base
 	stale.CatalogVersion = strings.Repeat("0", 64)
 	if _, _, err := compilePlan(stale, catalog, defaultMaximumCost); !errors.Is(err, ErrStaleCatalog) {
@@ -137,4 +166,31 @@ func validationCode(err error, field string) string {
 		}
 	}
 	return ""
+}
+
+func FuzzCompilePlanFailsClosed(f *testing.F) {
+	f.Add("profile.full_name", "contains", "Ana%' OR true --")
+	f.Add("profile.secret", "eq", "hidden")
+	f.Add("profile.full_name; DROP TABLE profiles", "eq", "x")
+	f.Fuzz(func(t *testing.T, field, operator, value string) {
+		store := newFakeQueryStore()
+		catalog, err := loadCatalog(context.Background(), store, auth.RoleMember)
+		if err != nil {
+			t.Fatalf("loadCatalog() error = %v", err)
+		}
+		plan := QueryPlan{
+			Version: PlanVersionV1, CatalogVersion: catalog.Public.Version,
+			RootEntity: "profiles", Projections: []string{"profile.full_name"}, MaximumRows: 10,
+			Filter: &FilterNode{Kind: FilterPredicate, Field: field, Operator: Operator(operator), Values: []string{value}},
+		}
+		compiled, _, compileErr := compilePlan(plan, catalog, defaultMaximumCost)
+		definition, fieldAllowed := catalog.Fields[field]
+		operatorAllowed := fieldAllowed && containsOperator(definition.Public.Operators, Operator(operator))
+		if (!fieldAllowed || !operatorAllowed) && compileErr == nil {
+			t.Fatalf("forged field/operator compiled: %q / %q", field, operator)
+		}
+		if compileErr == nil && (!strings.HasPrefix(compiled.SQL, "SELECT ") || strings.Contains(compiled.SQL, ";")) {
+			t.Fatalf("compiler emitted unsafe SQL: %s", compiled.SQL)
+		}
+	})
 }

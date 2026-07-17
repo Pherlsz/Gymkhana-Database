@@ -196,6 +196,7 @@ func (service *Service) Result(ctx context.Context, actor auth.Session, executio
 		return ResultPage{}, ErrExpired
 	}
 	if execution.State != ExecutionCompleted {
+		service.audit(ctx, &user.ID, &executionID, AuditResultRead, auth.AuditOutcomeDenied, nil, requestID)
 		return ResultPage{}, ErrConflict
 	}
 	if _, permitted := catalog.Entities[execution.RootEntity]; !permitted {

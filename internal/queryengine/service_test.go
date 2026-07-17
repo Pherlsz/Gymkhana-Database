@@ -24,7 +24,7 @@ func TestServiceExecutesMaterializesAndAuditsTypedResult(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Catalog() error = %v", err)
 	}
-	plan := QueryPlan{CatalogVersion: catalog.Version, RootEntity: "profiles",
+	plan := QueryPlan{Version: PlanVersionV1, CatalogVersion: catalog.Version, RootEntity: "profiles",
 		Projections: []string{"profile.full_name", "profile.updated_at"}, MaximumRows: 10}
 	execution, err := service.Execute(context.Background(), queryActor(store), plan, "query-success-01", "execute-request")
 	if err != nil {
@@ -50,7 +50,7 @@ func TestServiceHonorsIdempotentReplayWithoutReexecution(t *testing.T) {
 	store.created = false
 	store.existing = Execution{ID: Identifier{7}, OwnerUserID: store.user.ID, State: ExecutionCompleted,
 		CatalogVersion: catalog.Version, RootEntity: "profiles", MaximumRows: 10, RowCount: 1, ColumnCount: 1}
-	plan := QueryPlan{CatalogVersion: catalog.Version, RootEntity: "profiles", Projections: []string{"profile.full_name"}, MaximumRows: 10}
+	plan := QueryPlan{Version: PlanVersionV1, CatalogVersion: catalog.Version, RootEntity: "profiles", Projections: []string{"profile.full_name"}, MaximumRows: 10}
 	result, err := service.Execute(context.Background(), queryActor(store), plan, "replay-key-01", "replay")
 	if err != nil || result.ID != store.existing.ID || store.executeCalls != 0 {
 		t.Fatalf("idempotent Execute() = %#v, calls=%d, error=%v", result, store.executeCalls, err)
@@ -69,7 +69,7 @@ func TestServiceRevalidatesAuthorizationAndFailsUnsafeOrTimedOutExecution(t *tes
 	store = newFakeQueryStore()
 	service, _ = NewService(store, ServiceOptions{})
 	catalog, _ := service.Catalog(context.Background(), queryActor(store), "catalog")
-	plan := QueryPlan{CatalogVersion: catalog.Version, RootEntity: "profiles", Projections: []string{"profile.full_name"}, MaximumRows: 10}
+	plan := QueryPlan{Version: PlanVersionV1, CatalogVersion: catalog.Version, RootEntity: "profiles", Projections: []string{"profile.full_name"}, MaximumRows: 10}
 	store.executeErr = ErrTimeout
 	if _, err := service.Execute(context.Background(), queryActor(store), plan, "timeout-key-01", "timeout"); !errors.Is(err, ErrTimeout) {
 		t.Fatalf("Execute(timeout) error = %v", err)
@@ -109,6 +109,13 @@ func TestServiceResultIsOwnerScopedReauthorizedAndTyped(t *testing.T) {
 	if err != nil || page.Total != 1 || len(page.Rows) != 1 {
 		t.Fatalf("Result() = %#v, error=%v", page, err)
 	}
+	store.page.Execution.State = ExecutionRunning
+	store.audits = nil
+	if _, err := service.Result(context.Background(), queryActor(store), executionID, 0, 0, "running-result"); !errors.Is(err, ErrConflict) ||
+		!hasAudit(store.audits, AuditResultRead, string(auth.AuditOutcomeDenied)) {
+		t.Fatalf("Result(running) error/audits = %v / %#v", err, store.audits)
+	}
+	store.page.Execution.State = ExecutionCompleted
 	store.page.Columns[0].FieldKey = "profile.secret"
 	if _, err := service.Result(context.Background(), queryActor(store), executionID, 0, 0, "unsafe-result"); !errors.Is(err, ErrUnsafeResult) {
 		t.Fatalf("Result(removed field) error = %v", err)

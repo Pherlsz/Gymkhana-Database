@@ -94,9 +94,6 @@ func compilePlan(plan QueryPlan, catalog resolvedCatalog, maximumCost int) (Comp
 
 func normalizePlan(plan QueryPlan, catalog resolvedCatalog) (QueryPlan, *ValidationError) {
 	validation := &ValidationError{}
-	if plan.Version == "" {
-		plan.Version = PlanVersionV1
-	}
 	if plan.Version != PlanVersionV1 {
 		validation.add("version", "unsupported")
 	}

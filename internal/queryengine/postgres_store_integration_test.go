@@ -35,6 +35,8 @@ func TestPostgresQueryEngineLifecycleRelationsTypingOwnershipAndLimits(t *testin
 	otherProfileID, _ := auth.NewIdentifier()
 	documentTypeID, _ := auth.NewIdentifier()
 	documentID, _ := auth.NewIdentifier()
+	billTypeID, _ := auth.NewIdentifier()
+	billID, _ := auth.NewIdentifier()
 	fieldID, _ := auth.NewIdentifier()
 	valueID, _ := auth.NewIdentifier()
 	key := "query_" + strings.ReplaceAll(actorID.String(), "-", "")[:20]
@@ -47,6 +49,9 @@ func TestPostgresQueryEngineLifecycleRelationsTypingOwnershipAndLimits(t *testin
 	}
 	insertQueryActor(t, ctx, pool, actorID, githubID, key)
 	insertQueryActor(t, ctx, pool, otherActorID, githubID+1, key+"_other")
+	if _, err := pool.Exec(ctx, `UPDATE app_users SET role='SUPERADMIN' WHERE id=$1`, otherActorID.String()); err != nil {
+		t.Fatalf("promote other query actor: %v", err)
+	}
 	if _, err := pool.Exec(ctx, `INSERT INTO profiles(id, full_name, email, address_city)
 VALUES($1,'Ana Query','ana.query@example.org','Recife'),($2,'Zed Query','zed.query@example.org','Olinda')`, profileID.String(), otherProfileID.String()); err != nil {
 		t.Fatalf("insert query profiles: %v", err)
@@ -58,6 +63,14 @@ VALUES($1,$2,'Documento Query',true,'NONE',false)`, documentTypeID.String(), key
 	if _, err := pool.Exec(ctx, `INSERT INTO documents(id, owner_profile_id, document_type_id, identifier_value, uniqueness_policy)
 VALUES($1,$2,$3,'RG%_42','NONE')`, documentID.String(), profileID.String(), documentTypeID.String()); err != nil {
 		t.Fatalf("insert query document: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO bill_types(id, technical_key, label, active, supports_current_use)
+VALUES($1,$2,'Conta Query',true,false)`, billTypeID.String(), key+"_bill"); err != nil {
+		t.Fatalf("insert query bill type: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO bills(id, owner_profile_id, bill_type_id, reference_value, amount, currency)
+VALUES($1,$2,$3,'UC-QUERY-42',42.50,'BRL')`, billID.String(), profileID.String(), billTypeID.String()); err != nil {
+		t.Fatalf("insert query bill: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO custom_field_definitions
 (id, target_kind, technical_key, label, field_kind, required, active)
@@ -76,6 +89,8 @@ VALUES($1,$2,$3,'DECIMAL',12.34)`, valueID.String(), fieldID.String(), profileID
 		_, _ = pool.Exec(cleanup, `DELETE FROM query_rate_limits WHERE actor_user_id IN ($1,$2)`, actorID.String(), otherActorID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM custom_field_values WHERE id=$1`, valueID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM custom_field_definitions WHERE id=$1`, fieldID.String())
+		_, _ = pool.Exec(cleanup, `DELETE FROM bills WHERE id=$1`, billID.String())
+		_, _ = pool.Exec(cleanup, `DELETE FROM bill_types WHERE id=$1`, billTypeID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM documents WHERE id=$1`, documentID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM document_types WHERE id=$1`, documentTypeID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM profiles WHERE id IN ($1,$2)`, profileID.String(), otherProfileID.String())
@@ -95,10 +110,11 @@ VALUES($1,$2,$3,'DECIMAL',12.34)`, valueID.String(), fieldID.String(), profileID
 		t.Fatalf("Catalog() error = %v", err)
 	}
 	customField := "custom." + fieldID.String()
-	if !catalogHasField(catalog, customField, ValueDecimal) || !catalogHasRelation(catalog, "profile.documents") {
+	if !catalogHasField(catalog, customField, ValueDecimal) || !catalogHasRelation(catalog, "profile.documents") || !catalogHasRelation(catalog, "profile.bills") {
 		t.Fatalf("Catalog() misses dynamic field or relation: %#v", catalog)
 	}
 	plan := QueryPlan{
+		Version:        PlanVersionV1,
 		CatalogVersion: catalog.Version, RootEntity: "profiles",
 		Projections: []string{"profile.full_name", customField}, MaximumRows: 10,
 		Filter: &FilterNode{Kind: FilterGroup, Conjunction: ConjunctionAnd, Children: []FilterNode{
@@ -108,6 +124,7 @@ VALUES($1,$2,$3,'DECIMAL',12.34)`, valueID.String(), fieldID.String(), profileID
 			}},
 			{Kind: FilterPredicate, Field: customField, Operator: OperatorGreater, Values: []string{"10"}},
 			{Kind: FilterRelation, Relation: "profile.documents", Children: []FilterNode{{Kind: FilterPredicate, Field: "document.identifier", Operator: OperatorContains, Values: []string{"%_"}}}},
+			{Kind: FilterRelation, Relation: "profile.bills", Children: []FilterNode{{Kind: FilterPredicate, Field: "bill.reference", Operator: OperatorEqual, Values: []string{"UC-QUERY-42"}}}},
 			{Kind: FilterNot, Children: []FilterNode{{Kind: FilterPredicate, Field: "profile.full_name", Operator: OperatorStartsWith, Values: []string{"Zed"}}}},
 		}},
 		Sort: []Sort{{Field: "profile.full_name", Direction: SortAscending}},
@@ -144,6 +161,12 @@ VALUES($1,$2,$3,'DECIMAL',12.34)`, valueID.String(), fieldID.String(), profileID
 		Columns: []ResultColumn{{Position: 0, FieldKey: "profile.id", Label: "ID", Kind: ValueIdentifier}}}, time.Second); !errors.Is(err, ErrReadOnlyRequired) {
 		t.Fatalf("unsafe ExecuteReadOnly() error = %v", err)
 	}
+	if _, err := store.ExecuteReadOnly(ctx, CompiledPlan{
+		SQL: "SELECT 'id'::text, 'label'::text, now(), 'value'::text FROM pg_sleep(1)", MaximumRows: 1,
+		Columns: []ResultColumn{{Position: 0, FieldKey: "profile.id", Label: "ID", Kind: ValueIdentifier}},
+	}, 100*time.Millisecond); !errors.Is(err, ErrTimeout) {
+		t.Fatalf("timed ExecuteReadOnly() error = %v", err)
+	}
 
 	expiredService, err := NewService(store, ServiceOptions{Now: func() time.Time { return now.Add(2 * time.Hour) }})
 	if err != nil {
@@ -158,6 +181,70 @@ VALUES($1,$2,$3,'DECIMAL',12.34)`, valueID.String(), fieldID.String(), profileID
 	deleted, err := expiredService.CleanupExpired(ctx)
 	if err != nil || deleted < 1 {
 		t.Fatalf("CleanupExpired() = %d, error=%v", deleted, err)
+	}
+}
+
+func TestPostgresQueryExecutionRateConcurrencyAndRollback(t *testing.T) {
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("DATABASE_URL is required for Query Engine PostgreSQL integration tests")
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		t.Fatalf("pgxpool.New() error = %v", err)
+	}
+	defer pool.Close()
+	actorID, _ := auth.NewIdentifier()
+	now := time.Now().UTC()
+	githubID := now.UnixNano()
+	if githubID < 0 {
+		githubID = -githubID
+	}
+	login := "query_limits_" + strings.ReplaceAll(actorID.String(), "-", "")[:16]
+	insertQueryActor(t, ctx, pool, actorID, githubID, login)
+	defer func() {
+		cleanup := context.Background()
+		_, _ = pool.Exec(cleanup, `DELETE FROM query_executions WHERE owner_user_id=$1`, actorID.String())
+		_, _ = pool.Exec(cleanup, `DELETE FROM query_rate_limits WHERE actor_user_id=$1`, actorID.String())
+		_, _ = pool.Exec(cleanup, `DELETE FROM app_users WHERE id=$1`, actorID.String())
+	}()
+
+	store := NewPostgresStore(pool)
+	firstID, _ := NewIdentifier()
+	first := ExecutionInput{
+		ID: firstID, OwnerUserID: actorID, IdempotencyKey: "limits-first-key",
+		PlanFingerprint: [32]byte{1}, CatalogVersion: strings.Repeat("a", 64),
+		RootEntity: "profiles", MaximumRows: 10, StartedAt: now, ExpiresAt: now.Add(time.Hour),
+	}
+	created, fresh, err := store.CreateExecution(ctx, first, now.Truncate(time.Minute), 100)
+	if err != nil || !fresh || created.State != ExecutionRunning {
+		t.Fatalf("CreateExecution(first) = %#v, fresh=%v, error=%v", created, fresh, err)
+	}
+	replayed, fresh, err := store.CreateExecution(ctx, first, now.Truncate(time.Minute), 1)
+	if err != nil || fresh || replayed.ID != firstID {
+		t.Fatalf("CreateExecution(replay) = %#v, fresh=%v, error=%v", replayed, fresh, err)
+	}
+	secondID, _ := NewIdentifier()
+	second := first
+	second.ID, second.IdempotencyKey, second.PlanFingerprint = secondID, "limits-second-key", [32]byte{2}
+	if _, _, err := store.CreateExecution(ctx, second, now.Truncate(time.Minute), 100); !errors.Is(err, ErrConflict) {
+		t.Fatalf("CreateExecution(concurrent) error = %v", err)
+	}
+	if _, _, err := store.CreateExecution(ctx, second, now.Truncate(time.Minute), 1); !errors.Is(err, ErrRateLimited) {
+		t.Fatalf("CreateExecution(rate limited) error = %v", err)
+	}
+
+	columns := []ResultColumn{{Position: 0, FieldKey: "profile.full_name", Label: strings.Repeat("x", 161), Kind: ValueText}}
+	if _, err := store.CompleteExecution(ctx, firstID, columns, nil, now.Add(time.Second)); err == nil {
+		t.Fatal("CompleteExecution(invalid stored label) unexpectedly succeeded")
+	}
+	var storedColumns int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM query_result_columns WHERE execution_id=$1`, firstID.String()).Scan(&storedColumns); err != nil || storedColumns != 0 {
+		t.Fatalf("rolled-back result columns = %d, error=%v", storedColumns, err)
+	}
+	if err := store.FailExecution(ctx, firstID, "test_cleanup", ExecutionFailed, now.Add(2*time.Second)); err != nil {
+		t.Fatalf("FailExecution(cleanup) error = %v", err)
 	}
 }
 

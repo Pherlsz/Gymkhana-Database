@@ -33,6 +33,7 @@ type Options struct {
 	Search         searchService
 	Operations     operationsService
 	GoogleForms    googleFormsService
+	Query          queryService
 	SecureCookies  bool
 	ApplicationURL string
 }
@@ -80,6 +81,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerSearchRoutes(mux, logger, settings.Auth, settings.Search)
 	registerOperationsRoutes(mux, logger, settings.Auth, settings.Operations)
 	registerGoogleFormsRoutes(mux, logger, settings.Auth, settings.GoogleForms, settings.ApplicationURL)
+	registerQueryRoutes(mux, logger, settings.Auth, settings.Query)
 	mux.HandleFunc("/", fallbackHandler)
 	applicationOrigin := absoluteOrigin(settings.ApplicationURL)
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, browserOriginMiddleware(applicationOrigin, mux)))))

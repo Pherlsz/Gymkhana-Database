@@ -54,7 +54,8 @@ CREATE TABLE query_result_columns (
     'civil_date', 'civil_month', 'timestamp', 'enum'
   )),
   PRIMARY KEY (execution_id, position),
-  UNIQUE (execution_id, field_key)
+  UNIQUE (execution_id, field_key),
+  UNIQUE (execution_id, position, value_kind)
 );
 
 CREATE TABLE query_result_rows (
@@ -65,7 +66,7 @@ CREATE TABLE query_result_rows (
   entity_label TEXT NOT NULL CHECK (entity_label = btrim(entity_label) AND entity_label <> '' AND char_length(entity_label) <= 300),
   updated_at TIMESTAMPTZ NOT NULL,
   PRIMARY KEY (execution_id, position),
-  UNIQUE (execution_id, entity_kind, entity_id, position)
+  UNIQUE (execution_id, entity_kind, entity_id)
 );
 
 CREATE TABLE query_result_cells (
@@ -88,6 +89,8 @@ CREATE TABLE query_result_cells (
     REFERENCES query_result_rows(execution_id, position) ON DELETE CASCADE,
   FOREIGN KEY (execution_id, column_position)
     REFERENCES query_result_columns(execution_id, position) ON DELETE CASCADE,
+  FOREIGN KEY (execution_id, column_position, value_kind)
+    REFERENCES query_result_columns(execution_id, position, value_kind) ON DELETE CASCADE,
   CHECK (
     (is_null AND num_nonnulls(text_value, integer_value, decimal_value, boolean_value, civil_date_value, timestamp_value) = 0) OR
     (NOT is_null AND num_nonnulls(text_value, integer_value, decimal_value, boolean_value, civil_date_value, timestamp_value) = 1)

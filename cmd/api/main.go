@@ -23,6 +23,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/logging"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/postgres"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
+	"github.com/Pherlsz/Gymkhana-Database/internal/queryengine"
 	"github.com/Pherlsz/Gymkhana-Database/internal/search"
 )
 
@@ -85,6 +86,7 @@ func run() error {
 	var searchService *search.Service
 	var operationsService *operations.Service
 	var googleFormsService *googleforms.Service
+	var queryService *queryengine.Service
 	if pool != nil {
 		profileService, err = profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{OnAuditFailure: func(_ context.Context, event profile.AuditEvent, auditErr error) {
 			logger.Error("profile audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "profile_id", event.ProfileID.String(), "error", auditErr)
@@ -169,6 +171,14 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("configure Search service: %w", err)
 		}
+		queryService, err = queryengine.NewService(queryengine.NewPostgresStore(pool), queryengine.ServiceOptions{
+			OnAuditFailure: func(_ context.Context, event queryengine.AuditEvent, auditErr error) {
+				logger.Error("query audit event was not persisted", "event_type", event.EventType, "request_id", event.RequestID, "error", auditErr)
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("configure Query Engine service: %w", err)
+		}
 	}
 	server := &http.Server{
 		Addr: cfg.HTTPAddress,
@@ -183,6 +193,7 @@ func run() error {
 			Search:         searchService,
 			Operations:     operationsService,
 			GoogleForms:    googleFormsService,
+			Query:          queryService,
 			SecureCookies:  cfg.Auth.SecureCookies,
 			ApplicationURL: cfg.Auth.ApplicationURL,
 		}),

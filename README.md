@@ -132,6 +132,10 @@ Owner-scoped Google Forms ingestion is disabled by default. It uses only the For
 
 Configuration, key rotation, smoke testing, and recovery procedures are in [`docs/GOOGLE_FORMS.md`](docs/GOOGLE_FORMS.md).
 
+## Query Engine
+
+The authenticated Query Engine builds permission-filtered, typed, read-only relational plans without accepting SQL or physical schema paths. Its supported v1 nodes, limits, retention, safe error surface, M14 boundary, and rollback procedure are documented in [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md).
+
 ## Common commands
 
 ```bash
@@ -223,4 +227,5 @@ Private UI/Core versions are pinned only after their releases are published. Per
 - GitHub milestones summarize one delivery stage and derive progress from its parent and executable issues; they do not replace #31.
 - [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) is an operational runbook for the implemented authentication feature.
 - [`docs/GOOGLE_FORMS.md`](docs/GOOGLE_FORMS.md) is the activation, rotation, smoke-test, and recovery runbook for Google Forms ingestion.
+- [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md) defines the QueryPlan v1 security, execution, retention, M14, and rollback boundaries.
 - New milestone-status, acceptance-tracking, continuation, or next-action documents must not be created.

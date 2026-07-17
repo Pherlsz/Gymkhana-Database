@@ -16,6 +16,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/logging"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/postgres"
+	"github.com/Pherlsz/Gymkhana-Database/internal/queryengine"
 )
 
 func main() {
@@ -52,6 +53,10 @@ func run() error {
 		return errors.New("operations worker requires a database connection")
 	}
 	defer pool.Close()
+	queryCleanup, err := queryengine.NewService(queryengine.NewPostgresStore(pool), queryengine.ServiceOptions{})
+	if err != nil {
+		return fmt.Errorf("configure Query Engine cleanup: %w", err)
+	}
 	objects, err := attachment.NewR2Store(attachment.R2Options{
 		Endpoint: storageCfg.Endpoint, Bucket: storageCfg.Bucket,
 		AccessKeyID: storageCfg.AccessKeyID, SecretAccessKey: storageCfg.SecretAccessKey,
@@ -115,7 +120,7 @@ func run() error {
 		}
 	}
 	cleanupDone := make(chan struct{})
-	go runCleanupScheduler(rootCtx, logger, service, attachmentCleanup, googleFormsService, cfg.GoogleForms.SyncInterval, cleanupDone)
+	go runCleanupScheduler(rootCtx, logger, service, attachmentCleanup, queryCleanup, googleFormsService, cfg.GoogleForms.SyncInterval, cleanupDone)
 	logger.Info("operations worker started", "queue", operations.OperationsQueue)
 	select {
 	case <-rootCtx.Done():
@@ -146,7 +151,7 @@ func run() error {
 	return nil
 }
 
-func runCleanupScheduler(ctx context.Context, logger *slog.Logger, service *operations.Service, attachmentCleanup *attachment.Service, googleForms *googleforms.Service, googleFormsInterval time.Duration, done chan<- struct{}) {
+func runCleanupScheduler(ctx context.Context, logger *slog.Logger, service *operations.Service, attachmentCleanup *attachment.Service, queryCleanup *queryengine.Service, googleForms *googleforms.Service, googleFormsInterval time.Duration, done chan<- struct{}) {
 	defer close(done)
 	scheduleCleanup := func() {
 		if err := service.ScheduleCleanup(ctx); err != nil && !errors.Is(err, context.Canceled) {
@@ -155,10 +160,14 @@ func runCleanupScheduler(ctx context.Context, logger *slog.Logger, service *oper
 		result, err := attachmentCleanup.Cleanup(ctx, "worker-scheduled")
 		if err != nil && !errors.Is(err, context.Canceled) {
 			logger.Error("attachment cleanup failed", "error", err)
-			return
-		}
-		if err == nil {
+		} else if err == nil {
 			logger.Info("attachment cleanup completed", "expired_uploads", result.ExpiredUploads, "purged_attachments", result.Purged, "failures", result.Failures, "skipped", result.Skipped)
+		}
+		deleted, err := queryCleanup.CleanupExpired(ctx)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			logger.Error("Query Engine cleanup failed", "error", err)
+		} else if err == nil && deleted > 0 {
+			logger.Info("Query Engine cleanup completed", "expired_executions", deleted)
 		}
 	}
 	scheduleGoogleForms := func() {

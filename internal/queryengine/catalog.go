@@ -311,8 +311,22 @@ func (catalog *resolvedCatalog) addRelation(value sqlRelationDefinition) {
 }
 
 func field(key, entity, label string, kind ValueKind, nullable, projectable, filterable, sortable bool, expression string) sqlFieldDefinition {
+	operators := operatorsForKind(kind)
+	if !nullable {
+		operators = removeOperators(operators, OperatorIsNull, OperatorNotNull)
+	}
 	return sqlFieldDefinition{Public: FieldDefinition{Key: key, Entity: entity, Label: label, Kind: kind, Nullable: nullable,
-		Projectable: projectable, Filterable: filterable, Sortable: sortable, Operators: operatorsForKind(kind)}, Expression: expression}
+		Projectable: projectable, Filterable: filterable, Sortable: sortable, Operators: operators}, Expression: expression}
+}
+
+func removeOperators(values []Operator, excluded ...Operator) []Operator {
+	result := make([]Operator, 0, len(values))
+	for _, value := range values {
+		if !containsOperator(excluded, value) {
+			result = append(result, value)
+		}
+	}
+	return result
 }
 
 func relation(key, from, to, label string, cardinality RelationCardinality, condition string) sqlRelationDefinition {

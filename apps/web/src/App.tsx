@@ -23,6 +23,7 @@ import { CustomDataPage } from "./CustomDataPage";
 import { GoogleFormsPage } from "./GoogleFormsPage";
 import { ProfilesPage, normalizeProfileSearch } from "./ProfilesPage";
 import { OperationsPage, normalizeOperationsSearch } from "./OperationsPage";
+import { QueryPage } from "./QueryPage";
 import { SearchPage, normalizeGlobalSearch } from "./SearchPage";
 import {
   APIRequestError,
@@ -32,6 +33,7 @@ import {
   type AuthSessionResponse,
 } from "./lib/api/client";
 import { checkLiveHealth } from "./lib/api/health";
+import { normalizeQuerySearch } from "./lib/queryState";
 
 type HealthState = "checking" | "available" | "unavailable";
 type AuthState =
@@ -83,6 +85,12 @@ export const googleFormsRoute = createRoute({
   path: "/google-forms",
   component: GoogleFormsPage,
 });
+export const queryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/query",
+  validateSearch: normalizeQuerySearch,
+  component: QueryPage,
+});
 const routeTree = rootRoute.addChildren([
   homeRoute,
   profilesRoute,
@@ -90,6 +98,7 @@ const routeTree = rootRoute.addChildren([
   customDataRoute,
   operationsRoute,
   googleFormsRoute,
+  queryRoute,
 ]);
 const router = createRouter({ routeTree });
 declare module "@tanstack/react-router" {
@@ -212,6 +221,14 @@ function AuthenticatedShell() {
               to="/search"
             >
               Buscar
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeQuerySearch({})}
+              to="/query"
+            >
+              Consultar
             </Link>
             <Link
               activeProps={{ className: "app-nav__link app-nav__link--active" }}
