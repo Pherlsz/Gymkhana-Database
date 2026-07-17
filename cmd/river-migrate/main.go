@@ -30,7 +30,7 @@ func run() error {
 		return err
 	}
 	if cfg.DatabaseURL == "" {
-		return errors.New("DATABASE_URL is required for River migrations")
+		return errors.New("database URL is required for River migrations")
 	}
 	ctx := context.Background()
 	pool, err := postgres.Open(ctx, cfg.DatabaseURL)
@@ -38,7 +38,7 @@ func run() error {
 		return err
 	}
 	if pool == nil {
-		return errors.New("River migrations require a database connection")
+		return errors.New("river migrations require a database connection")
 	}
 	defer pool.Close()
 	migrator, err := rivermigrate.New(riverpgxv5.New(pool), nil)
@@ -57,7 +57,7 @@ func run() error {
 			return fmt.Errorf("validate River schema: %w", err)
 		}
 		if !result.OK {
-			return fmt.Errorf("River schema is not current: %s", strings.Join(result.Messages, "; "))
+			return fmt.Errorf("river schema is not current: %s", strings.Join(result.Messages, "; "))
 		}
 		return nil
 	default:

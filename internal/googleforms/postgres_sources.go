@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
-	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -396,14 +395,4 @@ func (store *PostgresStore) DueSources(ctx context.Context, now time.Time, limit
 		return nil, fmt.Errorf("iterate due sources: %w", err)
 	}
 	return result, nil
-}
-
-func operationMapping(source Source) []operations.MappingInput {
-	result := make([]operations.MappingInput, 0, len(source.Questions))
-	for _, question := range source.Questions {
-		if question.TargetField != "" {
-			result = append(result, operations.MappingInput{SourceColumn: question.Position, TargetField: question.TargetField})
-		}
-	}
-	return result
 }

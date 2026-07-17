@@ -125,7 +125,7 @@ func run() error {
 		}
 	case <-googleFormsStopped(googleFormsClient):
 		if rootCtx.Err() == nil {
-			return errors.New("Google Forms worker stopped unexpectedly")
+			return errors.New("google forms worker stopped unexpectedly")
 		}
 	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)

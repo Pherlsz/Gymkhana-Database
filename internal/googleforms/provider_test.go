@@ -15,8 +15,7 @@ import (
 )
 
 func TestGoogleProviderOAuthAndFormsFlow(t *testing.T) {
-	var server *httptest.Server
-	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/token":
 			if err := r.ParseForm(); err != nil {

@@ -245,7 +245,7 @@ func (cfg Config) validate() error {
 		return nil
 	}
 	if cfg.GoogleForms.ClientID == "" || cfg.GoogleForms.ClientSecret == "" {
-		return errors.New("Google Forms OAuth client credentials are required when Google Forms is enabled")
+		return errors.New("google forms OAuth client credentials are required when Google Forms is enabled")
 	}
 	if cfg.GoogleForms.TokenKeyVersion == 0 {
 		return errors.New("GOOGLE_FORMS_TOKEN_KEY_VERSION must be positive")

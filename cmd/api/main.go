@@ -148,7 +148,7 @@ func run() error {
 		}
 		if cfg.GoogleForms.Enabled {
 			if operationsService == nil {
-				return errors.New("Google Forms requires the operations runtime and private storage")
+				return errors.New("google forms requires the operations runtime and private storage")
 			}
 			googleFormsService, _, err = googleforms.NewRuntime(pool, operationsService, googleforms.RuntimeOptions{
 				Service: googleforms.ServiceOptions{
