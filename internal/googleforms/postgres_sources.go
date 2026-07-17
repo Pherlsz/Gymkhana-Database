@@ -350,6 +350,9 @@ func (store *PostgresStore) RefreshSourceSchema(ctx context.Context, id Identifi
 	if _, err := tx.Exec(ctx, `UPDATE google_forms_sources
 	   SET title=$3, schema_revision=$4, schema_fingerprint=$5, state=$6,
 	       next_sync_at=CASE WHEN $6='SCHEMA_DRIFT' THEN NULL ELSE next_sync_at END,
+	       cursor_submitted_at=CASE WHEN $6='SCHEMA_DRIFT'
+	         THEN COALESCE(page_token_cursor_started_at, cursor_submitted_at)
+	         ELSE cursor_submitted_at END,
 	       response_page_token=CASE WHEN $6='SCHEMA_DRIFT' THEN NULL ELSE response_page_token END,
 	       page_token_cursor_started_at=CASE WHEN $6='SCHEMA_DRIFT' THEN NULL ELSE page_token_cursor_started_at END,
        error_code=CASE WHEN $6='SCHEMA_DRIFT' THEN 'schema_drift' ELSE error_code END,
@@ -369,13 +372,14 @@ func (store *PostgresStore) DueSources(ctx context.Context, now time.Time, limit
 	if limit < 1 || limit > 100 {
 		return nil, ErrInvalidInput
 	}
-	rows, err := store.pool.Query(ctx, sourceSelect+` WHERE state='ACTIVE' AND sync_mode='POLL'
-   AND next_sync_at IS NOT NULL AND next_sync_at<=$1
+	rows, err := store.pool.Query(ctx, sourceSelect+` WHERE state='ACTIVE'
+	   AND (response_page_token IS NOT NULL OR
+	        (sync_mode='POLL' AND next_sync_at IS NOT NULL AND next_sync_at<=$1))
    AND NOT EXISTS (
      SELECT 1 FROM google_forms_sync_runs run
       WHERE run.source_id=google_forms_sources.id AND run.state IN ('QUEUED','RUNNING')
    )
- ORDER BY next_sync_at, id LIMIT $2`, now, limit)
+	 ORDER BY response_page_token IS NULL, next_sync_at NULLS LAST, id LIMIT $2`, now, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list due sources: %w", err)
 	}

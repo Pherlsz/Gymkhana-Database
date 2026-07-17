@@ -14,6 +14,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
+
+	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 )
 
 const maximumProviderResponseBytes int64 = 4 << 20
@@ -301,8 +304,10 @@ func classifyProviderResponse(response *http.Response) error {
 			return &ProviderError{Code: "invalid_grant"}
 		}
 		return &ProviderError{Code: "invalid_request"}
-	case http.StatusUnauthorized, http.StatusForbidden:
+	case http.StatusUnauthorized:
 		return &ProviderError{Code: "authorization_failed"}
+	case http.StatusForbidden:
+		return &ProviderError{Code: "permission_denied"}
 	case http.StatusNotFound:
 		return &ProviderError{Code: "form_not_found"}
 	case http.StatusTooManyRequests:
@@ -384,7 +389,10 @@ type providerAnswer struct {
 }
 
 func normalizeProviderForm(payload providerForm) (Form, error) {
-	if !validProviderFormID(payload.FormID) || strings.TrimSpace(payload.RevisionID) == "" || strings.TrimSpace(payload.Info.Title) == "" || len(payload.Items) > MaximumQuestions {
+	title := strings.TrimSpace(payload.Info.Title)
+	revision := strings.TrimSpace(payload.RevisionID)
+	if !validProviderFormID(payload.FormID) || revision == "" || utf8.RuneCountInString(revision) > 500 ||
+		title == "" || utf8.RuneCountInString(title) > 500 || len(payload.Items) > MaximumQuestions {
 		return Form{}, &ProviderError{Code: "invalid_form_schema"}
 	}
 	questions := make([]Question, 0, len(payload.Items))
@@ -395,7 +403,7 @@ func normalizeProviderForm(payload providerForm) (Form, error) {
 				continue
 			}
 			id := strings.TrimSpace(item.ItemID)
-			if id == "" {
+			if id == "" || len(id) > 300 {
 				return Form{}, &ProviderError{Code: "invalid_form_schema"}
 			}
 			if _, duplicate := seen[id]; duplicate {
@@ -409,7 +417,7 @@ func normalizeProviderForm(payload providerForm) (Form, error) {
 		}
 		value := item.QuestionItem.Question
 		id := strings.TrimSpace(value.QuestionID)
-		if id == "" {
+		if id == "" || len(id) > 300 {
 			return Form{}, &ProviderError{Code: "invalid_form_schema"}
 		}
 		if _, duplicate := seen[id]; duplicate {
@@ -449,7 +457,7 @@ func normalizeProviderForm(payload providerForm) (Form, error) {
 	if len(questions) == 0 {
 		return Form{}, &ProviderError{Code: "empty_form"}
 	}
-	form := Form{ID: payload.FormID, Title: strings.TrimSpace(payload.Info.Title), Revision: strings.TrimSpace(payload.RevisionID), Questions: questions}
+	form := Form{ID: payload.FormID, Title: title, Revision: revision, Questions: questions}
 	form.Fingerprint = fingerprintForm(questions)
 	return form, nil
 }
@@ -522,10 +530,7 @@ func normalizedQuestionTitle(title string, position int) string {
 	if title == "" {
 		return fmt.Sprintf("Pergunta %d", position+1)
 	}
-	if len(title) > 500 {
-		return title[:500]
-	}
-	return title
+	return truncateText(title, 500)
 }
 
 func validProviderFormID(value string) bool {

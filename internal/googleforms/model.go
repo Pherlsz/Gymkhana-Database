@@ -16,6 +16,7 @@ const (
 	ScopeBodyReadonly      = "https://www.googleapis.com/auth/forms.body.readonly"
 	ScopeResponsesReadonly = "https://www.googleapis.com/auth/forms.responses.readonly"
 	MaximumSourcesPerOwner = 25
+	MaximumActiveSyncs     = 2
 	MaximumQuestions       = 256
 	MaximumResponsesPerRun = 500
 	MaximumPagesPerRun     = 10

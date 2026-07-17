@@ -156,7 +156,7 @@ func (worker *syncWorker) Work(ctx context.Context, job *river.Job[SyncArgs]) er
 	}
 	if errors.Is(err, ErrCancelled) || errors.Is(err, ErrForbidden) || errors.Is(err, ErrInvalidInput) ||
 		errors.Is(err, ErrInvalidState) || errors.Is(err, ErrSchemaDrift) || errors.Is(err, ErrNeedsReauth) ||
-		errors.Is(err, ErrUnsupportedForm) || errors.Is(err, ErrProvider) {
+		errors.Is(err, ErrUnsupportedForm) || errors.Is(err, ErrResponseChanged) || errors.Is(err, ErrProvider) {
 		return river.JobCancel(err)
 	}
 	return err

@@ -13,6 +13,7 @@ var (
 	ErrOAuthScopes       = errors.New("required google forms scopes were not granted")
 	ErrNeedsReauth       = errors.New("google forms connection requires reauthorization")
 	ErrSchemaDrift       = errors.New("google forms schema changed")
+	ErrResponseChanged   = errors.New("google forms response changed after ingestion")
 	ErrUnsupportedForm   = errors.New("google form contains unsupported questions")
 	ErrProvider          = errors.New("google forms provider failed")
 	ErrProviderRetryable = errors.New("google forms provider request is retryable")

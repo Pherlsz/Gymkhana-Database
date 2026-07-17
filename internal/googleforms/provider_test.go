@@ -99,6 +99,8 @@ func TestGoogleProviderClassifiesRetryAndReauthorization(t *testing.T) {
 		retryable bool
 	}{
 		{name: "invalid grant", status: http.StatusBadRequest, body: `{"error":"invalid_grant"}`, want: ErrNeedsReauth},
+		{name: "unauthorized", status: http.StatusUnauthorized, body: `{}`, want: ErrNeedsReauth},
+		{name: "forbidden", status: http.StatusForbidden, body: `{}`, want: ErrProvider},
 		{name: "rate limited", status: http.StatusTooManyRequests, body: `{}`, want: ErrRateLimited, retryable: true},
 		{name: "unavailable", status: http.StatusServiceUnavailable, body: `{}`, want: ErrProviderRetryable, retryable: true},
 	}

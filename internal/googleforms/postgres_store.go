@@ -181,7 +181,113 @@ func (store *PostgresStore) SaveOAuthState(ctx context.Context, value OAuthState
 }
 
 func (store *PostgresStore) ConsumeOAuthState(ctx context.Context, stateHash [32]byte, ownerID, sessionID auth.Identifier, now time.Time) (OAuthState, error) {
-	var value OAuthSta×½=¶‰žËkºwµç}version+1, updated_at=$2
+	var value OAuthState
+	var databaseOwner, databaseSession pgtype.UUID
+	var keyVersion int
+	var consumedAt pgtype.Timestamptz
+	err := store.pool.QueryRow(ctx, `UPDATE google_forms_oauth_states
+   SET consumed_at=$4
+ WHERE state_hash=$1 AND owner_user_id=$2 AND session_id=$3
+   AND consumed_at IS NULL AND expires_at>$4
+RETURNING state_hash, owner_user_id, session_id, verifier_ciphertext,
+          verifier_nonce, token_key_version, return_path, created_at, expires_at, consumed_at`,
+		stateHash[:], authDatabaseUUID(ownerID), authDatabaseUUID(sessionID), now).Scan(
+		&value.StateHash, &databaseOwner, &databaseSession, &value.VerifierCiphertext,
+		&value.VerifierNonce, &keyVersion, &value.ReturnPath, &value.CreatedAt,
+		&value.ExpiresAt, &consumedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return OAuthState{}, ErrOAuthState
+	}
+	if err != nil {
+		return OAuthState{}, fmt.Errorf("consume oauth state: %w", err)
+	}
+	value.OwnerUserID = authIdentifierFromUUID(databaseOwner)
+	value.SessionID = authIdentifierFromUUID(databaseSession)
+	value.TokenKeyVersion = uint16(keyVersion)
+	if consumedAt.Valid {
+		value.ConsumedAt = &consumedAt.Time
+	}
+	return value, nil
+}
+
+func (store *PostgresStore) UpsertConnection(ctx context.Context, value Connection) (Connection, error) {
+	if value.ID.IsZero() || value.OwnerUserID == (auth.Identifier{}) || value.State != ConnectionActive ||
+		len(value.RefreshTokenCiphertext) == 0 || len(value.RefreshTokenNonce) == 0 ||
+		value.TokenKeyVersion == 0 || !hasRequiredScopes(value.GrantedScopes) {
+		return Connection{}, ErrInvalidInput
+	}
+	tx, err := store.pool.Begin(ctx)
+	if err != nil {
+		return Connection{}, fmt.Errorf("begin connection upsert: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	created, err := scanConnection(tx.QueryRow(ctx, `INSERT INTO google_forms_connections (
+  id, owner_user_id, state, refresh_token_ciphertext, refresh_token_nonce,
+  token_key_version, granted_scopes, connected_at, created_at, updated_at
+) VALUES ($1,$2,'ACTIVE',$3,$4,$5,$6,$7,$7,$7)
+ON CONFLICT (owner_user_id) DO UPDATE SET
+  state='ACTIVE', refresh_token_ciphertext=EXCLUDED.refresh_token_ciphertext,
+  refresh_token_nonce=EXCLUDED.refresh_token_nonce,
+  token_key_version=EXCLUDED.token_key_version,
+  granted_scopes=EXCLUDED.granted_scopes, error_code=NULL,
+  connected_at=EXCLUDED.connected_at, disconnected_at=NULL,
+  version=google_forms_connections.version+1, updated_at=EXCLUDED.updated_at
+RETURNING id, owner_user_id, state, refresh_token_ciphertext,
+          refresh_token_nonce, token_key_version, granted_scopes, error_code,
+          connected_at, disconnected_at, version, created_at, updated_at`,
+		databaseUUID(value.ID), authDatabaseUUID(value.OwnerUserID), value.RefreshTokenCiphertext,
+		value.RefreshTokenNonce, int(value.TokenKeyVersion), canonicalScopes(value.GrantedScopes), value.UpdatedAt))
+	if err != nil {
+		return Connection{}, mapPostgresError("upsert connection", err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE google_forms_sources
+	   SET state='PAUSED', next_sync_at=NULL, error_code=NULL,
+	       version=version+1, updated_at=$2
+	 WHERE owner_user_id=$1 AND state='NEEDS_REAUTH'`, authDatabaseUUID(value.OwnerUserID), value.UpdatedAt); err != nil {
+		return Connection{}, fmt.Errorf("restore reauthorized sources: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Connection{}, fmt.Errorf("commit connection upsert: %w", err)
+	}
+	return created, nil
+}
+
+func (store *PostgresStore) GetConnection(ctx context.Context, ownerID auth.Identifier) (Connection, error) {
+	value, err := scanConnection(store.pool.QueryRow(ctx, connectionSelect+` WHERE owner_user_id=$1`, authDatabaseUUID(ownerID)))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Connection{}, ErrNotFound
+	}
+	if err != nil {
+		return Connection{}, fmt.Errorf("get connection: %w", err)
+	}
+	return value, nil
+}
+
+func (store *PostgresStore) DisconnectConnection(ctx context.Context, ownerID auth.Identifier, version int64, now time.Time) (Connection, error) {
+	tx, err := store.pool.Begin(ctx)
+	if err != nil {
+		return Connection{}, fmt.Errorf("begin connection disconnect: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	value, err := scanConnection(tx.QueryRow(ctx, `UPDATE google_forms_connections
+   SET state='DISCONNECTED', refresh_token_ciphertext=NULL, refresh_token_nonce=NULL,
+       token_key_version=NULL, granted_scopes='{}', error_code=NULL,
+       disconnected_at=$3, version=version+1, updated_at=$3
+ WHERE owner_user_id=$1 AND version=$2
+RETURNING id, owner_user_id, state, refresh_token_ciphertext,
+          refresh_token_nonce, token_key_version, granted_scopes, error_code,
+          connected_at, disconnected_at, version, created_at, updated_at`,
+		authDatabaseUUID(ownerID), version, now))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Connection{}, store.connectionWriteError(ctx, tx, ownerID)
+	}
+	if err != nil {
+		return Connection{}, fmt.Errorf("disconnect connection: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE google_forms_sources
+   SET state='NEEDS_REAUTH', next_sync_at=NULL, error_code='connection_disconnected',
+       version=version+1, updated_at=$2
  WHERE owner_user_id=$1 AND state<>'NEEDS_REAUTH'`, authDatabaseUUID(ownerID), now); err != nil {
 		return Connection{}, fmt.Errorf("pause disconnected sources: %w", err)
 	}

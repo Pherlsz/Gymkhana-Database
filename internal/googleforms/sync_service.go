@@ -2,6 +2,7 @@ package googleforms
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"sort"
@@ -44,6 +45,9 @@ func (service *Service) Sync(ctx context.Context, id Identifier) error {
 	after := run.CursorStartedAt
 	pageToken := source.ResponsePageToken
 	seenTokens := make(map[string]struct{})
+	if pageToken != "" {
+		seenTokens[pageToken] = struct{}{}
+	}
 	responses := make([]Response, 0, service.responsePageSize)
 	for pageNumber := 0; pageNumber < MaximumPagesPerRun && len(responses) < MaximumResponsesPerRun; pageNumber++ {
 		if err := ctx.Err(); err != nil {
@@ -58,6 +62,9 @@ func (service *Service) Sync(ctx context.Context, id Identifier) error {
 				return pageErr
 			}
 			return service.failSync(ctx, run, service.handleProviderConnectionError(ctx, source.OwnerUserID, pageErr))
+		}
+		if len(page.Responses) > pageSize {
+			return service.failSync(ctx, run, fmt.Errorf("provider exceeded requested page size: %w", ErrProvider))
 		}
 		responses = append(responses, page.Responses...)
 		nextPageToken := page.NextPageToken
@@ -152,7 +159,7 @@ func (service *Service) EnqueueDueSources(ctx context.Context) (int, error) {
 			CursorStartedAt: syncCursor(source), CreatedAt: now, UpdatedAt: now,
 		})
 		if createErr != nil {
-			if errors.Is(createErr, ErrConflict) {
+			if errors.Is(createErr, ErrConflict) || errors.Is(createErr, ErrRateLimited) {
 				continue
 			}
 			return queued, createErr
@@ -188,6 +195,8 @@ func syncErrorCode(err error) string {
 		return "needs_reauth"
 	case errors.Is(err, ErrSchemaDrift):
 		return "schema_drift"
+	case errors.Is(err, ErrResponseChanged):
+		return "response_changed"
 	case errors.Is(err, ErrUnsupportedForm):
 		return "unsupported_form"
 	case errors.Is(err, ErrRateLimited):
@@ -224,6 +233,10 @@ func retryProvider[T any](ctx context.Context, call func() (T, error)) (T, error
 		if errors.As(err, &providerError) && providerError.RetryAfter > delay {
 			delay = providerError.RetryAfter
 		}
+		delay = jitteredProviderDelay(delay)
+		if providerError != nil && delay < providerError.RetryAfter {
+			delay = providerError.RetryAfter
+		}
 		if delay > 5*time.Second {
 			delay = 5 * time.Second
 		}
@@ -238,4 +251,17 @@ func retryProvider[T any](ctx context.Context, call func() (T, error)) (T, error
 		}
 	}
 	return zero, ErrProvider
+}
+
+func jitteredProviderDelay(value time.Duration) time.Duration {
+	if value <= 0 {
+		return 0
+	}
+	var sample [1]byte
+	if _, err := rand.Read(sample[:]); err != nil {
+		return value
+	}
+	// Bounded +/-25% jitter prevents concurrent sources from retrying in lockstep.
+	offset := int64(sample[0]) - 128
+	return value + time.Duration(int64(value)*offset/512)
 }

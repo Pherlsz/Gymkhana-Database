@@ -216,11 +216,9 @@ func (service *Service) Disconnect(ctx context.Context, actor auth.Session, vers
 	if connection.State == ConnectionActive {
 		refreshToken, openErr := service.openRefreshToken(connection)
 		if openErr != nil {
-			return Connection{}, openErr
-		}
-		if revokeErr := service.provider.Revoke(ctx, refreshToken); revokeErr != nil && !errors.Is(revokeErr, ErrNeedsReauth) {
 			service.audit(ctx, &actor.User.ID, &connection.ID, nil, nil, AuditConnectionDisconnected, auth.AuditOutcomeFailure, nil, requestID)
-			return Connection{}, revokeErr
+		} else if revokeErr := service.provider.Revoke(ctx, refreshToken); revokeErr != nil && !errors.Is(revokeErr, ErrNeedsReauth) {
+			service.audit(ctx, &actor.User.ID, &connection.ID, nil, nil, AuditConnectionDisconnected, auth.AuditOutcomeFailure, nil, requestID)
 		}
 	}
 	disconnected, err := service.store.DisconnectConnection(ctx, actor.User.ID, version, service.now().UTC())
@@ -397,7 +395,10 @@ func (service *Service) RequestSync(ctx context.Context, actor auth.Session, sou
 	if err != nil {
 		return SyncRun{}, err
 	}
-	if source.State != SourceActive || !validIdempotencyKey(idempotencyKey) {
+	if !validIdempotencyKey(idempotencyKey) {
+		return SyncRun{}, ErrInvalidInput
+	}
+	if source.State != SourceActive {
 		return SyncRun{}, ErrInvalidState
 	}
 	now := service.now().UTC()

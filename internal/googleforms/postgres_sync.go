@@ -21,12 +21,38 @@ func (store *PostgresStore) CreateSyncRun(ctx context.Context, value SyncRun) (S
 		len(value.IdempotencyKey) < 8 || len(value.IdempotencyKey) > 128 {
 		return SyncRun{}, ErrInvalidInput
 	}
-	created, err := scanSyncRun(store.pool.QueryRow(ctx, `INSERT INTO google_forms_sync_runs (
+	tx, err := store.pool.Begin(ctx)
+	if err != nil {
+		return SyncRun{}, fmt.Errorf("begin sync run creation: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	ownerID := authDatabaseUUID(value.OwnerUserID)
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1::text, 9110))`, ownerID); err != nil {
+		return SyncRun{}, fmt.Errorf("lock sync owner: %w", err)
+	}
+	existing, err := scanSyncRun(tx.QueryRow(ctx, syncRunSelect+` WHERE source_id=$1 AND idempotency_key=$2`,
+		databaseUUID(value.SourceID), value.IdempotencyKey))
+	if err == nil {
+		if err := tx.Commit(ctx); err != nil {
+			return SyncRun{}, fmt.Errorf("commit replayed sync run: %w", err)
+		}
+		return existing, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return SyncRun{}, fmt.Errorf("load replayed sync run: %w", err)
+	}
+	var active int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM google_forms_sync_runs
+ WHERE owner_user_id=$1 AND state IN ('QUEUED','RUNNING')`, ownerID).Scan(&active); err != nil {
+		return SyncRun{}, fmt.Errorf("count active owner syncs: %w", err)
+	}
+	if active >= MaximumActiveSyncs {
+		return SyncRun{}, ErrRateLimited
+	}
+	created, err := scanSyncRun(tx.QueryRow(ctx, `INSERT INTO google_forms_sync_runs (
   id, source_id, owner_user_id, actor_user_id, trigger_kind, state,
   idempotency_key, cursor_started_at, created_at, updated_at
 ) VALUES ($1,$2,$3,$4,$5,'QUEUED',$6,$7,$8,$8)
-ON CONFLICT (source_id, idempotency_key) DO UPDATE
-  SET idempotency_key=EXCLUDED.idempotency_key
 RETURNING id, source_id, owner_user_id, actor_user_id, trigger_kind,
           state, idempotency_key, operation_import_id, cursor_started_at,
           cursor_completed_at, received_count, staged_count, duplicate_count,
@@ -36,6 +62,9 @@ RETURNING id, source_id, owner_user_id, actor_user_id, trigger_kind,
 		optionalTime(value.CursorStartedAt), value.CreatedAt))
 	if err != nil {
 		return SyncRun{}, mapPostgresError("create sync run", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return SyncRun{}, fmt.Errorf("commit sync run creation: %w", err)
 	}
 	return created, nil
 }
@@ -205,20 +234,24 @@ func (store *PostgresStore) StageResponses(ctx context.Context, run SyncRun, sou
 	}
 	values := sortedResponses(responses)
 	ids := make([]string, 0, len(values))
-	seenInput := make(map[string]struct{}, len(values))
+	inputFingerprints := make(map[string][32]byte, len(values))
 	for _, value := range values {
 		if value.ID == "" || len(value.ID) > 500 || value.SubmittedAt.IsZero() {
 			return StageResult{}, ErrInvalidInput
 		}
-		if _, duplicate := seenInput[value.ID]; duplicate {
+		fingerprint := responseFingerprint(value)
+		if previous, duplicate := inputFingerprints[value.ID]; duplicate {
+			if previous != fingerprint {
+				return StageResult{}, ErrResponseChanged
+			}
 			continue
 		}
-		seenInput[value.ID] = struct{}{}
+		inputFingerprints[value.ID] = fingerprint
 		ids = append(ids, value.ID)
 	}
-	existing := make(map[string]struct{})
+	existing := make(map[string][32]byte)
 	if len(ids) > 0 {
-		rows, queryErr := tx.Query(ctx, `SELECT provider_response_id
+		rows, queryErr := tx.Query(ctx, `SELECT provider_response_id, response_fingerprint
   FROM google_forms_response_receipts
  WHERE source_id=$1 AND provider_response_id=ANY($2::text[])`, databaseUUID(source.ID), ids)
 		if queryErr != nil {
@@ -226,11 +259,14 @@ func (store *PostgresStore) StageResponses(ctx context.Context, run SyncRun, sou
 		}
 		for rows.Next() {
 			var responseID string
-			if scanErr := rows.Scan(&responseID); scanErr != nil {
+			var fingerprint []byte
+			if scanErr := rows.Scan(&responseID, &fingerprint); scanErr != nil {
 				rows.Close()
 				return StageResult{}, fmt.Errorf("scan response receipt: %w", scanErr)
 			}
-			existing[responseID] = struct{}{}
+			var digest [32]byte
+			copy(digest[:], fingerprint)
+			existing[responseID] = digest
 		}
 		if rowsErr := rows.Err(); rowsErr != nil {
 			rows.Close()
@@ -253,7 +289,10 @@ func (store *PostgresStore) StageResponses(ctx context.Context, run SyncRun, sou
 		received++
 		timestamp := value.SubmittedAt.UTC()
 		cursor = &timestamp
-		if _, duplicate := existing[value.ID]; duplicate {
+		if fingerprint, duplicate := existing[value.ID]; duplicate {
+			if fingerprint != inputFingerprints[value.ID] {
+				return StageResult{}, ErrResponseChanged
+			}
 			duplicates++
 			continue
 		}
