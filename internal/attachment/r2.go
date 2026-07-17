@@ -83,6 +83,16 @@ func (store *R2Store) PresignUpload(_ context.Context, objectKey string, ttl tim
 	return store.presign(http.MethodPut, objectKey, nil, nil, ttl)
 }
 
+// PresignOperationUpload binds the browser upload signature to the declared
+// workbook size. The browser supplies Content-Length automatically for a File;
+// R2 rejects a body whose actual length differs from the signed value.
+func (store *R2Store) PresignOperationUpload(_ context.Context, objectKey string, size int64, ttl time.Duration) (SignedRequest, error) {
+	if size <= 0 {
+		return SignedRequest{}, ErrInvalidInput
+	}
+	return store.presign(http.MethodPut, objectKey, nil, map[string]string{"content-length": strconv.FormatInt(size, 10)}, ttl)
+}
+
 func (store *R2Store) PresignDownload(_ context.Context, objectKey, fileName, mime string, ttl time.Duration) (SignedRequest, error) {
 	query := url.Values{}
 	query.Set("response-content-disposition", contentDisposition(fileName))
@@ -119,6 +129,39 @@ func (store *R2Store) Delete(ctx context.Context, objectKey string) error {
 		return nil
 	}
 	return fmt.Errorf("%w: R2 delete returned status %d", ErrStorageUnavailable, response.StatusCode)
+}
+
+// Put stores a server-generated object without exposing permanent credentials or
+// an object key outside the trusted backend boundary.
+func (store *R2Store) Put(ctx context.Context, objectKey string, body io.Reader, size int64, mime string) error {
+	if body == nil || size <= 0 {
+		return ErrInvalidInput
+	}
+	signed, err := store.PresignUpload(ctx, objectKey, 15*time.Minute)
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequestWithContext(ctx, signed.Method, signed.URL, body)
+	if err != nil {
+		return fmt.Errorf("create R2 upload request: %w", err)
+	}
+	request.ContentLength = size
+	if normalized := normalizeMIME(mime); normalized != "" {
+		request.Header.Set("Content-Type", normalized)
+	}
+	response, err := store.client.Do(request)
+	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
+		return fmt.Errorf("%w: R2 upload failed", ErrStorageUnavailable)
+	}
+	defer response.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4<<10))
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return fmt.Errorf("%w: R2 upload returned status %d", ErrStorageUnavailable, response.StatusCode)
+	}
+	return nil
 }
 
 func (store *R2Store) presign(method, objectKey string, additional url.Values, headers map[string]string, ttl time.Duration) (SignedRequest, error) {
