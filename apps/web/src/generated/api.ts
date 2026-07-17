@@ -422,6 +422,185 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/custom-entity-types": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List custom entity types */
+    get: operations["listCustomEntityTypes"];
+    put?: never;
+    /** Create a custom entity type */
+    post: operations["createCustomEntityType"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-entity-types/{entity_type_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_type_id: string;
+      };
+      cookie?: never;
+    };
+    /** Read a custom entity type */
+    get: operations["getCustomEntityType"];
+    /** Update a custom entity type */
+    put: operations["updateCustomEntityType"];
+    post?: never;
+    /** Delete an unused custom entity type */
+    delete: operations["deleteCustomEntityType"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-fields": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List custom field definitions */
+    get: operations["listCustomFields"];
+    put?: never;
+    /** Create a custom field definition */
+    post: operations["createCustomField"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-fields/{field_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    /** Read a custom field definition */
+    get: operations["getCustomField"];
+    /** Update a custom field definition */
+    put: operations["updateCustomField"];
+    post?: never;
+    /** Delete an unused custom field definition */
+    delete: operations["deleteCustomField"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-fields/{field_id}/options": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    /** List select options for a custom field */
+    get: operations["listCustomOptions"];
+    put?: never;
+    /** Create a select option */
+    post: operations["createCustomOption"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-fields/{field_id}/options/{option_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+        option_id: string;
+      };
+      cookie?: never;
+    };
+    get?: never;
+    /** Update a select option */
+    put: operations["updateCustomOption"];
+    post?: never;
+    /** Delete an unused select option */
+    delete: operations["deleteCustomOption"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-values/{target_kind}/{target_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        target_kind: "profile" | "document" | "bill" | "custom_entity";
+        target_id: string;
+      };
+      cookie?: never;
+    };
+    /** Read custom values for a record */
+    get: operations["getCustomValues"];
+    /** Replace custom values using optimistic concurrency */
+    put: operations["replaceCustomValues"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-entities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List custom entities */
+    get: operations["listCustomEntities"];
+    put?: never;
+    /** Create a custom entity */
+    post: operations["createCustomEntity"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-entities/{entity_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_id: string;
+      };
+      cookie?: never;
+    };
+    /** Read a custom entity */
+    get: operations["getCustomEntity"];
+    /** Update a custom entity */
+    put: operations["updateCustomEntity"];
+    post?: never;
+    /** Delete a custom entity */
+    delete: operations["deleteCustomEntity"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -845,6 +1024,263 @@ export interface components {
     BillPageResponse: {
       bills: components["schemas"]["Bill"][];
       page: components["schemas"]["BillPageMeta"];
+    };
+    /** @enum {string} */
+    CustomTargetKind: "PROFILE" | "DOCUMENT_TYPE" | "BILL_TYPE" | "CUSTOM_ENTITY_TYPE";
+    /** @enum {string} */
+    CustomFieldKind:
+      | "TEXT"
+      | "LONG_TEXT"
+      | "INTEGER"
+      | "DECIMAL"
+      | "BOOLEAN"
+      | "CIVIL_DATE"
+      | "CIVIL_MONTH"
+      | "EMAIL"
+      | "PHONE"
+      | "SINGLE_SELECT"
+      | "MULTI_SELECT";
+    /** @enum {string} */
+    CustomProfileCardinality: "" | "ONE_PER_PROFILE" | "MANY_PER_PROFILE";
+    /** @enum {string} */
+    CustomValueTargetKind: "PROFILE" | "DOCUMENT" | "BILL" | "CUSTOM_ENTITY";
+    CustomEntityTypeValuesRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      profile_cardinality: components["schemas"]["CustomProfileCardinality"];
+    };
+    UpdateCustomEntityTypeRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      profile_cardinality: components["schemas"]["CustomProfileCardinality"];
+      /** Format: int64 */
+      version: number;
+    };
+    CustomEntityType: {
+      /** Format: uuid */
+      id: string;
+      technical_key: string;
+      label: string;
+      active: boolean;
+      profile_cardinality: components["schemas"]["CustomProfileCardinality"];
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    CustomEntityTypePageResponse: {
+      types: components["schemas"]["CustomEntityType"][];
+      page: {
+        /** Format: int64 */
+        total: number;
+        /** Format: int32 */
+        limit: number;
+        /** Format: int32 */
+        offset: number;
+        sort_field?: string;
+        sort_order?: components["schemas"]["SortOrder"];
+      };
+    };
+    CustomFieldValuesRequest: {
+      target_kind: components["schemas"]["CustomTargetKind"];
+      /** Format: uuid */
+      target_id?: string;
+      technical_key: string;
+      label: string;
+      field_kind: components["schemas"]["CustomFieldKind"];
+      required: boolean;
+      active: boolean;
+      minimum_length?: number;
+      maximum_length?: number;
+      validation_regex?: string;
+      minimum_decimal?: string;
+      maximum_decimal?: string;
+    };
+    UpdateCustomFieldRequest: {
+      target_kind: components["schemas"]["CustomTargetKind"];
+      /** Format: uuid */
+      target_id?: string;
+      technical_key: string;
+      label: string;
+      field_kind: components["schemas"]["CustomFieldKind"];
+      required: boolean;
+      active: boolean;
+      minimum_length?: number;
+      maximum_length?: number;
+      validation_regex?: string;
+      minimum_decimal?: string;
+      maximum_decimal?: string;
+      /** Format: int64 */
+      version: number;
+    };
+    CustomField: {
+      /** Format: uuid */
+      id: string;
+      target_kind: components["schemas"]["CustomTargetKind"];
+      /** Format: uuid */
+      target_id?: string;
+      technical_key: string;
+      label: string;
+      field_kind: components["schemas"]["CustomFieldKind"];
+      required: boolean;
+      active: boolean;
+      minimum_length?: number;
+      maximum_length?: number;
+      validation_regex?: string;
+      minimum_decimal?: string;
+      maximum_decimal?: string;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    CustomFieldPageResponse: {
+      fields: components["schemas"]["CustomField"][];
+      page: {
+        /** Format: int64 */
+        total: number;
+        /** Format: int32 */
+        limit: number;
+        /** Format: int32 */
+        offset: number;
+        sort_field?: string;
+        sort_order?: components["schemas"]["SortOrder"];
+      };
+    };
+    CustomOptionValuesRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      sort_order: number;
+    };
+    UpdateCustomOptionRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      sort_order: number;
+      /** Format: int64 */
+      version: number;
+    };
+    CustomOption: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      field_definition_id: string;
+      technical_key: string;
+      label: string;
+      active: boolean;
+      sort_order: number;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    CustomOptionListResponse: {
+      options: components["schemas"]["CustomOption"][];
+    };
+    CustomValueInput: {
+      /** Format: uuid */
+      field_definition_id: string;
+      field_kind: components["schemas"]["CustomFieldKind"];
+      text?: string;
+      /** Format: int64 */
+      integer?: number;
+      decimal?: string;
+      boolean?: boolean;
+      /** Format: date */
+      civil_date?: string;
+      civil_month?: string;
+      option_ids?: string[];
+    };
+    CustomStoredValue: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      field_definition_id: string;
+      field_kind: components["schemas"]["CustomFieldKind"];
+      text?: string;
+      /** Format: int64 */
+      integer?: number;
+      decimal?: string;
+      boolean?: boolean;
+      /** Format: date */
+      civil_date?: string;
+      civil_month?: string;
+      option_ids?: string[];
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    CustomValueSet: {
+      target_kind: components["schemas"]["CustomValueTargetKind"];
+      /** Format: uuid */
+      target_id: string;
+      values: components["schemas"]["CustomStoredValue"][];
+      /** Format: int64 */
+      version: number;
+    };
+    ReplaceCustomValuesRequest: {
+      /** Format: int64 */
+      version: number;
+      values: components["schemas"]["CustomValueInput"][];
+    };
+    CreateCustomEntityRequest: {
+      /** Format: uuid */
+      entity_type_id: string;
+      /** Format: uuid */
+      owner_profile_id?: string;
+      values: components["schemas"]["CustomValueInput"][];
+    };
+    UpdateCustomEntityRequest: {
+      /** Format: int64 */
+      version: number;
+      values: components["schemas"]["CustomValueInput"][];
+    };
+    CustomEntity: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      entity_type_id: string;
+      /** Format: uuid */
+      owner_profile_id?: string;
+      profile_cardinality: components["schemas"]["CustomProfileCardinality"];
+      values: components["schemas"]["CustomStoredValue"][];
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    CustomEntityPageResponse: {
+      entities: components["schemas"]["CustomEntity"][];
+      page: {
+        /** Format: int64 */
+        total: number;
+        /** Format: int32 */
+        limit: number;
+        /** Format: int32 */
+        offset: number;
+        sort_field?: string;
+        sort_order?: components["schemas"]["SortOrder"];
+      };
+    };
+    DeleteCustomDataRequest: {
+      /** Format: int64 */
+      version: number;
+      /** @enum {string} */
+      confirmation: "Confirmar";
     };
   };
   responses: {
@@ -2093,6 +2529,672 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listCustomEntityTypes: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: "label" | "created_at" | "updated_at";
+        order?: components["schemas"]["SortOrder"];
+        label?: string;
+        active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated custom entity type list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntityTypePageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createCustomEntityType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CustomEntityTypeValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created custom entity type */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntityType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getCustomEntityType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Custom entity type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntityType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateCustomEntityType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCustomEntityTypeRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated custom entity type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntityType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteCustomEntityType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteCustomDataRequest"];
+      };
+    };
+    responses: {
+      /** @description Deleted custom entity type */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listCustomFields: {
+    parameters: {
+      query: {
+        limit?: number;
+        offset?: number;
+        target_kind: components["schemas"]["CustomTargetKind"];
+        target_id?: string;
+        sort?: "label" | "technical_key" | "created_at" | "updated_at";
+        order?: components["schemas"]["SortOrder"];
+        label?: string;
+        active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated custom field list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomFieldPageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createCustomField: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CustomFieldValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created custom field */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomField"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getCustomField: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Custom field */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomField"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateCustomField: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCustomFieldRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated custom field */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomField"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteCustomField: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteCustomDataRequest"];
+      };
+    };
+    responses: {
+      /** @description Deleted custom field */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listCustomOptions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Custom field options */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomOptionListResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createCustomOption: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CustomOptionValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created custom option */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomOption"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateCustomOption: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+        option_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCustomOptionRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated custom option */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomOption"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteCustomOption: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+        option_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteCustomDataRequest"];
+      };
+    };
+    responses: {
+      /** @description Deleted custom option */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getCustomValues: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        target_kind: "profile" | "document" | "bill" | "custom_entity";
+        target_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Custom value set */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomValueSet"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  replaceCustomValues: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        target_kind: "profile" | "document" | "bill" | "custom_entity";
+        target_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReplaceCustomValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated custom value set */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomValueSet"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listCustomEntities: {
+    parameters: {
+      query: {
+        limit?: number;
+        offset?: number;
+        entity_type_id: string;
+        owner_profile_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated custom entity list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntityPageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createCustomEntity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateCustomEntityRequest"];
+      };
+    };
+    responses: {
+      /** @description Created custom entity */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntity"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getCustomEntity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Custom entity */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntity"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateCustomEntity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCustomEntityRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated custom entity */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntity"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteCustomEntity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteCustomDataRequest"];
+      };
+    };
+    responses: {
+      /** @description Deleted custom entity */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
       503: components["responses"]["ServiceUnavailable"];
     };
   };

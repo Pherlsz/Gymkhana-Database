@@ -118,6 +118,135 @@ func (e BillTypeSortField) Valid() bool {
 	}
 }
 
+// Defines values for CustomFieldKind.
+const (
+	BOOLEAN      CustomFieldKind = "BOOLEAN"
+	CIVILDATE    CustomFieldKind = "CIVIL_DATE"
+	CIVILMONTH   CustomFieldKind = "CIVIL_MONTH"
+	DECIMAL      CustomFieldKind = "DECIMAL"
+	EMAIL        CustomFieldKind = "EMAIL"
+	INTEGER      CustomFieldKind = "INTEGER"
+	LONGTEXT     CustomFieldKind = "LONG_TEXT"
+	MULTISELECT  CustomFieldKind = "MULTI_SELECT"
+	PHONE        CustomFieldKind = "PHONE"
+	SINGLESELECT CustomFieldKind = "SINGLE_SELECT"
+	TEXT         CustomFieldKind = "TEXT"
+)
+
+// Valid indicates whether the value is a known member of the CustomFieldKind enum.
+func (e CustomFieldKind) Valid() bool {
+	switch e {
+	case BOOLEAN:
+		return true
+	case CIVILDATE:
+		return true
+	case CIVILMONTH:
+		return true
+	case DECIMAL:
+		return true
+	case EMAIL:
+		return true
+	case INTEGER:
+		return true
+	case LONGTEXT:
+		return true
+	case MULTISELECT:
+		return true
+	case PHONE:
+		return true
+	case SINGLESELECT:
+		return true
+	case TEXT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CustomProfileCardinality.
+const (
+	Empty          CustomProfileCardinality = ""
+	MANYPERPROFILE CustomProfileCardinality = "MANY_PER_PROFILE"
+	ONEPERPROFILE  CustomProfileCardinality = "ONE_PER_PROFILE"
+)
+
+// Valid indicates whether the value is a known member of the CustomProfileCardinality enum.
+func (e CustomProfileCardinality) Valid() bool {
+	switch e {
+	case Empty:
+		return true
+	case MANYPERPROFILE:
+		return true
+	case ONEPERPROFILE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CustomTargetKind.
+const (
+	CustomTargetKindBILLTYPE         CustomTargetKind = "BILL_TYPE"
+	CustomTargetKindCUSTOMENTITYTYPE CustomTargetKind = "CUSTOM_ENTITY_TYPE"
+	CustomTargetKindDOCUMENTTYPE     CustomTargetKind = "DOCUMENT_TYPE"
+	CustomTargetKindPROFILE          CustomTargetKind = "PROFILE"
+)
+
+// Valid indicates whether the value is a known member of the CustomTargetKind enum.
+func (e CustomTargetKind) Valid() bool {
+	switch e {
+	case CustomTargetKindBILLTYPE:
+		return true
+	case CustomTargetKindCUSTOMENTITYTYPE:
+		return true
+	case CustomTargetKindDOCUMENTTYPE:
+		return true
+	case CustomTargetKindPROFILE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CustomValueTargetKind.
+const (
+	CustomValueTargetKindBILL         CustomValueTargetKind = "BILL"
+	CustomValueTargetKindCUSTOMENTITY CustomValueTargetKind = "CUSTOM_ENTITY"
+	CustomValueTargetKindDOCUMENT     CustomValueTargetKind = "DOCUMENT"
+	CustomValueTargetKindPROFILE      CustomValueTargetKind = "PROFILE"
+)
+
+// Valid indicates whether the value is a known member of the CustomValueTargetKind enum.
+func (e CustomValueTargetKind) Valid() bool {
+	switch e {
+	case CustomValueTargetKindBILL:
+		return true
+	case CustomValueTargetKindCUSTOMENTITY:
+		return true
+	case CustomValueTargetKindDOCUMENT:
+		return true
+	case CustomValueTargetKindPROFILE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DeleteCustomDataRequestConfirmation.
+const (
+	Confirmar DeleteCustomDataRequestConfirmation = "Confirmar"
+)
+
+// Valid indicates whether the value is a known member of the DeleteCustomDataRequestConfirmation enum.
+func (e DeleteCustomDataRequestConfirmation) Valid() bool {
+	switch e {
+	case Confirmar:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DocumentRecordState.
 const (
 	DocumentRecordStateARCHIVED DocumentRecordState = "ARCHIVED"
@@ -252,28 +381,28 @@ func (e HealthResponseStatus) Valid() bool {
 
 // Defines values for ProfileSortField.
 const (
-	AddressCity ProfileSortField = "address_city"
-	Cpf         ProfileSortField = "cpf"
-	CreatedAt   ProfileSortField = "created_at"
-	Email       ProfileSortField = "email"
-	FullName    ProfileSortField = "full_name"
-	UpdatedAt   ProfileSortField = "updated_at"
+	ProfileSortFieldAddressCity ProfileSortField = "address_city"
+	ProfileSortFieldCpf         ProfileSortField = "cpf"
+	ProfileSortFieldCreatedAt   ProfileSortField = "created_at"
+	ProfileSortFieldEmail       ProfileSortField = "email"
+	ProfileSortFieldFullName    ProfileSortField = "full_name"
+	ProfileSortFieldUpdatedAt   ProfileSortField = "updated_at"
 )
 
 // Valid indicates whether the value is a known member of the ProfileSortField enum.
 func (e ProfileSortField) Valid() bool {
 	switch e {
-	case AddressCity:
+	case ProfileSortFieldAddressCity:
 		return true
-	case Cpf:
+	case ProfileSortFieldCpf:
 		return true
-	case CreatedAt:
+	case ProfileSortFieldCreatedAt:
 		return true
-	case Email:
+	case ProfileSortFieldEmail:
 		return true
-	case FullName:
+	case ProfileSortFieldFullName:
 		return true
-	case UpdatedAt:
+	case ProfileSortFieldUpdatedAt:
 		return true
 	default:
 		return false
@@ -313,6 +442,51 @@ func (e UserRole) Valid() bool {
 	case MEMBER:
 		return true
 	case SUPERADMIN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListCustomEntityTypesParamsSort.
+const (
+	ListCustomEntityTypesParamsSortCreatedAt ListCustomEntityTypesParamsSort = "created_at"
+	ListCustomEntityTypesParamsSortLabel     ListCustomEntityTypesParamsSort = "label"
+	ListCustomEntityTypesParamsSortUpdatedAt ListCustomEntityTypesParamsSort = "updated_at"
+)
+
+// Valid indicates whether the value is a known member of the ListCustomEntityTypesParamsSort enum.
+func (e ListCustomEntityTypesParamsSort) Valid() bool {
+	switch e {
+	case ListCustomEntityTypesParamsSortCreatedAt:
+		return true
+	case ListCustomEntityTypesParamsSortLabel:
+		return true
+	case ListCustomEntityTypesParamsSortUpdatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListCustomFieldsParamsSort.
+const (
+	CreatedAt    ListCustomFieldsParamsSort = "created_at"
+	Label        ListCustomFieldsParamsSort = "label"
+	TechnicalKey ListCustomFieldsParamsSort = "technical_key"
+	UpdatedAt    ListCustomFieldsParamsSort = "updated_at"
+)
+
+// Valid indicates whether the value is a known member of the ListCustomFieldsParamsSort enum.
+func (e ListCustomFieldsParamsSort) Valid() bool {
+	switch e {
+	case CreatedAt:
+		return true
+	case Label:
+		return true
+	case TechnicalKey:
+		return true
+	case UpdatedAt:
 		return true
 	default:
 		return false
@@ -459,11 +633,207 @@ type BillValuesRequest struct {
 	ReferenceValue    string             `json:"reference_value"`
 }
 
+// CreateCustomEntityRequest defines model for CreateCustomEntityRequest.
+type CreateCustomEntityRequest struct {
+	EntityTypeId   openapi_types.UUID  `json:"entity_type_id"`
+	OwnerProfileId *openapi_types.UUID `json:"owner_profile_id,omitempty"`
+	Values         []CustomValueInput  `json:"values"`
+}
+
+// CustomEntity defines model for CustomEntity.
+type CustomEntity struct {
+	CreatedAt          time.Time                `json:"created_at"`
+	EntityTypeId       openapi_types.UUID       `json:"entity_type_id"`
+	Id                 openapi_types.UUID       `json:"id"`
+	OwnerProfileId     *openapi_types.UUID      `json:"owner_profile_id,omitempty"`
+	ProfileCardinality CustomProfileCardinality `json:"profile_cardinality"`
+	UpdatedAt          time.Time                `json:"updated_at"`
+	Values             []CustomStoredValue      `json:"values"`
+	Version            int64                    `json:"version"`
+}
+
+// CustomEntityPageResponse defines model for CustomEntityPageResponse.
+type CustomEntityPageResponse struct {
+	Entities []CustomEntity `json:"entities"`
+	Page     struct {
+		Limit     int32      `json:"limit"`
+		Offset    int32      `json:"offset"`
+		SortField *string    `json:"sort_field,omitempty"`
+		SortOrder *SortOrder `json:"sort_order,omitempty"`
+		Total     int64      `json:"total"`
+	} `json:"page"`
+}
+
+// CustomEntityType defines model for CustomEntityType.
+type CustomEntityType struct {
+	Active             bool                     `json:"active"`
+	CreatedAt          time.Time                `json:"created_at"`
+	Id                 openapi_types.UUID       `json:"id"`
+	Label              string                   `json:"label"`
+	ProfileCardinality CustomProfileCardinality `json:"profile_cardinality"`
+	TechnicalKey       string                   `json:"technical_key"`
+	UpdatedAt          time.Time                `json:"updated_at"`
+	Version            int64                    `json:"version"`
+}
+
+// CustomEntityTypePageResponse defines model for CustomEntityTypePageResponse.
+type CustomEntityTypePageResponse struct {
+	Page struct {
+		Limit     int32      `json:"limit"`
+		Offset    int32      `json:"offset"`
+		SortField *string    `json:"sort_field,omitempty"`
+		SortOrder *SortOrder `json:"sort_order,omitempty"`
+		Total     int64      `json:"total"`
+	} `json:"page"`
+	Types []CustomEntityType `json:"types"`
+}
+
+// CustomEntityTypeValuesRequest defines model for CustomEntityTypeValuesRequest.
+type CustomEntityTypeValuesRequest struct {
+	Active             bool                     `json:"active"`
+	Label              string                   `json:"label"`
+	ProfileCardinality CustomProfileCardinality `json:"profile_cardinality"`
+	TechnicalKey       string                   `json:"technical_key"`
+}
+
+// CustomField defines model for CustomField.
+type CustomField struct {
+	Active          bool                `json:"active"`
+	CreatedAt       time.Time           `json:"created_at"`
+	FieldKind       CustomFieldKind     `json:"field_kind"`
+	Id              openapi_types.UUID  `json:"id"`
+	Label           string              `json:"label"`
+	MaximumDecimal  *string             `json:"maximum_decimal,omitempty"`
+	MaximumLength   *int                `json:"maximum_length,omitempty"`
+	MinimumDecimal  *string             `json:"minimum_decimal,omitempty"`
+	MinimumLength   *int                `json:"minimum_length,omitempty"`
+	Required        bool                `json:"required"`
+	TargetId        *openapi_types.UUID `json:"target_id,omitempty"`
+	TargetKind      CustomTargetKind    `json:"target_kind"`
+	TechnicalKey    string              `json:"technical_key"`
+	UpdatedAt       time.Time           `json:"updated_at"`
+	ValidationRegex *string             `json:"validation_regex,omitempty"`
+	Version         int64               `json:"version"`
+}
+
+// CustomFieldKind defines model for CustomFieldKind.
+type CustomFieldKind string
+
+// CustomFieldPageResponse defines model for CustomFieldPageResponse.
+type CustomFieldPageResponse struct {
+	Fields []CustomField `json:"fields"`
+	Page   struct {
+		Limit     int32      `json:"limit"`
+		Offset    int32      `json:"offset"`
+		SortField *string    `json:"sort_field,omitempty"`
+		SortOrder *SortOrder `json:"sort_order,omitempty"`
+		Total     int64      `json:"total"`
+	} `json:"page"`
+}
+
+// CustomFieldValuesRequest defines model for CustomFieldValuesRequest.
+type CustomFieldValuesRequest struct {
+	Active          bool                `json:"active"`
+	FieldKind       CustomFieldKind     `json:"field_kind"`
+	Label           string              `json:"label"`
+	MaximumDecimal  *string             `json:"maximum_decimal,omitempty"`
+	MaximumLength   *int                `json:"maximum_length,omitempty"`
+	MinimumDecimal  *string             `json:"minimum_decimal,omitempty"`
+	MinimumLength   *int                `json:"minimum_length,omitempty"`
+	Required        bool                `json:"required"`
+	TargetId        *openapi_types.UUID `json:"target_id,omitempty"`
+	TargetKind      CustomTargetKind    `json:"target_kind"`
+	TechnicalKey    string              `json:"technical_key"`
+	ValidationRegex *string             `json:"validation_regex,omitempty"`
+}
+
+// CustomOption defines model for CustomOption.
+type CustomOption struct {
+	Active            bool               `json:"active"`
+	CreatedAt         time.Time          `json:"created_at"`
+	FieldDefinitionId openapi_types.UUID `json:"field_definition_id"`
+	Id                openapi_types.UUID `json:"id"`
+	Label             string             `json:"label"`
+	SortOrder         int                `json:"sort_order"`
+	TechnicalKey      string             `json:"technical_key"`
+	UpdatedAt         time.Time          `json:"updated_at"`
+	Version           int64              `json:"version"`
+}
+
+// CustomOptionListResponse defines model for CustomOptionListResponse.
+type CustomOptionListResponse struct {
+	Options []CustomOption `json:"options"`
+}
+
+// CustomOptionValuesRequest defines model for CustomOptionValuesRequest.
+type CustomOptionValuesRequest struct {
+	Active       bool   `json:"active"`
+	Label        string `json:"label"`
+	SortOrder    int    `json:"sort_order"`
+	TechnicalKey string `json:"technical_key"`
+}
+
+// CustomProfileCardinality defines model for CustomProfileCardinality.
+type CustomProfileCardinality string
+
+// CustomStoredValue defines model for CustomStoredValue.
+type CustomStoredValue struct {
+	Boolean           *bool                 `json:"boolean,omitempty"`
+	CivilDate         *openapi_types.Date   `json:"civil_date,omitempty"`
+	CivilMonth        *string               `json:"civil_month,omitempty"`
+	CreatedAt         time.Time             `json:"created_at"`
+	Decimal           *string               `json:"decimal,omitempty"`
+	FieldDefinitionId openapi_types.UUID    `json:"field_definition_id"`
+	FieldKind         CustomFieldKind       `json:"field_kind"`
+	Id                openapi_types.UUID    `json:"id"`
+	Integer           *int64                `json:"integer,omitempty"`
+	OptionIds         *[]openapi_types.UUID `json:"option_ids,omitempty"`
+	Text              *string               `json:"text,omitempty"`
+	UpdatedAt         time.Time             `json:"updated_at"`
+	Version           int64                 `json:"version"`
+}
+
+// CustomTargetKind defines model for CustomTargetKind.
+type CustomTargetKind string
+
+// CustomValueInput defines model for CustomValueInput.
+type CustomValueInput struct {
+	Boolean           *bool                 `json:"boolean,omitempty"`
+	CivilDate         *openapi_types.Date   `json:"civil_date,omitempty"`
+	CivilMonth        *string               `json:"civil_month,omitempty"`
+	Decimal           *string               `json:"decimal,omitempty"`
+	FieldDefinitionId openapi_types.UUID    `json:"field_definition_id"`
+	FieldKind         CustomFieldKind       `json:"field_kind"`
+	Integer           *int64                `json:"integer,omitempty"`
+	OptionIds         *[]openapi_types.UUID `json:"option_ids,omitempty"`
+	Text              *string               `json:"text,omitempty"`
+}
+
+// CustomValueSet defines model for CustomValueSet.
+type CustomValueSet struct {
+	TargetId   openapi_types.UUID    `json:"target_id"`
+	TargetKind CustomValueTargetKind `json:"target_kind"`
+	Values     []CustomStoredValue   `json:"values"`
+	Version    int64                 `json:"version"`
+}
+
+// CustomValueTargetKind defines model for CustomValueTargetKind.
+type CustomValueTargetKind string
+
 // DeleteBillResourceRequest defines model for DeleteBillResourceRequest.
 type DeleteBillResourceRequest struct {
 	Confirmation string `json:"confirmation"`
 	Version      int64  `json:"version"`
 }
+
+// DeleteCustomDataRequest defines model for DeleteCustomDataRequest.
+type DeleteCustomDataRequest struct {
+	Confirmation DeleteCustomDataRequestConfirmation `json:"confirmation"`
+	Version      int64                               `json:"version"`
+}
+
+// DeleteCustomDataRequestConfirmation defines model for DeleteCustomDataRequest.Confirmation.
+type DeleteCustomDataRequestConfirmation string
 
 // DeleteDocumentResourceRequest defines model for DeleteDocumentResourceRequest.
 type DeleteDocumentResourceRequest struct {
@@ -662,6 +1032,12 @@ type ProfileValuesRequest struct {
 	SocialName    string         `json:"social_name"`
 }
 
+// ReplaceCustomValuesRequest defines model for ReplaceCustomValuesRequest.
+type ReplaceCustomValuesRequest struct {
+	Values  []CustomValueInput `json:"values"`
+	Version int64              `json:"version"`
+}
+
 // SortOrder defines model for SortOrder.
 type SortOrder string
 
@@ -687,6 +1063,47 @@ type UpdateBillTypeRequest struct {
 	SupportsCurrentUse bool   `json:"supports_current_use"`
 	TechnicalKey       string `json:"technical_key"`
 	Version            int64  `json:"version"`
+}
+
+// UpdateCustomEntityRequest defines model for UpdateCustomEntityRequest.
+type UpdateCustomEntityRequest struct {
+	Values  []CustomValueInput `json:"values"`
+	Version int64              `json:"version"`
+}
+
+// UpdateCustomEntityTypeRequest defines model for UpdateCustomEntityTypeRequest.
+type UpdateCustomEntityTypeRequest struct {
+	Active             bool                     `json:"active"`
+	Label              string                   `json:"label"`
+	ProfileCardinality CustomProfileCardinality `json:"profile_cardinality"`
+	TechnicalKey       string                   `json:"technical_key"`
+	Version            int64                    `json:"version"`
+}
+
+// UpdateCustomFieldRequest defines model for UpdateCustomFieldRequest.
+type UpdateCustomFieldRequest struct {
+	Active          bool                `json:"active"`
+	FieldKind       CustomFieldKind     `json:"field_kind"`
+	Label           string              `json:"label"`
+	MaximumDecimal  *string             `json:"maximum_decimal,omitempty"`
+	MaximumLength   *int                `json:"maximum_length,omitempty"`
+	MinimumDecimal  *string             `json:"minimum_decimal,omitempty"`
+	MinimumLength   *int                `json:"minimum_length,omitempty"`
+	Required        bool                `json:"required"`
+	TargetId        *openapi_types.UUID `json:"target_id,omitempty"`
+	TargetKind      CustomTargetKind    `json:"target_kind"`
+	TechnicalKey    string              `json:"technical_key"`
+	ValidationRegex *string             `json:"validation_regex,omitempty"`
+	Version         int64               `json:"version"`
+}
+
+// UpdateCustomOptionRequest defines model for UpdateCustomOptionRequest.
+type UpdateCustomOptionRequest struct {
+	Active       bool   `json:"active"`
+	Label        string `json:"label"`
+	SortOrder    int    `json:"sort_order"`
+	TechnicalKey string `json:"technical_key"`
+	Version      int64  `json:"version"`
 }
 
 // UpdateDocumentRequest defines model for UpdateDocumentRequest.
@@ -792,6 +1209,42 @@ type ListBillsParams struct {
 	HolderProfileId *openapi_types.UUID `form:"holder_profile_id,omitempty" json:"holder_profile_id,omitempty"`
 }
 
+// ListCustomEntitiesParams defines parameters for ListCustomEntities.
+type ListCustomEntitiesParams struct {
+	Limit          *int32              `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset         *int32              `form:"offset,omitempty" json:"offset,omitempty"`
+	EntityTypeId   openapi_types.UUID  `form:"entity_type_id" json:"entity_type_id"`
+	OwnerProfileId *openapi_types.UUID `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
+}
+
+// ListCustomEntityTypesParams defines parameters for ListCustomEntityTypes.
+type ListCustomEntityTypesParams struct {
+	Limit  *int32                           `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int32                           `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort   *ListCustomEntityTypesParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+	Order  *SortOrder                       `form:"order,omitempty" json:"order,omitempty"`
+	Label  *string                          `form:"label,omitempty" json:"label,omitempty"`
+	Active *bool                            `form:"active,omitempty" json:"active,omitempty"`
+}
+
+// ListCustomEntityTypesParamsSort defines parameters for ListCustomEntityTypes.
+type ListCustomEntityTypesParamsSort string
+
+// ListCustomFieldsParams defines parameters for ListCustomFields.
+type ListCustomFieldsParams struct {
+	Limit      *int32                      `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset     *int32                      `form:"offset,omitempty" json:"offset,omitempty"`
+	TargetKind CustomTargetKind            `form:"target_kind" json:"target_kind"`
+	TargetId   *openapi_types.UUID         `form:"target_id,omitempty" json:"target_id,omitempty"`
+	Sort       *ListCustomFieldsParamsSort `form:"sort,omitempty" json:"sort,omitempty"`
+	Order      *SortOrder                  `form:"order,omitempty" json:"order,omitempty"`
+	Label      *string                     `form:"label,omitempty" json:"label,omitempty"`
+	Active     *bool                       `form:"active,omitempty" json:"active,omitempty"`
+}
+
+// ListCustomFieldsParamsSort defines parameters for ListCustomFields.
+type ListCustomFieldsParamsSort string
+
 // ListDocumentTypesParams defines parameters for ListDocumentTypes.
 type ListDocumentTypesParams struct {
 	Limit  *int32                 `form:"limit,omitempty" json:"limit,omitempty"`
@@ -858,6 +1311,45 @@ type UpdateBillJSONRequestBody = UpdateBillRequest
 
 // AssignBillCurrentUseJSONRequestBody defines body for AssignBillCurrentUse for application/json ContentType.
 type AssignBillCurrentUseJSONRequestBody = AssignBillCurrentUseRequest
+
+// CreateCustomEntityJSONRequestBody defines body for CreateCustomEntity for application/json ContentType.
+type CreateCustomEntityJSONRequestBody = CreateCustomEntityRequest
+
+// DeleteCustomEntityJSONRequestBody defines body for DeleteCustomEntity for application/json ContentType.
+type DeleteCustomEntityJSONRequestBody = DeleteCustomDataRequest
+
+// UpdateCustomEntityJSONRequestBody defines body for UpdateCustomEntity for application/json ContentType.
+type UpdateCustomEntityJSONRequestBody = UpdateCustomEntityRequest
+
+// CreateCustomEntityTypeJSONRequestBody defines body for CreateCustomEntityType for application/json ContentType.
+type CreateCustomEntityTypeJSONRequestBody = CustomEntityTypeValuesRequest
+
+// DeleteCustomEntityTypeJSONRequestBody defines body for DeleteCustomEntityType for application/json ContentType.
+type DeleteCustomEntityTypeJSONRequestBody = DeleteCustomDataRequest
+
+// UpdateCustomEntityTypeJSONRequestBody defines body for UpdateCustomEntityType for application/json ContentType.
+type UpdateCustomEntityTypeJSONRequestBody = UpdateCustomEntityTypeRequest
+
+// CreateCustomFieldJSONRequestBody defines body for CreateCustomField for application/json ContentType.
+type CreateCustomFieldJSONRequestBody = CustomFieldValuesRequest
+
+// DeleteCustomFieldJSONRequestBody defines body for DeleteCustomField for application/json ContentType.
+type DeleteCustomFieldJSONRequestBody = DeleteCustomDataRequest
+
+// UpdateCustomFieldJSONRequestBody defines body for UpdateCustomField for application/json ContentType.
+type UpdateCustomFieldJSONRequestBody = UpdateCustomFieldRequest
+
+// CreateCustomOptionJSONRequestBody defines body for CreateCustomOption for application/json ContentType.
+type CreateCustomOptionJSONRequestBody = CustomOptionValuesRequest
+
+// DeleteCustomOptionJSONRequestBody defines body for DeleteCustomOption for application/json ContentType.
+type DeleteCustomOptionJSONRequestBody = DeleteCustomDataRequest
+
+// UpdateCustomOptionJSONRequestBody defines body for UpdateCustomOption for application/json ContentType.
+type UpdateCustomOptionJSONRequestBody = UpdateCustomOptionRequest
+
+// ReplaceCustomValuesJSONRequestBody defines body for ReplaceCustomValues for application/json ContentType.
+type ReplaceCustomValuesJSONRequestBody = ReplaceCustomValuesRequest
 
 // CreateDocumentTypeJSONRequestBody defines body for CreateDocumentType for application/json ContentType.
 type CreateDocumentTypeJSONRequestBody = DocumentTypeValuesRequest
@@ -942,6 +1434,69 @@ type ServerInterface interface {
 	// Duplicate a bill into an independent record
 	// (POST /api/v1/bills/{bill_id}/duplicate)
 	DuplicateBill(w http.ResponseWriter, r *http.Request, billId openapi_types.UUID)
+	// List custom entities
+	// (GET /api/v1/custom-entities)
+	ListCustomEntities(w http.ResponseWriter, r *http.Request, params ListCustomEntitiesParams)
+	// Create a custom entity
+	// (POST /api/v1/custom-entities)
+	CreateCustomEntity(w http.ResponseWriter, r *http.Request)
+	// Delete a custom entity
+	// (DELETE /api/v1/custom-entities/{entity_id})
+	DeleteCustomEntity(w http.ResponseWriter, r *http.Request, entityId openapi_types.UUID)
+	// Read a custom entity
+	// (GET /api/v1/custom-entities/{entity_id})
+	GetCustomEntity(w http.ResponseWriter, r *http.Request, entityId openapi_types.UUID)
+	// Update a custom entity
+	// (PUT /api/v1/custom-entities/{entity_id})
+	UpdateCustomEntity(w http.ResponseWriter, r *http.Request, entityId openapi_types.UUID)
+	// List custom entity types
+	// (GET /api/v1/custom-entity-types)
+	ListCustomEntityTypes(w http.ResponseWriter, r *http.Request, params ListCustomEntityTypesParams)
+	// Create a custom entity type
+	// (POST /api/v1/custom-entity-types)
+	CreateCustomEntityType(w http.ResponseWriter, r *http.Request)
+	// Delete an unused custom entity type
+	// (DELETE /api/v1/custom-entity-types/{entity_type_id})
+	DeleteCustomEntityType(w http.ResponseWriter, r *http.Request, entityTypeId openapi_types.UUID)
+	// Read a custom entity type
+	// (GET /api/v1/custom-entity-types/{entity_type_id})
+	GetCustomEntityType(w http.ResponseWriter, r *http.Request, entityTypeId openapi_types.UUID)
+	// Update a custom entity type
+	// (PUT /api/v1/custom-entity-types/{entity_type_id})
+	UpdateCustomEntityType(w http.ResponseWriter, r *http.Request, entityTypeId openapi_types.UUID)
+	// List custom field definitions
+	// (GET /api/v1/custom-fields)
+	ListCustomFields(w http.ResponseWriter, r *http.Request, params ListCustomFieldsParams)
+	// Create a custom field definition
+	// (POST /api/v1/custom-fields)
+	CreateCustomField(w http.ResponseWriter, r *http.Request)
+	// Delete an unused custom field definition
+	// (DELETE /api/v1/custom-fields/{field_id})
+	DeleteCustomField(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID)
+	// Read a custom field definition
+	// (GET /api/v1/custom-fields/{field_id})
+	GetCustomField(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID)
+	// Update a custom field definition
+	// (PUT /api/v1/custom-fields/{field_id})
+	UpdateCustomField(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID)
+	// List select options for a custom field
+	// (GET /api/v1/custom-fields/{field_id}/options)
+	ListCustomOptions(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID)
+	// Create a select option
+	// (POST /api/v1/custom-fields/{field_id}/options)
+	CreateCustomOption(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID)
+	// Delete an unused select option
+	// (DELETE /api/v1/custom-fields/{field_id}/options/{option_id})
+	DeleteCustomOption(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID, optionId openapi_types.UUID)
+	// Update a select option
+	// (PUT /api/v1/custom-fields/{field_id}/options/{option_id})
+	UpdateCustomOption(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID, optionId openapi_types.UUID)
+	// Read custom values for a record
+	// (GET /api/v1/custom-values/{target_kind}/{target_id})
+	GetCustomValues(w http.ResponseWriter, r *http.Request, targetKind string, targetId openapi_types.UUID)
+	// Replace custom values using optimistic concurrency
+	// (PUT /api/v1/custom-values/{target_kind}/{target_id})
+	ReplaceCustomValues(w http.ResponseWriter, r *http.Request, targetKind string, targetId openapi_types.UUID)
 	// List administrable document types
 	// (GET /api/v1/document-types)
 	ListDocumentTypes(w http.ResponseWriter, r *http.Request, params ListDocumentTypesParams)
@@ -1738,6 +2293,894 @@ func (siw *ServerInterfaceWrapper) DuplicateBill(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DuplicateBill(w, r, billId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCustomEntities operation middleware
+func (siw *ServerInterfaceWrapper) ListCustomEntities(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCustomEntitiesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "entity_type_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "entity_type_id", r.URL.Query(), &params.EntityTypeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "owner_profile_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_profile_id", r.URL.Query(), &params.OwnerProfileId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_profile_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_profile_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCustomEntities(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCustomEntity operation middleware
+func (siw *ServerInterfaceWrapper) CreateCustomEntity(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCustomEntity(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCustomEntity operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCustomEntity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", r.PathValue("entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCustomEntity(w, r, entityId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCustomEntity operation middleware
+func (siw *ServerInterfaceWrapper) GetCustomEntity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", r.PathValue("entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCustomEntity(w, r, entityId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCustomEntity operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCustomEntity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_id" -------------
+	var entityId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_id", r.PathValue("entity_id"), &entityId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCustomEntity(w, r, entityId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCustomEntityTypes operation middleware
+func (siw *ServerInterfaceWrapper) ListCustomEntityTypes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCustomEntityTypesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "label" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "label", r.URL.Query(), &params.Label, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "label"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "label", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "active" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "active", r.URL.Query(), &params.Active, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "active"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "active", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCustomEntityTypes(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCustomEntityType operation middleware
+func (siw *ServerInterfaceWrapper) CreateCustomEntityType(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCustomEntityType(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCustomEntityType operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCustomEntityType(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_type_id" -------------
+	var entityTypeId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_type_id", r.PathValue("entity_type_id"), &entityTypeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCustomEntityType(w, r, entityTypeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCustomEntityType operation middleware
+func (siw *ServerInterfaceWrapper) GetCustomEntityType(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_type_id" -------------
+	var entityTypeId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_type_id", r.PathValue("entity_type_id"), &entityTypeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCustomEntityType(w, r, entityTypeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCustomEntityType operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCustomEntityType(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_type_id" -------------
+	var entityTypeId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_type_id", r.PathValue("entity_type_id"), &entityTypeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCustomEntityType(w, r, entityTypeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCustomFields operation middleware
+func (siw *ServerInterfaceWrapper) ListCustomFields(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCustomFieldsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "target_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "target_kind", r.URL.Query(), &params.TargetKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target_id", r.URL.Query(), &params.TargetId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "sort" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort", r.URL.Query(), &params.Sort, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sort"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order", r.URL.Query(), &params.Order, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "label" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "label", r.URL.Query(), &params.Label, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "label"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "label", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "active" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "active", r.URL.Query(), &params.Active, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "active"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "active", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCustomFields(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCustomField operation middleware
+func (siw *ServerInterfaceWrapper) CreateCustomField(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCustomField(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCustomField operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCustomField(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "field_id" -------------
+	var fieldId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "field_id", r.PathValue("field_id"), &fieldId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "field_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCustomField(w, r, fieldId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCustomField operation middleware
+func (siw *ServerInterfaceWrapper) GetCustomField(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "field_id" -------------
+	var fieldId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "field_id", r.PathValue("field_id"), &fieldId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "field_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCustomField(w, r, fieldId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCustomField operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCustomField(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "field_id" -------------
+	var fieldId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "field_id", r.PathValue("field_id"), &fieldId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "field_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCustomField(w, r, fieldId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCustomOptions operation middleware
+func (siw *ServerInterfaceWrapper) ListCustomOptions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "field_id" -------------
+	var fieldId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "field_id", r.PathValue("field_id"), &fieldId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "field_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCustomOptions(w, r, fieldId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCustomOption operation middleware
+func (siw *ServerInterfaceWrapper) CreateCustomOption(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "field_id" -------------
+	var fieldId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "field_id", r.PathValue("field_id"), &fieldId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "field_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCustomOption(w, r, fieldId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCustomOption operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCustomOption(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "field_id" -------------
+	var fieldId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "field_id", r.PathValue("field_id"), &fieldId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "field_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "option_id" -------------
+	var optionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "option_id", r.PathValue("option_id"), &optionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "option_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCustomOption(w, r, fieldId, optionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCustomOption operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCustomOption(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "field_id" -------------
+	var fieldId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "field_id", r.PathValue("field_id"), &fieldId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "field_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "option_id" -------------
+	var optionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "option_id", r.PathValue("option_id"), &optionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "option_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCustomOption(w, r, fieldId, optionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCustomValues operation middleware
+func (siw *ServerInterfaceWrapper) GetCustomValues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "target_kind" -------------
+	var targetKind string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "target_kind", r.PathValue("target_kind"), &targetKind, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_kind", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "target_id" -------------
+	var targetId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "target_id", r.PathValue("target_id"), &targetId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCustomValues(w, r, targetKind, targetId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceCustomValues operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceCustomValues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "target_kind" -------------
+	var targetKind string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "target_kind", r.PathValue("target_kind"), &targetKind, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_kind", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "target_id" -------------
+	var targetId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "target_id", r.PathValue("target_id"), &targetId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceCustomValues(w, r, targetKind, targetId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2851,6 +4294,27 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/bills/{bill_id}/current-use", wrapper.ReturnBillCurrentUse)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/bills/{bill_id}/current-use", wrapper.AssignBillCurrentUse)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/bills/{bill_id}/duplicate", wrapper.DuplicateBill)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/custom-entities", wrapper.ListCustomEntities)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/custom-entities", wrapper.CreateCustomEntity)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/custom-entities/{entity_id}", wrapper.DeleteCustomEntity)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/custom-entities/{entity_id}", wrapper.GetCustomEntity)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/custom-entities/{entity_id}", wrapper.UpdateCustomEntity)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/custom-entity-types", wrapper.ListCustomEntityTypes)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/custom-entity-types", wrapper.CreateCustomEntityType)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/custom-entity-types/{entity_type_id}", wrapper.DeleteCustomEntityType)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/custom-entity-types/{entity_type_id}", wrapper.GetCustomEntityType)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/custom-entity-types/{entity_type_id}", wrapper.UpdateCustomEntityType)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/custom-fields", wrapper.ListCustomFields)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/custom-fields", wrapper.CreateCustomField)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/custom-fields/{field_id}", wrapper.DeleteCustomField)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/custom-fields/{field_id}", wrapper.GetCustomField)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/custom-fields/{field_id}", wrapper.UpdateCustomField)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/custom-fields/{field_id}/options", wrapper.ListCustomOptions)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/custom-fields/{field_id}/options", wrapper.CreateCustomOption)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/custom-fields/{field_id}/options/{option_id}", wrapper.DeleteCustomOption)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/custom-fields/{field_id}/options/{option_id}", wrapper.UpdateCustomOption)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/custom-values/{target_kind}/{target_id}", wrapper.GetCustomValues)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/custom-values/{target_kind}/{target_id}", wrapper.ReplaceCustomValues)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/document-types", wrapper.ListDocumentTypes)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/document-types", wrapper.CreateDocumentType)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/document-types/{document_type_id}", wrapper.DeleteDocumentType)
@@ -4469,6 +5933,2516 @@ func (response DuplicateBill409JSONResponse) VisitDuplicateBillResponse(w http.R
 type DuplicateBill503JSONResponse struct{ ServiceUnavailableJSONResponse }
 
 func (response DuplicateBill503JSONResponse) VisitDuplicateBillResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntitiesRequestObject struct {
+	Params ListCustomEntitiesParams
+}
+
+type ListCustomEntitiesResponseObject interface {
+	VisitListCustomEntitiesResponse(w http.ResponseWriter) error
+}
+
+type ListCustomEntities200JSONResponse CustomEntityPageResponse
+
+func (response ListCustomEntities200JSONResponse) VisitListCustomEntitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntities400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListCustomEntities400JSONResponse) VisitListCustomEntitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntities401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListCustomEntities401JSONResponse) VisitListCustomEntitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntities403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListCustomEntities403JSONResponse) VisitListCustomEntitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntities404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListCustomEntities404JSONResponse) VisitListCustomEntitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntities409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ListCustomEntities409JSONResponse) VisitListCustomEntitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntities422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response ListCustomEntities422JSONResponse) VisitListCustomEntitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntities503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListCustomEntities503JSONResponse) VisitListCustomEntitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntityRequestObject struct {
+	Body *CreateCustomEntityJSONRequestBody
+}
+
+type CreateCustomEntityResponseObject interface {
+	VisitCreateCustomEntityResponse(w http.ResponseWriter) error
+}
+
+type CreateCustomEntity201JSONResponse CustomEntity
+
+func (response CreateCustomEntity201JSONResponse) VisitCreateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntity400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateCustomEntity400JSONResponse) VisitCreateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntity401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateCustomEntity401JSONResponse) VisitCreateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntity403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateCustomEntity403JSONResponse) VisitCreateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntity404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateCustomEntity404JSONResponse) VisitCreateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntity409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateCustomEntity409JSONResponse) VisitCreateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntity422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response CreateCustomEntity422JSONResponse) VisitCreateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntity503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response CreateCustomEntity503JSONResponse) VisitCreateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntityRequestObject struct {
+	EntityId openapi_types.UUID `json:"entity_id"`
+	Body     *DeleteCustomEntityJSONRequestBody
+}
+
+type DeleteCustomEntityResponseObject interface {
+	VisitDeleteCustomEntityResponse(w http.ResponseWriter) error
+}
+
+type DeleteCustomEntity204Response struct {
+}
+
+func (response DeleteCustomEntity204Response) VisitDeleteCustomEntityResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCustomEntity400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteCustomEntity400JSONResponse) VisitDeleteCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntity401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteCustomEntity401JSONResponse) VisitDeleteCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntity403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteCustomEntity403JSONResponse) VisitDeleteCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntity404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteCustomEntity404JSONResponse) VisitDeleteCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntity409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteCustomEntity409JSONResponse) VisitDeleteCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntity422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response DeleteCustomEntity422JSONResponse) VisitDeleteCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntity503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response DeleteCustomEntity503JSONResponse) VisitDeleteCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntityRequestObject struct {
+	EntityId openapi_types.UUID `json:"entity_id"`
+}
+
+type GetCustomEntityResponseObject interface {
+	VisitGetCustomEntityResponse(w http.ResponseWriter) error
+}
+
+type GetCustomEntity200JSONResponse CustomEntity
+
+func (response GetCustomEntity200JSONResponse) VisitGetCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntity400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetCustomEntity400JSONResponse) VisitGetCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntity401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetCustomEntity401JSONResponse) VisitGetCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntity403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetCustomEntity403JSONResponse) VisitGetCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntity404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetCustomEntity404JSONResponse) VisitGetCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntity409JSONResponse struct{ ConflictJSONResponse }
+
+func (response GetCustomEntity409JSONResponse) VisitGetCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntity422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response GetCustomEntity422JSONResponse) VisitGetCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntity503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetCustomEntity503JSONResponse) VisitGetCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntityRequestObject struct {
+	EntityId openapi_types.UUID `json:"entity_id"`
+	Body     *UpdateCustomEntityJSONRequestBody
+}
+
+type UpdateCustomEntityResponseObject interface {
+	VisitUpdateCustomEntityResponse(w http.ResponseWriter) error
+}
+
+type UpdateCustomEntity200JSONResponse CustomEntity
+
+func (response UpdateCustomEntity200JSONResponse) VisitUpdateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntity400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateCustomEntity400JSONResponse) VisitUpdateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntity401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateCustomEntity401JSONResponse) VisitUpdateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntity403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateCustomEntity403JSONResponse) VisitUpdateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntity404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateCustomEntity404JSONResponse) VisitUpdateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntity409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpdateCustomEntity409JSONResponse) VisitUpdateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntity422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UpdateCustomEntity422JSONResponse) VisitUpdateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntity503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response UpdateCustomEntity503JSONResponse) VisitUpdateCustomEntityResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntityTypesRequestObject struct {
+	Params ListCustomEntityTypesParams
+}
+
+type ListCustomEntityTypesResponseObject interface {
+	VisitListCustomEntityTypesResponse(w http.ResponseWriter) error
+}
+
+type ListCustomEntityTypes200JSONResponse CustomEntityTypePageResponse
+
+func (response ListCustomEntityTypes200JSONResponse) VisitListCustomEntityTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntityTypes400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListCustomEntityTypes400JSONResponse) VisitListCustomEntityTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntityTypes401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListCustomEntityTypes401JSONResponse) VisitListCustomEntityTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntityTypes403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListCustomEntityTypes403JSONResponse) VisitListCustomEntityTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntityTypes404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListCustomEntityTypes404JSONResponse) VisitListCustomEntityTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntityTypes409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ListCustomEntityTypes409JSONResponse) VisitListCustomEntityTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntityTypes422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response ListCustomEntityTypes422JSONResponse) VisitListCustomEntityTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomEntityTypes503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListCustomEntityTypes503JSONResponse) VisitListCustomEntityTypesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntityTypeRequestObject struct {
+	Body *CreateCustomEntityTypeJSONRequestBody
+}
+
+type CreateCustomEntityTypeResponseObject interface {
+	VisitCreateCustomEntityTypeResponse(w http.ResponseWriter) error
+}
+
+type CreateCustomEntityType201JSONResponse CustomEntityType
+
+func (response CreateCustomEntityType201JSONResponse) VisitCreateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntityType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateCustomEntityType400JSONResponse) VisitCreateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntityType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateCustomEntityType401JSONResponse) VisitCreateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntityType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateCustomEntityType403JSONResponse) VisitCreateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntityType404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateCustomEntityType404JSONResponse) VisitCreateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntityType409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateCustomEntityType409JSONResponse) VisitCreateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntityType422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response CreateCustomEntityType422JSONResponse) VisitCreateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomEntityType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response CreateCustomEntityType503JSONResponse) VisitCreateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntityTypeRequestObject struct {
+	EntityTypeId openapi_types.UUID `json:"entity_type_id"`
+	Body         *DeleteCustomEntityTypeJSONRequestBody
+}
+
+type DeleteCustomEntityTypeResponseObject interface {
+	VisitDeleteCustomEntityTypeResponse(w http.ResponseWriter) error
+}
+
+type DeleteCustomEntityType204Response struct {
+}
+
+func (response DeleteCustomEntityType204Response) VisitDeleteCustomEntityTypeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCustomEntityType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteCustomEntityType400JSONResponse) VisitDeleteCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntityType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteCustomEntityType401JSONResponse) VisitDeleteCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntityType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteCustomEntityType403JSONResponse) VisitDeleteCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntityType404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteCustomEntityType404JSONResponse) VisitDeleteCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntityType409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteCustomEntityType409JSONResponse) VisitDeleteCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntityType422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response DeleteCustomEntityType422JSONResponse) VisitDeleteCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomEntityType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response DeleteCustomEntityType503JSONResponse) VisitDeleteCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntityTypeRequestObject struct {
+	EntityTypeId openapi_types.UUID `json:"entity_type_id"`
+}
+
+type GetCustomEntityTypeResponseObject interface {
+	VisitGetCustomEntityTypeResponse(w http.ResponseWriter) error
+}
+
+type GetCustomEntityType200JSONResponse CustomEntityType
+
+func (response GetCustomEntityType200JSONResponse) VisitGetCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntityType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetCustomEntityType400JSONResponse) VisitGetCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntityType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetCustomEntityType401JSONResponse) VisitGetCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntityType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetCustomEntityType403JSONResponse) VisitGetCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntityType404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetCustomEntityType404JSONResponse) VisitGetCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntityType409JSONResponse struct{ ConflictJSONResponse }
+
+func (response GetCustomEntityType409JSONResponse) VisitGetCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntityType422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response GetCustomEntityType422JSONResponse) VisitGetCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomEntityType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetCustomEntityType503JSONResponse) VisitGetCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntityTypeRequestObject struct {
+	EntityTypeId openapi_types.UUID `json:"entity_type_id"`
+	Body         *UpdateCustomEntityTypeJSONRequestBody
+}
+
+type UpdateCustomEntityTypeResponseObject interface {
+	VisitUpdateCustomEntityTypeResponse(w http.ResponseWriter) error
+}
+
+type UpdateCustomEntityType200JSONResponse CustomEntityType
+
+func (response UpdateCustomEntityType200JSONResponse) VisitUpdateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntityType400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateCustomEntityType400JSONResponse) VisitUpdateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntityType401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateCustomEntityType401JSONResponse) VisitUpdateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntityType403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateCustomEntityType403JSONResponse) VisitUpdateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntityType404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateCustomEntityType404JSONResponse) VisitUpdateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntityType409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpdateCustomEntityType409JSONResponse) VisitUpdateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntityType422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UpdateCustomEntityType422JSONResponse) VisitUpdateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomEntityType503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response UpdateCustomEntityType503JSONResponse) VisitUpdateCustomEntityTypeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomFieldsRequestObject struct {
+	Params ListCustomFieldsParams
+}
+
+type ListCustomFieldsResponseObject interface {
+	VisitListCustomFieldsResponse(w http.ResponseWriter) error
+}
+
+type ListCustomFields200JSONResponse CustomFieldPageResponse
+
+func (response ListCustomFields200JSONResponse) VisitListCustomFieldsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomFields400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListCustomFields400JSONResponse) VisitListCustomFieldsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomFields401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListCustomFields401JSONResponse) VisitListCustomFieldsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomFields403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListCustomFields403JSONResponse) VisitListCustomFieldsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomFields404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListCustomFields404JSONResponse) VisitListCustomFieldsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomFields409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ListCustomFields409JSONResponse) VisitListCustomFieldsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomFields422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response ListCustomFields422JSONResponse) VisitListCustomFieldsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomFields503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListCustomFields503JSONResponse) VisitListCustomFieldsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomFieldRequestObject struct {
+	Body *CreateCustomFieldJSONRequestBody
+}
+
+type CreateCustomFieldResponseObject interface {
+	VisitCreateCustomFieldResponse(w http.ResponseWriter) error
+}
+
+type CreateCustomField201JSONResponse CustomField
+
+func (response CreateCustomField201JSONResponse) VisitCreateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomField400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateCustomField400JSONResponse) VisitCreateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomField401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateCustomField401JSONResponse) VisitCreateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomField403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateCustomField403JSONResponse) VisitCreateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomField404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateCustomField404JSONResponse) VisitCreateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomField409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateCustomField409JSONResponse) VisitCreateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomField422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response CreateCustomField422JSONResponse) VisitCreateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomField503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response CreateCustomField503JSONResponse) VisitCreateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomFieldRequestObject struct {
+	FieldId openapi_types.UUID `json:"field_id"`
+	Body    *DeleteCustomFieldJSONRequestBody
+}
+
+type DeleteCustomFieldResponseObject interface {
+	VisitDeleteCustomFieldResponse(w http.ResponseWriter) error
+}
+
+type DeleteCustomField204Response struct {
+}
+
+func (response DeleteCustomField204Response) VisitDeleteCustomFieldResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCustomField400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteCustomField400JSONResponse) VisitDeleteCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomField401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteCustomField401JSONResponse) VisitDeleteCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomField403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteCustomField403JSONResponse) VisitDeleteCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomField404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteCustomField404JSONResponse) VisitDeleteCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomField409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteCustomField409JSONResponse) VisitDeleteCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomField422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response DeleteCustomField422JSONResponse) VisitDeleteCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomField503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response DeleteCustomField503JSONResponse) VisitDeleteCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomFieldRequestObject struct {
+	FieldId openapi_types.UUID `json:"field_id"`
+}
+
+type GetCustomFieldResponseObject interface {
+	VisitGetCustomFieldResponse(w http.ResponseWriter) error
+}
+
+type GetCustomField200JSONResponse CustomField
+
+func (response GetCustomField200JSONResponse) VisitGetCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomField400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetCustomField400JSONResponse) VisitGetCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomField401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetCustomField401JSONResponse) VisitGetCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomField403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetCustomField403JSONResponse) VisitGetCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomField404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetCustomField404JSONResponse) VisitGetCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomField409JSONResponse struct{ ConflictJSONResponse }
+
+func (response GetCustomField409JSONResponse) VisitGetCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomField422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response GetCustomField422JSONResponse) VisitGetCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomField503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetCustomField503JSONResponse) VisitGetCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomFieldRequestObject struct {
+	FieldId openapi_types.UUID `json:"field_id"`
+	Body    *UpdateCustomFieldJSONRequestBody
+}
+
+type UpdateCustomFieldResponseObject interface {
+	VisitUpdateCustomFieldResponse(w http.ResponseWriter) error
+}
+
+type UpdateCustomField200JSONResponse CustomField
+
+func (response UpdateCustomField200JSONResponse) VisitUpdateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomField400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateCustomField400JSONResponse) VisitUpdateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomField401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateCustomField401JSONResponse) VisitUpdateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomField403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateCustomField403JSONResponse) VisitUpdateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomField404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateCustomField404JSONResponse) VisitUpdateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomField409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpdateCustomField409JSONResponse) VisitUpdateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomField422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UpdateCustomField422JSONResponse) VisitUpdateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomField503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response UpdateCustomField503JSONResponse) VisitUpdateCustomFieldResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomOptionsRequestObject struct {
+	FieldId openapi_types.UUID `json:"field_id"`
+}
+
+type ListCustomOptionsResponseObject interface {
+	VisitListCustomOptionsResponse(w http.ResponseWriter) error
+}
+
+type ListCustomOptions200JSONResponse CustomOptionListResponse
+
+func (response ListCustomOptions200JSONResponse) VisitListCustomOptionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomOptions400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListCustomOptions400JSONResponse) VisitListCustomOptionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomOptions401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListCustomOptions401JSONResponse) VisitListCustomOptionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomOptions403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListCustomOptions403JSONResponse) VisitListCustomOptionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomOptions404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListCustomOptions404JSONResponse) VisitListCustomOptionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomOptions409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ListCustomOptions409JSONResponse) VisitListCustomOptionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomOptions422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response ListCustomOptions422JSONResponse) VisitListCustomOptionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCustomOptions503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListCustomOptions503JSONResponse) VisitListCustomOptionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomOptionRequestObject struct {
+	FieldId openapi_types.UUID `json:"field_id"`
+	Body    *CreateCustomOptionJSONRequestBody
+}
+
+type CreateCustomOptionResponseObject interface {
+	VisitCreateCustomOptionResponse(w http.ResponseWriter) error
+}
+
+type CreateCustomOption201JSONResponse CustomOption
+
+func (response CreateCustomOption201JSONResponse) VisitCreateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomOption400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateCustomOption400JSONResponse) VisitCreateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomOption401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateCustomOption401JSONResponse) VisitCreateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomOption403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateCustomOption403JSONResponse) VisitCreateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomOption404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateCustomOption404JSONResponse) VisitCreateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomOption409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateCustomOption409JSONResponse) VisitCreateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomOption422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response CreateCustomOption422JSONResponse) VisitCreateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCustomOption503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response CreateCustomOption503JSONResponse) VisitCreateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomOptionRequestObject struct {
+	FieldId  openapi_types.UUID `json:"field_id"`
+	OptionId openapi_types.UUID `json:"option_id"`
+	Body     *DeleteCustomOptionJSONRequestBody
+}
+
+type DeleteCustomOptionResponseObject interface {
+	VisitDeleteCustomOptionResponse(w http.ResponseWriter) error
+}
+
+type DeleteCustomOption204Response struct {
+}
+
+func (response DeleteCustomOption204Response) VisitDeleteCustomOptionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCustomOption400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteCustomOption400JSONResponse) VisitDeleteCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomOption401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteCustomOption401JSONResponse) VisitDeleteCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomOption403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteCustomOption403JSONResponse) VisitDeleteCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomOption404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteCustomOption404JSONResponse) VisitDeleteCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomOption409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteCustomOption409JSONResponse) VisitDeleteCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomOption422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response DeleteCustomOption422JSONResponse) VisitDeleteCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteCustomOption503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response DeleteCustomOption503JSONResponse) VisitDeleteCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomOptionRequestObject struct {
+	FieldId  openapi_types.UUID `json:"field_id"`
+	OptionId openapi_types.UUID `json:"option_id"`
+	Body     *UpdateCustomOptionJSONRequestBody
+}
+
+type UpdateCustomOptionResponseObject interface {
+	VisitUpdateCustomOptionResponse(w http.ResponseWriter) error
+}
+
+type UpdateCustomOption200JSONResponse CustomOption
+
+func (response UpdateCustomOption200JSONResponse) VisitUpdateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomOption400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateCustomOption400JSONResponse) VisitUpdateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomOption401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateCustomOption401JSONResponse) VisitUpdateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomOption403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateCustomOption403JSONResponse) VisitUpdateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomOption404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateCustomOption404JSONResponse) VisitUpdateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomOption409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpdateCustomOption409JSONResponse) VisitUpdateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomOption422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UpdateCustomOption422JSONResponse) VisitUpdateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCustomOption503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response UpdateCustomOption503JSONResponse) VisitUpdateCustomOptionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomValuesRequestObject struct {
+	TargetKind string             `json:"target_kind"`
+	TargetId   openapi_types.UUID `json:"target_id"`
+}
+
+type GetCustomValuesResponseObject interface {
+	VisitGetCustomValuesResponse(w http.ResponseWriter) error
+}
+
+type GetCustomValues200JSONResponse CustomValueSet
+
+func (response GetCustomValues200JSONResponse) VisitGetCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomValues400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetCustomValues400JSONResponse) VisitGetCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomValues401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetCustomValues401JSONResponse) VisitGetCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomValues403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetCustomValues403JSONResponse) VisitGetCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomValues404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetCustomValues404JSONResponse) VisitGetCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomValues409JSONResponse struct{ ConflictJSONResponse }
+
+func (response GetCustomValues409JSONResponse) VisitGetCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomValues422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response GetCustomValues422JSONResponse) VisitGetCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCustomValues503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response GetCustomValues503JSONResponse) VisitGetCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceCustomValuesRequestObject struct {
+	TargetKind string             `json:"target_kind"`
+	TargetId   openapi_types.UUID `json:"target_id"`
+	Body       *ReplaceCustomValuesJSONRequestBody
+}
+
+type ReplaceCustomValuesResponseObject interface {
+	VisitReplaceCustomValuesResponse(w http.ResponseWriter) error
+}
+
+type ReplaceCustomValues200JSONResponse CustomValueSet
+
+func (response ReplaceCustomValues200JSONResponse) VisitReplaceCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceCustomValues400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReplaceCustomValues400JSONResponse) VisitReplaceCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceCustomValues401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReplaceCustomValues401JSONResponse) VisitReplaceCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceCustomValues403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ReplaceCustomValues403JSONResponse) VisitReplaceCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceCustomValues404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReplaceCustomValues404JSONResponse) VisitReplaceCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceCustomValues409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ReplaceCustomValues409JSONResponse) VisitReplaceCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceCustomValues422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response ReplaceCustomValues422JSONResponse) VisitReplaceCustomValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ReplaceCustomValues503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ReplaceCustomValues503JSONResponse) VisitReplaceCustomValuesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -6589,6 +10563,69 @@ type StrictServerInterface interface {
 	// Duplicate a bill into an independent record
 	// (POST /api/v1/bills/{bill_id}/duplicate)
 	DuplicateBill(ctx context.Context, request DuplicateBillRequestObject) (DuplicateBillResponseObject, error)
+	// List custom entities
+	// (GET /api/v1/custom-entities)
+	ListCustomEntities(ctx context.Context, request ListCustomEntitiesRequestObject) (ListCustomEntitiesResponseObject, error)
+	// Create a custom entity
+	// (POST /api/v1/custom-entities)
+	CreateCustomEntity(ctx context.Context, request CreateCustomEntityRequestObject) (CreateCustomEntityResponseObject, error)
+	// Delete a custom entity
+	// (DELETE /api/v1/custom-entities/{entity_id})
+	DeleteCustomEntity(ctx context.Context, request DeleteCustomEntityRequestObject) (DeleteCustomEntityResponseObject, error)
+	// Read a custom entity
+	// (GET /api/v1/custom-entities/{entity_id})
+	GetCustomEntity(ctx context.Context, request GetCustomEntityRequestObject) (GetCustomEntityResponseObject, error)
+	// Update a custom entity
+	// (PUT /api/v1/custom-entities/{entity_id})
+	UpdateCustomEntity(ctx context.Context, request UpdateCustomEntityRequestObject) (UpdateCustomEntityResponseObject, error)
+	// List custom entity types
+	// (GET /api/v1/custom-entity-types)
+	ListCustomEntityTypes(ctx context.Context, request ListCustomEntityTypesRequestObject) (ListCustomEntityTypesResponseObject, error)
+	// Create a custom entity type
+	// (POST /api/v1/custom-entity-types)
+	CreateCustomEntityType(ctx context.Context, request CreateCustomEntityTypeRequestObject) (CreateCustomEntityTypeResponseObject, error)
+	// Delete an unused custom entity type
+	// (DELETE /api/v1/custom-entity-types/{entity_type_id})
+	DeleteCustomEntityType(ctx context.Context, request DeleteCustomEntityTypeRequestObject) (DeleteCustomEntityTypeResponseObject, error)
+	// Read a custom entity type
+	// (GET /api/v1/custom-entity-types/{entity_type_id})
+	GetCustomEntityType(ctx context.Context, request GetCustomEntityTypeRequestObject) (GetCustomEntityTypeResponseObject, error)
+	// Update a custom entity type
+	// (PUT /api/v1/custom-entity-types/{entity_type_id})
+	UpdateCustomEntityType(ctx context.Context, request UpdateCustomEntityTypeRequestObject) (UpdateCustomEntityTypeResponseObject, error)
+	// List custom field definitions
+	// (GET /api/v1/custom-fields)
+	ListCustomFields(ctx context.Context, request ListCustomFieldsRequestObject) (ListCustomFieldsResponseObject, error)
+	// Create a custom field definition
+	// (POST /api/v1/custom-fields)
+	CreateCustomField(ctx context.Context, request CreateCustomFieldRequestObject) (CreateCustomFieldResponseObject, error)
+	// Delete an unused custom field definition
+	// (DELETE /api/v1/custom-fields/{field_id})
+	DeleteCustomField(ctx context.Context, request DeleteCustomFieldRequestObject) (DeleteCustomFieldResponseObject, error)
+	// Read a custom field definition
+	// (GET /api/v1/custom-fields/{field_id})
+	GetCustomField(ctx context.Context, request GetCustomFieldRequestObject) (GetCustomFieldResponseObject, error)
+	// Update a custom field definition
+	// (PUT /api/v1/custom-fields/{field_id})
+	UpdateCustomField(ctx context.Context, request UpdateCustomFieldRequestObject) (UpdateCustomFieldResponseObject, error)
+	// List select options for a custom field
+	// (GET /api/v1/custom-fields/{field_id}/options)
+	ListCustomOptions(ctx context.Context, request ListCustomOptionsRequestObject) (ListCustomOptionsResponseObject, error)
+	// Create a select option
+	// (POST /api/v1/custom-fields/{field_id}/options)
+	CreateCustomOption(ctx context.Context, request CreateCustomOptionRequestObject) (CreateCustomOptionResponseObject, error)
+	// Delete an unused select option
+	// (DELETE /api/v1/custom-fields/{field_id}/options/{option_id})
+	DeleteCustomOption(ctx context.Context, request DeleteCustomOptionRequestObject) (DeleteCustomOptionResponseObject, error)
+	// Update a select option
+	// (PUT /api/v1/custom-fields/{field_id}/options/{option_id})
+	UpdateCustomOption(ctx context.Context, request UpdateCustomOptionRequestObject) (UpdateCustomOptionResponseObject, error)
+	// Read custom values for a record
+	// (GET /api/v1/custom-values/{target_kind}/{target_id})
+	GetCustomValues(ctx context.Context, request GetCustomValuesRequestObject) (GetCustomValuesResponseObject, error)
+	// Replace custom values using optimistic concurrency
+	// (PUT /api/v1/custom-values/{target_kind}/{target_id})
+	ReplaceCustomValues(ctx context.Context, request ReplaceCustomValuesRequestObject) (ReplaceCustomValuesResponseObject, error)
 	// List administrable document types
 	// (GET /api/v1/document-types)
 	ListDocumentTypes(ctx context.Context, request ListDocumentTypesRequestObject) (ListDocumentTypesResponseObject, error)
@@ -7172,6 +11209,641 @@ func (sh *strictHandler) DuplicateBill(w http.ResponseWriter, r *http.Request, b
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DuplicateBillResponseObject); ok {
 		if err := validResponse.VisitDuplicateBillResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCustomEntities operation middleware
+func (sh *strictHandler) ListCustomEntities(w http.ResponseWriter, r *http.Request, params ListCustomEntitiesParams) {
+	var request ListCustomEntitiesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCustomEntities(ctx, request.(ListCustomEntitiesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCustomEntities")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCustomEntitiesResponseObject); ok {
+		if err := validResponse.VisitListCustomEntitiesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCustomEntity operation middleware
+func (sh *strictHandler) CreateCustomEntity(w http.ResponseWriter, r *http.Request) {
+	var request CreateCustomEntityRequestObject
+
+	var body CreateCustomEntityJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCustomEntity(ctx, request.(CreateCustomEntityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCustomEntity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCustomEntityResponseObject); ok {
+		if err := validResponse.VisitCreateCustomEntityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCustomEntity operation middleware
+func (sh *strictHandler) DeleteCustomEntity(w http.ResponseWriter, r *http.Request, entityId openapi_types.UUID) {
+	var request DeleteCustomEntityRequestObject
+
+	request.EntityId = entityId
+
+	var body DeleteCustomEntityJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCustomEntity(ctx, request.(DeleteCustomEntityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCustomEntity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCustomEntityResponseObject); ok {
+		if err := validResponse.VisitDeleteCustomEntityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCustomEntity operation middleware
+func (sh *strictHandler) GetCustomEntity(w http.ResponseWriter, r *http.Request, entityId openapi_types.UUID) {
+	var request GetCustomEntityRequestObject
+
+	request.EntityId = entityId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCustomEntity(ctx, request.(GetCustomEntityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCustomEntity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCustomEntityResponseObject); ok {
+		if err := validResponse.VisitGetCustomEntityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCustomEntity operation middleware
+func (sh *strictHandler) UpdateCustomEntity(w http.ResponseWriter, r *http.Request, entityId openapi_types.UUID) {
+	var request UpdateCustomEntityRequestObject
+
+	request.EntityId = entityId
+
+	var body UpdateCustomEntityJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCustomEntity(ctx, request.(UpdateCustomEntityRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCustomEntity")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCustomEntityResponseObject); ok {
+		if err := validResponse.VisitUpdateCustomEntityResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCustomEntityTypes operation middleware
+func (sh *strictHandler) ListCustomEntityTypes(w http.ResponseWriter, r *http.Request, params ListCustomEntityTypesParams) {
+	var request ListCustomEntityTypesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCustomEntityTypes(ctx, request.(ListCustomEntityTypesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCustomEntityTypes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCustomEntityTypesResponseObject); ok {
+		if err := validResponse.VisitListCustomEntityTypesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCustomEntityType operation middleware
+func (sh *strictHandler) CreateCustomEntityType(w http.ResponseWriter, r *http.Request) {
+	var request CreateCustomEntityTypeRequestObject
+
+	var body CreateCustomEntityTypeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCustomEntityType(ctx, request.(CreateCustomEntityTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCustomEntityType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCustomEntityTypeResponseObject); ok {
+		if err := validResponse.VisitCreateCustomEntityTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCustomEntityType operation middleware
+func (sh *strictHandler) DeleteCustomEntityType(w http.ResponseWriter, r *http.Request, entityTypeId openapi_types.UUID) {
+	var request DeleteCustomEntityTypeRequestObject
+
+	request.EntityTypeId = entityTypeId
+
+	var body DeleteCustomEntityTypeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCustomEntityType(ctx, request.(DeleteCustomEntityTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCustomEntityType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCustomEntityTypeResponseObject); ok {
+		if err := validResponse.VisitDeleteCustomEntityTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCustomEntityType operation middleware
+func (sh *strictHandler) GetCustomEntityType(w http.ResponseWriter, r *http.Request, entityTypeId openapi_types.UUID) {
+	var request GetCustomEntityTypeRequestObject
+
+	request.EntityTypeId = entityTypeId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCustomEntityType(ctx, request.(GetCustomEntityTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCustomEntityType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCustomEntityTypeResponseObject); ok {
+		if err := validResponse.VisitGetCustomEntityTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCustomEntityType operation middleware
+func (sh *strictHandler) UpdateCustomEntityType(w http.ResponseWriter, r *http.Request, entityTypeId openapi_types.UUID) {
+	var request UpdateCustomEntityTypeRequestObject
+
+	request.EntityTypeId = entityTypeId
+
+	var body UpdateCustomEntityTypeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCustomEntityType(ctx, request.(UpdateCustomEntityTypeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCustomEntityType")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCustomEntityTypeResponseObject); ok {
+		if err := validResponse.VisitUpdateCustomEntityTypeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCustomFields operation middleware
+func (sh *strictHandler) ListCustomFields(w http.ResponseWriter, r *http.Request, params ListCustomFieldsParams) {
+	var request ListCustomFieldsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCustomFields(ctx, request.(ListCustomFieldsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCustomFields")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCustomFieldsResponseObject); ok {
+		if err := validResponse.VisitListCustomFieldsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCustomField operation middleware
+func (sh *strictHandler) CreateCustomField(w http.ResponseWriter, r *http.Request) {
+	var request CreateCustomFieldRequestObject
+
+	var body CreateCustomFieldJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCustomField(ctx, request.(CreateCustomFieldRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCustomField")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCustomFieldResponseObject); ok {
+		if err := validResponse.VisitCreateCustomFieldResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCustomField operation middleware
+func (sh *strictHandler) DeleteCustomField(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID) {
+	var request DeleteCustomFieldRequestObject
+
+	request.FieldId = fieldId
+
+	var body DeleteCustomFieldJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCustomField(ctx, request.(DeleteCustomFieldRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCustomField")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCustomFieldResponseObject); ok {
+		if err := validResponse.VisitDeleteCustomFieldResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCustomField operation middleware
+func (sh *strictHandler) GetCustomField(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID) {
+	var request GetCustomFieldRequestObject
+
+	request.FieldId = fieldId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCustomField(ctx, request.(GetCustomFieldRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCustomField")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCustomFieldResponseObject); ok {
+		if err := validResponse.VisitGetCustomFieldResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCustomField operation middleware
+func (sh *strictHandler) UpdateCustomField(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID) {
+	var request UpdateCustomFieldRequestObject
+
+	request.FieldId = fieldId
+
+	var body UpdateCustomFieldJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCustomField(ctx, request.(UpdateCustomFieldRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCustomField")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCustomFieldResponseObject); ok {
+		if err := validResponse.VisitUpdateCustomFieldResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCustomOptions operation middleware
+func (sh *strictHandler) ListCustomOptions(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID) {
+	var request ListCustomOptionsRequestObject
+
+	request.FieldId = fieldId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCustomOptions(ctx, request.(ListCustomOptionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCustomOptions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCustomOptionsResponseObject); ok {
+		if err := validResponse.VisitListCustomOptionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCustomOption operation middleware
+func (sh *strictHandler) CreateCustomOption(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID) {
+	var request CreateCustomOptionRequestObject
+
+	request.FieldId = fieldId
+
+	var body CreateCustomOptionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCustomOption(ctx, request.(CreateCustomOptionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCustomOption")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCustomOptionResponseObject); ok {
+		if err := validResponse.VisitCreateCustomOptionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteCustomOption operation middleware
+func (sh *strictHandler) DeleteCustomOption(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID, optionId openapi_types.UUID) {
+	var request DeleteCustomOptionRequestObject
+
+	request.FieldId = fieldId
+	request.OptionId = optionId
+
+	var body DeleteCustomOptionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCustomOption(ctx, request.(DeleteCustomOptionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCustomOption")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCustomOptionResponseObject); ok {
+		if err := validResponse.VisitDeleteCustomOptionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCustomOption operation middleware
+func (sh *strictHandler) UpdateCustomOption(w http.ResponseWriter, r *http.Request, fieldId openapi_types.UUID, optionId openapi_types.UUID) {
+	var request UpdateCustomOptionRequestObject
+
+	request.FieldId = fieldId
+	request.OptionId = optionId
+
+	var body UpdateCustomOptionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCustomOption(ctx, request.(UpdateCustomOptionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCustomOption")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCustomOptionResponseObject); ok {
+		if err := validResponse.VisitUpdateCustomOptionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCustomValues operation middleware
+func (sh *strictHandler) GetCustomValues(w http.ResponseWriter, r *http.Request, targetKind string, targetId openapi_types.UUID) {
+	var request GetCustomValuesRequestObject
+
+	request.TargetKind = targetKind
+	request.TargetId = targetId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCustomValues(ctx, request.(GetCustomValuesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCustomValues")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCustomValuesResponseObject); ok {
+		if err := validResponse.VisitGetCustomValuesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplaceCustomValues operation middleware
+func (sh *strictHandler) ReplaceCustomValues(w http.ResponseWriter, r *http.Request, targetKind string, targetId openapi_types.UUID) {
+	var request ReplaceCustomValuesRequestObject
+
+	request.TargetKind = targetKind
+	request.TargetId = targetId
+
+	var body ReplaceCustomValuesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplaceCustomValues(ctx, request.(ReplaceCustomValuesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplaceCustomValues")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReplaceCustomValuesResponseObject); ok {
+		if err := validResponse.VisitReplaceCustomValuesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

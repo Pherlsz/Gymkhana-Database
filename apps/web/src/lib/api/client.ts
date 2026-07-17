@@ -1,4 +1,4 @@
-import type { paths } from "../../generated/api";
+import type { components, paths } from "../../generated/api";
 
 type LiveHealthResponse =
   paths["/health/live"]["get"]["responses"][200]["content"]["application/json"];
@@ -45,6 +45,23 @@ export type BillTypeValuesRequest =
   paths["/api/v1/bill-types"]["post"]["requestBody"]["content"]["application/json"];
 export type UpdateBillTypeRequest =
   paths["/api/v1/bill-types/{bill_type_id}"]["put"]["requestBody"]["content"]["application/json"];
+
+export type CustomEntityType = components["schemas"]["CustomEntityType"];
+export type CustomEntityTypeValuesRequest = components["schemas"]["CustomEntityTypeValuesRequest"];
+export type UpdateCustomEntityTypeRequest = components["schemas"]["UpdateCustomEntityTypeRequest"];
+export type CustomField = components["schemas"]["CustomField"];
+export type CustomFieldValuesRequest = components["schemas"]["CustomFieldValuesRequest"];
+export type UpdateCustomFieldRequest = components["schemas"]["UpdateCustomFieldRequest"];
+export type CustomOption = components["schemas"]["CustomOption"];
+export type CustomOptionValuesRequest = components["schemas"]["CustomOptionValuesRequest"];
+export type UpdateCustomOptionRequest = components["schemas"]["UpdateCustomOptionRequest"];
+export type CustomValueInput = components["schemas"]["CustomValueInput"];
+export type CustomValueSet = components["schemas"]["CustomValueSet"];
+export type CustomEntity = components["schemas"]["CustomEntity"];
+export type CreateCustomEntityRequest = components["schemas"]["CreateCustomEntityRequest"];
+export type UpdateCustomEntityRequest = components["schemas"]["UpdateCustomEntityRequest"];
+export type CustomTargetKind = components["schemas"]["CustomTargetKind"];
+export type CustomValueTargetKind = "profile" | "document" | "bill" | "custom_entity";
 
 type UpdateUserAccessRequest =
   paths["/api/admin/users/{user_id}/access"]["patch"]["requestBody"]["content"]["application/json"];
@@ -475,4 +492,188 @@ export async function returnBillCurrentUse(id: string): Promise<void> {
   await requestNoContent(`/api/v1/bills/${encodeURIComponent(id)}/current-use`, {
     method: "DELETE",
   });
+}
+
+export async function listCustomEntityTypes(
+  signal?: AbortSignal,
+): Promise<components["schemas"]["CustomEntityTypePageResponse"]> {
+  return requestJSON(
+    "/api/v1/custom-entity-types?limit=1000&offset=0&sort=label&order=asc",
+    signal ? { signal } : {},
+  );
+}
+
+export async function createCustomEntityType(
+  request: CustomEntityTypeValuesRequest,
+): Promise<CustomEntityType> {
+  return requestJSON("/api/v1/custom-entity-types", jsonRequest("POST", request));
+}
+
+export async function updateCustomEntityType(
+  id: string,
+  request: UpdateCustomEntityTypeRequest,
+): Promise<CustomEntityType> {
+  return requestJSON(
+    `/api/v1/custom-entity-types/${encodeURIComponent(id)}`,
+    jsonRequest("PUT", request),
+  );
+}
+
+export async function deleteCustomEntityType(
+  id: string,
+  version: number,
+  confirmation: string,
+): Promise<void> {
+  await requestNoContent(
+    `/api/v1/custom-entity-types/${encodeURIComponent(id)}`,
+    jsonRequest("DELETE", { version, confirmation }),
+  );
+}
+
+export async function listCustomFields(
+  targetKind: CustomTargetKind,
+  targetId?: string,
+  signal?: AbortSignal,
+): Promise<components["schemas"]["CustomFieldPageResponse"]> {
+  const query = new URLSearchParams({
+    target_kind: targetKind,
+    limit: "1000",
+    offset: "0",
+    sort: "label",
+    order: "asc",
+  });
+  if (targetId) query.set("target_id", targetId);
+  return requestJSON(`/api/v1/custom-fields?${query}`, signal ? { signal } : {});
+}
+
+export async function createCustomField(request: CustomFieldValuesRequest): Promise<CustomField> {
+  return requestJSON("/api/v1/custom-fields", jsonRequest("POST", request));
+}
+
+export async function updateCustomField(
+  id: string,
+  request: UpdateCustomFieldRequest,
+): Promise<CustomField> {
+  return requestJSON(
+    `/api/v1/custom-fields/${encodeURIComponent(id)}`,
+    jsonRequest("PUT", request),
+  );
+}
+
+export async function deleteCustomField(
+  id: string,
+  version: number,
+  confirmation: string,
+): Promise<void> {
+  await requestNoContent(
+    `/api/v1/custom-fields/${encodeURIComponent(id)}`,
+    jsonRequest("DELETE", { version, confirmation }),
+  );
+}
+
+export async function listCustomOptions(
+  fieldId: string,
+  signal?: AbortSignal,
+): Promise<components["schemas"]["CustomOptionListResponse"]> {
+  return requestJSON(
+    `/api/v1/custom-fields/${encodeURIComponent(fieldId)}/options`,
+    signal ? { signal } : {},
+  );
+}
+
+export async function createCustomOption(
+  fieldId: string,
+  request: CustomOptionValuesRequest,
+): Promise<CustomOption> {
+  return requestJSON(
+    `/api/v1/custom-fields/${encodeURIComponent(fieldId)}/options`,
+    jsonRequest("POST", request),
+  );
+}
+
+export async function updateCustomOption(
+  fieldId: string,
+  optionId: string,
+  request: UpdateCustomOptionRequest,
+): Promise<CustomOption> {
+  return requestJSON(
+    `/api/v1/custom-fields/${encodeURIComponent(fieldId)}/options/${encodeURIComponent(optionId)}`,
+    jsonRequest("PUT", request),
+  );
+}
+
+export async function deleteCustomOption(
+  fieldId: string,
+  optionId: string,
+  version: number,
+  confirmation: string,
+): Promise<void> {
+  await requestNoContent(
+    `/api/v1/custom-fields/${encodeURIComponent(fieldId)}/options/${encodeURIComponent(optionId)}`,
+    jsonRequest("DELETE", { version, confirmation }),
+  );
+}
+
+export async function getCustomValues(
+  targetKind: CustomValueTargetKind,
+  targetId: string,
+  signal?: AbortSignal,
+): Promise<CustomValueSet> {
+  return requestJSON(
+    `/api/v1/custom-values/${targetKind}/${encodeURIComponent(targetId)}`,
+    signal ? { signal } : {},
+  );
+}
+
+export async function replaceCustomValues(
+  targetKind: CustomValueTargetKind,
+  targetId: string,
+  version: number,
+  values: CustomValueInput[],
+): Promise<CustomValueSet> {
+  return requestJSON(
+    `/api/v1/custom-values/${targetKind}/${encodeURIComponent(targetId)}`,
+    jsonRequest("PUT", { version, values }),
+  );
+}
+
+export async function listCustomEntities(
+  entityTypeId: string,
+  ownerProfileId?: string,
+  signal?: AbortSignal,
+): Promise<components["schemas"]["CustomEntityPageResponse"]> {
+  const query = new URLSearchParams({
+    entity_type_id: entityTypeId,
+    limit: "1000",
+    offset: "0",
+  });
+  if (ownerProfileId) query.set("owner_profile_id", ownerProfileId);
+  return requestJSON(`/api/v1/custom-entities?${query}`, signal ? { signal } : {});
+}
+
+export async function createCustomEntity(
+  request: CreateCustomEntityRequest,
+): Promise<CustomEntity> {
+  return requestJSON("/api/v1/custom-entities", jsonRequest("POST", request));
+}
+
+export async function updateCustomEntity(
+  id: string,
+  request: UpdateCustomEntityRequest,
+): Promise<CustomEntity> {
+  return requestJSON(
+    `/api/v1/custom-entities/${encodeURIComponent(id)}`,
+    jsonRequest("PUT", request),
+  );
+}
+
+export async function deleteCustomEntity(
+  id: string,
+  version: number,
+  confirmation: string,
+): Promise<void> {
+  await requestNoContent(
+    `/api/v1/custom-entities/${encodeURIComponent(id)}`,
+    jsonRequest("DELETE", { version, confirmation }),
+  );
 }
