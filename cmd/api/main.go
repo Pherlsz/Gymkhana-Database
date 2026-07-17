@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Pherlsz/Gymkhana-Database/internal/attachment"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/bill"
 	"github.com/Pherlsz/Gymkhana-Database/internal/config"
@@ -28,8 +29,13 @@ func main() {
 		os.Exit(1)
 	}
 }
+
 func run() error {
 	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	storageCfg, err := config.LoadStorage()
 	if err != nil {
 		return err
 	}
@@ -49,13 +55,21 @@ func run() error {
 		if pool == nil {
 			return errors.New("authentication requires a database connection")
 		}
-		provider, err := auth.NewGitHubProvider(auth.GitHubProviderOptions{ClientID: cfg.Auth.GitHubClientID, ClientSecret: cfg.Auth.GitHubClientSecret, RedirectURL: cfg.Auth.GitHubRedirectURL})
+		provider, err := auth.NewGitHubProvider(auth.GitHubProviderOptions{
+			ClientID:     cfg.Auth.GitHubClientID,
+			ClientSecret: cfg.Auth.GitHubClientSecret,
+			RedirectURL:  cfg.Auth.GitHubRedirectURL,
+		})
 		if err != nil {
 			return fmt.Errorf("configure GitHub OAuth: %w", err)
 		}
-		authService, err = auth.NewService(provider, auth.NewPostgresStore(pool), auth.ServiceOptions{AllowedLogins: cfg.Auth.AllowedLogins, SuperadminLogin: cfg.Auth.SuperadminLogin, OnAuditFailure: func(_ context.Context, event auth.AuditEvent, auditErr error) {
-			logger.Error("authentication audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
-		}})
+		authService, err = auth.NewService(provider, auth.NewPostgresStore(pool), auth.ServiceOptions{
+			AllowedLogins:   cfg.Auth.AllowedLogins,
+			SuperadminLogin: cfg.Auth.SuperadminLogin,
+			OnAuditFailure: func(_ context.Context, event auth.AuditEvent, auditErr error) {
+				logger.Error("authentication audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
+			},
+		})
 		if err != nil {
 			return fmt.Errorf("configure authentication service: %w", err)
 		}
@@ -64,6 +78,7 @@ func run() error {
 	var documentService *document.Service
 	var billService *bill.Service
 	var customDataService *customdata.Service
+	var attachmentService *attachment.Service
 	if pool != nil {
 		profileService, err = profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{OnAuditFailure: func(_ context.Context, event profile.AuditEvent, auditErr error) {
 			logger.Error("profile audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "profile_id", event.ProfileID.String(), "error", auditErr)
@@ -89,11 +104,52 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("configure custom data service: %w", err)
 		}
+		if storageCfg.Enabled {
+			objects, err := attachment.NewR2Store(attachment.R2Options{
+				Endpoint:        storageCfg.Endpoint,
+				Bucket:          storageCfg.Bucket,
+				AccessKeyID:     storageCfg.AccessKeyID,
+				SecretAccessKey: storageCfg.SecretAccessKey,
+			})
+			if err != nil {
+				return fmt.Errorf("configure private object storage: %w", err)
+			}
+			attachmentService, err = attachment.NewService(attachment.NewPostgresStore(pool), objects, attachment.ServiceOptions{
+				UploadTTL:       storageCfg.UploadTTL,
+				DownloadTTL:     storageCfg.DownloadTTL,
+				TrashRetention:  storageCfg.TrashRetention,
+				MaximumFileSize: storageCfg.MaximumFileSize,
+				CleanupBatch:    storageCfg.CleanupBatch,
+				OnAuditFailure: func(_ context.Context, event attachment.AuditEvent, auditErr error) {
+					logger.Error("attachment audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("configure attachment service: %w", err)
+			}
+		}
 	}
-	server := &http.Server{Addr: cfg.HTTPAddress, Handler: httpserver.New(logger, pool, httpserver.Options{MaxBodyBytes: cfg.HTTPMaxBodyBytes, Auth: authService, Profile: profileService, Document: documentService, Bill: billService, CustomData: customDataService, SecureCookies: cfg.Auth.SecureCookies, ApplicationURL: cfg.Auth.ApplicationURL}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second}
+	server := &http.Server{
+		Addr: cfg.HTTPAddress,
+		Handler: httpserver.New(logger, pool, httpserver.Options{
+			MaxBodyBytes:   cfg.HTTPMaxBodyBytes,
+			Auth:           authService,
+			Profile:        profileService,
+			Document:       documentService,
+			Bill:           billService,
+			CustomData:     customDataService,
+			Attachment:     attachmentService,
+			SecureCookies:  cfg.Auth.SecureCookies,
+			ApplicationURL: cfg.Auth.ApplicationURL,
+		}),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 	serverError := make(chan error, 1)
 	go func() {
-		logger.Info("api listening", "address", cfg.HTTPAddress, "environment", cfg.Environment, "authentication_enabled", cfg.Auth.Enabled)
+		logger.Info("api listening", "address", cfg.HTTPAddress, "environment", cfg.Environment, "authentication_enabled", cfg.Auth.Enabled, "attachments_enabled", storageCfg.Enabled)
 		serverError <- server.ListenAndServe()
 	}()
 	select {

@@ -84,11 +84,12 @@ const (
 	FieldPhone        FieldKind = "PHONE"
 	FieldSingleSelect FieldKind = "SINGLE_SELECT"
 	FieldMultiSelect  FieldKind = "MULTI_SELECT"
+	FieldAttachment   FieldKind = "ATTACHMENT"
 )
 
 func (kind FieldKind) Valid() bool {
 	switch kind {
-	case FieldText, FieldLongText, FieldInteger, FieldDecimal, FieldBoolean, FieldCivilDate, FieldCivilMonth, FieldEmail, FieldPhone, FieldSingleSelect, FieldMultiSelect:
+	case FieldText, FieldLongText, FieldInteger, FieldDecimal, FieldBoolean, FieldCivilDate, FieldCivilMonth, FieldEmail, FieldPhone, FieldSingleSelect, FieldMultiSelect, FieldAttachment:
 		return true
 	default:
 		return false
@@ -365,7 +366,7 @@ func validateNoUnexpectedValues(validation *ValidationError, value ValueInput) {
 		FieldText: {"text": true}, FieldLongText: {"text": true}, FieldEmail: {"text": true}, FieldPhone: {"text": true},
 		FieldInteger: {"integer": true}, FieldDecimal: {"decimal": true}, FieldBoolean: {"boolean": true},
 		FieldCivilDate: {"date": true}, FieldCivilMonth: {"month": true},
-		FieldSingleSelect: {"options": true}, FieldMultiSelect: {"options": true},
+		FieldSingleSelect: {"options": true}, FieldMultiSelect: {"options": true}, FieldAttachment: {},
 	}[value.Kind]
 	for key, present := range map[string]bool{"text": hasText, "integer": hasInteger, "decimal": hasDecimal, "boolean": hasBoolean, "date": hasDate, "month": hasMonth, "options": hasOptions} {
 		if present && !allowed[key] {
@@ -445,6 +446,8 @@ func normalizeTypedValue(validation *ValidationError, value *ValueInput, definit
 		if len(value.OptionIDs) == 0 && definition.Required {
 			validation.add("option_ids", "required")
 		}
+	case FieldAttachment:
+		validation.add("field_kind", "managed_separately")
 	}
 }
 

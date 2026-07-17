@@ -48,5 +48,17 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run frontend gate
-        run: make check-frontend
+      - name: Check TypeScript
+        run: pnpm typecheck:web
+
+      - name: Check lint
+        run: pnpm lint:web
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Run tests
+        run: pnpm test:web
+
+      - name: Build production bundle
+        run: pnpm build:web

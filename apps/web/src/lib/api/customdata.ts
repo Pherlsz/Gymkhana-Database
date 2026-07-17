@@ -12,7 +12,7 @@ import {
   getCustomValues,
   listCustomEntities,
   listCustomEntityTypes,
-  listCustomFields,
+  listCustomFields as listCustomFieldsRequest,
   listCustomOptions,
   replaceCustomValues,
   updateCustomEntity as updateCustomEntityRequest,
@@ -21,7 +21,7 @@ import {
   updateCustomOption as updateCustomOptionRequest,
   type CustomEntity,
   type CustomEntityType,
-  type CustomField,
+  type CustomField as GeneratedCustomField,
   type CustomOption,
   type CustomTargetKind,
   type CustomValueInput,
@@ -38,14 +38,12 @@ export {
   getCustomValues,
   listCustomEntities,
   listCustomEntityTypes,
-  listCustomFields,
   listCustomOptions,
   replaceCustomValues,
 };
 export type {
   CustomEntity,
   CustomEntityType,
-  CustomField,
   CustomOption,
   CustomTargetKind,
   CustomValueInput,
@@ -53,15 +51,25 @@ export type {
   CustomValueTargetKind,
 };
 
-export type CustomFieldKind = components["schemas"]["CustomFieldKind"];
+export type CustomFieldKind = components["schemas"]["CustomFieldKind"] | "ATTACHMENT";
+export type CustomField = Omit<GeneratedCustomField, "field_kind"> & {
+  field_kind: CustomFieldKind;
+};
 export type CustomProfileCardinality = components["schemas"]["CustomProfileCardinality"];
 export type CustomStoredValue = components["schemas"]["CustomStoredValue"];
 export type CustomEntityTypePage = components["schemas"]["CustomEntityTypePageResponse"];
-export type CustomFieldPage = components["schemas"]["CustomFieldPageResponse"];
+export type CustomFieldPage = Omit<components["schemas"]["CustomFieldPageResponse"], "fields"> & {
+  fields: CustomField[];
+};
 export type CustomOptionPage = components["schemas"]["CustomOptionListResponse"];
 export type CustomEntityPage = components["schemas"]["CustomEntityPageResponse"];
 export type CustomEntityTypeValues = components["schemas"]["CustomEntityTypeValuesRequest"];
-export type CustomFieldValues = components["schemas"]["CustomFieldValuesRequest"];
+export type CustomFieldValues = Omit<
+  components["schemas"]["CustomFieldValuesRequest"],
+  "field_kind"
+> & {
+  field_kind: CustomFieldKind;
+};
 export type CustomOptionValues = components["schemas"]["CustomOptionValuesRequest"];
 
 export function createCustomEntityType(values: CustomEntityTypeValues): Promise<CustomEntityType> {
@@ -76,16 +84,29 @@ export function updateCustomEntityType(
   return updateCustomEntityTypeRequest(id, { ...values, version });
 }
 
-export function createCustomField(values: CustomFieldValues): Promise<CustomField> {
-  return createCustomFieldRequest(values);
+export async function listCustomFields(
+  targetKind: CustomTargetKind,
+  targetId?: string,
+  signal?: AbortSignal,
+): Promise<CustomFieldPage> {
+  return (await listCustomFieldsRequest(targetKind, targetId, signal)) as CustomFieldPage;
 }
 
-export function updateCustomField(
+export async function createCustomField(values: CustomFieldValues): Promise<CustomField> {
+  return (await createCustomFieldRequest(
+    values as components["schemas"]["CustomFieldValuesRequest"],
+  )) as CustomField;
+}
+
+export async function updateCustomField(
   id: string,
   version: number,
   values: CustomFieldValues,
 ): Promise<CustomField> {
-  return updateCustomFieldRequest(id, { ...values, version });
+  return (await updateCustomFieldRequest(id, {
+    ...(values as components["schemas"]["CustomFieldValuesRequest"]),
+    version,
+  })) as CustomField;
 }
 
 export function createCustomOption(

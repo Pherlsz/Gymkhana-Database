@@ -85,6 +85,7 @@ describe("custom value draft conversion", () => {
           field("date", "CIVIL_DATE"),
           field("select", "MULTI_SELECT"),
           field("empty", "TEXT"),
+          field("private-file", "ATTACHMENT"),
         ],
         {
           integer: "0",
@@ -93,6 +94,7 @@ describe("custom value draft conversion", () => {
           date: "2026-07-16",
           select: ["option-a", "option-b"],
           empty: "   ",
+          "private-file": "must-not-enter-scalar-payload",
         },
       ),
     ).toEqual([

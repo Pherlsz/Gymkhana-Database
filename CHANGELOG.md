@@ -8,6 +8,9 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 
 ### Added
 
+- Private Cloudflare R2 attachment lifecycle with short-lived signed uploads/downloads, streamed signature verification, exact size checks, SHA-256 metadata, seven-day trash, restore, and idempotent purge.
+- Typed document, bill, and custom-field attachment ownership with protected APIs, audit events, optimistic lifecycle mutations, scheduled worker cleanup, and responsive upload/recovery UI.
+- Modular OpenAPI 0.8.0 attachment contracts with deterministic Go and TypeScript generation.
 - Typed custom-data persistence foundations for Profile, document-type, bill-type, and custom-entity targets without free-form JSON as the primary source of truth.
 - Pure Go contracts for field definitions, options, Profile cardinalities, and typed text, integer, decimal, boolean, civil date/month, email, phone, and select values.
 - M4 milestone acceptance coverage for Profile ownership, historical states, printed bill data, civil money, current-use boundaries, URL state, semantic controls, and optimistic-conflict feedback.
@@ -67,7 +70,7 @@ The format follows Keep a Changelog and the project uses Semantic Versioning onc
 - Pinned Gymkhana Core `v0.2.1` and Gymkhana UI `0.3.0`.
 - Updated `openapi-typescript` from `7.10.1` to `7.13.0`.
 - Added authenticated private Core access to CI, security, OpenAPI, deployment, and container builds.
-- Expanded audit correlation to invalid OAuth callbacks, failed sign-out, administration access, access conflicts, session revocation, Profile mutations, and document mutations/current-use changes.
+- Expanded audit correlation to invalid OAuth callbacks, failed sign-out, administration access, access conflicts, session revocation, Profile mutations, document mutations/current-use changes, and private attachment lifecycle events.
 
 ## [0.0.0] - 2026-07-13
 

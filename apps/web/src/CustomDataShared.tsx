@@ -39,6 +39,7 @@ export const fieldKinds: CustomFieldKind[] = [
   "PHONE",
   "SINGLE_SELECT",
   "MULTI_SELECT",
+  "ATTACHMENT",
 ];
 
 export function SectionTitle({ title, description }: { title: string; description: string }) {
@@ -63,6 +64,7 @@ export function fieldKindLabel(value: CustomFieldKind) {
       PHONE: "Telefone",
       SINGLE_SELECT: "Seleção única",
       MULTI_SELECT: "Seleção múltipla",
+      ATTACHMENT: "Anexo privado",
     } as Record<CustomFieldKind, string>
   )[value];
 }

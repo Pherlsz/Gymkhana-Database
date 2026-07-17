@@ -46,7 +46,7 @@ func (service *Service) CreateFieldDefinition(ctx context.Context, actor auth.Se
 		service.recordAudit(ctx, actor, AuditResourceFieldDefinition, &id, target, AuditEventFieldCreated, auth.AuditOutcomeDenied, requestID)
 		return FieldDefinition{}, ErrForbidden
 	}
-	normalized, err := NormalizeFieldDefinition(values)
+	normalized, err := normalizeManageableFieldDefinition(values)
 	if err != nil {
 		service.recordAudit(ctx, actor, AuditResourceFieldDefinition, &id, target, AuditEventFieldCreated, mutationOutcome(err), requestID)
 		return FieldDefinition{}, err
@@ -66,7 +66,7 @@ func (service *Service) UpdateFieldDefinition(ctx context.Context, actor auth.Se
 		service.recordAudit(ctx, actor, AuditResourceFieldDefinition, &id, target, AuditEventFieldUpdated, auth.AuditOutcomeDenied, requestID)
 		return FieldDefinition{}, ErrForbidden
 	}
-	normalized, err := NormalizeFieldDefinition(values)
+	normalized, err := normalizeManageableFieldDefinition(values)
 	if err != nil {
 		service.recordAudit(ctx, actor, AuditResourceFieldDefinition, &id, target, AuditEventFieldUpdated, mutationOutcome(err), requestID)
 		return FieldDefinition{}, err
@@ -95,4 +95,17 @@ func (service *Service) DeleteFieldDefinition(ctx context.Context, actor auth.Se
 	}
 	service.recordAudit(ctx, actor, AuditResourceFieldDefinition, &id, nil, AuditEventFieldDeleted, auth.AuditOutcomeSuccess, requestID)
 	return nil
+}
+
+func normalizeManageableFieldDefinition(values FieldDefinitionValues) (FieldDefinitionValues, error) {
+	normalized, err := NormalizeFieldDefinition(values)
+	if err != nil {
+		return FieldDefinitionValues{}, err
+	}
+	if normalized.Kind == FieldAttachment && normalized.Required {
+		validation := &ValidationError{}
+		validation.add("required", "unsupported")
+		return FieldDefinitionValues{}, validation
+	}
+	return normalized, nil
 }

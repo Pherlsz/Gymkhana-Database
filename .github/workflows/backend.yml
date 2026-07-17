@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: backend-${{ github.event.pull_request.number || github.ref }}
@@ -49,17 +50,57 @@ jobs:
         run: go mod download
 
       - name: Check formatting
+        id: formatting
+        continue-on-error: true
         shell: bash
         run: |
-          unformatted="$(gofmt -l $(find cmd internal api/generated/go -type f -name '*.go'))"
+          unformatted="$(gofmt -l $(find cmd internal api/generated -type f -name '*.go'))"
           if [ -n "$unformatted" ]; then
             echo "Unformatted Go files:"
             echo "$unformatted"
             exit 1
           fi
 
+      - name: Prepare formatted Go sources
+        if: ${{ steps.formatting.outcome == 'failure' }}
+        run: find cmd internal api/generated -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
+
+      - name: Preserve formatted Go sources
+        if: ${{ steps.formatting.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: formatted-go-sources
+          path: |
+            cmd/**/*.go
+            internal/**/*.go
+            api/generated/**/*.go
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Fail when Go formatting differs
+        if: ${{ steps.formatting.outcome == 'failure' }}
+        run: exit 1
+
       - name: Run vet
-        run: go vet ./...
+        id: vet
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          go vet ./... 2>&1 | tee /tmp/go-vet.log
+
+      - name: Preserve Go vet diagnostics
+        if: ${{ steps.vet.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: go-vet-diagnostics
+          path: /tmp/go-vet.log
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Fail when Go vet fails
+        if: ${{ steps.vet.outcome == 'failure' }}
+        run: exit 1
 
       - name: Run tests
         run: go test ./...

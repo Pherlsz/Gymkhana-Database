@@ -1,0 +1,483 @@
+openapi: 3.1.0
+info:
+  title: Gymkhana Database Attachments API
+  version: 0.8.0
+  description: Private attachment upload, download, trash, restore, and cleanup contract.
+servers:
+  - url: /
+tags:
+  - name: Attachments
+paths:
+  /api/v1/attachment-upload-intents:
+    post:
+      operationId: createAttachmentUploadIntent
+      summary: Create a short-lived private upload intent
+      tags: [Attachments]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttachmentUploadIntentRequest'
+      responses:
+        '201':
+          description: Upload intent and signed PUT request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentUploadGrant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/attachment-upload-intents/{intent_id}/confirm:
+    post:
+      operationId: confirmAttachmentUpload
+      summary: Verify and persist an uploaded private object
+      tags: [Attachments]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/IntentID'
+      responses:
+        '201':
+          description: Verified attachment metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '410':
+          $ref: '#/components/responses/Gone'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/attachments:
+    get:
+      operationId: listAttachments
+      summary: List active or recoverable attachments for one typed owner
+      tags: [Attachments]
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: owner_kind
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/AttachmentOwnerKind'
+        - name: owner_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: custom_target_kind
+          in: query
+          schema:
+            $ref: '#/components/schemas/AttachmentCustomTargetKind'
+        - name: field_definition_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: include_trashed
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Attachment list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/attachments/{attachment_id}/download:
+    post:
+      operationId: createAttachmentDownload
+      summary: Authorize and create a short-lived signed download
+      tags: [Attachments]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/AttachmentID'
+      responses:
+        '200':
+          description: Signed GET request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/attachments/{attachment_id}:
+    delete:
+      operationId: trashAttachment
+      summary: Move an attachment to the seven-day trash
+      tags: [Attachments]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/AttachmentID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrashAttachmentRequest'
+      responses:
+        '200':
+          description: Trashed attachment metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/attachments/{attachment_id}/restore:
+    post:
+      operationId: restoreAttachment
+      summary: Restore an attachment before permanent purge
+      tags: [Attachments]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/AttachmentID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestoreAttachmentRequest'
+      responses:
+        '200':
+          description: Restored attachment metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: gymkhana_session
+  parameters:
+    IntentID:
+      name: intent_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AttachmentID:
+      name: attachment_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    AttachmentOwnerKind:
+      type: string
+      enum: [DOCUMENT, BILL, CUSTOM_FIELD]
+    AttachmentCustomTargetKind:
+      type: string
+      enum: [PROFILE, DOCUMENT, BILL, CUSTOM_ENTITY]
+    AttachmentLifecycleState:
+      type: string
+      enum: [ACTIVE, TRASHED]
+    AttachmentOwnerRequest:
+      type: object
+      additionalProperties: false
+      required: [owner_kind, owner_id]
+      properties:
+        owner_kind:
+          $ref: '#/components/schemas/AttachmentOwnerKind'
+        owner_id:
+          type: string
+          format: uuid
+        custom_target_kind:
+          $ref: '#/components/schemas/AttachmentCustomTargetKind'
+        field_definition_id:
+          type: string
+          format: uuid
+    AttachmentUploadIntentRequest:
+      allOf:
+        - $ref: '#/components/schemas/AttachmentOwnerRequest'
+        - type: object
+          additionalProperties: false
+          required: [original_filename, declared_mime, expected_size]
+          properties:
+            original_filename:
+              type: string
+              minLength: 1
+              maxLength: 255
+            declared_mime:
+              type: string
+              minLength: 1
+              maxLength: 127
+            expected_size:
+              type: integer
+              format: int64
+              minimum: 1
+    SignedRequest:
+      type: object
+      additionalProperties: false
+      required: [url, method, headers, expires_at]
+      properties:
+        url:
+          type: string
+          format: uri
+        method:
+          type: string
+          enum: [GET, PUT]
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        expires_at:
+          type: string
+          format: date-time
+    AttachmentUploadGrant:
+      type: object
+      additionalProperties: false
+      required: [intent_id, upload, expires_at]
+      properties:
+        intent_id:
+          type: string
+          format: uuid
+        upload:
+          $ref: '#/components/schemas/SignedRequest'
+        expires_at:
+          type: string
+          format: date-time
+    Attachment:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - owner_kind
+        - owner_id
+        - original_filename
+        - declared_mime
+        - detected_mime
+        - byte_size
+        - sha256
+        - lifecycle_state
+        - version
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        owner_kind:
+          $ref: '#/components/schemas/AttachmentOwnerKind'
+        owner_id:
+          type: string
+          format: uuid
+        custom_target_kind:
+          $ref: '#/components/schemas/AttachmentCustomTargetKind'
+        field_definition_id:
+          type: string
+          format: uuid
+        original_filename:
+          type: string
+        declared_mime:
+          type: string
+        detected_mime:
+          type: string
+        byte_size:
+          type: integer
+          format: int64
+          minimum: 1
+        sha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        lifecycle_state:
+          $ref: '#/components/schemas/AttachmentLifecycleState'
+        deleted_at:
+          type: string
+          format: date-time
+        purge_after:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AttachmentListResponse:
+      type: object
+      additionalProperties: false
+      required: [attachments]
+      properties:
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+    TrashAttachmentRequest:
+      type: object
+      additionalProperties: false
+      required: [version, confirmation]
+      properties:
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        confirmation:
+          type: string
+          enum: [Confirmar]
+    RestoreAttachmentRequest:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, code, message]
+      properties:
+        field:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error, request_id]
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+        request_id:
+          type: string
+        field_errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+  responses:
+    BadRequest:
+      description: Invalid attachment request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication is required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Attachment operation is forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Attachment resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Attachment version or lifecycle state conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Gone:
+      description: Upload intent expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Attachment field validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServiceUnavailable:
+      description: Private storage or another required dependency is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
