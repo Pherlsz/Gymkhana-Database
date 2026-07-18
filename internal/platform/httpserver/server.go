@@ -35,6 +35,9 @@ type Options struct {
 	GoogleForms    googleFormsService
 	Query          queryService
 	Matching       matchingService
+	Chat           chatService
+	ChatResults    chatResultReader
+	ChatLauncher   chatRunLauncher
 	SecureCookies  bool
 	ApplicationURL string
 }
@@ -84,6 +87,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerGoogleFormsRoutes(mux, logger, settings.Auth, settings.GoogleForms, settings.ApplicationURL)
 	registerQueryRoutes(mux, logger, settings.Auth, settings.Query)
 	registerMatchingRoutes(mux, logger, settings.Auth, settings.Matching)
+	registerChatRoutes(mux, logger, settings.Auth, settings.Chat, settings.ChatResults, settings.ChatLauncher)
 	mux.HandleFunc("/", fallbackHandler)
 	applicationOrigin := absoluteOrigin(settings.ApplicationURL)
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, browserOriginMiddleware(applicationOrigin, mux)))))

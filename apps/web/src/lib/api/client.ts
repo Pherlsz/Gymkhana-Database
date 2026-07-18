@@ -109,7 +109,7 @@ export function apiURL(path: string): string {
   return `${baseURL}${path}`;
 }
 
-async function readJSON<T>(response: Response): Promise<T> {
+export async function readJSON<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
     throw new APIRequestError("API response is not JSON", {
@@ -121,7 +121,7 @@ async function readJSON<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-async function throwAPIError(response: Response): Promise<never> {
+export async function throwAPIError(response: Response): Promise<never> {
   let payload: ErrorPayload = {};
   try {
     payload = await readJSON<ErrorPayload>(response);
@@ -136,7 +136,7 @@ async function throwAPIError(response: Response): Promise<never> {
   });
 }
 
-async function requestJSON<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function requestJSON<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(apiURL(path), {
     credentials: "include",
     ...init,
@@ -146,7 +146,7 @@ async function requestJSON<T>(path: string, init: RequestInit = {}): Promise<T> 
   return readJSON<T>(response);
 }
 
-async function requestNoContent(path: string, init: RequestInit): Promise<void> {
+export async function requestNoContent(path: string, init: RequestInit): Promise<void> {
   const response = await fetch(apiURL(path), {
     credentials: "include",
     ...init,
@@ -155,7 +155,7 @@ async function requestNoContent(path: string, init: RequestInit): Promise<void> 
   if (!response.ok) await throwAPIError(response);
 }
 
-function jsonRequest(method: string, body: unknown): RequestInit {
+export function jsonRequest(method: string, body: unknown): RequestInit {
   return {
     method,
     headers: { "Content-Type": "application/json" },

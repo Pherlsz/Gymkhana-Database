@@ -30,6 +30,10 @@ var configurationKeys = []string{
 	"GOOGLE_FORMS_TOKEN_KEY_VERSION",
 	"GOOGLE_FORMS_SYNC_INTERVAL",
 	"GOOGLE_FORMS_RESPONSE_PAGE_SIZE",
+	"AI_CHAT_ENABLED",
+	"AI_CHAT_PROVIDER",
+	"AI_CHAT_MODEL",
+	"AI_CHAT_RETENTION",
 }
 
 func setValidGoogleForms(t *testing.T) {
@@ -87,6 +91,9 @@ func TestLoadUsesSafeTypedDefaults(t *testing.T) {
 	if cfg.GoogleForms.Enabled || cfg.GoogleForms.SyncInterval != 15*time.Minute || cfg.GoogleForms.ResponsePageSize != 100 {
 		t.Fatalf("GoogleForms defaults = %#v", cfg.GoogleForms)
 	}
+	if cfg.AIChat.Enabled || cfg.AIChat.Provider != "" || cfg.AIChat.Model != "" || cfg.AIChat.Retention != 0 {
+		t.Fatalf("AIChat defaults = %#v", cfg.AIChat)
+	}
 }
 
 func TestLoadRejectsInvalidTypedValues(t *testing.T) {
@@ -105,6 +112,8 @@ func TestLoadRejectsInvalidTypedValues(t *testing.T) {
 		{name: "google forms key version", key: "GOOGLE_FORMS_TOKEN_KEY_VERSION", value: "zero"},
 		{name: "google forms interval", key: "GOOGLE_FORMS_SYNC_INTERVAL", value: "later"},
 		{name: "google forms page size", key: "GOOGLE_FORMS_RESPONSE_PAGE_SIZE", value: "many"},
+		{name: "AI Chat enabled", key: "AI_CHAT_ENABLED", value: "sometimes"},
+		{name: "AI Chat retention", key: "AI_CHAT_RETENTION", value: "forever"},
 	}
 
 	for _, test := range tests {
@@ -115,6 +124,63 @@ func TestLoadRejectsInvalidTypedValues(t *testing.T) {
 				t.Fatal("Load() error = nil, want validation error")
 			}
 		})
+	}
+}
+
+func TestLoadAllowsOnlyExplicitDeterministicTestChatConfiguration(t *testing.T) {
+	clearConfiguration(t)
+	setValidLocalAuthentication(t)
+	t.Setenv("APP_ENV", "test")
+	t.Setenv("AI_CHAT_ENABLED", "true")
+	t.Setenv("AI_CHAT_PROVIDER", "fake")
+	t.Setenv("AI_CHAT_MODEL", "deterministic-v1")
+	t.Setenv("AI_CHAT_RETENTION", "24h")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !cfg.AIChat.Enabled || cfg.AIChat.Provider != "fake" || cfg.AIChat.Model != "deterministic-v1" || cfg.AIChat.Retention != 24*time.Hour {
+		t.Fatalf("AIChat = %#v", cfg.AIChat)
+	}
+}
+
+func TestLoadKeepsProductionChatBlockedUntilOwnerActivationDecisions(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		environment string
+		provider    string
+		model       string
+		retention   string
+	}{
+		{name: "missing provider", environment: "test", model: "deterministic-v1", retention: "24h"},
+		{name: "missing model", environment: "test", provider: "fake", retention: "24h"},
+		{name: "missing retention", environment: "test", provider: "fake", model: "deterministic-v1"},
+		{name: "short retention", environment: "test", provider: "fake", model: "deterministic-v1", retention: "30m"},
+		{name: "unsupported local adapter", environment: "local", provider: "fake", model: "deterministic-v1", retention: "24h"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			clearConfiguration(t)
+			setValidLocalAuthentication(t)
+			t.Setenv("APP_ENV", test.environment)
+			t.Setenv("AI_CHAT_ENABLED", "true")
+			t.Setenv("AI_CHAT_PROVIDER", test.provider)
+			t.Setenv("AI_CHAT_MODEL", test.model)
+			t.Setenv("AI_CHAT_RETENTION", test.retention)
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() error = nil, want AI Chat activation error")
+			}
+		})
+	}
+
+	clearConfiguration(t)
+	t.Setenv("APP_ENV", "test")
+	t.Setenv("AI_CHAT_ENABLED", "true")
+	t.Setenv("AI_CHAT_PROVIDER", "fake")
+	t.Setenv("AI_CHAT_MODEL", "deterministic-v1")
+	t.Setenv("AI_CHAT_RETENTION", "24h")
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() error = nil, want authentication dependency error")
 	}
 }
 

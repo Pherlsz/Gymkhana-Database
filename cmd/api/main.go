@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Pherlsz/Gymkhana-Database/internal/aichat"
 	"github.com/Pherlsz/Gymkhana-Database/internal/attachment"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/bill"
@@ -89,6 +90,9 @@ func run() error {
 	var googleFormsService *googleforms.Service
 	var queryService *queryengine.Service
 	var matchingService *matching.Service
+	var chatService *aichat.Service
+	var chatTools *aichat.ToolGateway
+	var chatCoordinator *aichat.Coordinator
 	if pool != nil {
 		profileService, err = profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{OnAuditFailure: func(_ context.Context, event profile.AuditEvent, auditErr error) {
 			logger.Error("profile audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "profile_id", event.ProfileID.String(), "error", auditErr)
@@ -189,6 +193,41 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("configure matching service: %w", err)
 		}
+		if cfg.AIChat.Enabled {
+			if authService == nil || searchService == nil || queryService == nil {
+				return errors.New("AI Chat requires authentication, Search, Query Engine, and a database connection")
+			}
+			chatService, err = aichat.NewService(aichat.NewPostgresStore(pool), aichat.ServiceOptions{
+				Retention: cfg.AIChat.Retention,
+				OnAuditFailure: func(_ context.Context, event aichat.AuditEvent, auditErr error) {
+					logger.Error("AI Chat audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome,
+						"error_code", event.ErrorCode, "request_id", event.RequestID, "error_type", fmt.Sprintf("%T", auditErr))
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("configure AI Chat service: %w", err)
+			}
+			chatTools, err = aichat.NewToolGateway(searchService, queryService, chatService, time.Now)
+			if err != nil {
+				return fmt.Errorf("configure AI Chat tools: %w", err)
+			}
+			var provider aichat.ModelClient
+			switch cfg.AIChat.Provider {
+			case "fake":
+				provider = aichat.NewRepeatingFakeProvider(aichat.FakeModelStep{Deltas: []string{"Resposta determinística do ambiente de teste."}})
+			default:
+				return errors.New("AI Chat production provider adapter is not configured")
+			}
+			orchestrator, err := aichat.NewOrchestrator(chatService, chatTools, provider)
+			if err != nil {
+				return fmt.Errorf("configure AI Chat orchestration: %w", err)
+			}
+			chatCoordinator, err = aichat.NewCoordinator(rootCtx, orchestrator)
+			if err != nil {
+				return fmt.Errorf("configure AI Chat coordinator: %w", err)
+			}
+			startAIChatCleanup(rootCtx, chatService, logger)
+		}
 	}
 	server := &http.Server{
 		Addr: cfg.HTTPAddress,
@@ -205,6 +244,9 @@ func run() error {
 			GoogleForms:    googleFormsService,
 			Query:          queryService,
 			Matching:       matchingService,
+			Chat:           chatService,
+			ChatResults:    chatTools,
+			ChatLauncher:   chatCoordinator,
 			SecureCookies:  cfg.Auth.SecureCookies,
 			ApplicationURL: cfg.Auth.ApplicationURL,
 		}),
@@ -215,18 +257,51 @@ func run() error {
 	}
 	serverError := make(chan error, 1)
 	go func() {
-		logger.Info("api listening", "address", cfg.HTTPAddress, "environment", cfg.Environment, "authentication_enabled", cfg.Auth.Enabled, "attachments_enabled", storageCfg.Enabled)
+		logger.Info("api listening", "address", cfg.HTTPAddress, "environment", cfg.Environment, "authentication_enabled", cfg.Auth.Enabled,
+			"attachments_enabled", storageCfg.Enabled, "ai_chat_enabled", cfg.AIChat.Enabled)
 		serverError <- server.ListenAndServe()
 	}()
 	select {
 	case <-rootCtx.Done():
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 		defer cancel()
-		return server.Shutdown(shutdownCtx)
+		shutdownErr := server.Shutdown(shutdownCtx)
+		if chatCoordinator != nil {
+			if waitErr := chatCoordinator.Wait(shutdownCtx); shutdownErr == nil && waitErr != nil {
+				shutdownErr = waitErr
+			}
+		}
+		return shutdownErr
 	case err := <-serverError:
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
 		return err
 	}
+}
+
+func startAIChatCleanup(ctx context.Context, service *aichat.Service, logger *slog.Logger) {
+	go func() {
+		cleanup := func() {
+			cleanupCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			if _, err := service.CleanupExpired(cleanupCtx); err != nil && !errors.Is(err, context.Canceled) {
+				logger.Error("AI Chat retention cleanup failed", "error_type", fmt.Sprintf("%T", err))
+			}
+		}
+		cleanup()
+		// Runs have a much shorter lifecycle than retained threads. A one-minute pass
+		// makes an abruptly interrupted run observable and retryable without touching
+		// any canonical Search or Query data.
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				cleanup()
+			}
+		}
+	}()
 }
