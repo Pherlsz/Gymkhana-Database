@@ -62,8 +62,11 @@ jobs:
       - name: Regenerate OpenAPI clients
         run: |
           make generate-go generate-ts
+          mkdir -p api/generated/chat
+          go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.2 --config api/oapi-chat-codegen.yaml api/chat.openapi.yaml
+          pnpm exec openapi-typescript api/chat.openapi.yaml -o apps/web/src/generated/chat-api.ts
           find api/generated -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
-          pnpm exec oxfmt apps/web/src/generated/api.ts apps/web/src/generated/attachments-api.ts apps/web/src/generated/search-api.ts apps/web/src/generated/operations-api.ts apps/web/src/generated/google-forms-api.ts apps/web/src/generated/query-api.ts apps/web/src/generated/matching-api.ts --write
+          pnpm exec oxfmt apps/web/src/generated/api.ts apps/web/src/generated/attachments-api.ts apps/web/src/generated/search-api.ts apps/web/src/generated/operations-api.ts apps/web/src/generated/google-forms-api.ts apps/web/src/generated/query-api.ts apps/web/src/generated/matching-api.ts apps/web/src/generated/chat-api.ts --write
 
       - name: Verify generated files
         id: generated

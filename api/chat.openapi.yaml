@@ -1,0 +1,1026 @@
+openapi: 3.1.0
+info:
+  title: Gymkhana Database AI Chat API
+  version: 0.12.0
+  description: Owner-private, provider-neutral AI Chat over permission-filtered, typed, read-only Search and Query tools. The contract never accepts SQL, physical schema names, credentials, arbitrary HTTP/code tools, or mutations.
+servers:
+  - url: /
+paths:
+  /api/v1/chat/capability:
+    get:
+      operationId: getChatCapability
+      summary: Read safe Chat activation state and fixed limits
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Safe capability metadata; enabled is false until provider, model, and retention are explicitly configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatCapability"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/chat/threads:
+    get:
+      operationId: listChatThreads
+      summary: List the current user's unexpired private threads
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ThreadLimit"
+        - $ref: "#/components/parameters/ThreadOffset"
+      responses:
+        "200":
+          description: Compact owner-scoped thread metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatThreadPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: createChatThread
+      summary: Create one private thread with configured retention
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChatThreadRequest"
+      responses:
+        "201":
+          description: Created thread
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatThread"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/chat/threads/{thread_id}:
+    parameters:
+      - $ref: "#/components/parameters/ThreadID"
+    get:
+      operationId: getChatThread
+      summary: Read one owner-scoped private thread
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Private thread metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatThread"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/StaleContext"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    patch:
+      operationId: renameChatThread
+      summary: Rename one private thread with optimistic versioning
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenameChatThreadRequest"
+      responses:
+        "200":
+          description: Renamed thread
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatThread"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Busy"
+        "410":
+          $ref: "#/components/responses/StaleContext"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    delete:
+      operationId: deleteChatThread
+      summary: Explicitly delete one private thread and its Chat-only content
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      responses:
+        "204":
+          description: Thread deleted; canonical Search and Query data retain their own lifecycle
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Busy"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/chat/threads/{thread_id}/messages:
+    get:
+      operationId: listChatMessages
+      summary: Read private ordered message content for the owning user
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ThreadID"
+        - $ref: "#/components/parameters/MessageLimit"
+        - $ref: "#/components/parameters/MessageOffset"
+      responses:
+        "200":
+          description: Ordered private message page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessagePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/StaleContext"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/chat/threads/{thread_id}/active-result:
+    put:
+      operationId: setChatActiveResult
+      summary: Select or clear the explicit owner-scoped follow-up context
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ThreadID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetChatActiveResultRequest"
+      responses:
+        "200":
+          description: Thread with updated explicit result context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatThread"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/StaleContext"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/chat/threads/{thread_id}/turns:
+    post:
+      operationId: startChatTurn
+      summary: Persist and launch one idempotent bounded turn
+      description: A replay returns the existing run only when the owner-scoped request fingerprint matches. A thread can have only one active run.
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ThreadID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartChatTurnRequest"
+      responses:
+        "200":
+          description: Idempotently replayed run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatRunCreation"
+        "201":
+          description: Newly accepted run; the user message is returned only after persistence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatRunCreation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Busy"
+        "410":
+          $ref: "#/components/responses/StaleContext"
+        "429":
+          $ref: "#/components/responses/RateOrQuotaLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/chat/runs/{run_id}:
+    get:
+      operationId: getChatRun
+      summary: Inspect one owner-scoped run without provider payloads
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          description: Normalized run state and safe usage counters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatRun"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/chat/runs/{run_id}/cancel:
+    post:
+      operationId: cancelChatRun
+      summary: Idempotently request cancellation for one owner-scoped run
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          description: Current run state after the cancellation request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatRun"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/chat/runs/{run_id}/events:
+    get:
+      operationId: streamChatRunEvents
+      summary: Stream persisted owner-scoped run events in monotonic sequence order
+      description: Last-Event-ID or after replays only later persisted events. Disconnecting the stream does not silently mutate the run; explicit cancellation remains available and every run has a fixed server deadline.
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+        - name: Last-Event-ID
+          in: header
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - name: after
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: text/event-stream frames use sequence as id, ChatEventKind as event, and ChatEvent JSON as data; heartbeat comments carry no content
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/chat/result-references/{reference_id}:
+    get:
+      operationId: getChatResultReference
+      summary: Reauthorize and reopen one typed result reference
+      description: The response contains only logical typed evidence. Stored logical requests, system policy, SQL, physical names, provider payloads, and hidden fields are never returned.
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ReferenceID"
+        - $ref: "#/components/parameters/ResultLimit"
+        - $ref: "#/components/parameters/ResultOffset"
+      responses:
+        "200":
+          description: Reauthorized typed evidence page and compact provenance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatReferenceResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/StaleContext"
+        "429":
+          $ref: "#/components/responses/RateOrQuotaLimited"
+        "502":
+          $ref: "#/components/responses/UnsafeUpstream"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: gymkhana_session
+  parameters:
+    ThreadID:
+      name: thread_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RunID:
+      name: run_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ReferenceID:
+      name: reference_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ThreadLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
+    ThreadOffset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 10000
+        default: 0
+    MessageLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
+    MessageOffset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 100000
+        default: 0
+    ResultLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
+    ResultOffset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 10000
+        default: 0
+  responses:
+    BadRequest:
+      description: Strict JSON, identifier, cursor, pagination, idempotency key, or bounded content is invalid
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Exact session authentication is required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: The current or revalidated user cannot use Chat or access the requested resource
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: The private resource does not exist for this owner
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Busy:
+      description: Another run is active, a version changed, or the requested transition is no longer valid
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    StaleContext:
+      description: The private thread or explicit result context expired or no longer matches
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateOrQuotaLimited:
+      description: A persistent request, usage, tool, row, byte, or result bound was reached
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    UnsafeUpstream:
+      description: A provider or tool response did not satisfy the safe typed contract
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unavailable:
+      description: Chat is disabled, unavailable, or exceeded its safe deadline
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ChatCapability:
+      type: object
+      additionalProperties: false
+      required: [enabled, maximum_tool_calls, maximum_rows, maximum_result_bytes, maximum_usage, maximum_duration_seconds, maximum_message_runes]
+      properties:
+        enabled:
+          type: boolean
+        maximum_tool_calls:
+          type: integer
+          minimum: 0
+          maximum: 8
+        maximum_rows:
+          type: integer
+          minimum: 0
+          maximum: 100
+        maximum_result_bytes:
+          type: integer
+          minimum: 0
+          maximum: 262144
+        maximum_usage:
+          type: integer
+          format: int64
+          minimum: 0
+        maximum_duration_seconds:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 300
+        maximum_message_runes:
+          type: integer
+          minimum: 1
+          maximum: 20000
+    ChatThread:
+      type: object
+      additionalProperties: false
+      required: [id, title, retention_expires_at, version, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        active_result_reference_id:
+          type: string
+          format: uuid
+        retention_expires_at:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ChatThreadPage:
+      type: object
+      additionalProperties: false
+      required: [threads, total, limit, offset]
+      properties:
+        threads:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatThread"
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+    ChatMessageRole:
+      type: string
+      enum: [USER, ASSISTANT]
+    ChatMessage:
+      type: object
+      additionalProperties: false
+      required: [id, thread_id, run_id, sequence, role, content, result_reference_ids, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        thread_id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        role:
+          $ref: "#/components/schemas/ChatMessageRole"
+        content:
+          type: string
+          minLength: 1
+          maxLength: 20000
+        result_reference_ids:
+          type: array
+          maxItems: 8
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+    ChatMessagePage:
+      type: object
+      additionalProperties: false
+      required: [messages, total, limit, offset]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        offset:
+          type: integer
+          minimum: 0
+    ChatRunState:
+      type: string
+      enum: [QUEUED, RUNNING, TOOL_RUNNING, COMPLETED, FAILED, CANCELLED]
+    ChatRun:
+      type: object
+      additionalProperties: false
+      required: [id, thread_id, state, tool_call_count, input_usage, output_usage, result_bytes, version, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        thread_id:
+          type: string
+          format: uuid
+        retry_of_run_id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/ChatRunState"
+        tool_call_count:
+          type: integer
+          minimum: 0
+          maximum: 8
+        input_usage:
+          type: integer
+          format: int64
+          minimum: 0
+        output_usage:
+          type: integer
+          format: int64
+          minimum: 0
+        result_bytes:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 262144
+        error_code:
+          type: string
+          minLength: 1
+          maxLength: 80
+        cancel_requested_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ChatRunCreation:
+      type: object
+      additionalProperties: false
+      required: [run, user_message, created]
+      properties:
+        run:
+          $ref: "#/components/schemas/ChatRun"
+        user_message:
+          $ref: "#/components/schemas/ChatMessage"
+        created:
+          type: boolean
+    ChatResultReferenceKind:
+      type: string
+      enum: [SEARCH, QUERY]
+    ChatResultReference:
+      type: object
+      additionalProperties: false
+      required: [id, thread_id, run_id, kind, label, row_count, column_count, expires_at, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        thread_id:
+          type: string
+          format: uuid
+        run_id:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/ChatResultReferenceKind"
+        query_execution_id:
+          type: string
+          format: uuid
+        label:
+          type: string
+          minLength: 1
+          maxLength: 160
+        row_count:
+          type: integer
+          minimum: 0
+          maximum: 100
+        column_count:
+          type: integer
+          minimum: 0
+          maximum: 20
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    SearchEvidence:
+      type: object
+      additionalProperties: false
+      required: [module, entity_kind, entity_id, target_kind, target_id, entity_label, field_key, field_label, preview, score]
+      properties:
+        module:
+          type: string
+          enum: [profiles, documents, bills, custom_data, attachments]
+        entity_kind:
+          type: string
+          maxLength: 80
+        entity_id:
+          type: string
+          maxLength: 200
+        profile_id:
+          type: string
+          maxLength: 200
+        target_kind:
+          type: string
+          maxLength: 80
+        target_id:
+          type: string
+          maxLength: 200
+        entity_label:
+          type: string
+          maxLength: 500
+        field_key:
+          type: string
+          maxLength: 200
+        field_label:
+          type: string
+          maxLength: 160
+        preview:
+          type: string
+          maxLength: 500
+        score:
+          type: integer
+          format: int32
+    SearchReferenceData:
+      type: object
+      additionalProperties: false
+      required: [reference_id, results, total]
+      properties:
+        reference_id:
+          type: string
+          format: uuid
+        results:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/SearchEvidence"
+        total:
+          type: integer
+          format: int64
+          minimum: 0
+    QueryValueKind:
+      type: string
+      enum: [text, long_text, identifier, integer, decimal, boolean, civil_date, civil_month, timestamp, enum]
+    QueryResultColumn:
+      type: object
+      additionalProperties: false
+      required: [position, field_key, label, kind]
+      properties:
+        position:
+          type: integer
+          minimum: 0
+          maximum: 19
+        field_key:
+          type: string
+          maxLength: 200
+        label:
+          type: string
+          maxLength: 160
+        kind:
+          $ref: "#/components/schemas/QueryValueKind"
+    QueryResultCell:
+      type: object
+      additionalProperties: false
+      required: [column_position, kind, is_null]
+      properties:
+        column_position:
+          type: integer
+          minimum: 0
+          maximum: 19
+        kind:
+          $ref: "#/components/schemas/QueryValueKind"
+        is_null:
+          type: boolean
+        value:
+          oneOf:
+            - type: string
+              maxLength: 500
+            - type: integer
+              format: int64
+            - type: boolean
+        truncated:
+          type: boolean
+    QueryResultRow:
+      type: object
+      additionalProperties: false
+      required: [position, entity_kind, entity_id, entity_label, cells]
+      properties:
+        position:
+          type: integer
+          minimum: 0
+        entity_kind:
+          type: string
+          maxLength: 80
+        entity_id:
+          type: string
+          maxLength: 200
+        entity_label:
+          type: string
+          maxLength: 500
+        cells:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/QueryResultCell"
+    QueryReferenceData:
+      type: object
+      additionalProperties: false
+      required: [execution_id, columns, rows, total]
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        columns:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/QueryResultColumn"
+        rows:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/QueryResultRow"
+        total:
+          type: integer
+          minimum: 0
+    ChatReferenceResult:
+      type: object
+      additionalProperties: false
+      required: [reference, data, row_count, field_count]
+      properties:
+        reference:
+          $ref: "#/components/schemas/ChatResultReference"
+        data:
+          oneOf:
+            - $ref: "#/components/schemas/SearchReferenceData"
+            - $ref: "#/components/schemas/QueryReferenceData"
+        row_count:
+          type: integer
+          minimum: 0
+          maximum: 100
+        field_count:
+          type: integer
+          minimum: 0
+          maximum: 20
+    ChatEventKind:
+      type: string
+      enum: [RUN_ACCEPTED, RUN_STARTED, TEXT_DELTA, TOOL_STARTED, TOOL_COMPLETED, RESULT_REFERENCE, RUN_COMPLETED, RUN_FAILED, RUN_CANCELLED]
+    ChatEvent:
+      type: object
+      additionalProperties: false
+      required: [sequence, kind, created_at]
+      properties:
+        sequence:
+          type: integer
+          format: int64
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/ChatEventKind"
+        text_delta:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        tool_step_id:
+          type: string
+          format: uuid
+        result_reference_id:
+          type: string
+          format: uuid
+        error_code:
+          type: string
+          minLength: 1
+          maxLength: 80
+        created_at:
+          type: string
+          format: date-time
+    CreateChatThreadRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          maxLength: 120
+    RenameChatThreadRequest:
+      type: object
+      additionalProperties: false
+      required: [title, version]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+    SetChatActiveResultRequest:
+      type: object
+      additionalProperties: false
+      required: [reference_id]
+      properties:
+        reference_id:
+          type: string
+          format: uuid
+          nullable: true
+    StartChatTurnRequest:
+      type: object
+      additionalProperties: false
+      required: [content, idempotency_key]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 20000
+        idempotency_key:
+          type: string
+          minLength: 8
+          maxLength: 128
+          pattern: "^[A-Za-z0-9._:-]+$"
+        retry_of_run_id:
+          type: string
+          format: uuid
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [bad_request, invalid_json, unsupported_media_type, request_too_large, unauthorized, forbidden, not_found, rate_limited, chat_unavailable, chat_busy, chat_quota_exceeded, chat_timeout, chat_cancelled, chat_stale_context, chat_malformed_provider, chat_tool_failed, chat_unsafe_result, internal_error]
+            message:
+              type: string
+        request_id:
+          type: string
+          maxLength: 128
