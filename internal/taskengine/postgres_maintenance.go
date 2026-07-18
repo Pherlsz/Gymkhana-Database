@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func (store *PostgresStore) RecoverStaleJobs(ctx context.Context, staleBefore, now time.Time, limit int) (int, error) {
@@ -25,12 +26,16 @@ ORDER BY updated_at,id FOR UPDATE SKIP LOCKED LIMIT $2`, staleBefore, limit)
 	}
 	ids := make([]Identifier, 0)
 	for rows.Next() {
-		var raw [16]byte
+		var raw pgtype.UUID
 		if err := rows.Scan(&raw); err != nil {
 			rows.Close()
 			return 0, err
 		}
-		ids = append(ids, Identifier(raw))
+		if !raw.Valid {
+			rows.Close()
+			return 0, ErrUnsafeResult
+		}
+		ids = append(ids, Identifier(raw.Bytes))
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
