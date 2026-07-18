@@ -9,7 +9,9 @@ import (
 )
 
 const (
-	PlanVersionV1          = "v1"
+	PlanVersionV1 = "v1"
+	PlanVersionV2 = "v2"
+
 	MaximumProjections     = 20
 	MaximumFilterNodes     = 40
 	MaximumFilterDepth     = 6
@@ -20,6 +22,16 @@ const (
 	MaximumPageSize        = 100
 	MaximumIdempotencySize = 128
 	MinimumIdempotencySize = 8
+
+	MaximumGroupKeys              = 8
+	MaximumAggregates             = 12
+	MaximumAggregateFilterNodes   = 24
+	MaximumSetInputs              = 6
+	MaximumSetDepth               = 4
+	MaximumPatternLength          = 160
+	MaximumPatternTokens          = 32
+	MaximumCombinationDimensions = 8
+	MaximumCombinationSize       = 10_000
 )
 
 type Identifier [16]byte
@@ -135,6 +147,88 @@ type OperatorDefinition struct {
 	MaximumValues int      `json:"maximum_values"`
 }
 
+type AggregateFunction string
+
+const (
+	AggregateCount   AggregateFunction = "count"
+	AggregateSum     AggregateFunction = "sum"
+	AggregateAverage AggregateFunction = "average"
+	AggregateMinimum AggregateFunction = "minimum"
+	AggregateMaximum AggregateFunction = "maximum"
+)
+
+type AggregateFunctionDefinition struct {
+	Key                AggregateFunction `json:"key"`
+	Label              string            `json:"label"`
+	InputKinds         []ValueKind       `json:"input_kinds,omitempty"`
+	OutputKind         ValueKind         `json:"output_kind"`
+	AllowsDistinct     bool              `json:"allows_distinct"`
+	AllowsNullInput    bool              `json:"allows_null_input"`
+	RequiresInputField bool              `json:"requires_input_field"`
+}
+
+type SetOperator string
+
+const (
+	SetUnion        SetOperator = "union"
+	SetIntersection SetOperator = "intersection"
+	SetDifference   SetOperator = "difference"
+)
+
+type SetOperatorDefinition struct {
+	Key           SetOperator `json:"key"`
+	Label         string      `json:"label"`
+	MinimumInputs int         `json:"minimum_inputs"`
+	MaximumInputs int         `json:"maximum_inputs"`
+}
+
+type PatternGrammar string
+
+const (
+	PatternLiteralSequence PatternGrammar = "literal_sequence"
+	PatternCharacterClass  PatternGrammar = "character_class"
+	PatternBinaryDigits    PatternGrammar = "binary_digits"
+	PatternDigits          PatternGrammar = "digits"
+	PatternLetters         PatternGrammar = "letters"
+	PatternAlphaNumeric    PatternGrammar = "alphanumeric"
+)
+
+type PatternGrammarDefinition struct {
+	Key               PatternGrammar `json:"key"`
+	Label             string         `json:"label"`
+	MaximumLength     int            `json:"maximum_length"`
+	MaximumTokens     int            `json:"maximum_tokens"`
+	SupportsAnchoring bool           `json:"supports_anchoring"`
+	SupportsCaseFold  bool           `json:"supports_case_fold"`
+}
+
+type FieldCapability struct {
+	Field              string              `json:"field"`
+	Groupable          bool                `json:"groupable"`
+	AggregateFunctions []AggregateFunction `json:"aggregate_functions,omitempty"`
+	PatternGrammars    []PatternGrammar    `json:"pattern_grammars,omitempty"`
+}
+
+type AdvancedCatalogLimits struct {
+	MaximumGroupKeys              int `json:"maximum_group_keys"`
+	MaximumAggregates             int `json:"maximum_aggregates"`
+	MaximumAggregateFilterNodes   int `json:"maximum_aggregate_filter_nodes"`
+	MaximumSetInputs              int `json:"maximum_set_inputs"`
+	MaximumSetDepth               int `json:"maximum_set_depth"`
+	MaximumPatternLength          int `json:"maximum_pattern_length"`
+	MaximumPatternTokens          int `json:"maximum_pattern_tokens"`
+	MaximumCombinationDimensions int `json:"maximum_combination_dimensions"`
+	MaximumCombinationSize       int `json:"maximum_combination_size"`
+}
+
+type AdvancedCatalog struct {
+	FieldCapabilities  []FieldCapability             `json:"field_capabilities"`
+	AggregateFunctions []AggregateFunctionDefinition `json:"aggregate_functions"`
+	SetOperators       []SetOperatorDefinition       `json:"set_operators"`
+	PatternGrammars    []PatternGrammarDefinition    `json:"pattern_grammars"`
+	Limits             AdvancedCatalogLimits         `json:"limits"`
+}
+
 type CatalogLimits struct {
 	MaximumProjections     int `json:"maximum_projections"`
 	MaximumFilterNodes     int `json:"maximum_filter_nodes"`
@@ -153,6 +247,7 @@ type Catalog struct {
 	Relations []RelationDefinition `json:"relations"`
 	Operators []OperatorDefinition `json:"operators"`
 	Limits    CatalogLimits        `json:"limits"`
+	Advanced  *AdvancedCatalog     `json:"advanced,omitempty"`
 }
 
 type FilterKind string
@@ -193,6 +288,56 @@ type Sort struct {
 	Direction SortDirection `json:"direction"`
 }
 
+type Aggregate struct {
+	Key      string            `json:"key"`
+	Function AggregateFunction `json:"function"`
+	Field    string            `json:"field,omitempty"`
+	Distinct bool              `json:"distinct,omitempty"`
+}
+
+type AggregateReference struct {
+	Aggregate string   `json:"aggregate"`
+	Operator  Operator `json:"operator"`
+	Values    []string `json:"values,omitempty"`
+}
+
+type AggregateFilterNode struct {
+	Conjunction Conjunction           `json:"conjunction,omitempty"`
+	Predicate   *AggregateReference   `json:"predicate,omitempty"`
+	Children    []AggregateFilterNode `json:"children,omitempty"`
+	Negated     bool                  `json:"negated,omitempty"`
+}
+
+type PatternPredicate struct {
+	Field      string         `json:"field"`
+	Grammar    PatternGrammar `json:"grammar"`
+	Pattern    string         `json:"pattern"`
+	Anchored   bool           `json:"anchored,omitempty"`
+	CaseFold   bool           `json:"case_fold,omitempty"`
+	AllowEmpty bool           `json:"allow_empty,omitempty"`
+}
+
+type SetExpression struct {
+	Operator SetOperator     `json:"operator"`
+	Inputs   []SetExpression `json:"inputs,omitempty"`
+	Plan     *QueryPlan      `json:"plan,omitempty"`
+}
+
+type CombinationInput struct {
+	Key             string     `json:"key"`
+	Plan            *QueryPlan `json:"plan"`
+	MinimumSelected int        `json:"minimum_selected"`
+	MaximumSelected int        `json:"maximum_selected"`
+}
+
+type CombinationSpec struct {
+	Inputs              []CombinationInput `json:"inputs"`
+	MaximumCombinations int                `json:"maximum_combinations"`
+	RequireDistinctRows bool               `json:"require_distinct_rows"`
+}
+
+// QueryPlan is the single versioned public query contract. Version v1 uses the
+// legacy projection/filter/sort subset. Version v2 enables the advanced fields.
 type QueryPlan struct {
 	Version        string      `json:"version"`
 	CatalogVersion string      `json:"catalog_version"`
@@ -201,6 +346,13 @@ type QueryPlan struct {
 	Filter         *FilterNode `json:"filter,omitempty"`
 	Sort           []Sort      `json:"sort,omitempty"`
 	MaximumRows    int         `json:"maximum_rows"`
+
+	GroupBy     []string             `json:"group_by,omitempty"`
+	Aggregates  []Aggregate          `json:"aggregates,omitempty"`
+	Having      *AggregateFilterNode `json:"having,omitempty"`
+	Patterns    []PatternPredicate   `json:"patterns,omitempty"`
+	Set         *SetExpression       `json:"set,omitempty"`
+	Combination *CombinationSpec     `json:"combination,omitempty"`
 }
 
 type FieldError struct {
@@ -257,10 +409,18 @@ type Execution struct {
 }
 
 type ResultColumn struct {
-	Position int       `json:"position"`
-	FieldKey string    `json:"field_key"`
-	Label    string    `json:"label"`
-	Kind     ValueKind `json:"kind"`
+	Position     int                `json:"position"`
+	FieldKey     string             `json:"field_key"`
+	Label        string             `json:"label"`
+	Kind         ValueKind          `json:"kind"`
+	AggregateKey string             `json:"aggregate_key,omitempty"`
+	Lineage      []ResultLineageRef `json:"lineage,omitempty"`
+}
+
+type ResultLineageRef struct {
+	Entity   string `json:"entity"`
+	Field    string `json:"field,omitempty"`
+	Relation string `json:"relation,omitempty"`
 }
 
 type ResultCell struct {
