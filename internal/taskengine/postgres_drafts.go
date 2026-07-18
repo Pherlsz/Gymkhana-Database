@@ -5,11 +5,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/jackc/pgx/v5"
 )
 
 func (store *PostgresStore) CreateDraft(ctx context.Context, input CreateDraftInput) (Draft, error) {
-	if store == nil || store.pool == nil || input.ID.IsZero() || input.OwnerUserID == ([16]byte{}) ||
+	if store == nil || store.pool == nil || input.ID.IsZero() || input.OwnerUserID == (auth.Identifier{}) ||
 		input.CatalogVersion == "" || input.Now.IsZero() || !input.ExpiresAt.After(input.Now) ||
 		(input.State != DraftProposed && input.State != DraftReviewed) {
 		return Draft{}, ErrInvalidInput
@@ -30,7 +31,7 @@ RETURNING `+draftColumns, taskUUID(input.ID), taskAuthUUID(input.OwnerUserID), i
 }
 
 func (store *PostgresStore) UpdateDraft(ctx context.Context, input UpdateDraftInput) (Draft, error) {
-	if store == nil || store.pool == nil || input.ID.IsZero() || input.OwnerUserID == ([16]byte{}) ||
+	if store == nil || store.pool == nil || input.ID.IsZero() || input.OwnerUserID == (auth.Identifier{}) ||
 		input.CatalogVersion == "" || input.Version < 1 || input.Now.IsZero() {
 		return Draft{}, ErrInvalidInput
 	}
@@ -55,8 +56,8 @@ RETURNING `+draftColumns, taskUUID(input.ID), taskAuthUUID(input.OwnerUserID), i
 	return value, nil
 }
 
-func (store *PostgresStore) GetDraft(ctx context.Context, id Identifier, owner [16]byte) (Draft, error) {
-	if store == nil || store.pool == nil || id.IsZero() || owner == ([16]byte{}) {
+func (store *PostgresStore) GetDraft(ctx context.Context, id Identifier, owner auth.Identifier) (Draft, error) {
+	if store == nil || store.pool == nil || id.IsZero() || owner == (auth.Identifier{}) {
 		return Draft{}, ErrNotFound
 	}
 	value, err := scanDraft(store.pool.QueryRow(ctx, `SELECT `+draftColumns+` FROM task_drafts WHERE id=$1 AND owner_user_id=$2`, taskUUID(id), taskAuthUUID(owner)))
