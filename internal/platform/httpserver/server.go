@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	taskdomain "github.com/Pherlsz/Gymkhana-Database/internal/taskengine"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -19,7 +20,7 @@ const DefaultMaxBodyBytes int64 = 1 << 20
 
 const (
 	corsAllowedMethods = "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS"
-	corsAllowedHeaders = "Accept, Content-Type"
+	corsAllowedHeaders = "Accept, Content-Type, Last-Event-ID"
 )
 
 type Options struct {
@@ -87,6 +88,23 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerOperationsRoutes(mux, logger, settings.Auth, settings.Operations)
 	registerGoogleFormsRoutes(mux, logger, settings.Auth, settings.GoogleForms, settings.ApplicationURL)
 	registerQueryRoutes(mux, logger, settings.Auth, settings.Query)
+	registerAdvancedQueryRoutes(mux, logger, settings.Auth, settings.Query)
+	var tasks taskService
+	if pool != nil && settings.Query != nil {
+		if gateway, ok := settings.Query.(taskdomain.QueryGateway); ok {
+			service, _, err := taskdomain.NewRuntime(pool, gateway, taskdomain.DisabledInterpreter{}, taskdomain.ServiceOptions{
+				OnAuditFailure: func(_ context.Context, event taskdomain.AuditEvent, auditErr error) {
+					logger.Error("task audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error_type", auditErr)
+				},
+			}, false)
+			if err != nil {
+				logger.Error("advanced task runtime is unavailable", "error_type", err)
+			} else {
+				tasks = service
+			}
+		}
+	}
+	registerTaskRoutes(mux, logger, settings.Auth, tasks)
 	registerMatchingRoutes(mux, logger, settings.Auth, settings.Matching)
 	registerChatRoutes(mux, logger, settings.Auth, settings.Chat, settings.ChatResults, settings.ChatLauncher)
 	registerOCRRoutes(mux, logger, settings.Auth, settings.OCR)
