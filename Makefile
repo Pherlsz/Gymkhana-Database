@@ -68,6 +68,7 @@ generate-go:
 	@mkdir -p api/generated/googleforms
 	@mkdir -p api/generated/query
 	@mkdir -p api/generated/matching
+	@mkdir -p api/generated/chat
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-codegen.yaml api/openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-attachments-codegen.yaml api/attachments.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-search-codegen.yaml api/search.openapi.yaml
@@ -75,6 +76,7 @@ generate-go:
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-google-forms-codegen.yaml api/google-forms.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-query-codegen.yaml api/query.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-matching-codegen.yaml api/matching.openapi.yaml
+	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-chat-codegen.yaml api/chat.openapi.yaml
 
 generate-ts:
 	@$(PNPM) generate:openapi:ts

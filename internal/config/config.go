@@ -55,6 +55,13 @@ type GoogleFormsConfig struct {
 	ResponsePageSize    int
 }
 
+type AIChatConfig struct {
+	Enabled   bool
+	Provider  string
+	Model     string
+	Retention time.Duration
+}
+
 type Config struct {
 	Environment      Environment
 	HTTPAddress      string
@@ -64,6 +71,7 @@ type Config struct {
 	ShutdownTimeout  time.Duration
 	Auth             AuthConfig
 	GoogleForms      GoogleFormsConfig
+	AIChat           AIChatConfig
 }
 
 func Load() (Config, error) {
@@ -107,6 +115,17 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_TOKEN_DECRYPTION_KEYS: %w", err)
 	}
+	aiChatEnabled, err := strconv.ParseBool(valueOrDefault("AI_CHAT_ENABLED", "false"))
+	if err != nil {
+		return Config{}, fmt.Errorf("parse AI_CHAT_ENABLED: %w", err)
+	}
+	var aiChatRetention time.Duration
+	if value := strings.TrimSpace(os.Getenv("AI_CHAT_RETENTION")); value != "" {
+		aiChatRetention, err = time.ParseDuration(value)
+		if err != nil {
+			return Config{}, fmt.Errorf("parse AI_CHAT_RETENTION: %w", err)
+		}
+	}
 
 	cfg := Config{
 		Environment:      environment,
@@ -135,6 +154,10 @@ func Load() (Config, error) {
 			TokenKeyVersion:     uint16(googleFormsKeyVersion),
 			SyncInterval:        googleFormsSyncInterval,
 			ResponsePageSize:    googleFormsPageSize,
+		},
+		AIChat: AIChatConfig{
+			Enabled: aiChatEnabled, Provider: strings.ToLower(strings.TrimSpace(os.Getenv("AI_CHAT_PROVIDER"))),
+			Model: strings.TrimSpace(os.Getenv("AI_CHAT_MODEL")), Retention: aiChatRetention,
 		},
 	}
 
@@ -191,6 +214,9 @@ func (cfg Config) validate() error {
 		if cfg.GoogleForms.Enabled {
 			return errors.New("GOOGLE_FORMS_ENABLED requires authentication")
 		}
+		if cfg.AIChat.Enabled {
+			return errors.New("AI_CHAT_ENABLED requires authentication")
+		}
 		return nil
 	}
 	if cfg.DatabaseURL == "" {
@@ -240,6 +266,20 @@ func (cfg Config) validate() error {
 	}
 	if !allowed {
 		return errors.New("AUTH_SUPERADMIN_GITHUB_LOGIN must be included in AUTH_ALLOWED_GITHUB_LOGINS")
+	}
+	if cfg.AIChat.Enabled {
+		if cfg.AIChat.Provider == "" || cfg.AIChat.Model == "" || cfg.AIChat.Retention == 0 {
+			return errors.New("AI_CHAT_PROVIDER, AI_CHAT_MODEL and AI_CHAT_RETENTION are required when AI Chat is enabled")
+		}
+		if len(cfg.AIChat.Model) > 120 {
+			return errors.New("AI_CHAT_MODEL cannot exceed 120 characters")
+		}
+		if cfg.AIChat.Retention < time.Hour || cfg.AIChat.Retention > 365*24*time.Hour {
+			return errors.New("AI_CHAT_RETENTION must be between 1h and 8760h")
+		}
+		if cfg.Environment != EnvironmentTest || cfg.AIChat.Provider != "fake" {
+			return errors.New("AI Chat has no production provider adapter; keep AI_CHAT_ENABLED=false until the owner selects and configures one")
+		}
 	}
 	if !cfg.GoogleForms.Enabled {
 		return nil

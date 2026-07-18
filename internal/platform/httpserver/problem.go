@@ -37,6 +37,15 @@ const (
 	ErrorCodeMatchingCancelled ErrorCode = "matching_cancelled"
 	ErrorCodeMatchingStale     ErrorCode = "matching_stale_preview"
 	ErrorCodeMatchingConflict  ErrorCode = "matching_dependency_conflict"
+	ErrorCodeChatUnavailable   ErrorCode = "chat_unavailable"
+	ErrorCodeChatBusy          ErrorCode = "chat_busy"
+	ErrorCodeChatQuota         ErrorCode = "chat_quota_exceeded"
+	ErrorCodeChatTimeout       ErrorCode = "chat_timeout"
+	ErrorCodeChatCancelled     ErrorCode = "chat_cancelled"
+	ErrorCodeChatStaleContext  ErrorCode = "chat_stale_context"
+	ErrorCodeChatMalformed     ErrorCode = "chat_malformed_provider"
+	ErrorCodeChatToolFailed    ErrorCode = "chat_tool_failed"
+	ErrorCodeChatUnsafeResult  ErrorCode = "chat_unsafe_result"
 	ErrorCodeInternal          ErrorCode = "internal_error"
 )
 

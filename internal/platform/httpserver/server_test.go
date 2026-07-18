@@ -13,6 +13,7 @@ import (
 func TestLiveHealth(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	request := httptest.NewRequest(http.MethodGet, "/health/live", nil)
+	request.Header.Set("X-Request-ID", "attacker-controlled-secret")
 	response := httptest.NewRecorder()
 
 	New(logger, nil).ServeHTTP(response, request)
@@ -22,6 +23,9 @@ func TestLiveHealth(t *testing.T) {
 	}
 	if response.Header().Get("X-Request-ID") == "" {
 		t.Fatal("X-Request-ID header is empty")
+	}
+	if response.Header().Get("X-Request-ID") == request.Header.Get("X-Request-ID") {
+		t.Fatal("server trusted the inbound X-Request-ID")
 	}
 }
 

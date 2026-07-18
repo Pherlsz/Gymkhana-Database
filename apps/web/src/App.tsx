@@ -19,6 +19,7 @@ import {
 } from "@tanstack/react-router";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { AdminUsersPanel } from "./AdminUsersPanel";
+import { ChatPage, normalizeChatSearch } from "./ChatPage";
 import { CustomDataPage } from "./CustomDataPage";
 import { GoogleFormsPage } from "./GoogleFormsPage";
 import { MatchingPage, normalizeMatchingSearch } from "./MatchingPage";
@@ -98,6 +99,12 @@ export const matchingRoute = createRoute({
   validateSearch: normalizeMatchingSearch,
   component: MatchingPage,
 });
+export const chatRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/chat",
+  validateSearch: normalizeChatSearch,
+  component: ChatPage,
+});
 const routeTree = rootRoute.addChildren([
   homeRoute,
   profilesRoute,
@@ -107,6 +114,7 @@ const routeTree = rootRoute.addChildren([
   googleFormsRoute,
   queryRoute,
   matchingRoute,
+  chatRoute,
 ]);
 const router = createRouter({ routeTree });
 declare module "@tanstack/react-router" {
@@ -115,11 +123,13 @@ declare module "@tanstack/react-router" {
   }
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 15_000, retry: 1 } },
-});
-
 export function App() {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { staleTime: 15_000, retry: 1 } },
+      }),
+  );
   const [health, setHealth] = useState<HealthState>("checking");
   const [authentication, setAuthentication] = useState<AuthState>({ kind: "checking" });
   const [signingOut, setSigningOut] = useState(false);
@@ -245,6 +255,14 @@ function AuthenticatedShell() {
               to="/matching"
             >
               Duplicidades
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeChatSearch({})}
+              to="/chat"
+            >
+              Chat
             </Link>
             <Link
               activeProps={{ className: "app-nav__link app-nav__link--active" }}

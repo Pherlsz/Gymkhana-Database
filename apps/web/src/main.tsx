@@ -11,6 +11,7 @@ import "./operations.css";
 import "./google-forms.css";
 import "./query.css";
 import "./matching.css";
+import "./chat.css";
 
 const root = document.getElementById("root");
 
