@@ -109,9 +109,11 @@ WHERE id=$1 AND owner_user_id=$2 AND version=$5
 RETURNING id,owner_user_id,title,active_result_reference_id,retention_expires_at,version,created_at,updated_at`,
 		chatUUID(id), chatAuthUUID(owner), title, now, version))
 	if errors.Is(err, pgx.ErrNoRows) {
-		if _, loadErr := store.GetThread(ctx, id, owner); loadErr == nil {
+		_, loadErr := store.GetThread(ctx, id, owner)
+		if loadErr == nil {
 			return Thread{}, ErrConflict
-		} else if errors.Is(loadErr, ErrNotFound) {
+		}
+		if errors.Is(loadErr, ErrNotFound) {
 			return Thread{}, ErrNotFound
 		}
 		return Thread{}, loadErr
