@@ -144,6 +144,10 @@ The authenticated Matching workspace generates bounded, explainable Profile cand
 
 The private AI Chat uses only permission-filtered, typed, read-only Search and Query tools. It remains disabled in production until the owner selects a provider/model and a default retention period. Configuration, privacy, quotas, crash recovery, smoke testing and rollback are documented in [`docs/AI_CHAT.md`](docs/AI_CHAT.md).
 
+## Multimodal OCR
+
+Private OCR validates authorized PDF/image attachments, creates typed evidence-backed suggestions, and requires human review plus a separate conflict-safe application. Production remains blocked until the owner selects a provider/model and approves its privacy boundary. Configuration, limits, retry/recovery, acceptance, activation, smoke testing, and rollback are documented in [`docs/OCR.md`](docs/OCR.md).
+
 ## Common commands
 
 ```bash
@@ -238,4 +242,5 @@ Private UI/Core versions are pinned only after their releases are published. Per
 - [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md) defines the QueryPlan v1 security, execution, retention, M14, and rollback boundaries.
 - [`docs/MATCHING.md`](docs/MATCHING.md) defines Profile candidate evidence, review lifecycle, explicit merge invariants, operations, and rollback boundaries.
 - [`docs/AI_CHAT.md`](docs/AI_CHAT.md) defines the read-only tool boundary, privacy, quotas, activation, recovery, retention, smoke-test, and rollback procedures.
+- [`docs/OCR.md`](docs/OCR.md) defines source/provider validation, privacy, review/application, retries, activation, acceptance, and rollback procedures.
 - New milestone-status, acceptance-tracking, continuation, or next-action documents must not be created.

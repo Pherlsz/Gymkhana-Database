@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 	"time"
@@ -208,6 +209,37 @@ func (service *Service) List(ctx context.Context, actor auth.Session, owner Owne
 		return nil, ErrInvalidOwner
 	}
 	return service.store.List(ctx, owner, includeTrashed)
+}
+
+// GetForProcessing returns active attachment metadata only after applying the
+// same authorization boundary used by browser downloads. It intentionally does
+// not create a signed URL.
+func (service *Service) GetForProcessing(ctx context.Context, actor auth.Session, id Identifier) (Attachment, error) {
+	value, err := service.store.Get(ctx, id)
+	if err != nil {
+		return Attachment{}, err
+	}
+	if !actor.User.Active || !canReadOwner(actor.User.Role, value.Owner) {
+		return Attachment{}, ErrForbidden
+	}
+	if value.LifecycleState != LifecycleActive {
+		return Attachment{}, ErrInvalidState
+	}
+	return value, nil
+}
+
+// OpenForProcessing keeps private object access inside the trusted backend so
+// provider adapters never need a browser download URL or a storage key.
+func (service *Service) OpenForProcessing(ctx context.Context, actor auth.Session, id Identifier) (Attachment, io.ReadCloser, error) {
+	value, err := service.GetForProcessing(ctx, actor, id)
+	if err != nil {
+		return Attachment{}, nil, err
+	}
+	reader, err := service.objects.Open(ctx, value.ObjectKey)
+	if err != nil {
+		return Attachment{}, nil, err
+	}
+	return value, reader, nil
 }
 
 func (service *Service) Download(ctx context.Context, actor auth.Session, id Identifier, requestID string) (SignedRequest, error) {

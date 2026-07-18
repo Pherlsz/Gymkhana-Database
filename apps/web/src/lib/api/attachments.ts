@@ -161,14 +161,18 @@ function uploadSignedObject(
 }
 
 export async function downloadAttachment(value: AttachmentRecord): Promise<void> {
+  return downloadAttachmentByID(value.id, value.original_filename);
+}
+
+export async function downloadAttachmentByID(id: string, fileName = "anexo-ocr"): Promise<void> {
   const signed = await requestJSON<SignedRequest>(
-    `/api/v1/attachments/${encodeURIComponent(value.id)}/download`,
+    `/api/v1/attachments/${encodeURIComponent(id)}/download`,
     { method: "POST" },
   );
   const anchor = document.createElement("a");
   anchor.href = signed.url;
   anchor.rel = "noreferrer";
-  anchor.download = value.original_filename;
+  anchor.download = fileName;
   anchor.click();
   anchor.remove();
 }

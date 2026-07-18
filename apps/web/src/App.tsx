@@ -25,6 +25,7 @@ import { GoogleFormsPage } from "./GoogleFormsPage";
 import { MatchingPage, normalizeMatchingSearch } from "./MatchingPage";
 import { ProfilesPage, normalizeProfileSearch } from "./ProfilesPage";
 import { OperationsPage, normalizeOperationsSearch } from "./OperationsPage";
+import { OCRPage, normalizeOCRSearch } from "./OCRPage";
 import { QueryPage } from "./QueryPage";
 import { SearchPage, normalizeGlobalSearch } from "./SearchPage";
 import {
@@ -105,6 +106,12 @@ export const chatRoute = createRoute({
   validateSearch: normalizeChatSearch,
   component: ChatPage,
 });
+export const ocrRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/ocr",
+  validateSearch: normalizeOCRSearch,
+  component: OCRPage,
+});
 const routeTree = rootRoute.addChildren([
   homeRoute,
   profilesRoute,
@@ -115,6 +122,7 @@ const routeTree = rootRoute.addChildren([
   queryRoute,
   matchingRoute,
   chatRoute,
+  ocrRoute,
 ]);
 const router = createRouter({ routeTree });
 declare module "@tanstack/react-router" {
@@ -263,6 +271,14 @@ function AuthenticatedShell() {
               to="/chat"
             >
               Chat
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeOCRSearch({})}
+              to="/ocr"
+            >
+              OCR
             </Link>
             <Link
               activeProps={{ className: "app-nav__link app-nav__link--active" }}

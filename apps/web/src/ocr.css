@@ -1,0 +1,172 @@
+.ocr-start,
+.ocr-jobs,
+.ocr-job-summary,
+.ocr-suggestion,
+.ocr-apply-bar,
+.ocr-empty {
+  padding: var(--gym-space-5);
+}
+
+.ocr-confirm {
+  padding: var(--gym-space-5);
+  border-color: var(--gym-color-warning, var(--gym-color-border));
+}
+
+.ocr-start label,
+.ocr-editor {
+  display: grid;
+  gap: var(--gym-space-2);
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.ocr-start input,
+.ocr-editor input,
+.ocr-editor textarea {
+  inline-size: 100%;
+  min-block-size: 2.5rem;
+  padding: var(--gym-space-2) var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+  color: var(--gym-color-text);
+}
+
+.ocr-workspace {
+  display: grid;
+  grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr);
+  gap: var(--gym-space-4);
+  align-items: start;
+}
+
+.ocr-jobs {
+  position: sticky;
+  inset-block-start: 6rem;
+}
+
+.ocr-jobs nav,
+.ocr-review-workspace,
+.ocr-suggestions {
+  display: grid;
+  gap: var(--gym-space-3);
+}
+
+.ocr-job-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gym-space-3);
+  inline-size: 100%;
+  padding: var(--gym-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--gym-radius-md);
+  background: transparent;
+  color: var(--gym-color-text);
+  text-align: start;
+  cursor: pointer;
+}
+
+.ocr-job-link:hover,
+.ocr-job-link[aria-current="page"] {
+  border-color: var(--gym-color-border);
+  background: var(--gym-color-surface-raised);
+}
+
+.ocr-job-link span:first-child {
+  display: grid;
+  gap: var(--gym-space-1);
+  min-inline-size: 0;
+}
+
+.ocr-job-link small,
+.ocr-muted,
+.ocr-field-key,
+.ocr-evidence small {
+  color: var(--gym-color-text-muted);
+}
+
+.ocr-job-summary h2,
+.ocr-suggestion h3,
+.ocr-start h2,
+.ocr-jobs h2,
+.ocr-empty h2 {
+  margin: 0;
+}
+
+.ocr-job-summary > div > div:first-child,
+.ocr-apply-bar > div > div:first-child,
+.ocr-suggestion > div > div:first-child {
+  justify-content: space-between;
+}
+
+.ocr-job-metrics,
+.ocr-comparison {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--gym-space-3);
+}
+
+.ocr-job-metrics > div,
+.ocr-comparison > div {
+  display: grid;
+  gap: var(--gym-space-1);
+  padding: var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+}
+
+.ocr-job-metrics span,
+.ocr-comparison span {
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.ocr-suggestion {
+  overflow-wrap: anywhere;
+}
+
+.ocr-selection {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gym-space-2);
+  min-block-size: 2rem;
+}
+
+.ocr-selection input {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+}
+
+.ocr-evidence {
+  padding: var(--gym-space-3);
+  border-inline-start: 0.25rem solid var(--gym-color-border);
+  background: var(--gym-color-surface-raised);
+}
+
+.ocr-evidence p {
+  margin-block: var(--gym-space-2);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 64rem) {
+  .ocr-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .ocr-jobs {
+    position: static;
+  }
+
+  .ocr-jobs nav {
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  }
+}
+
+@media (max-width: 42rem) {
+  .ocr-job-summary > div > div:first-child,
+  .ocr-apply-bar > div > div:first-child,
+  .ocr-suggestion > div > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

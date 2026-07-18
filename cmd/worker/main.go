@@ -11,12 +11,17 @@ import (
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/attachment"
+	"github.com/Pherlsz/Gymkhana-Database/internal/bill"
 	"github.com/Pherlsz/Gymkhana-Database/internal/config"
+	"github.com/Pherlsz/Gymkhana-Database/internal/customdata"
+	"github.com/Pherlsz/Gymkhana-Database/internal/document"
 	"github.com/Pherlsz/Gymkhana-Database/internal/googleforms"
 	"github.com/Pherlsz/Gymkhana-Database/internal/matching"
+	"github.com/Pherlsz/Gymkhana-Database/internal/ocr"
 	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/logging"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/postgres"
+	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
 	"github.com/Pherlsz/Gymkhana-Database/internal/queryengine"
 )
 
@@ -131,9 +136,64 @@ func run() error {
 			return fmt.Errorf("start Google Forms worker: %w", err)
 		}
 	}
+	var ocrService *ocr.Service
+	var ocrClient interface {
+		Start(context.Context) error
+		Stop(context.Context) error
+		Stopped() <-chan struct{}
+	}
+	if cfg.OCR.Enabled {
+		profileService, err := profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{})
+		if err != nil {
+			return fmt.Errorf("configure OCR Profile target: %w", err)
+		}
+		documentService, err := document.NewService(document.NewPostgresStore(pool), document.ServiceOptions{})
+		if err != nil {
+			return fmt.Errorf("configure OCR Document target: %w", err)
+		}
+		billService, err := bill.NewService(bill.NewPostgresStore(pool), bill.ServiceOptions{})
+		if err != nil {
+			return fmt.Errorf("configure OCR Bill target: %w", err)
+		}
+		customService, err := customdata.NewService(customdata.NewPostgresStore(pool), customdata.ServiceOptions{})
+		if err != nil {
+			return fmt.Errorf("configure OCR custom-data target: %w", err)
+		}
+		targets, err := ocr.NewDomainTargetGateway(profileService, documentService, billService, customService)
+		if err != nil {
+			return fmt.Errorf("configure OCR targets: %w", err)
+		}
+		var extractor ocr.Extractor
+		switch cfg.OCR.Provider {
+		case "fake":
+			extractor = ocr.NewDeterministicFakeExtractor()
+		default:
+			return errors.New("OCR production provider adapter is not configured")
+		}
+		ocrRuntime, runtimeClient, runtimeErr := ocr.NewRuntime(pool, attachmentCleanup, targets, extractor, ocr.ServiceOptions{
+			Timeout: cfg.OCR.Timeout, MaximumRate: cfg.OCR.MaximumRequests,
+			MaximumProviderUsage: cfg.OCR.MaximumProviderUsage, MaximumSourceBytes: cfg.OCR.MaximumSourceBytes,
+			OnAuditFailure: func(_ context.Context, event ocr.AuditEvent, auditErr error) {
+				logger.Error("OCR audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome,
+					"error_code", event.ErrorCode, "request_id", event.RequestID, "error_type", fmt.Sprintf("%T", auditErr))
+			},
+		}, true)
+		if runtimeErr != nil {
+			return fmt.Errorf("configure OCR worker: %w", runtimeErr)
+		}
+		ocrService, ocrClient = ocrRuntime, runtimeClient
+		if err := ocrClient.Start(rootCtx); err != nil {
+			return fmt.Errorf("start OCR worker: %w", err)
+		}
+	}
 	cleanupDone := make(chan struct{})
 	go runCleanupScheduler(rootCtx, logger, service, attachmentCleanup, queryCleanup, matchingService, googleFormsService, cfg.GoogleForms.SyncInterval, cleanupDone)
-	logger.Info("operations worker started", "queues", []string{operations.OperationsQueue, matching.Queue})
+	ocrRecoveryDone := startOCRRecovery(rootCtx, logger, ocrService)
+	queues := []string{operations.OperationsQueue, matching.Queue}
+	if cfg.OCR.Enabled {
+		queues = append(queues, ocr.Queue)
+	}
+	logger.Info("operations worker started", "queues", queues)
 	select {
 	case <-rootCtx.Done():
 	case <-client.Stopped():
@@ -147,6 +207,10 @@ func run() error {
 	case <-matchingClient.Stopped():
 		if rootCtx.Err() == nil {
 			return errors.New("matching worker stopped unexpectedly")
+		}
+	case <-ocrStopped(ocrClient):
+		if rootCtx.Err() == nil {
+			return errors.New("OCR worker stopped unexpectedly")
 		}
 	}
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
@@ -162,8 +226,18 @@ func run() error {
 	if err := matchingClient.Stop(shutdownCtx); err != nil && !errors.Is(err, context.Canceled) {
 		return fmt.Errorf("stop matching worker: %w", err)
 	}
+	if ocrClient != nil {
+		if err := ocrClient.Stop(shutdownCtx); err != nil && !errors.Is(err, context.Canceled) {
+			return fmt.Errorf("stop OCR worker: %w", err)
+		}
+	}
 	select {
 	case <-cleanupDone:
+	case <-shutdownCtx.Done():
+		return shutdownCtx.Err()
+	}
+	select {
+	case <-ocrRecoveryDone:
 	case <-shutdownCtx.Done():
 		return shutdownCtx.Err()
 	}
@@ -230,4 +304,44 @@ func googleFormsStopped(client interface{ Stopped() <-chan struct{} }) <-chan st
 		return nil
 	}
 	return client.Stopped()
+}
+
+func ocrStopped(client interface{ Stopped() <-chan struct{} }) <-chan struct{} {
+	if client == nil {
+		return nil
+	}
+	return client.Stopped()
+}
+
+func startOCRRecovery(ctx context.Context, logger *slog.Logger, service *ocr.Service) <-chan struct{} {
+	done := make(chan struct{})
+	if service == nil {
+		close(done)
+		return done
+	}
+	go func() {
+		defer close(done)
+		recoverJobs := func() {
+			recoveryCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			affected, err := service.RecoverStaleJobs(recoveryCtx)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				logger.Error("OCR stale-job recovery failed", "error_type", fmt.Sprintf("%T", err))
+			} else if affected > 0 {
+				logger.Info("OCR stale-job recovery completed", "affected_jobs", affected)
+			}
+		}
+		recoverJobs()
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				recoverJobs()
+			}
+		}
+	}()
+	return done
 }

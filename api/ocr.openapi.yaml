@@ -1,0 +1,450 @@
+openapi: 3.1.0
+info:
+  title: Gymkhana Multimodal OCR API
+  version: 1.0.0
+  description: Private attachment extraction with evidence, human review, and explicit conflict-safe application.
+servers:
+  - url: http://localhost:8080
+security:
+  - sessionCookie: []
+paths:
+  /api/v1/ocr/capability:
+    get:
+      operationId: getOCRCapability
+      responses:
+        "200":
+          description: Runtime capability; enabled is false while no production adapter is configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OCRCapability"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/ocr/jobs:
+    get:
+      operationId: listOCRJobs
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Owner-scoped jobs whose source attachment remains active.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OCRJobPage"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: startOCRJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartOCRJobRequest"
+      responses:
+        "202":
+          description: Durable extraction accepted or idempotently replayed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OCRJob"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "415": { $ref: "#/components/responses/UnsafeSource" }
+        "429": { $ref: "#/components/responses/Quota" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/ocr/jobs/{job_id}:
+    parameters:
+      - $ref: "#/components/parameters/JobID"
+    get:
+      operationId: getOCRJob
+      responses:
+        "200":
+          description: Job status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OCRJob"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/ocr/jobs/{job_id}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/JobID"
+    post:
+      operationId: cancelOCRJob
+      responses:
+        "200":
+          description: Cancellation requested or completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OCRJob"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/ocr/jobs/{job_id}/events:
+    parameters:
+      - $ref: "#/components/parameters/JobID"
+      - name: after
+        in: query
+        required: false
+        schema: { type: integer, format: int64, minimum: 0, default: 0 }
+    get:
+      operationId: streamOCRJobEvents
+      parameters:
+        - name: Last-Event-ID
+          in: header
+          required: false
+          schema: { type: integer, format: int64, minimum: 0 }
+      responses:
+        "200":
+          description: Resumable SSE stream. Each data field is an OCRJobEvent JSON object.
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /api/v1/ocr/jobs/{job_id}/suggestions:
+    parameters:
+      - $ref: "#/components/parameters/JobID"
+    get:
+      operationId: listOCRSuggestions
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Extracted fields with immutable evidence and current target state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OCRSuggestionPage"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/ocr/suggestions/{suggestion_id}:
+    parameters:
+      - name: suggestion_id
+        in: path
+        required: true
+        schema: { $ref: "#/components/schemas/UUID" }
+    patch:
+      operationId: reviewOCRSuggestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewOCRSuggestionRequest"
+      responses:
+        "200":
+          description: Updated review decision.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OCRSuggestion"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/ocr/jobs/{job_id}/apply:
+    parameters:
+      - $ref: "#/components/parameters/JobID"
+    post:
+      operationId: applyOCRSuggestions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplyOCRSuggestionsRequest"
+      responses:
+        "200":
+          description: Idempotent per-suggestion application receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OCRApplyReceipt"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: gymkhana_session
+  parameters:
+    JobID:
+      name: job_id
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/UUID" }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100 }
+    Offset:
+      name: offset
+      in: query
+      required: false
+      schema: { type: integer, minimum: 0, maximum: 10000, default: 0 }
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+    Timestamp:
+      type: string
+      format: date-time
+    OCRCapability:
+      type: object
+      additionalProperties: false
+      required: [enabled, supported_mimes, maximum_source_bytes, maximum_pages, maximum_pixels, maximum_suggestions, maximum_duration_seconds, maximum_requests_per_hour, maximum_provider_usage_per_hour]
+      properties:
+        enabled: { type: boolean }
+        supported_mimes:
+          type: array
+          items: { type: string, enum: [application/pdf, image/jpeg, image/png] }
+        maximum_source_bytes: { type: integer, format: int64, minimum: 1, maximum: 20971520 }
+        maximum_pages: { type: integer, minimum: 1, maximum: 20 }
+        maximum_pixels: { type: integer, format: int64, minimum: 1, maximum: 40000000 }
+        maximum_suggestions: { type: integer, minimum: 1, maximum: 100 }
+        maximum_duration_seconds: { type: integer, format: int64, minimum: 1, maximum: 300 }
+        maximum_requests_per_hour: { type: integer, minimum: 1, maximum: 1000 }
+        maximum_provider_usage_per_hour: { type: integer, format: int64, minimum: 1, maximum: 100000000 }
+    OCRJobState:
+      type: string
+      enum: [QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED]
+    OCRJob:
+      type: object
+      additionalProperties: false
+      required: [id, attachment_id, source_mime, source_bytes, state, attempt_count, page_count, pixel_count, suggestion_count, provider_usage, version, created_at, updated_at]
+      properties:
+        id: { $ref: "#/components/schemas/UUID" }
+        attachment_id: { $ref: "#/components/schemas/UUID" }
+        retry_of_job_id: { $ref: "#/components/schemas/UUID" }
+        source_mime: { type: string, enum: [application/pdf, image/jpeg, image/png] }
+        source_bytes: { type: integer, format: int64, minimum: 1, maximum: 20971520 }
+        state: { $ref: "#/components/schemas/OCRJobState" }
+        attempt_count: { type: integer, minimum: 0, maximum: 3 }
+        page_count: { type: integer, minimum: 0, maximum: 20 }
+        pixel_count: { type: integer, format: int64, minimum: 0, maximum: 40000000 }
+        suggestion_count: { type: integer, minimum: 0, maximum: 100 }
+        provider_usage: { type: integer, format: int64, minimum: 0, maximum: 100000000 }
+        error_code: { type: string, minLength: 1, maxLength: 80 }
+        cancel_requested_at: { $ref: "#/components/schemas/Timestamp" }
+        started_at: { $ref: "#/components/schemas/Timestamp" }
+        completed_at: { $ref: "#/components/schemas/Timestamp" }
+        version: { type: integer, format: int64, minimum: 1 }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+        updated_at: { $ref: "#/components/schemas/Timestamp" }
+    OCRJobPage:
+      type: object
+      additionalProperties: false
+      required: [jobs, total, limit, offset]
+      properties:
+        jobs: { type: array, items: { $ref: "#/components/schemas/OCRJob" } }
+        total: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        offset: { type: integer, minimum: 0 }
+    StartOCRJobRequest:
+      type: object
+      additionalProperties: false
+      required: [attachment_id, idempotency_key]
+      properties:
+        attachment_id: { $ref: "#/components/schemas/UUID" }
+        idempotency_key: { type: string, pattern: "^[A-Za-z0-9._:-]{8,128}$" }
+        retry_of_job_id: { $ref: "#/components/schemas/UUID" }
+    OCRTargetKind:
+      type: string
+      enum: [PROFILE, DOCUMENT, BILL, CUSTOM_FIELD]
+    OCRValueKind:
+      type: string
+      enum: [TEXT, LONG_TEXT, INTEGER, DECIMAL, BOOLEAN, CIVIL_DATE, CIVIL_MONTH, EMAIL, PHONE]
+    OCRReviewState:
+      type: string
+      enum: [PENDING, ACCEPTED, REJECTED, APPLIED, STALE]
+    OCREvidenceRegion:
+      type: object
+      additionalProperties: false
+      required: [x, y, width, height]
+      properties:
+        x: { type: integer, minimum: 0, maximum: 9999 }
+        y: { type: integer, minimum: 0, maximum: 9999 }
+        width: { type: integer, minimum: 1, maximum: 10000 }
+        height: { type: integer, minimum: 1, maximum: 10000 }
+    OCREvidence:
+      type: object
+      additionalProperties: false
+      required: [page]
+      properties:
+        page: { type: integer, minimum: 1, maximum: 20 }
+        region: { $ref: "#/components/schemas/OCREvidenceRegion" }
+        excerpt: { type: string, minLength: 1, maxLength: 500 }
+        confidence: { type: integer, minimum: 0, maximum: 1000 }
+    OCRSuggestion:
+      type: object
+      additionalProperties: false
+      required: [id, job_id, ordinal, target_kind, target_id, target_version, field_key, field_label, value_kind, proposed_value, evidence, review_state, version, created_at, updated_at]
+      properties:
+        id: { $ref: "#/components/schemas/UUID" }
+        job_id: { $ref: "#/components/schemas/UUID" }
+        ordinal: { type: integer, minimum: 1, maximum: 100 }
+        target_kind: { $ref: "#/components/schemas/OCRTargetKind" }
+        target_id: { $ref: "#/components/schemas/UUID" }
+        target_version: { type: integer, format: int64, minimum: 1 }
+        field_key: { type: string, minLength: 2, maxLength: 120 }
+        field_label: { type: string, minLength: 1, maxLength: 160 }
+        value_kind: { $ref: "#/components/schemas/OCRValueKind" }
+        proposed_value: { type: string, minLength: 1, maxLength: 5000 }
+        evidence: { $ref: "#/components/schemas/OCREvidence" }
+        review_state: { $ref: "#/components/schemas/OCRReviewState" }
+        reviewed_value: { type: string, maxLength: 5000 }
+        reviewed_at: { $ref: "#/components/schemas/Timestamp" }
+        applied_at: { $ref: "#/components/schemas/Timestamp" }
+        version: { type: integer, format: int64, minimum: 1 }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+        updated_at: { $ref: "#/components/schemas/Timestamp" }
+    OCRSuggestionView:
+      type: object
+      additionalProperties: false
+      required: [suggestion, current_value, current_version, stale]
+      properties:
+        suggestion: { $ref: "#/components/schemas/OCRSuggestion" }
+        current_value: { type: string, maxLength: 5000 }
+        current_version: { type: integer, format: int64, minimum: 0 }
+        stale: { type: boolean }
+    OCRSuggestionPage:
+      type: object
+      additionalProperties: false
+      required: [suggestions, total, limit, offset]
+      properties:
+        suggestions: { type: array, items: { $ref: "#/components/schemas/OCRSuggestionView" } }
+        total: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        offset: { type: integer, minimum: 0 }
+    OCRReviewAction:
+      type: string
+      enum: [ACCEPT, REJECT]
+    ReviewOCRSuggestionRequest:
+      type: object
+      additionalProperties: false
+      required: [action, version]
+      properties:
+        action: { $ref: "#/components/schemas/OCRReviewAction" }
+        value: { type: string, maxLength: 5000 }
+        version: { type: integer, format: int64, minimum: 1 }
+    OCRApplySelection:
+      type: object
+      additionalProperties: false
+      required: [suggestion_id, version]
+      properties:
+        suggestion_id: { $ref: "#/components/schemas/UUID" }
+        version: { type: integer, format: int64, minimum: 1 }
+    ApplyOCRSuggestionsRequest:
+      type: object
+      additionalProperties: false
+      required: [idempotency_key, selections]
+      properties:
+        idempotency_key: { type: string, pattern: "^[A-Za-z0-9._:-]{8,128}$" }
+        selections:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: "#/components/schemas/OCRApplySelection" }
+    OCRApplyReceiptState:
+      type: string
+      enum: [RUNNING, COMPLETED]
+    OCRApplyOutcome:
+      type: string
+      enum: [APPLIED, STALE, FAILED]
+    OCRApplyResult:
+      type: object
+      additionalProperties: false
+      required: [suggestion_id, outcome, created_at]
+      properties:
+        suggestion_id: { $ref: "#/components/schemas/UUID" }
+        outcome: { $ref: "#/components/schemas/OCRApplyOutcome" }
+        target_version: { type: integer, format: int64, minimum: 1 }
+        error_code: { type: string, minLength: 1, maxLength: 80 }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+    OCRApplyReceipt:
+      type: object
+      additionalProperties: false
+      required: [id, job_id, state, results, created_at, updated_at]
+      properties:
+        id: { $ref: "#/components/schemas/UUID" }
+        job_id: { $ref: "#/components/schemas/UUID" }
+        state: { $ref: "#/components/schemas/OCRApplyReceiptState" }
+        results: { type: array, items: { $ref: "#/components/schemas/OCRApplyResult" } }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+        updated_at: { $ref: "#/components/schemas/Timestamp" }
+        completed_at: { $ref: "#/components/schemas/Timestamp" }
+    OCRJobEventKind:
+      type: string
+      enum: [JOB_ACCEPTED, JOB_STARTED, SOURCE_VALIDATED, SUGGESTIONS_READY, JOB_COMPLETED, JOB_FAILED, JOB_CANCELLED]
+    OCRJobEvent:
+      type: object
+      additionalProperties: false
+      required: [sequence, kind, created_at]
+      properties:
+        sequence: { type: integer, format: int64, minimum: 1 }
+        kind: { $ref: "#/components/schemas/OCRJobEventKind" }
+        page_count: { type: integer, minimum: 1, maximum: 20 }
+        suggestion_count: { type: integer, minimum: 0, maximum: 100 }
+        error_code: { type: string, minLength: 1, maxLength: 80 }
+        created_at: { $ref: "#/components/schemas/Timestamp" }
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+        request_id: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Unauthorized:
+      description: Authentication required.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Forbidden:
+      description: Source or target is outside the actor authorization scope.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    NotFound:
+      description: Resource not found or no longer active.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Conflict:
+      description: Optimistic version, state, idempotency payload, or target changed.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    UnsafeSource:
+      description: MIME, size, page, pixel, hash, encryption, or structural source validation failed.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Quota:
+      description: Per-owner request or provider usage limit reached.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Unavailable:
+      description: OCR runtime or provider unavailable.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }

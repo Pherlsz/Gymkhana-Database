@@ -46,6 +46,13 @@ const (
 	ErrorCodeChatMalformed     ErrorCode = "chat_malformed_provider"
 	ErrorCodeChatToolFailed    ErrorCode = "chat_tool_failed"
 	ErrorCodeChatUnsafeResult  ErrorCode = "chat_unsafe_result"
+	ErrorCodeOCRUnavailable    ErrorCode = "ocr_unavailable"
+	ErrorCodeOCRQuota          ErrorCode = "ocr_quota_exceeded"
+	ErrorCodeOCRTimeout        ErrorCode = "ocr_timeout"
+	ErrorCodeOCRCancelled      ErrorCode = "ocr_cancelled"
+	ErrorCodeOCRStaleTarget    ErrorCode = "ocr_stale_target"
+	ErrorCodeOCRUnsafeSource   ErrorCode = "ocr_unsafe_source"
+	ErrorCodeOCRMalformed      ErrorCode = "ocr_malformed_provider"
 	ErrorCodeInternal          ErrorCode = "internal_error"
 )
 
