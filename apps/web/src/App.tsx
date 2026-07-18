@@ -233,28 +233,106 @@ function AuthenticatedShell() {
         <Inline align="center">
           <strong>Gymkhana Database</strong>
           <nav aria-label="Navegação principal" className="app-nav">
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" to="/">Início</Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" to="/profiles" search={normalizeProfileSearch({})}>Pessoas</Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeGlobalSearch({})} to="/search">Buscar</Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeQuerySearch({})} to="/query">Consultar</Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeTaskSearch({})} to="/tasks">Tarefas</Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeMatchingSearch({})} to="/matching">Duplicidades</Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeChatSearch({})} to="/chat">Chat</Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeOCRSearch({})} to="/ocr">OCR</Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" to="/custom-data">Dados personalizados</Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeOperationsSearch({})} to="/operations">Operações</Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              to="/"
+            >
+              Início
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              to="/profiles"
+              search={normalizeProfileSearch({})}
+            >
+              Pessoas
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeGlobalSearch({})}
+              to="/search"
+            >
+              Buscar
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeQuerySearch({})}
+              to="/query"
+            >
+              Consultar
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeTaskSearch({})}
+              to="/tasks"
+            >
+              Tarefas
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeMatchingSearch({})}
+              to="/matching"
+            >
+              Duplicidades
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeChatSearch({})}
+              to="/chat"
+            >
+              Chat
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeOCRSearch({})}
+              to="/ocr"
+            >
+              OCR
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              to="/custom-data"
+            >
+              Dados personalizados
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeOperationsSearch({})}
+              to="/operations"
+            >
+              Operações
+            </Link>
             {canManageUsers(session.user.role) ? (
-              <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" to="/google-forms">Google Forms</Link>
+              <Link
+                activeProps={{ className: "app-nav__link app-nav__link--active" }}
+                className="app-nav__link"
+                to="/google-forms"
+              >
+                Google Forms
+              </Link>
             ) : null}
           </nav>
         </Inline>
         <Inline align="center">
           <span className="current-user">@{session.user.login}</span>
           <StatusBadge tone="success">{roleLabel(session.user.role)}</StatusBadge>
-          <Button disabled={signingOut} onClick={signOut}>{signingOut ? "Saindo" : "Sair"}</Button>
+          <Button disabled={signingOut} onClick={signOut}>
+            {signingOut ? "Saindo" : "Sair"}
+          </Button>
         </Inline>
       </AppShell.Header>
-      <AppShell.Main><Outlet /></AppShell.Main>
+      <AppShell.Main>
+        <Outlet />
+      </AppShell.Main>
     </AppShell.Root>
   );
 }
@@ -266,23 +344,33 @@ function HomePage() {
       <Page.Header>
         <Page.Eyebrow>Aplicação privada</Page.Eyebrow>
         <Page.Title>Gymkhana Database</Page.Title>
-        <Page.Description>Gerencie pessoas e permissões com sessões privadas e dados normalizados.</Page.Description>
+        <Page.Description>
+          Gerencie pessoas e permissões com sessões privadas e dados normalizados.
+        </Page.Description>
       </Page.Header>
       <Page.Content>
         <Stack gap="6">
           <Surface className="authentication-panel" tone="raised">
             <Stack gap="3">
               <strong>{session.user.display_name}</strong>
-              <span className="authentication-panel__description">@{session.user.login} · {roleLabel(session.user.role)}</span>
+              <span className="authentication-panel__description">
+                @{session.user.login} · {roleLabel(session.user.role)}
+              </span>
               <StatusBadge tone="success">Sessão ativa</StatusBadge>
             </Stack>
           </Surface>
           {canManageUsers(session.user.role) ? (
-            <Page.Section description="Funções, acesso ativo e revogação de sessões são controlados pela aplicação." title="Administração de usuários">
+            <Page.Section
+              description="Funções, acesso ativo e revogação de sessões são controlados pela aplicação."
+              title="Administração de usuários"
+            >
               <AdminUsersPanel currentLogin={session.user.login} />
             </Page.Section>
           ) : null}
-          <Page.Section description="A infraestrutura compartilhada continua consumida somente por versões exatas." title="Foundation status">
+          <Page.Section
+            description="A infraestrutura compartilhada continua consumida somente por versões exatas."
+            title="Foundation status"
+          >
             <Inline align="stretch">
               <FoundationCard label="Frontend" value="React + TypeScript" />
               <FoundationCard label="Core" value="v0.2.1" />
@@ -315,13 +403,29 @@ function PublicShell(props: {
           <Page.Header>
             <Page.Eyebrow>Private application access</Page.Eyebrow>
             <Page.Title>Gymkhana Database</Page.Title>
-            <Page.Description>Acesso privado com GitHub, sessões revogáveis de 24 horas e permissões da aplicação.</Page.Description>
-            <Page.Actions><Button disabled={props.health === "checking"} onClick={props.onRefreshHealth}>Verificar API</Button></Page.Actions>
+            <Page.Description>
+              Acesso privado com GitHub, sessões revogáveis de 24 horas e permissões da aplicação.
+            </Page.Description>
+            <Page.Actions>
+              <Button disabled={props.health === "checking"} onClick={props.onRefreshHealth}>
+                Verificar API
+              </Button>
+            </Page.Actions>
           </Page.Header>
           <Page.Content>
             <Stack gap="6">
-              {props.health === "unavailable" ? <Alert title="API indisponível" tone="danger">Verifique se o serviço está em execução e tente novamente.</Alert> : null}
-              <AuthenticationPanel authentication={props.authentication} signingOut={props.signingOut} onLogin={props.onLogin} onRetry={props.onRetry} onSignOut={props.onSignOut} />
+              {props.health === "unavailable" ? (
+                <Alert title="API indisponível" tone="danger">
+                  Verifique se o serviço está em execução e tente novamente.
+                </Alert>
+              ) : null}
+              <AuthenticationPanel
+                authentication={props.authentication}
+                signingOut={props.signingOut}
+                onLogin={props.onLogin}
+                onRetry={props.onRetry}
+                onSignOut={props.onSignOut}
+              />
             </Stack>
           </Page.Content>
         </Page.Root>
@@ -330,7 +434,19 @@ function PublicShell(props: {
   );
 }
 
-function AuthenticationPanel({ authentication, signingOut, onLogin, onRetry, onSignOut }: { authentication: AuthState; signingOut: boolean; onLogin: () => void; onRetry: () => void; onSignOut: () => void }) {
+function AuthenticationPanel({
+  authentication,
+  signingOut,
+  onLogin,
+  onRetry,
+  onSignOut,
+}: {
+  authentication: AuthState;
+  signingOut: boolean;
+  onLogin: () => void;
+  onRetry: () => void;
+  onSignOut: () => void;
+}) {
   switch (authentication.kind) {
     case "checking":
       return <Alert title="Verificando acesso">Validando a sessão da aplicação.</Alert>;
@@ -338,31 +454,73 @@ function AuthenticationPanel({ authentication, signingOut, onLogin, onRetry, onS
       return (
         <Surface className="authentication-panel" tone="raised">
           <Stack gap="4">
-            <div><strong>Autenticação necessária</strong><p className="authentication-panel__description">Entre com uma conta GitHub previamente autorizada.</p></div>
-            <Inline><Button onClick={onLogin}>Entrar com GitHub</Button></Inline>
+            <div>
+              <strong>Autenticação necessária</strong>
+              <p className="authentication-panel__description">
+                Entre com uma conta GitHub previamente autorizada.
+              </p>
+            </div>
+            <Inline>
+              <Button onClick={onLogin}>Entrar com GitHub</Button>
+            </Inline>
           </Stack>
         </Surface>
       );
     case "disabled":
-      return <Alert title="Autenticação desativada neste ambiente" tone="info">Configure as variáveis OAuth para testar o acesso privado localmente.</Alert>;
+      return (
+        <Alert title="Autenticação desativada neste ambiente" tone="info">
+          Configure as variáveis OAuth para testar o acesso privado localmente.
+        </Alert>
+      );
     case "unavailable":
-      return <Alert title="Não foi possível verificar a sessão" tone="danger"><Stack gap="3"><span>Tente novamente sem recarregar a página.</span><Inline><Button onClick={onRetry}>Tentar novamente</Button></Inline></Stack></Alert>;
+      return (
+        <Alert title="Não foi possível verificar a sessão" tone="danger">
+          <Stack gap="3">
+            <span>Tente novamente sem recarregar a página.</span>
+            <Inline>
+              <Button onClick={onRetry}>Tentar novamente</Button>
+            </Inline>
+          </Stack>
+        </Alert>
+      );
     case "authenticated":
       return (
         <Surface className="authentication-panel" tone="raised">
           <Stack gap="4">
             <strong>{authentication.session.user.display_name}</strong>
-            <Inline><StatusBadge tone="success">Sessão ativa</StatusBadge><Button disabled={signingOut} onClick={onSignOut}>{signingOut ? "Saindo" : "Sair"}</Button></Inline>
+            <Inline>
+              <StatusBadge tone="success">Sessão ativa</StatusBadge>
+              <Button disabled={signingOut} onClick={onSignOut}>
+                {signingOut ? "Saindo" : "Sair"}
+              </Button>
+            </Inline>
           </Stack>
         </Surface>
       );
   }
 }
 function FoundationCard({ label, value }: { label: string; value: string }) {
-  return <Surface className="foundation-card" tone="raised"><Stack gap="2"><span className="foundation-card__label">{label}</span><strong>{value}</strong></Stack></Surface>;
+  return (
+    <Surface className="foundation-card" tone="raised">
+      <Stack gap="2">
+        <span className="foundation-card__label">{label}</span>
+        <strong>{value}</strong>
+      </Stack>
+    </Surface>
+  );
 }
-function canManageUsers(role: "MEMBER" | "ADMIN" | "SUPERADMIN") { return role === "ADMIN" || role === "SUPERADMIN"; }
-function roleLabel(role: "MEMBER" | "ADMIN" | "SUPERADMIN") { return role === "SUPERADMIN" ? "Superadmin" : role === "ADMIN" ? "Admin" : "Membro"; }
+function canManageUsers(role: "MEMBER" | "ADMIN" | "SUPERADMIN") {
+  return role === "ADMIN" || role === "SUPERADMIN";
+}
+function roleLabel(role: "MEMBER" | "ADMIN" | "SUPERADMIN") {
+  return role === "SUPERADMIN" ? "Superadmin" : role === "ADMIN" ? "Admin" : "Membro";
+}
 function authenticationTone(authentication: AuthState): "neutral" | "success" | "danger" | "info" {
-  return authentication.kind === "authenticated" ? "success" : authentication.kind === "unavailable" ? "danger" : authentication.kind === "unauthenticated" ? "info" : "neutral";
+  return authentication.kind === "authenticated"
+    ? "success"
+    : authentication.kind === "unavailable"
+      ? "danger"
+      : authentication.kind === "unauthenticated"
+        ? "info"
+        : "neutral";
 }

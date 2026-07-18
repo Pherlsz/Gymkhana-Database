@@ -245,16 +245,16 @@ type QueryGateway interface {
 type AuditEventType string
 
 const (
-	AuditDraftCreated AuditEventType = "DRAFT_CREATED"
+	AuditDraftCreated  AuditEventType = "DRAFT_CREATED"
 	AuditDraftReviewed AuditEventType = "DRAFT_REVIEWED"
-	AuditJobCreated AuditEventType = "JOB_CREATED"
-	AuditJobRead AuditEventType = "JOB_READ"
-	AuditJobStarted AuditEventType = "JOB_STARTED"
-	AuditJobCancelled AuditEventType = "JOB_CANCELLED"
-	AuditJobCompleted AuditEventType = "JOB_COMPLETED"
-	AuditJobFailed AuditEventType = "JOB_FAILED"
-	AuditJobRecovered AuditEventType = "JOB_RECOVERED"
-	AuditResultRead AuditEventType = "RESULT_READ"
+	AuditJobCreated    AuditEventType = "JOB_CREATED"
+	AuditJobRead       AuditEventType = "JOB_READ"
+	AuditJobStarted    AuditEventType = "JOB_STARTED"
+	AuditJobCancelled  AuditEventType = "JOB_CANCELLED"
+	AuditJobCompleted  AuditEventType = "JOB_COMPLETED"
+	AuditJobFailed     AuditEventType = "JOB_FAILED"
+	AuditJobRecovered  AuditEventType = "JOB_RECOVERED"
+	AuditResultRead    AuditEventType = "RESULT_READ"
 )
 
 type AuditEvent struct {

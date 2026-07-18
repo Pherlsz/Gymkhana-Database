@@ -51,7 +51,10 @@ export function TaskPage() {
   const search = taskRoute.useSearch();
   const navigate = taskRoute.useNavigate();
   const queryClient = useQueryClient();
-  const capability = useQuery({ queryKey: ["task-capability"], queryFn: ({ signal }) => getTaskCapability(signal) });
+  const capability = useQuery({
+    queryKey: ["task-capability"],
+    queryFn: ({ signal }) => getTaskCapability(signal),
+  });
   const catalog = useQuery({
     queryKey: ["advanced-query-catalog"],
     queryFn: ({ signal }) => getAdvancedQueryCatalog(signal),
@@ -220,7 +223,11 @@ export function TaskPage() {
               variant={search.mode === mode ? "primary" : "secondary"}
               onClick={() => void navigate({ search: (previous) => ({ ...previous, mode }) })}
             >
-              {mode === "visual" ? "Visual" : mode === "json" ? "QueryPlan JSON" : "Tarefa completa"}
+              {mode === "visual"
+                ? "Visual"
+                : mode === "json"
+                  ? "QueryPlan JSON"
+                  : "Tarefa completa"}
             </Button>
           ))}
         </Inline>
@@ -229,7 +236,8 @@ export function TaskPage() {
         {catalog.isError ? <RequestError error={catalog.error} /> : null}
         {capability.data && !capability.data.semantic_interpretation ? (
           <Alert tone="info" title="Interpretação semântica desativada">
-            A construção tipada continua disponível. Nenhum provedor externo recebe o texto da tarefa.
+            A construção tipada continua disponível. Nenhum provedor externo recebe o texto da
+            tarefa.
           </Alert>
         ) : null}
 
@@ -275,10 +283,15 @@ export function TaskPage() {
             <MutationError mutation={executeQuery} />
             {queryEstimate ? (
               <p role="status">
-                Plano válido · custo {queryEstimate.cost ?? 0} · {queryEstimate.columns?.length ?? 0} colunas
+                Plano válido · custo {queryEstimate.cost ?? 0} ·{" "}
+                {queryEstimate.columns?.length ?? 0} colunas
               </p>
             ) : null}
-            {queryExecution ? <p>Execução {queryExecution.state}: {queryExecution.id}</p> : null}
+            {queryExecution ? (
+              <p>
+                Execução {queryExecution.state}: {queryExecution.id}
+              </p>
+            ) : null}
           </Surface>
         ) : null}
 
@@ -300,7 +313,11 @@ export function TaskPage() {
                 </label>
                 <Button
                   onClick={() => interpret.mutate()}
-                  disabled={!capability.data?.semantic_interpretation || interpret.isPending || !taskText.trim()}
+                  disabled={
+                    !capability.data?.semantic_interpretation ||
+                    interpret.isPending ||
+                    !taskText.trim()
+                  }
                 >
                   Propor especificação
                 </Button>
@@ -377,7 +394,8 @@ function VisualQueryBuilder({
   fields: Array<{ key: string; label: string; projectable: boolean; sortable: boolean }>;
   onChange: (plan: AdvancedQueryPlan) => void;
 }) {
-  if (!catalog || !plan) return <Surface className="task-workspace__panel">Carregando catálogo…</Surface>;
+  if (!catalog || !plan)
+    return <Surface className="task-workspace__panel">Carregando catálogo…</Surface>;
   const projections = plan.projections ?? [];
   const groupBy = plan.group_by ?? [];
   const aggregates = plan.aggregates ?? [];
@@ -399,7 +417,11 @@ function VisualQueryBuilder({
                 })
               }
             >
-              {catalog.entities.map((entity) => <option key={entity.key} value={entity.key}>{entity.label}</option>)}
+              {catalog.entities.map((entity) => (
+                <option key={entity.key} value={entity.key}>
+                  {entity.label}
+                </option>
+              ))}
             </select>
           </label>
           <label className="task-workspace__field">
@@ -416,31 +438,39 @@ function VisualQueryBuilder({
         <fieldset className="task-workspace__fieldset">
           <legend>Colunas</legend>
           <div className="task-workspace__checks">
-            {fields.filter((field) => field.projectable).map((field) => (
-              <label key={field.key}>
-                <input
-                  type="checkbox"
-                  checked={projections.includes(field.key)}
-                  onChange={() => onChange({ ...plan, projections: toggle(projections, field.key) })}
-                />
-                {field.label}
-              </label>
-            ))}
+            {fields
+              .filter((field) => field.projectable)
+              .map((field) => (
+                <label key={field.key}>
+                  <input
+                    type="checkbox"
+                    checked={projections.includes(field.key)}
+                    onChange={() =>
+                      onChange({ ...plan, projections: toggle(projections, field.key) })
+                    }
+                  />
+                  {field.label}
+                </label>
+              ))}
           </div>
         </fieldset>
         <fieldset className="task-workspace__fieldset">
           <legend>Agrupar por</legend>
           <div className="task-workspace__checks">
-            {fields.filter((field) => field.sortable).map((field) => (
-              <label key={field.key}>
-                <input
-                  type="checkbox"
-                  checked={groupBy.includes(field.key)}
-                  onChange={() => onChange({ ...plan, group_by: toggle(groupBy, field.key), projections: [] })}
-                />
-                {field.label}
-              </label>
-            ))}
+            {fields
+              .filter((field) => field.sortable)
+              .map((field) => (
+                <label key={field.key}>
+                  <input
+                    type="checkbox"
+                    checked={groupBy.includes(field.key)}
+                    onChange={() =>
+                      onChange({ ...plan, group_by: toggle(groupBy, field.key), projections: [] })
+                    }
+                  />
+                  {field.label}
+                </label>
+              ))}
           </div>
         </fieldset>
         <Inline gap="3" wrap>
@@ -449,7 +479,10 @@ function VisualQueryBuilder({
               onChange({
                 ...plan,
                 projections: [],
-                aggregates: [...aggregates, { key: `count_${aggregates.length + 1}`, function: "count" }],
+                aggregates: [
+                  ...aggregates,
+                  { key: `count_${aggregates.length + 1}`, function: "count" },
+                ],
               })
             }
           >
@@ -478,16 +511,36 @@ function VisualQueryBuilder({
               Campo do padrão
               <select
                 value={pattern.field}
-                onChange={(event) => onChange({ ...plan, patterns: replaceAt(plan.patterns ?? [], index, { ...pattern, field: event.target.value }) })}
+                onChange={(event) =>
+                  onChange({
+                    ...plan,
+                    patterns: replaceAt(plan.patterns ?? [], index, {
+                      ...pattern,
+                      field: event.target.value,
+                    }),
+                  })
+                }
               >
-                {fields.map((field) => <option key={field.key} value={field.key}>{field.label}</option>)}
+                {fields.map((field) => (
+                  <option key={field.key} value={field.key}>
+                    {field.label}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="task-workspace__field">
               Gramática
               <select
                 value={pattern.grammar}
-                onChange={(event) => onChange({ ...plan, patterns: replaceAt(plan.patterns ?? [], index, { ...pattern, grammar: event.target.value as typeof pattern.grammar }) })}
+                onChange={(event) =>
+                  onChange({
+                    ...plan,
+                    patterns: replaceAt(plan.patterns ?? [], index, {
+                      ...pattern,
+                      grammar: event.target.value as typeof pattern.grammar,
+                    }),
+                  })
+                }
               >
                 <option value="literal_sequence">Sequência literal</option>
                 <option value="character_class">Caracteres permitidos</option>
@@ -499,7 +552,18 @@ function VisualQueryBuilder({
             </label>
             <label className="task-workspace__field">
               Padrão
-              <input value={pattern.pattern} onChange={(event) => onChange({ ...plan, patterns: replaceAt(plan.patterns ?? [], index, { ...pattern, pattern: event.target.value }) })} />
+              <input
+                value={pattern.pattern}
+                onChange={(event) =>
+                  onChange({
+                    ...plan,
+                    patterns: replaceAt(plan.patterns ?? [], index, {
+                      ...pattern,
+                      pattern: event.target.value,
+                    }),
+                  })
+                }
+              />
             </label>
           </div>
         ))}
@@ -508,16 +572,28 @@ function VisualQueryBuilder({
   );
 }
 
-function AdvancedQueryResultView({ result }: { result: Awaited<ReturnType<typeof getAdvancedQueryResult>> }) {
+function AdvancedQueryResultView({
+  result,
+}: {
+  result: Awaited<ReturnType<typeof getAdvancedQueryResult>>;
+}) {
   return (
     <Surface className="task-workspace__panel task-workspace__table-wrap">
       <h2>Resultado da consulta</h2>
       <table className="task-workspace__table">
-        <thead><tr>{result.columns.map((column) => <th key={column.position}>{column.label}</th>)}</tr></thead>
+        <thead>
+          <tr>
+            {result.columns.map((column) => (
+              <th key={column.position}>{column.label}</th>
+            ))}
+          </tr>
+        </thead>
         <tbody>
           {result.rows.map((row) => (
             <tr key={`${row.entity_kind}-${row.entity_id}`}>
-              {row.cells.map((cell) => <td key={cell.column_position}>{renderCell(cell)}</td>)}
+              {row.cells.map((cell) => (
+                <td key={cell.column_position}>{renderCell(cell)}</td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -527,10 +603,30 @@ function AdvancedQueryResultView({ result }: { result: Awaited<ReturnType<typeof
 }
 
 function DraftSummary({ draft }: { draft: TaskDraft }) {
-  return <p role="status">Rascunho {draft.state} · versão {draft.version} · {draft.id}</p>;
+  return (
+    <p role="status">
+      Rascunho {draft.state} · versão {draft.version} · {draft.id}
+    </p>
+  );
 }
 
-function JobPanel({ job, streamMessage, streamError, onCancel, onRetry, cancelling, retrying }: { job: TaskJob; streamMessage: string; streamError: boolean; onCancel: () => void; onRetry: () => void; cancelling: boolean; retrying: boolean }) {
+function JobPanel({
+  job,
+  streamMessage,
+  streamError,
+  onCancel,
+  onRetry,
+  cancelling,
+  retrying,
+}: {
+  job: TaskJob;
+  streamMessage: string;
+  streamError: boolean;
+  onCancel: () => void;
+  onRetry: () => void;
+  cancelling: boolean;
+  retrying: boolean;
+}) {
   return (
     <Surface className="task-workspace__panel">
       <Stack gap="3">
@@ -538,11 +634,26 @@ function JobPanel({ job, streamMessage, streamError, onCancel, onRetry, cancelli
           <h2>Job</h2>
           <StatusBadge tone={jobTone(job.state)}>{job.state}</StatusBadge>
         </Inline>
-        <p>{streamMessage || `${job.progress_current}/${job.progress_total} etapas · ${job.candidate_count} candidatos`}</p>
-        {streamError && !isTerminalJob(job.state) ? <Alert tone="warning" title="Reconectando eventos">O status também será conferido por consulta periódica.</Alert> : null}
+        <p>
+          {streamMessage ||
+            `${job.progress_current}/${job.progress_total} etapas · ${job.candidate_count} candidatos`}
+        </p>
+        {streamError && !isTerminalJob(job.state) ? (
+          <Alert tone="warning" title="Reconectando eventos">
+            O status também será conferido por consulta periódica.
+          </Alert>
+        ) : null}
         <Inline gap="3" wrap>
-          {!isTerminalJob(job.state) ? <Button onClick={onCancel} disabled={cancelling}>Cancelar</Button> : null}
-          {job.state === "FAILED" || job.state === "CANCELLED" || job.state === "INCOMPLETE" ? <Button onClick={onRetry} disabled={retrying}>Repetir explicitamente</Button> : null}
+          {!isTerminalJob(job.state) ? (
+            <Button onClick={onCancel} disabled={cancelling}>
+              Cancelar
+            </Button>
+          ) : null}
+          {job.state === "FAILED" || job.state === "CANCELLED" || job.state === "INCOMPLETE" ? (
+            <Button onClick={onRetry} disabled={retrying}>
+              Repetir explicitamente
+            </Button>
+          ) : null}
         </Inline>
       </Stack>
     </Surface>
@@ -560,12 +671,28 @@ function TaskResultsView({ page }: { page: TaskResultPage }) {
             {Object.entries(composition.selected).map(([role, candidates]) => (
               <div key={role}>
                 <strong>{role}</strong>
-                <ul>{candidates.map((candidate) => <li key={`${candidate.entity}-${candidate.id}`}>{candidate.label} <small>({candidate.entity} · {candidate.id})</small></li>)}</ul>
+                <ul>
+                  {candidates.map((candidate) => (
+                    <li key={`${candidate.entity}-${candidate.id}`}>
+                      {candidate.label}{" "}
+                      <small>
+                        ({candidate.entity} · {candidate.id})
+                      </small>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
             <details>
               <summary>Evidências ({composition.evidence.length})</summary>
-              <ul>{composition.evidence.map((evidence, index) => <li key={`${evidence.requirement ?? evidence.constraint}-${index}`}>{evidence.satisfied ? "✓" : "✕"} {evidence.requirement ?? evidence.constraint}: {evidence.source_entity}/{evidence.source_id}</li>)}</ul>
+              <ul>
+                {composition.evidence.map((evidence, index) => (
+                  <li key={`${evidence.requirement ?? evidence.constraint}-${index}`}>
+                    {evidence.satisfied ? "✓" : "✕"} {evidence.requirement ?? evidence.constraint}:{" "}
+                    {evidence.source_entity}/{evidence.source_id}
+                  </li>
+                ))}
+              </ul>
             </details>
           </details>
         ))}
@@ -575,8 +702,13 @@ function TaskResultsView({ page }: { page: TaskResultPage }) {
 }
 
 function RequestError({ error }: { error: unknown }) {
-  const message = error instanceof APIRequestError ? error.message : "Não foi possível carregar os dados.";
-  return <Alert tone="danger" title="Falha na solicitação">{message}</Alert>;
+  const message =
+    error instanceof APIRequestError ? error.message : "Não foi possível carregar os dados.";
+  return (
+    <Alert tone="danger" title="Falha na solicitação">
+      {message}
+    </Alert>
+  );
 }
 
 function MutationError({ mutation }: { mutation: { isError: boolean; error: unknown } }) {
@@ -587,12 +719,47 @@ function parseJSON<T>(value: string): T {
   return JSON.parse(value) as T;
 }
 function safeParsePlan(value: string): AdvancedQueryPlan | undefined {
-  try { return parseJSON<AdvancedQueryPlan>(value); } catch { return undefined; }
+  try {
+    return parseJSON<AdvancedQueryPlan>(value);
+  } catch {
+    return undefined;
+  }
 }
-function toggle(values: string[], value: string): string[] { return values.includes(value) ? values.filter((item) => item !== value) : [...values, value]; }
-function replaceAt<T>(values: T[], index: number, value: T): T[] { return values.map((item, itemIndex) => itemIndex === index ? value : item); }
-function isTerminalJob(state: TaskJob["state"] | undefined): boolean { return state === "COMPLETED" || state === "INCOMPLETE" || state === "FAILED" || state === "CANCELLED"; }
-function isResultJob(state: TaskJob["state"] | undefined): boolean { return state === "COMPLETED" || state === "INCOMPLETE"; }
-function taskEventLabel(kind: string, current?: number, total?: number): string { return `${kind.replaceAll("_", " ")}${current !== undefined && total !== undefined ? ` · ${current}/${total}` : ""}`; }
-function jobTone(state: TaskJob["state"]): "neutral" | "info" | "success" | "warning" | "danger" { if (state === "COMPLETED") return "success"; if (state === "INCOMPLETE") return "warning"; if (state === "FAILED" || state === "CANCELLED") return "danger"; if (state === "RUNNING") return "info"; return "neutral"; }
-function renderCell(cell: Record<string, unknown>): string { for (const key of ["text_value", "integer_value", "decimal_value", "boolean_value", "civil_date_value", "timestamp_value"]) { const value = cell[key]; if (value !== undefined && value !== null) return String(value); } return "—"; }
+function toggle(values: string[], value: string): string[] {
+  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+}
+function replaceAt<T>(values: T[], index: number, value: T): T[] {
+  return values.map((item, itemIndex) => (itemIndex === index ? value : item));
+}
+function isTerminalJob(state: TaskJob["state"] | undefined): boolean {
+  return (
+    state === "COMPLETED" || state === "INCOMPLETE" || state === "FAILED" || state === "CANCELLED"
+  );
+}
+function isResultJob(state: TaskJob["state"] | undefined): boolean {
+  return state === "COMPLETED" || state === "INCOMPLETE";
+}
+function taskEventLabel(kind: string, current?: number, total?: number): string {
+  return `${kind.replaceAll("_", " ")}${current !== undefined && total !== undefined ? ` · ${current}/${total}` : ""}`;
+}
+function jobTone(state: TaskJob["state"]): "neutral" | "info" | "success" | "warning" | "danger" {
+  if (state === "COMPLETED") return "success";
+  if (state === "INCOMPLETE") return "warning";
+  if (state === "FAILED" || state === "CANCELLED") return "danger";
+  if (state === "RUNNING") return "info";
+  return "neutral";
+}
+function renderCell(cell: Record<string, unknown>): string {
+  for (const key of [
+    "text_value",
+    "integer_value",
+    "decimal_value",
+    "boolean_value",
+    "civil_date_value",
+    "timestamp_value",
+  ]) {
+    const value = cell[key];
+    if (value !== undefined && value !== null) return String(value);
+  }
+  return "—";
+}

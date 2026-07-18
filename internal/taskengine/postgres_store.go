@@ -116,8 +116,12 @@ func scanJob(row taskRowScanner) (Job, error) {
 	return value, nil
 }
 
-func taskUUID(value Identifier) pgtype.UUID { return pgtype.UUID{Bytes: [16]byte(value), Valid: !value.IsZero()} }
-func taskAuthUUID(value auth.Identifier) pgtype.UUID { return pgtype.UUID{Bytes: [16]byte(value), Valid: value != (auth.Identifier{})} }
+func taskUUID(value Identifier) pgtype.UUID {
+	return pgtype.UUID{Bytes: [16]byte(value), Valid: !value.IsZero()}
+}
+func taskAuthUUID(value auth.Identifier) pgtype.UUID {
+	return pgtype.UUID{Bytes: [16]byte(value), Valid: value != (auth.Identifier{})}
+}
 func optionalTaskUUID(value *Identifier) pgtype.UUID {
 	if value == nil || value.IsZero() {
 		return pgtype.UUID{}

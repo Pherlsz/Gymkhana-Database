@@ -6,7 +6,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func IdentifierFromString(value string) (Identifier, error) { return queryengine.ParseIdentifier(value) }
+func IdentifierFromString(value string) (Identifier, error) {
+	return queryengine.ParseIdentifier(value)
+}
 
 func optionalTaskAuthUUID(value *auth.Identifier) pgtype.UUID {
 	if value == nil || *value == (auth.Identifier{}) {

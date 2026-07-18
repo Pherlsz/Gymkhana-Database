@@ -145,11 +145,7 @@ export function reviewTaskDraft(
   );
 }
 
-export function listTaskJobs(
-  limit = 100,
-  offset = 0,
-  signal?: AbortSignal,
-): Promise<TaskJobPage> {
+export function listTaskJobs(limit = 100, offset = 0, signal?: AbortSignal): Promise<TaskJobPage> {
   const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   return requestJSON(`/api/v1/tasks/jobs?${query}`, signal ? { signal } : {});
 }

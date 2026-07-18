@@ -23,13 +23,13 @@ const (
 	MaximumIdempotencySize = 128
 	MinimumIdempotencySize = 8
 
-	MaximumGroupKeys              = 8
-	MaximumAggregates             = 12
-	MaximumAggregateFilterNodes   = 24
-	MaximumSetInputs              = 6
-	MaximumSetDepth               = 4
-	MaximumPatternLength          = 160
-	MaximumPatternTokens          = 32
+	MaximumGroupKeys             = 8
+	MaximumAggregates            = 12
+	MaximumAggregateFilterNodes  = 24
+	MaximumSetInputs             = 6
+	MaximumSetDepth              = 4
+	MaximumPatternLength         = 160
+	MaximumPatternTokens         = 32
 	MaximumCombinationDimensions = 8
 	MaximumCombinationSize       = 10_000
 )
@@ -210,13 +210,13 @@ type FieldCapability struct {
 }
 
 type AdvancedCatalogLimits struct {
-	MaximumGroupKeys              int `json:"maximum_group_keys"`
-	MaximumAggregates             int `json:"maximum_aggregates"`
-	MaximumAggregateFilterNodes   int `json:"maximum_aggregate_filter_nodes"`
-	MaximumSetInputs              int `json:"maximum_set_inputs"`
-	MaximumSetDepth               int `json:"maximum_set_depth"`
-	MaximumPatternLength          int `json:"maximum_pattern_length"`
-	MaximumPatternTokens          int `json:"maximum_pattern_tokens"`
+	MaximumGroupKeys             int `json:"maximum_group_keys"`
+	MaximumAggregates            int `json:"maximum_aggregates"`
+	MaximumAggregateFilterNodes  int `json:"maximum_aggregate_filter_nodes"`
+	MaximumSetInputs             int `json:"maximum_set_inputs"`
+	MaximumSetDepth              int `json:"maximum_set_depth"`
+	MaximumPatternLength         int `json:"maximum_pattern_length"`
+	MaximumPatternTokens         int `json:"maximum_pattern_tokens"`
 	MaximumCombinationDimensions int `json:"maximum_combination_dimensions"`
 	MaximumCombinationSize       int `json:"maximum_combination_size"`
 }
