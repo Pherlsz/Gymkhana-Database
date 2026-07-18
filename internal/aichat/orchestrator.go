@@ -17,6 +17,7 @@ const (
 	maximumContextMessages = 30
 	maximumContextRunes    = 60_000
 	maximumProviderDelta   = 1000
+	maximumProviderUsage   = 100_000_000
 	finalizationTimeout    = 5 * time.Second
 )
 
@@ -110,8 +111,8 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 			return normalizeProviderError(runContext, err)
 		}
 		if response.Usage.InputUnits < 0 || response.Usage.OutputUnits < 0 ||
-			response.Usage.InputUnits > orchestrator.service.usageLimit ||
-			response.Usage.OutputUnits > orchestrator.service.usageLimit {
+			response.Usage.InputUnits > maximumProviderUsage ||
+			response.Usage.OutputUnits > maximumProviderUsage {
 			return ErrMalformedProvider
 		}
 		inputUsage += response.Usage.InputUnits

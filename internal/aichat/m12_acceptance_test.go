@@ -93,7 +93,7 @@ func TestM12SyntheticEndToEndReadOnlyFlow(t *testing.T) {
 	}
 
 	events, err := service.Events(ctx, actor, creation.Run.ID, 0, MaximumEventsPage)
-	if err != nil || !events.Terminal || countTerminalEvents(events.Events) != 1 {
+	if err != nil || !events.Terminal || countAcceptanceTerminalEvents(events.Events) != 1 {
 		t.Fatalf("Events() = %#v, error=%v", events, err)
 	}
 	referenceIDs := make([]Identifier, 0, 2)
@@ -191,3 +191,13 @@ func TestM12SyntheticEndToEndReadOnlyFlow(t *testing.T) {
 }
 
 func stringPointer(value string) *string { return &value }
+
+func countAcceptanceTerminalEvents(events []RunEvent) int {
+	count := 0
+	for _, event := range events {
+		if event.Kind == EventRunCompleted || event.Kind == EventRunFailed || event.Kind == EventRunCancelled {
+			count++
+		}
+	}
+	return count
+}

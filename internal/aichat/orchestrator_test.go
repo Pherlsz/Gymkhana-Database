@@ -96,7 +96,7 @@ func TestOrchestratorRejectsMalformedUnknownToolsAndRedactsProviderFailures(t *t
 		{name: "unknown tool", step: FakeModelStep{ToolCall: &ToolCall{ID: "call-delete", Name: "delete", Arguments: json.RawMessage(`{}`)}}, wantError: ErrMalformedProvider, wantCode: "malformed_provider"},
 		{name: "unknown argument", step: FakeModelStep{ToolCall: &ToolCall{ID: "call-search", Name: "search", Arguments: json.RawMessage(`{"terms":["Ana"],"sql":"SELECT secret"}`)}}, wantError: ErrMalformedProvider, wantCode: "malformed_provider"},
 		{name: "negative usage", step: FakeModelStep{Usage: ModelUsage{InputUnits: -1}}, wantError: ErrMalformedProvider, wantCode: "malformed_provider"},
-		{name: "oversized usage", step: FakeModelStep{Usage: ModelUsage{OutputUnits: 1001}}, wantError: ErrMalformedProvider, wantCode: "malformed_provider"},
+		{name: "oversized usage", step: FakeModelStep{Usage: ModelUsage{OutputUnits: maximumProviderUsage + 1}}, wantError: ErrMalformedProvider, wantCode: "malformed_provider"},
 		{name: "provider unavailable", step: FakeModelStep{Err: errors.New("provider payload: secret-token")}, wantError: ErrUnavailable, wantCode: "unavailable"},
 		{name: "provider timeout", step: FakeModelStep{Err: ErrProviderTimeout}, wantError: ErrTimeout, wantCode: "timeout"},
 	} {
