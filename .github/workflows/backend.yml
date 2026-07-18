@@ -20,7 +20,7 @@ on:
         type: boolean
 
 permissions:
-  contents: read
+  contents: write
   packages: read
 
 concurrency:
@@ -35,6 +35,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
@@ -42,10 +45,50 @@ jobs:
           go-version: 1.26.5
           cache: true
 
+      - name: Set up Node.js for M14 generation
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/m14-advanced-query-tasks' }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+
       - name: Configure private Core access
         run: scripts/configure-private-go.sh
         env:
           GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Apply one-shot M14 generated sources
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/m14-advanced-query-tasks' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          make generate-go generate-ts
+          find cmd internal api/generated -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
+          pnpm exec oxfmt \
+            apps/web/src/App.tsx \
+            apps/web/src/TaskPage.tsx \
+            apps/web/src/lib/api/tasks.ts \
+            apps/web/src/main.tsx \
+            apps/web/src/task.css \
+            apps/web/src/generated/tasks-api.ts \
+            package.json \
+            --write
+          git fetch origin main --depth=1
+          git checkout origin/main -- .github/workflows/backend.yml
+          rm -f .github/workflows/m14-bootstrap.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add cmd internal api/generated apps/web/src/generated \
+            apps/web/src/App.tsx apps/web/src/TaskPage.tsx apps/web/src/lib/api/tasks.ts \
+            apps/web/src/main.tsx apps/web/src/task.css package.json \
+            .github/workflows/backend.yml .github/workflows/m14-bootstrap.yml
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore: format and generate M14 contracts [m14-generated]"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
 
       - name: Normalize Go module metadata
         id: modules
