@@ -12,6 +12,7 @@ import "./google-forms.css";
 import "./query.css";
 import "./matching.css";
 import "./chat.css";
+import "./ocr.css";
 
 const root = document.getElementById("root");
 

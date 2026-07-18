@@ -61,6 +61,7 @@ func TestCoordinatorRunsOnceCancelsAndWaits(t *testing.T) {
 }
 
 func TestCoordinatorRequiresParentAndRunner(t *testing.T) {
+	//lint:ignore SA1012 This deliberately verifies the constructor's nil-context guard.
 	if _, err := NewCoordinator(nil, &blockingTurnRunner{}); !errors.Is(err, ErrInvalidSetup) {
 		t.Fatalf("nil parent error = %v", err)
 	}

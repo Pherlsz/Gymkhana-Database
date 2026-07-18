@@ -124,6 +124,7 @@ describe("AttachmentsPanel", () => {
     );
     renderPanel();
 
+    expect(await screen.findByRole("button", { name: "Revisar com OCR" })).toBeEnabled();
     fireEvent.click(await screen.findByRole("button", { name: "Mover para lixeira" }));
     expect(
       await screen.findByText("O anexo foi alterado por outra pessoa. Atualize e tente novamente."),

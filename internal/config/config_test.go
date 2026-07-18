@@ -34,6 +34,13 @@ var configurationKeys = []string{
 	"AI_CHAT_PROVIDER",
 	"AI_CHAT_MODEL",
 	"AI_CHAT_RETENTION",
+	"OCR_ENABLED",
+	"OCR_PROVIDER",
+	"OCR_MODEL",
+	"OCR_TIMEOUT",
+	"OCR_MAX_REQUESTS_PER_HOUR",
+	"OCR_MAX_PROVIDER_USAGE_PER_HOUR",
+	"OCR_MAX_SOURCE_BYTES",
 }
 
 func setValidGoogleForms(t *testing.T) {
@@ -94,6 +101,10 @@ func TestLoadUsesSafeTypedDefaults(t *testing.T) {
 	if cfg.AIChat.Enabled || cfg.AIChat.Provider != "" || cfg.AIChat.Model != "" || cfg.AIChat.Retention != 0 {
 		t.Fatalf("AIChat defaults = %#v", cfg.AIChat)
 	}
+	if cfg.OCR.Enabled || cfg.OCR.Provider != "" || cfg.OCR.Model != "" || cfg.OCR.Timeout != 90*time.Second ||
+		cfg.OCR.MaximumRequests != 10 || cfg.OCR.MaximumProviderUsage != 500_000 || cfg.OCR.MaximumSourceBytes != 20<<20 {
+		t.Fatalf("OCR defaults = %#v", cfg.OCR)
+	}
 }
 
 func TestLoadRejectsInvalidTypedValues(t *testing.T) {
@@ -114,6 +125,11 @@ func TestLoadRejectsInvalidTypedValues(t *testing.T) {
 		{name: "google forms page size", key: "GOOGLE_FORMS_RESPONSE_PAGE_SIZE", value: "many"},
 		{name: "AI Chat enabled", key: "AI_CHAT_ENABLED", value: "sometimes"},
 		{name: "AI Chat retention", key: "AI_CHAT_RETENTION", value: "forever"},
+		{name: "OCR enabled", key: "OCR_ENABLED", value: "sometimes"},
+		{name: "OCR timeout", key: "OCR_TIMEOUT", value: "later"},
+		{name: "OCR request limit", key: "OCR_MAX_REQUESTS_PER_HOUR", value: "many"},
+		{name: "OCR usage limit", key: "OCR_MAX_PROVIDER_USAGE_PER_HOUR", value: "many"},
+		{name: "OCR source limit", key: "OCR_MAX_SOURCE_BYTES", value: "many"},
 	}
 
 	for _, test := range tests {
@@ -122,6 +138,49 @@ func TestLoadRejectsInvalidTypedValues(t *testing.T) {
 			t.Setenv(test.key, test.value)
 			if _, err := Load(); err == nil {
 				t.Fatal("Load() error = nil, want validation error")
+			}
+		})
+	}
+}
+
+func TestLoadAllowsOnlyExplicitDeterministicTestOCRConfiguration(t *testing.T) {
+	clearConfiguration(t)
+	setValidLocalAuthentication(t)
+	t.Setenv("APP_ENV", "test")
+	t.Setenv("OCR_ENABLED", "true")
+	t.Setenv("OCR_PROVIDER", "fake")
+	t.Setenv("OCR_MODEL", "deterministic-v1")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !cfg.OCR.Enabled || cfg.OCR.Provider != "fake" || cfg.OCR.Model != "deterministic-v1" {
+		t.Fatalf("OCR = %#v", cfg.OCR)
+	}
+}
+
+func TestLoadKeepsProductionOCRBlockedUntilOwnerActivationDecision(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		environment string
+		provider    string
+		model       string
+	}{
+		{name: "missing provider", environment: "test", model: "deterministic-v1"},
+		{name: "missing model", environment: "test", provider: "fake"},
+		{name: "unsupported local adapter", environment: "local", provider: "fake", model: "deterministic-v1"},
+		{name: "production adapter absent", environment: "production", provider: "vendor", model: "vision-v1"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			clearConfiguration(t)
+			setValidLocalAuthentication(t)
+			t.Setenv("APP_ENV", test.environment)
+			t.Setenv("OCR_ENABLED", "true")
+			t.Setenv("OCR_PROVIDER", test.provider)
+			t.Setenv("OCR_MODEL", test.model)
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() error = nil, want OCR activation error")
 			}
 		})
 	}

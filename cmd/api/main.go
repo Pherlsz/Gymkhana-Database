@@ -20,6 +20,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
 	"github.com/Pherlsz/Gymkhana-Database/internal/googleforms"
 	"github.com/Pherlsz/Gymkhana-Database/internal/matching"
+	"github.com/Pherlsz/Gymkhana-Database/internal/ocr"
 	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/httpserver"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/logging"
@@ -93,6 +94,7 @@ func run() error {
 	var chatService *aichat.Service
 	var chatTools *aichat.ToolGateway
 	var chatCoordinator *aichat.Coordinator
+	var ocrService *ocr.Service
 	if pool != nil {
 		profileService, err = profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{OnAuditFailure: func(_ context.Context, event profile.AuditEvent, auditErr error) {
 			logger.Error("profile audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "profile_id", event.ProfileID.String(), "error", auditErr)
@@ -228,6 +230,33 @@ func run() error {
 			}
 			startAIChatCleanup(rootCtx, chatService, logger)
 		}
+		if cfg.OCR.Enabled {
+			if authService == nil || attachmentService == nil || profileService == nil || documentService == nil || billService == nil || customDataService == nil {
+				return errors.New("OCR requires authentication, private storage, attachments, and all canonical target services")
+			}
+			targets, err := ocr.NewDomainTargetGateway(profileService, documentService, billService, customDataService)
+			if err != nil {
+				return fmt.Errorf("configure OCR targets: %w", err)
+			}
+			var extractor ocr.Extractor
+			switch cfg.OCR.Provider {
+			case "fake":
+				extractor = ocr.NewDeterministicFakeExtractor()
+			default:
+				return errors.New("OCR production provider adapter is not configured")
+			}
+			ocrService, _, err = ocr.NewRuntime(pool, attachmentService, targets, extractor, ocr.ServiceOptions{
+				Timeout: cfg.OCR.Timeout, MaximumRate: cfg.OCR.MaximumRequests,
+				MaximumProviderUsage: cfg.OCR.MaximumProviderUsage, MaximumSourceBytes: cfg.OCR.MaximumSourceBytes,
+				OnAuditFailure: func(_ context.Context, event ocr.AuditEvent, auditErr error) {
+					logger.Error("OCR audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome,
+						"error_code", event.ErrorCode, "request_id", event.RequestID, "error_type", fmt.Sprintf("%T", auditErr))
+				},
+			}, false)
+			if err != nil {
+				return fmt.Errorf("configure OCR service: %w", err)
+			}
+		}
 	}
 	server := &http.Server{
 		Addr: cfg.HTTPAddress,
@@ -247,6 +276,7 @@ func run() error {
 			Chat:           chatService,
 			ChatResults:    chatTools,
 			ChatLauncher:   chatCoordinator,
+			OCR:            ocrService,
 			SecureCookies:  cfg.Auth.SecureCookies,
 			ApplicationURL: cfg.Auth.ApplicationURL,
 		}),
@@ -258,7 +288,7 @@ func run() error {
 	serverError := make(chan error, 1)
 	go func() {
 		logger.Info("api listening", "address", cfg.HTTPAddress, "environment", cfg.Environment, "authentication_enabled", cfg.Auth.Enabled,
-			"attachments_enabled", storageCfg.Enabled, "ai_chat_enabled", cfg.AIChat.Enabled)
+			"attachments_enabled", storageCfg.Enabled, "ai_chat_enabled", cfg.AIChat.Enabled, "ocr_enabled", cfg.OCR.Enabled)
 		serverError <- server.ListenAndServe()
 	}()
 	select {

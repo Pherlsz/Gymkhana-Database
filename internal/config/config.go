@@ -62,6 +62,16 @@ type AIChatConfig struct {
 	Retention time.Duration
 }
 
+type OCRConfig struct {
+	Enabled              bool
+	Provider             string
+	Model                string
+	Timeout              time.Duration
+	MaximumRequests      int
+	MaximumProviderUsage int64
+	MaximumSourceBytes   int64
+}
+
 type Config struct {
 	Environment      Environment
 	HTTPAddress      string
@@ -72,6 +82,7 @@ type Config struct {
 	Auth             AuthConfig
 	GoogleForms      GoogleFormsConfig
 	AIChat           AIChatConfig
+	OCR              OCRConfig
 }
 
 func Load() (Config, error) {
@@ -126,6 +137,26 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("parse AI_CHAT_RETENTION: %w", err)
 		}
 	}
+	ocrEnabled, err := strconv.ParseBool(valueOrDefault("OCR_ENABLED", "false"))
+	if err != nil {
+		return Config{}, fmt.Errorf("parse OCR_ENABLED: %w", err)
+	}
+	ocrTimeout, err := time.ParseDuration(valueOrDefault("OCR_TIMEOUT", "90s"))
+	if err != nil {
+		return Config{}, fmt.Errorf("parse OCR_TIMEOUT: %w", err)
+	}
+	ocrMaximumRequests, err := strconv.Atoi(valueOrDefault("OCR_MAX_REQUESTS_PER_HOUR", "10"))
+	if err != nil {
+		return Config{}, fmt.Errorf("parse OCR_MAX_REQUESTS_PER_HOUR: %w", err)
+	}
+	ocrMaximumProviderUsage, err := strconv.ParseInt(valueOrDefault("OCR_MAX_PROVIDER_USAGE_PER_HOUR", "500000"), 10, 64)
+	if err != nil {
+		return Config{}, fmt.Errorf("parse OCR_MAX_PROVIDER_USAGE_PER_HOUR: %w", err)
+	}
+	ocrMaximumSourceBytes, err := strconv.ParseInt(valueOrDefault("OCR_MAX_SOURCE_BYTES", "20971520"), 10, 64)
+	if err != nil {
+		return Config{}, fmt.Errorf("parse OCR_MAX_SOURCE_BYTES: %w", err)
+	}
 
 	cfg := Config{
 		Environment:      environment,
@@ -158,6 +189,12 @@ func Load() (Config, error) {
 		AIChat: AIChatConfig{
 			Enabled: aiChatEnabled, Provider: strings.ToLower(strings.TrimSpace(os.Getenv("AI_CHAT_PROVIDER"))),
 			Model: strings.TrimSpace(os.Getenv("AI_CHAT_MODEL")), Retention: aiChatRetention,
+		},
+		OCR: OCRConfig{
+			Enabled: ocrEnabled, Provider: strings.ToLower(strings.TrimSpace(os.Getenv("OCR_PROVIDER"))),
+			Model: strings.TrimSpace(os.Getenv("OCR_MODEL")), Timeout: ocrTimeout,
+			MaximumRequests: ocrMaximumRequests, MaximumProviderUsage: ocrMaximumProviderUsage,
+			MaximumSourceBytes: ocrMaximumSourceBytes,
 		},
 	}
 
@@ -196,6 +233,18 @@ func (cfg Config) validate() error {
 	if cfg.GoogleForms.ResponsePageSize < 1 || cfg.GoogleForms.ResponsePageSize > 500 {
 		return errors.New("GOOGLE_FORMS_RESPONSE_PAGE_SIZE must be between 1 and 500")
 	}
+	if cfg.OCR.Timeout < time.Second || cfg.OCR.Timeout > 5*time.Minute {
+		return errors.New("OCR_TIMEOUT must be between 1s and 5m")
+	}
+	if cfg.OCR.MaximumRequests < 1 || cfg.OCR.MaximumRequests > 1000 {
+		return errors.New("OCR_MAX_REQUESTS_PER_HOUR must be between 1 and 1000")
+	}
+	if cfg.OCR.MaximumProviderUsage < 1 || cfg.OCR.MaximumProviderUsage > 100_000_000 {
+		return errors.New("OCR_MAX_PROVIDER_USAGE_PER_HOUR must be between 1 and 100000000")
+	}
+	if cfg.OCR.MaximumSourceBytes < 1 || cfg.OCR.MaximumSourceBytes > 20<<20 {
+		return errors.New("OCR_MAX_SOURCE_BYTES must be between 1 and 20971520")
+	}
 
 	switch cfg.LogLevel {
 	case LogLevelDebug, LogLevelInfo, LogLevelWarn, LogLevelError:
@@ -216,6 +265,9 @@ func (cfg Config) validate() error {
 		}
 		if cfg.AIChat.Enabled {
 			return errors.New("AI_CHAT_ENABLED requires authentication")
+		}
+		if cfg.OCR.Enabled {
+			return errors.New("OCR_ENABLED requires authentication")
 		}
 		return nil
 	}
@@ -279,6 +331,17 @@ func (cfg Config) validate() error {
 		}
 		if cfg.Environment != EnvironmentTest || cfg.AIChat.Provider != "fake" {
 			return errors.New("AI Chat has no production provider adapter; keep AI_CHAT_ENABLED=false until the owner selects and configures one")
+		}
+	}
+	if cfg.OCR.Enabled {
+		if cfg.OCR.Provider == "" || cfg.OCR.Model == "" {
+			return errors.New("OCR_PROVIDER and OCR_MODEL are required when OCR is enabled")
+		}
+		if len(cfg.OCR.Model) > 120 {
+			return errors.New("OCR_MODEL cannot exceed 120 characters")
+		}
+		if cfg.Environment != EnvironmentTest || cfg.OCR.Provider != "fake" {
+			return errors.New("OCR has no production provider adapter; keep OCR_ENABLED=false until the owner selects and configures one")
 		}
 	}
 	if !cfg.GoogleForms.Enabled {

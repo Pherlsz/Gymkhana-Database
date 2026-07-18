@@ -38,6 +38,7 @@ type Options struct {
 	Chat           chatService
 	ChatResults    chatResultReader
 	ChatLauncher   chatRunLauncher
+	OCR            ocrService
 	SecureCookies  bool
 	ApplicationURL string
 }
@@ -88,6 +89,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerQueryRoutes(mux, logger, settings.Auth, settings.Query)
 	registerMatchingRoutes(mux, logger, settings.Auth, settings.Matching)
 	registerChatRoutes(mux, logger, settings.Auth, settings.Chat, settings.ChatResults, settings.ChatLauncher)
+	registerOCRRoutes(mux, logger, settings.Auth, settings.OCR)
 	mux.HandleFunc("/", fallbackHandler)
 	applicationOrigin := absoluteOrigin(settings.ApplicationURL)
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, browserOriginMiddleware(applicationOrigin, mux)))))
