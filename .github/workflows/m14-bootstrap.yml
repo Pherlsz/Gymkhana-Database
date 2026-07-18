@@ -1,3 +1,4 @@
+# Temporary self-removing workflow for the M14 branch.
 name: M14 bootstrap
 
 on:
