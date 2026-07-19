@@ -1,9 +1,11 @@
 name: Temporary Google auth consistency fix
 
 on:
-  push:
-    branches: [fix/google-auth-rebuild-migration]
-    paths: [.github/workflows/temporary-google-auth-fix.yml]
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - scripts/fix-google-auth-consistency.py
+      - .github/workflows/temporary-google-auth-fix.yml
 
 permissions:
   contents: write
@@ -11,6 +13,7 @@ permissions:
 
 jobs:
   fix:
+    if: ${{ github.event.pull_request.head.ref == 'fix/google-auth-rebuild-migration' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
