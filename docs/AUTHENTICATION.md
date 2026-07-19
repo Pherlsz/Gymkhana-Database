@@ -1,171 +1,89 @@
 # Authentication Operations Runbook
 
-This runbook covers the M2 GitHub OAuth, application-session, authorization, audit, and recovery procedures for Gymkhana Database.
+Gymkhana Database authenticates application users with Google OpenID Connect and keeps authorization, roles and sessions inside the application.
 
 ## Security guarantees
 
-- GitHub OAuth is the only application login mechanism; there are no local passwords.
-- Access requires the normalized GitHub login to be present in `AUTH_ALLOWED_GITHUB_LOGINS`.
-- The application stores the immutable GitHub user ID and refreshes display identity after successful login.
+- Google is the only application login provider; there are no local passwords.
+- A verified Google e-mail is accepted only when a normalized row already exists in `app_users`.
+- OAuth never creates an arbitrary application user.
+- The immutable Google `sub` is bound to the allowlisted row on the first successful login and must match on later logins.
+- An inactive `app_users` row remains blocked even when the Google account is valid.
 - Browser sessions use opaque random values. Only SHA-256 hashes are stored in PostgreSQL.
 - Sessions expire after 24 hours and are revocable server-side.
-- Session cookies are HttpOnly, SameSite=Lax, host-only, and Secure in staging and production.
-- Credentialed CORS and state-changing browser requests accept only the exact origin derived from `AUTH_APPLICATION_URL`.
-- Roles are `MEMBER`, `ADMIN`, and one protected `SUPERADMIN`.
-- The generic administration surface cannot change the current account or the `SUPERADMIN` account.
-- Effective role or active-status changes revoke every session belonging to the affected user.
-- Authentication and administration events are written to `auth_audit_events` with a request ID.
+- Cookies are HttpOnly, SameSite=Lax, host-only and Secure outside local/test environments.
+- Roles are `MEMBER`, `ADMIN` and exactly one active `SUPERADMIN`.
+- Effective role or active-state changes revoke every session belonging to the affected user.
+- Authentication and administration events are written to `auth_audit_events` using e-mail as provider identity; OAuth codes, access tokens and provider payloads are never persisted there.
 
 ## Required environment values
 
 | Variable | Purpose |
 | --- | --- |
-| `APP_ENV` | `local`, `test`, `staging`, or `production` |
-| `DATABASE_URL` | PostgreSQL connection string; required whenever authentication is enabled |
-| `AUTH_ENABLED` | Must be `true` in staging and production |
-| `GITHUB_OAUTH_CLIENT_ID` | GitHub OAuth App client ID |
-| `GITHUB_OAUTH_CLIENT_SECRET` | GitHub OAuth App client secret; supply only through a local or deployment secret manager |
-| `GITHUB_OAUTH_REDIRECT_URL` | Absolute API callback URL ending in `/auth/callback` |
-| `AUTH_APPLICATION_URL` | Absolute web application URL used after successful login |
-| `AUTH_ALLOWED_GITHUB_LOGINS` | Comma-separated normalized access allowlist |
-| `AUTH_SUPERADMIN_GITHUB_LOGIN` | Initial and recovery login for the single `SUPERADMIN`; it must also be allowlisted |
+| `APP_ENV` | `local`, `test`, `staging` or `production` |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `AUTH_ENABLED` | Must be `true` outside environments where authentication is intentionally disabled |
+| `GOOGLE_LOGIN_OAUTH_CLIENT_ID` | Google OAuth Web client ID used only for application login |
+| `GOOGLE_LOGIN_OAUTH_CLIENT_SECRET` | Login OAuth client secret; secret manager only |
+| `GOOGLE_LOGIN_OAUTH_REDIRECT_URL` | Absolute API callback URL ending in `/auth/callback` |
+| `AUTH_APPLICATION_URL` | Absolute SPA URL used after successful login |
 | `VITE_API_BASE_URL` | Browser-visible API origin |
 
-Never commit real client secrets, database credentials, session values, or production URLs containing credentials.
+The Google Forms integration uses a separate OAuth client and separate environment variables. Do not reuse its refresh-token scopes or credentials for application login.
+
+## Allowlist and user lifecycle
+
+`app_users` is the authoritative allowlist.
+
+To grant access:
+
+1. create an `app_users` row with a normalized lowercase e-mail, display name, role and `active=true`;
+2. leave `google_subject` null before the first login;
+3. the first successful login with that verified e-mail binds the Google subject;
+4. later logins must present both the same e-mail and the same subject.
+
+To remove access immediately, set `active=false`. The administration service revokes existing sessions when the effective access state changes.
+
+Do not delete and recreate a row merely because a user changes display name or avatar. Those presentation fields are refreshed after login. A change of Google account ownership or e-mail requires an explicit reviewed identity operation rather than silently rebinding the row.
 
 ## Local setup
 
-1. Register a GitHub OAuth App with:
-   - homepage URL `http://localhost:5173`;
-   - callback URL `http://localhost:8080/auth/callback`.
-2. Copy `.env.example` to `.env` and fill the OAuth credentials, database URL, allowlist, and superadmin login.
-3. Validate the effective environment without printing secrets:
+1. Register a Google OAuth Web client with:
+   - authorized JavaScript origin `http://localhost:5173`;
+   - redirect URI `http://localhost:8080/auth/callback`.
+2. Copy `.env.example` to `.env` and fill the database and Google login values.
+3. Apply migrations and insert at least one allowlisted user, preserving exactly one active `SUPERADMIN`.
+4. Run `make check-config`, `make dev-api` and `make dev-web`.
+5. Sign in with the allowlisted Google account.
 
-```bash
-make check-config
-```
+## Production topology
 
-4. Start PostgreSQL and apply migrations:
+The supported topology is intentionally portable rather than tied to one runtime:
 
-```bash
-make services-up
-make migrate
-```
+- the React/Vite SPA is delivered by Vercel;
+- the Go API, worker and migration binaries are standard containers and run on Cloud Run in the approved deployment;
+- those same binaries remain runnable in any compatible container platform, including a future Vercel-supported Go/container path, without changing domain or persistence contracts;
+- Neon PostgreSQL and Cloudflare R2 are external managed dependencies.
 
-5. Start the API and web application in separate terminals:
+Vercel and Cloud Run are complementary in the current deployment, not mutually exclusive architecture choices.
 
-```bash
-make dev-api
-make dev-web
-```
+## Smoke test
 
-6. Sign in first with `AUTH_SUPERADMIN_GITHUB_LOGIN`. The first successful login creates the protected `SUPERADMIN` user.
+After an authentication deployment:
 
-## Staging and production setup
+1. `GET /health/live` and `/health/ready` return `200` after migrations are applied.
+2. An unauthenticated `GET /api/auth/session` returns `401`.
+3. Login redirects to Google and returns through `/auth/callback`.
+4. An allowlisted active e-mail receives an application session.
+5. A Google account whose e-mail is absent from `app_users` is denied and no user row is created.
+6. A valid but inactive user is denied.
+7. A member cannot access `/api/admin/users`; an administrator can.
+8. Changing role or active state invalidates existing sessions for that user.
+9. Logout clears the cookie and revokes the server-side session.
+10. Audit rows contain request IDs and provider e-mail, but no OAuth code, token or provider payload.
 
-- Use HTTPS for both `GITHUB_OAUTH_REDIRECT_URL` and `AUTH_APPLICATION_URL`.
-- Store the OAuth client secret and `DATABASE_URL` in the deployment secret manager.
-- Run `make check-config` in the deployment environment before starting the API.
-- Apply migrations before routing traffic to the new application version.
-- Keep the OAuth callback URL exactly aligned with the deployed API callback.
-- Do not copy production personal data into staging; staging uses synthetic identities and records.
+## Recovery
 
-The API fails closed outside local/test when the database or authentication configuration is incomplete.
+Rotate a login OAuth secret by adding the replacement in the deployment secret manager, redeploying and revoking the old secret only after the new deployment is healthy. Existing application sessions remain independent from the temporary Google access token used during login.
 
-## User lifecycle
-
-### Grant initial access
-
-1. Add the GitHub login to `AUTH_ALLOWED_GITHUB_LOGINS` and restart the API so it reads the new environment.
-2. Ask the user to sign in once. A new allowlisted account is created as `MEMBER`.
-3. An `ADMIN` or `SUPERADMIN` may promote that user to `ADMIN` through the user-administration panel.
-
-### Remove access immediately
-
-1. Set the user to inactive in the administration panel. This revokes all existing application sessions.
-2. Remove the login from `AUTH_ALLOWED_GITHUB_LOGINS` and restart the API to block future OAuth sign-ins.
-
-Removing only the environment allowlist entry blocks future sign-ins but does not revoke an already-issued application session. Deactivate the application user first when immediate removal is required.
-
-### Change a role
-
-Role changes use optimistic concurrency through the user `version`. A stale edit returns a conflict and must be retried after reloading the list. A successful effective change revokes all sessions for that user.
-
-## Audit events
-
-| Event | Typical outcomes |
-| --- | --- |
-| `SIGN_IN_SUCCEEDED` | `SUCCESS` |
-| `SIGN_IN_DENIED` | `DENIED` for an unallowlisted or inactive account |
-| `SIGN_IN_FAILED` | `FAILURE` for invalid callback input, provider failure, persistence failure, or session creation failure |
-| `SIGN_OUT` | `SUCCESS` or `FAILURE` |
-| `USER_ADMINISTRATION_ACCESSED` | `SUCCESS`, `DENIED`, or `FAILURE` |
-| `USER_ACCESS_CHANGED` | `SUCCESS`, `DENIED`, or `FAILURE` |
-| `SESSION_REVOKED` | `SUCCESS` or `FAILURE` after an access change |
-
-Audit writes remain best-effort so a temporary audit-table failure does not create a partial authentication transaction. Every failed audit write emits a structured error log containing only event type, outcome, request ID, and the storage error. Tokens, OAuth codes, provider payloads, and secrets are never logged.
-
-Read-only verification query:
-
-```sql
-SELECT occurred_at, event_type, outcome, request_id, provider_login
-FROM auth_audit_events
-ORDER BY occurred_at DESC
-LIMIT 100;
-```
-
-## Routine smoke test
-
-After an authentication-related deployment:
-
-1. `GET /health/live` returns `200`.
-2. `GET /health/ready` returns `200` after database migrations are applied.
-3. An unauthenticated `GET /api/auth/session` returns `401`.
-4. GitHub login redirects through `/auth/callback` and returns to `AUTH_APPLICATION_URL`.
-5. `GET /api/auth/session` returns the authenticated user and role.
-6. An administrator can load `/api/admin/users`.
-7. A member cannot load `/api/admin/users` and receives `403`.
-8. Changing a test member's role or active status invalidates that member's existing session.
-9. Logout returns `204`, clears the browser cookie, and revokes the server-side session.
-10. The expected correlated audit rows exist for the test request IDs.
-
-## Incident and recovery procedures
-
-### Rotate a GitHub OAuth client secret
-
-1. Generate a replacement secret in the GitHub OAuth App.
-2. Update `GITHUB_OAUTH_CLIENT_SECRET` in the secret manager.
-3. restart or redeploy the API.
-4. Revoke the old secret after the new deployment is healthy.
-
-Existing Gymkhana Database sessions remain valid because they are independent of the temporary GitHub access token used during login.
-
-### GitHub login renamed
-
-1. Update `AUTH_ALLOWED_GITHUB_LOGINS` with the new normalized login.
-2. If this is the protected owner, also update `AUTH_SUPERADMIN_GITHUB_LOGIN`.
-3. Restart the API and sign in again.
-
-The immutable GitHub user ID reconnects the renamed account to the existing application user and refreshes its displayed identity.
-
-### Account compromised
-
-1. Deactivate the application user to revoke all sessions.
-2. Remove the login from the allowlist.
-3. Rotate the GitHub OAuth client secret if the OAuth App itself may be compromised.
-4. Review `auth_audit_events` and structured application logs by request ID.
-
-### Protected superadmin unavailable
-
-The M2 administration API intentionally cannot demote, deactivate, or replace the protected `SUPERADMIN`. First restore the same GitHub account or update its renamed login as described above.
-
-If the GitHub account is permanently unrecoverable, do not run an ad-hoc partial update. Use a reviewed, transactional operational change that:
-
-1. locks the current and target application-user rows;
-2. verifies that the target user already exists and is controlled by the owner;
-3. demotes the old superadmin and promotes the target in one transaction;
-4. verifies exactly one active `SUPERADMIN` before commit;
-5. revokes sessions for both accounts;
-6. records the recovery in the audit trail and deployment log.
-
-A dedicated automated transfer command is intentionally deferred until a real recovery case justifies its permanent maintenance and permission surface.
+A protected SUPERADMIN transfer must be reviewed and transactional: lock source and target rows, verify ownership, preserve exactly one active SUPERADMIN, revoke both users' sessions and record the operation in the audit/deployment trail.
