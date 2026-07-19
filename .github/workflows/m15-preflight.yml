@@ -20,7 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
       GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
     services:
       postgres:
@@ -67,6 +66,32 @@ jobs:
           pnpm install --frozen-lockfile
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove obsolete M14 helpers
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          store = Path("internal/taskengine/postgres_store.go")
+          text = store.read_text()
+          text = text.replace('\n\t"time"\n', '\n')
+          text = text.replace('\nfunc taskNowValid(value time.Time) bool { return !value.IsZero() && value.Location() != nil }\n', '\n')
+          store.write_text(text)
+
+          service = Path("internal/taskengine/service.go")
+          text = service.read_text()
+          text = text.replace('\n\t"sort"\n', '\n')
+          text = text.replace('''\nfunc sortCandidates(values []Candidate) {
+\tsort.Slice(values, func(left, right int) bool {
+\t\tif values[left].Entity != values[right].Entity {
+\t\t\treturn values[left].Entity < values[right].Entity
+\t\t}
+\t\treturn values[left].ID < values[right].ID
+\t})
+}
+''', '\n')
+          service.write_text(text)
+          PY
 
       - name: Normalize source formatting
         run: |
@@ -130,6 +155,8 @@ jobs:
         run: pnpm check:web
 
       - name: Verify PostgreSQL integration
+        env:
+          DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
         run: |
           make migrate
           go test -p=1 -tags=integration ./internal/attachment ./internal/search ./internal/operations ./internal/googleforms ./internal/queryengine ./internal/matching ./internal/aichat ./internal/ocr
