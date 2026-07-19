@@ -1,0 +1,42 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: __WORKER_JOB_NAME__
+  labels:
+    cloud.googleapis.com/location: __REGION__
+    app.kubernetes.io/name: gymkhana-database-worker
+    app.kubernetes.io/version: __RELEASE_VERSION__
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/execution-environment: gen2
+    spec:
+      taskCount: 1
+      template:
+        spec:
+          serviceAccountName: __RUNTIME_SERVICE_ACCOUNT__
+          maxRetries: 1
+          timeoutSeconds: "900"
+          containers:
+            - name: worker
+              image: __WORKER_IMAGE_DIGEST__
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+              env:
+                - name: APP_ENV
+                  value: production
+                - name: LOG_LEVEL
+                  value: info
+                - name: SHUTDOWN_TIMEOUT
+                  value: 45s
+                - name: WORKER_RUN_DURATION
+                  value: 14m
+                - name: R2_ENABLED
+                  value: "true"
+                - name: R2_ENDPOINT
+                  value: __R2_ENDPOINT__
+                - name: R2_BUCKET
+                  value: __R2_BUCKET__
