@@ -1,0 +1,53 @@
+go: downloading github.com/oapi-codegen/runtime v1.5.0
+go: downloading github.com/Pherlsz/Gymkhana-Core v0.2.1
+go: downloading github.com/apapsch/go-jsonmerge/v2 v2.0.0
+go: downloading github.com/tidwall/gjson v1.19.0
+go: downloading github.com/tidwall/sjson v1.2.5
+go: downloading github.com/tidwall/match v1.2.0
+go: downloading github.com/tidwall/pretty v1.2.1
+go: downloading github.com/stretchr/testify v1.11.1
+go: downloading go.uber.org/goleak v1.3.0
+go: downloading github.com/pmezard/go-difflib v1.0.0
+?   	github.com/Pherlsz/Gymkhana-Database/api/generated/attachments	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/api/generated/chat	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/api/generated/go	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/api/generated/googleforms	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/api/generated/matching	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/api/generated/ocr	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/api/generated/operations	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/api/generated/query	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/api/generated/search	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/api/generated/tasks	[no test files]
+# github.com/Pherlsz/Gymkhana-Database/cmd/configcheck
+cmd/configcheck/main.go:29:16: cfg.Auth.AllowedLogins undefined (type config.AuthConfig has no field or method AllowedLogins)
+?   	github.com/Pherlsz/Gymkhana-Database/cmd/api	[no test files]
+FAIL	github.com/Pherlsz/Gymkhana-Database/cmd/configcheck [build failed]
+ok  	github.com/Pherlsz/Gymkhana-Database/cmd/launch-smoke	0.008s
+?   	github.com/Pherlsz/Gymkhana-Database/cmd/legacy-reconcile	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/cmd/migrate	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/cmd/river-migrate	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/cmd/task-worker	[no test files]
+ok  	github.com/Pherlsz/Gymkhana-Database/cmd/worker	0.007s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/aichat	0.016s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/attachment	0.042s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/auth	0.006s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/bill	0.005s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/config	0.033s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/customdata	0.005s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/document	0.006s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/foundation	0.004s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/googleforms	0.026s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/legacymigration	0.008s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/matching	1.358s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/ocr	0.013s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/operations	0.065s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/platform/httpserver	0.096s
+?   	github.com/Pherlsz/Gymkhana-Database/internal/platform/logging	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/internal/platform/postgres	[no test files]
+?   	github.com/Pherlsz/Gymkhana-Database/internal/platform/postgres/dbgen	[no test files]
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo	0.003s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/profile	0.004s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/queryengine	0.011s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/search	0.007s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/taskengine	0.004s
+FAIL
