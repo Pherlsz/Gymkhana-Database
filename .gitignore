@@ -11,6 +11,11 @@ coverage-web/
 playwright-report/
 test-results/
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
 # Environment
 .env
 .env.local
