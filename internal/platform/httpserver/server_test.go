@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"
 )
 
 func TestLiveHealth(t *testing.T) {
@@ -29,6 +31,29 @@ func TestLiveHealth(t *testing.T) {
 	}
 }
 
+func TestHealthExposesOnlySafeReleaseMetadata(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	handler := New(logger, nil, Options{Release: releaseinfo.Info{
+		Version: "sha-304b760a3fff",
+		Commit:  "304b760a3fff934cefaf4bd36cb71bcebac060a2",
+	}})
+	request := httptest.NewRequest(http.MethodGet, "/health/live", nil)
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	var payload healthResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode health response: %v", err)
+	}
+	if payload.Release.Version != "sha-304b760a3fff" || payload.Release.Revision != "304b760a3fff" {
+		t.Fatalf("release = %#v", payload.Release)
+	}
+	if strings.Contains(response.Body.String(), "304b760a3fff934cefaf4bd36cb71bcebac060a2") {
+		t.Fatal("health response exposed the full commit identifier")
+	}
+}
+
 func TestReadyHealthRequiresDatabase(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	request := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
@@ -38,6 +63,13 @@ func TestReadyHealthRequiresDatabase(t *testing.T) {
 
 	if response.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusServiceUnavailable)
+	}
+	var payload healthResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode health response: %v", err)
+	}
+	if payload.Database != "unavailable" {
+		t.Fatalf("database = %q, want unavailable", payload.Database)
 	}
 }
 
