@@ -143,13 +143,12 @@ jobs:
         run: pnpm check:web
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Commit verified correction
+      - name: Publish verified code
         run: |
-          rm -f scripts/fix-google-auth-consistency.py .github/workflows/temporary-google-auth-fix.yml .ci-unit-failure.log .ci-integration-failure.log
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/backend.yml
+          rm -f .ci-unit-failure.log .ci-integration-failure.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
+          git reset -- .github/workflows/backend.yml .github/workflows/temporary-google-auth-fix.yml scripts/fix-google-auth-consistency.py
           git commit -m "fix: complete Google auth migration consistency"
           git push origin HEAD:fix/google-auth-rebuild-migration
