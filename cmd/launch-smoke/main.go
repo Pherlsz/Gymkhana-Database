@@ -33,7 +33,12 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
-	if err := checkLaunch(ctx, http.DefaultClient, *apiURL, *expectedRevision); err != nil {
+	client := &http.Client{
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	if err := checkLaunch(ctx, client, *apiURL, *expectedRevision); err != nil {
 		fmt.Fprintln(os.Stderr, "launch smoke check failed:", err)
 		os.Exit(1)
 	}
@@ -44,6 +49,9 @@ func checkLaunch(ctx context.Context, client *http.Client, baseURL, expectedRevi
 	parsed, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil || !parsed.IsAbs() || parsed.Host == "" || parsed.RawQuery != "" || parsed.Fragment != "" {
 		return errors.New("api URL must be an absolute URL without query or fragment")
+	}
+	if parsed.User != nil || (parsed.Path != "" && parsed.Path != "/") {
+		return errors.New("api URL must be an origin without credentials or path")
 	}
 	if parsed.Scheme != "https" && !(parsed.Scheme == "http" && isLocalHost(parsed.Hostname())) {
 		return errors.New("api URL must use HTTPS outside localhost")
