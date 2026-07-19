@@ -25,8 +25,14 @@ done
 target_name="$(TARGET_DATABASE_URL="$TARGET_DATABASE_URL" python3 - <<'PY'
 import os
 from urllib.parse import urlparse
+
 parsed = urlparse(os.environ["TARGET_DATABASE_URL"])
-print(parsed.path.lstrip("/").split("?")[0])
+if parsed.scheme not in {"postgres", "postgresql"} or not parsed.hostname:
+    raise SystemExit("TARGET_DATABASE_URL must be a PostgreSQL connection URL")
+name = parsed.path.lstrip("/")
+if not name or "/" in name:
+    raise SystemExit("TARGET_DATABASE_URL must include one database name")
+print(name)
 PY
 )"
 case "$target_name" in
@@ -42,13 +48,18 @@ pg_restore --list "$backup" >/dev/null
 existing_tables="$(PGDATABASE="$TARGET_DATABASE_URL" psql -XAtqc "SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind='r' AND n.nspname NOT IN ('pg_catalog','information_schema')")"
 [[ "$existing_tables" == "0" ]] || { echo "restore rehearsal target must be empty" >&2; exit 2; }
 
-PGDATABASE="$TARGET_DATABASE_URL" pg_restore \
-  --exit-on-error \
-  --single-transaction \
+# Keep the connection URL in the environment. The archive is converted to SQL
+# and psql wraps the entire restore in one transaction with fail-fast behavior.
+pg_restore \
   --no-owner \
   --no-privileges \
-  --dbname="$TARGET_DATABASE_URL" \
-  "$backup"
+  --file=- \
+  "$backup" | \
+  PGDATABASE="$TARGET_DATABASE_URL" psql \
+    -X \
+    --set=ON_ERROR_STOP=on \
+    --single-transaction \
+    --quiet
 
 restored_tables="$(PGDATABASE="$TARGET_DATABASE_URL" psql -XAtqc "SELECT count(*) FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind='r' AND n.nspname NOT IN ('pg_catalog','information_schema')")"
 [[ "$restored_tables" -gt 0 ]] || { echo "restore completed without user tables" >&2; exit 1; }
