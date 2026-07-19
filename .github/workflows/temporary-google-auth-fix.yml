@@ -83,7 +83,23 @@ jobs:
           make migrate
           make migrate-status
       - name: Run Go unit tests
-        run: go test ./...
+        shell: bash
+        run: |
+          set +e
+          go test ./... > /tmp/go-unit.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            tail -n 300 /tmp/go-unit.log > .ci-unit-failure.log
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .ci-unit-failure.log
+            git commit -m "chore: capture Google auth unit failure" || true
+            git push origin HEAD:fix/google-auth-rebuild-migration
+            cat .ci-unit-failure.log
+            exit "$status"
+          fi
+          rm -f .ci-unit-failure.log
       - name: Run PostgreSQL integration tests
         run: go test -p=1 -tags=integration ./internal/attachment ./internal/search ./internal/operations ./internal/googleforms ./internal/queryengine ./internal/matching ./internal/aichat ./internal/ocr
       - name: Run Go vet and build
@@ -96,7 +112,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Commit verified correction
         run: |
-          rm -f scripts/fix-google-auth-consistency.py .github/workflows/temporary-google-auth-fix.yml
+          rm -f scripts/fix-google-auth-consistency.py .github/workflows/temporary-google-auth-fix.yml .ci-unit-failure.log
           git fetch origin main
           git checkout origin/main -- .github/workflows/backend.yml
           git config user.name "github-actions[bot]"
