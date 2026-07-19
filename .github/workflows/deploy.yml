@@ -10,7 +10,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     env:
       GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
@@ -55,32 +55,24 @@ jobs:
           go build ./cmd/...
           pnpm build:web
 
-      - name: Build API image
+      - name: Build release images
+        shell: bash
         run: |
-          docker build \
-            --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN \
-            --build-arg RELEASE_VERSION=${{ steps.release.outputs.version }} \
-            --build-arg RELEASE_COMMIT=${{ steps.release.outputs.commit }} \
-            --build-arg RELEASE_BUILT_AT=${{ steps.release.outputs.built_at }} \
-            -f Dockerfile.api \
-            -t gymkhana-database-api:${{ steps.release.outputs.commit }} .
-
-      - name: Build worker image
-        run: |
-          docker build \
-            --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN \
-            --build-arg RELEASE_VERSION=${{ steps.release.outputs.version }} \
-            --build-arg RELEASE_COMMIT=${{ steps.release.outputs.commit }} \
-            --build-arg RELEASE_BUILT_AT=${{ steps.release.outputs.built_at }} \
-            -f Dockerfile.worker \
-            -t gymkhana-database-worker:${{ steps.release.outputs.commit }} .
+          for target in api migrate worker; do
+            docker build \
+              --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN \
+              --build-arg RELEASE_VERSION=${{ steps.release.outputs.version }} \
+              --build-arg RELEASE_COMMIT=${{ steps.release.outputs.commit }} \
+              --build-arg RELEASE_BUILT_AT=${{ steps.release.outputs.built_at }} \
+              -f "Dockerfile.${target}" \
+              -t "gymkhana-database-${target}:${{ steps.release.outputs.commit }}" .
+          done
 
       - name: Verify image release labels
         shell: bash
         run: |
-          for image in \
-            gymkhana-database-api:${{ steps.release.outputs.commit }} \
-            gymkhana-database-worker:${{ steps.release.outputs.commit }}; do
+          for target in api migrate worker; do
+            image="gymkhana-database-${target}:${{ steps.release.outputs.commit }}"
             test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "${{ steps.release.outputs.version }}"
             test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "${{ steps.release.outputs.commit }}"
             test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.created" }}')" = "${{ steps.release.outputs.built_at }}"
