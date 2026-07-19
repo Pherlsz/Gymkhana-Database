@@ -1,0 +1,15 @@
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/attachment	0.110s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/search	0.965s
+--- FAIL: TestPostgresOperationLifecycleIdempotencyOwnershipExportAndBulkDelete (0.22s)
+    postgres_store_integration_test.go:211: ExecuteImport(recovery) error = operation forbidden
+FAIL
+FAIL	github.com/Pherlsz/Gymkhana-Database/internal/operations	0.260s
+--- FAIL: TestPostgresGoogleFormsOAuthPaginationDriftStagingAndOwnership (0.54s)
+    postgres_store_integration_test.go:311: Operations ExecuteImport() error = operation forbidden
+FAIL
+FAIL	github.com/Pherlsz/Gymkhana-Database/internal/googleforms	0.554s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/queryengine	0.325s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/matching	0.854s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/aichat	0.265s
+ok  	github.com/Pherlsz/Gymkhana-Database/internal/ocr	0.161s
+FAIL
