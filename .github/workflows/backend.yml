@@ -5,33 +5,36 @@ on:
     types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - "**/*.go"
-      - "api/**"
-      - "apps/**"
       - "go.mod"
       - "go.sum"
-      - "package.json"
-      - "pnpm-lock.yaml"
+      - "Makefile"
+      - "scripts/configure-private-go.sh"
       - ".github/workflows/backend.yml"
+      - "database/migrations/**"
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run Staticcheck and race tests
+        required: false
+        default: true
+        type: boolean
 
 permissions:
-  contents: write
+  contents: read
   packages: read
 
 concurrency:
-  group: m14-finalize-${{ github.event.pull_request.number || github.ref }}
+  group: backend-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  finalize:
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/m14-advanced-query-tasks' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
+  quality:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
     steps:
-      - name: Check out branch
+      - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          ref: agent/m14-advanced-query-tasks
-          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
@@ -39,202 +42,142 @@ jobs:
           go-version: 1.26.5
           cache: true
 
-      - name: Set up Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 24
-          registry-url: https://npm.pkg.github.com
+      - name: Configure private Core access
+        run: scripts/configure-private-go.sh
+        env:
+          GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: Enable Corepack
-        run: corepack enable
+      - name: Normalize Go module metadata
+        id: modules
+        continue-on-error: true
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      - name: Preserve normalized Go module metadata
+        if: ${{ steps.modules.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: normalized-go-module-metadata
+          path: |
+            go.mod
+            go.sum
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Check formatting
+        id: formatting
+        continue-on-error: true
+        shell: bash
+        run: |
+          unformatted="$(gofmt -l $(find cmd internal api/generated -type f -name '*.go'))"
+          if [ -n "$unformatted" ]; then
+            echo "Unformatted Go files:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Prepare formatted Go sources
+        if: ${{ steps.formatting.outcome == 'failure' }}
+        run: find cmd internal api/generated -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
+
+      - name: Preserve formatted Go sources
+        if: ${{ steps.formatting.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: formatted-go-sources
+          path: |
+            cmd/**/*.go
+            internal/**/*.go
+            api/generated/**/*.go
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Fail when Go formatting differs
+        if: ${{ steps.formatting.outcome == 'failure' }}
+        run: exit 1
+
+      - name: Run vet
+        id: vet
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          go vet ./... 2>&1 | tee /tmp/go-vet.log
+
+      - name: Preserve Go vet diagnostics
+        if: ${{ steps.vet.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: go-vet-diagnostics
+          path: /tmp/go-vet.log
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Fail when Go vet fails
+        if: ${{ steps.vet.outcome == 'failure' }}
+        run: exit 1
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build executables
+        run: go build ./cmd/...
+
+      - name: Fail when Go module metadata differs
+        if: ${{ steps.modules.outcome == 'failure' }}
+        run: exit 1
+
+      - name: Run Staticcheck
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.full) || (github.event_name == 'pull_request' && github.event.action != 'synchronize') }}
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@v0.7.0
+          staticcheck ./...
+
+      - name: Run race tests
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.full) || (github.event_name == 'pull_request' && github.event.action != 'synchronize') }}
+        run: go test -race ./...
+
+  postgres-integration:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: gymkhana
+          POSTGRES_USER: gymkhana
+          POSTGRES_PASSWORD: gymkhana
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gymkhana -d gymkhana"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: 1.26.5
+          cache: true
 
       - name: Configure private Core access
         run: scripts/configure-private-go.sh
         env:
           GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: Apply final source and contract fixes
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          import textwrap
+      - name: Apply migrations
+        run: make migrate
 
-          def regex_patch(path: str, pattern: str, replacement: str, flags: int = 0) -> None:
-              file = Path(path)
-              text = file.read_text()
-              updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
-              if count == 0 and replacement not in text:
-                  raise SystemExit(f"patch target not found: {path}")
-              file.write_text(updated if count else text)
-
-          page = Path("apps/web/src/TaskPage.tsx")
-          text = page.read_text()
-          text = text.replace(
-              "void navigate({ search: (previous) => ({ ...previous, draft: created.id, job: undefined }) });",
-              textwrap.dedent("""\
-              void navigate({
-                search: (previous) => {
-                  const next = { ...previous, draft: created.id };
-                  delete next.job;
-                  return next;
-                },
-              });"""),
-          )
-          text = re.sub(
-              r'''    <Page\s+title="Consultas avançadas e tarefas"\s+description="Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução somente leitura\."\s*>\s*      <Stack gap="5">''',
-              textwrap.dedent("""\
-                  <Page.Root maxWidth="lg">
-                    <Page.Header>
-                      <Page.Eyebrow>M14 · Consultas avançadas</Page.Eyebrow>
-                      <Page.Title>Consultas avançadas e tarefas</Page.Title>
-                      <Page.Description>
-                        Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução
-                        somente leitura.
-                      </Page.Description>
-                    </Page.Header>
-                    <Page.Content>
-                      <Stack gap="5">"""),
-              text,
-              count=1,
-          )
-          text = text.replace('<Page.Root maxWidth="xl">', '<Page.Root maxWidth="lg">')
-          text = re.sub(
-              r'''      </Stack>\s+    </Page>\s+  \);\s+}\s+\nfunction VisualQueryBuilder''',
-              textwrap.dedent("""\
-                      </Stack>
-                    </Page.Content>
-                  </Page.Root>
-                );
-              }
-
-              function VisualQueryBuilder"""),
-              text,
-              count=1,
-          )
-          text = text.replace("{row.cells.map((cell) => (", "{(row.cells ?? []).map((cell) => (")
-          page.write_text(text)
-
-          tasks = Path("apps/web/src/lib/api/tasks.ts")
-          text = tasks.read_text()
-          text = re.sub(
-              r'''(throw new APIRequestError\("API response is not JSON", \{\s+status: response\.status,)(\s+requestId:)''',
-              r'''\1
-              code: undefined,\2''',
-              text,
-              count=1,
-          )
-          tasks.write_text(text)
-
-          completion = Path("internal/taskengine/postgres_completion.go")
-          text = completion.read_text()
-          if '"encoding/json"' not in text:
-              text = text.replace('import (\n\t"context"', 'import (\n\t"context"\n\t"encoding/json"', 1)
-          completion.write_text(text)
-          Path("internal/taskengine/json_bridge.go").unlink(missing_ok=True)
-
-          jobs = Path("internal/taskengine/postgres_jobs.go")
-          jobs.write_text(jobs.read_text().replace("return job.Version + 1", "return job.Version", 1))
-          advanced = Path("internal/queryengine/advanced_service.go")
-          text = advanced.read_text().replace("EntityKind: advanced.EntityKind,", "EntityKind: rootEntity,", 1)
-          text = text.replace("if len(parts) < 5 {", "if len(parts) < 4 {", 1)
-          advanced.write_text(text)
-
-          contract = Path("api/tasks.openapi.yaml")
-          text = contract.read_text()
-          text = re.sub(
-              r'''        rows:\n          type: array\n          items:\n            type: object''',
-              "        rows:\n          type: array\n          maxItems: 100\n          items:\n            $ref: '#/components/schemas/ResultRow'",
-              text,
-              count=1,
-          )
-          if "    ResultCell:\n" not in text:
-              schemas = textwrap.dedent("""\
-                  ResultCell:
-                    type: object
-                    additionalProperties: false
-                    required: [column_position, kind, is_null]
-                    properties:
-                      column_position: { type: integer, minimum: 0, maximum: 19 }
-                      kind:
-                        $ref: '#/components/schemas/ValueKind'
-                      is_null: { type: boolean }
-                      text_value: { type: string, maxLength: 5000 }
-                      integer_value: { type: integer, format: int64 }
-                      decimal_value:
-                        type: string
-                        pattern: '^-?[0-9]{1,28}(\\.[0-9]{1,10})?$'
-                      boolean_value: { type: boolean }
-                      civil_date_value: { type: string, format: date }
-                      timestamp_value: { type: string, format: date-time }
-                  ResultRow:
-                    type: object
-                    additionalProperties: false
-                    required: [position, entity_kind, entity_id, entity_label, updated_at, cells]
-                    properties:
-                      position: { type: integer, minimum: 0, maximum: 499 }
-                      entity_kind: { type: string }
-                      entity_id: { type: string, minLength: 1, maxLength: 200 }
-                      entity_label: { type: string, minLength: 1, maxLength: 300 }
-                      updated_at: { type: string, format: date-time }
-                      cells:
-                        type: array
-                        maxItems: 20
-                        items:
-                          $ref: '#/components/schemas/ResultCell'
-              """)
-              schemas = textwrap.indent(schemas, "    ")
-              text = text.replace("    PlanEstimate:\n", schemas + "    PlanEstimate:\n", 1)
-          contract.write_text(text)
-          PY
-
-          gofmt -w internal/taskengine/postgres_completion.go internal/taskengine/postgres_jobs.go internal/queryengine/advanced_service.go
-          git fetch origin main --depth=1
-          git checkout origin/main -- .github/workflows/backend.yml
-
-      - name: Install dependencies
-        run: |
-          go mod download
-          pnpm install --frozen-lockfile
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Regenerate contracts with official targets
-        shell: bash
-        run: |
-          make generate-go generate-ts
-          mkdir -p /tmp/m14-generated
-          cp api/generated/tasks/tasks.gen.go /tmp/m14-generated/tasks.gen.go
-          cp apps/web/src/generated/tasks-api.ts /tmp/m14-generated/tasks-api.ts
-          git checkout HEAD -- api/generated apps/web/src/generated
-          cp /tmp/m14-generated/tasks.gen.go api/generated/tasks/tasks.gen.go
-          cp /tmp/m14-generated/tasks-api.ts apps/web/src/generated/tasks-api.ts
-          gofmt -w api/generated/tasks/tasks.gen.go
-          pnpm exec oxfmt apps/web/src/TaskPage.tsx apps/web/src/lib/api/tasks.ts apps/web/src/generated/tasks-api.ts --write
-
-      - name: Verify Go
-        run: |
-          go mod tidy
-          git diff --exit-code -- go.mod go.sum
-          test -z "$(gofmt -l $(find cmd internal api/generated -type f -name '*.go'))"
-          go vet ./...
-          go test ./...
-          go build ./cmd/...
-          go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
-
-      - name: Verify frontend
-        run: |
-          pnpm typecheck:web
-          pnpm lint:web
-          pnpm format:check
-          pnpm test:web
-          pnpm build:web
-
-      - name: Publish verified fixes
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git commit -m "fix: complete M14 validation and restore CI"
-          git push origin HEAD:agent/m14-advanced-query-tasks
+      - name: Run PostgreSQL integration tests
+        run: go test -p=1 -tags=integration ./internal/attachment ./internal/search ./internal/operations ./internal/googleforms ./internal/queryengine ./internal/matching ./internal/aichat ./internal/ocr

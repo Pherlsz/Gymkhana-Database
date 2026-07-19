@@ -221,7 +221,7 @@ VALUES($1,$2,'JOB_STARTED',$3)`, taskUUID(id), currentVersionEventSequence(curre
 func currentVersionEventSequence(job Job) int64 {
 	// The persisted next sequence is not exposed on Job. Counting events under the
 	// row lock gives a monotonic sequence without trusting client state.
-	return job.Version + 1
+	return job.Version
 }
 
 func (store *PostgresStore) RecordProgress(ctx context.Context, id Identifier, kind EventKind, current, total, candidates int, now time.Time) (Job, error) {

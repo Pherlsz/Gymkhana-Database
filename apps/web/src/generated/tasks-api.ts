@@ -372,6 +372,29 @@ export interface components {
         relation?: string;
       }[];
     };
+    ResultCell: {
+      column_position: number;
+      kind: components["schemas"]["ValueKind"];
+      is_null: boolean;
+      text_value?: string;
+      /** Format: int64 */
+      integer_value?: number;
+      decimal_value?: string;
+      boolean_value?: boolean;
+      /** Format: date */
+      civil_date_value?: string;
+      /** Format: date-time */
+      timestamp_value?: string;
+    };
+    ResultRow: {
+      position: number;
+      entity_kind: string;
+      entity_id: string;
+      entity_label: string;
+      /** Format: date-time */
+      updated_at: string;
+      cells: components["schemas"]["ResultCell"][];
+    };
     PlanEstimate: {
       valid: boolean;
       fingerprint?: string;
@@ -401,7 +424,7 @@ export interface components {
     QueryResultPage: {
       execution: components["schemas"]["QueryExecution"];
       columns: components["schemas"]["ResultColumn"][];
-      rows: Record<string, never>[];
+      rows: components["schemas"]["ResultRow"][];
       total: number;
       limit: number;
       offset: number;

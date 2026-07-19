@@ -61,6 +61,7 @@ async function requestJSON<T>(path: string, init: RequestInit = {}): Promise<T> 
   if (payload === undefined) {
     throw new APIRequestError("API response is not JSON", {
       status: response.status,
+      code: undefined,
       requestId: response.headers.get("x-request-id") ?? undefined,
     });
   }

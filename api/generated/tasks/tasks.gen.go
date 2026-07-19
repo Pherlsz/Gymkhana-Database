@@ -647,12 +647,12 @@ type QueryPlanVersion string
 
 // QueryResultPage defines model for QueryResultPage.
 type QueryResultPage struct {
-	Columns   []ResultColumn           `json:"columns"`
-	Execution QueryExecution           `json:"execution"`
-	Limit     int                      `json:"limit"`
-	Offset    int                      `json:"offset"`
-	Rows      []map[string]interface{} `json:"rows"`
-	Total     int                      `json:"total"`
+	Columns   []ResultColumn `json:"columns"`
+	Execution QueryExecution `json:"execution"`
+	Limit     int            `json:"limit"`
+	Offset    int            `json:"offset"`
+	Rows      []ResultRow    `json:"rows"`
+	Total     int            `json:"total"`
 }
 
 // Requirement defines model for Requirement.
@@ -674,6 +674,19 @@ type Requirement struct {
 // RequirementPatternGrammar defines model for Requirement.Pattern.Grammar.
 type RequirementPatternGrammar string
 
+// ResultCell defines model for ResultCell.
+type ResultCell struct {
+	BooleanValue   *bool               `json:"boolean_value,omitempty"`
+	CivilDateValue *openapi_types.Date `json:"civil_date_value,omitempty"`
+	ColumnPosition int                 `json:"column_position"`
+	DecimalValue   *string             `json:"decimal_value,omitempty"`
+	IntegerValue   *int64              `json:"integer_value,omitempty"`
+	IsNull         bool                `json:"is_null"`
+	Kind           ValueKind           `json:"kind"`
+	TextValue      *string             `json:"text_value,omitempty"`
+	TimestampValue *time.Time          `json:"timestamp_value,omitempty"`
+}
+
 // ResultColumn defines model for ResultColumn.
 type ResultColumn struct {
 	AggregateKey *string   `json:"aggregate_key,omitempty"`
@@ -686,6 +699,16 @@ type ResultColumn struct {
 		Relation *string `json:"relation,omitempty"`
 	} `json:"lineage,omitempty"`
 	Position int `json:"position"`
+}
+
+// ResultRow defines model for ResultRow.
+type ResultRow struct {
+	Cells       []ResultCell `json:"cells"`
+	EntityId    string       `json:"entity_id"`
+	EntityKind  string       `json:"entity_kind"`
+	EntityLabel string       `json:"entity_label"`
+	Position    int          `json:"position"`
+	UpdatedAt   time.Time    `json:"updated_at"`
 }
 
 // TaskCapability defines model for TaskCapability.

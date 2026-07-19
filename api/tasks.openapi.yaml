@@ -570,6 +570,38 @@ components:
               entity: { type: string }
               field: { type: string }
               relation: { type: string }
+    ResultCell:
+      type: object
+      additionalProperties: false
+      required: [column_position, kind, is_null]
+      properties:
+        column_position: { type: integer, minimum: 0, maximum: 19 }
+        kind:
+          $ref: '#/components/schemas/ValueKind'
+        is_null: { type: boolean }
+        text_value: { type: string, maxLength: 5000 }
+        integer_value: { type: integer, format: int64 }
+        decimal_value:
+          type: string
+          pattern: '^-?[0-9]{1,28}(\.[0-9]{1,10})?$'
+        boolean_value: { type: boolean }
+        civil_date_value: { type: string, format: date }
+        timestamp_value: { type: string, format: date-time }
+    ResultRow:
+      type: object
+      additionalProperties: false
+      required: [position, entity_kind, entity_id, entity_label, updated_at, cells]
+      properties:
+        position: { type: integer, minimum: 0, maximum: 499 }
+        entity_kind: { type: string }
+        entity_id: { type: string, minLength: 1, maxLength: 200 }
+        entity_label: { type: string, minLength: 1, maxLength: 300 }
+        updated_at: { type: string, format: date-time }
+        cells:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ResultCell'
     PlanEstimate:
       type: object
       required: [valid]
@@ -611,8 +643,9 @@ components:
             $ref: '#/components/schemas/ResultColumn'
         rows:
           type: array
+          maxItems: 100
           items:
-            type: object
+            $ref: '#/components/schemas/ResultRow'
         total: { type: integer }
         limit: { type: integer }
         offset: { type: integer }

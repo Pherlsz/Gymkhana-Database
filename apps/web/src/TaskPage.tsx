@@ -175,7 +175,13 @@ export function TaskPage() {
     mutationFn: () => createTaskDraft(parseJSON<TaskSpec>(specText)),
     onSuccess: (created) => {
       setSpecText(JSON.stringify(created.spec, null, 2));
-      void navigate({ search: (previous) => ({ ...previous, draft: created.id, job: undefined }) });
+      void navigate({
+        search: (previous) => {
+          const next = { ...previous, draft: created.id };
+          delete next.job;
+          return next;
+        },
+      });
     },
   });
   const reviewDraft = useMutation({
@@ -211,175 +217,182 @@ export function TaskPage() {
   }, [catalog.data, parsedPlan]);
 
   return (
-    <Page
-      title="Consultas avançadas e tarefas"
-      description="Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução somente leitura."
-    >
-      <Stack gap="5">
-        <Inline gap="2" wrap>
-          {(["visual", "json", "task"] as const).map((mode) => (
-            <Button
-              key={mode}
-              variant={search.mode === mode ? "primary" : "secondary"}
-              onClick={() => void navigate({ search: (previous) => ({ ...previous, mode }) })}
-            >
-              {mode === "visual"
-                ? "Visual"
-                : mode === "json"
-                  ? "QueryPlan JSON"
-                  : "Tarefa completa"}
-            </Button>
-          ))}
-        </Inline>
-
-        {capability.isError ? <RequestError error={capability.error} /> : null}
-        {catalog.isError ? <RequestError error={catalog.error} /> : null}
-        {capability.data && !capability.data.semantic_interpretation ? (
-          <Alert tone="info" title="Interpretação semântica desativada">
-            A construção tipada continua disponível. Nenhum provedor externo recebe o texto da
-            tarefa.
-          </Alert>
-        ) : null}
-
-        {search.mode === "visual" ? (
-          <VisualQueryBuilder
-            catalog={catalog.data}
-            plan={parsedPlan}
-            fields={entityFields}
-            onChange={(plan) => setPlanText(JSON.stringify(plan, null, 2))}
-          />
-        ) : null}
-
-        {search.mode === "json" ? (
-          <Surface className="task-workspace__panel">
-            <label className="task-workspace__field">
-              QueryPlan v2
-              <textarea
-                aria-label="QueryPlan v2"
-                rows={22}
-                value={planText}
-                onChange={(event) => setPlanText(event.target.value)}
-                spellCheck={false}
-              />
-            </label>
-          </Surface>
-        ) : null}
-
-        {search.mode !== "task" ? (
-          <Surface className="task-workspace__panel">
-            <Inline gap="3" wrap>
-              <Button onClick={() => validateQuery.mutate()} disabled={validateQuery.isPending}>
-                Validar plano
-              </Button>
+    <Page.Root maxWidth="lg">
+      <Page.Header>
+        <Page.Eyebrow>M14 · Consultas avançadas</Page.Eyebrow>
+        <Page.Title>Consultas avançadas e tarefas</Page.Title>
+        <Page.Description>
+          Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução somente
+          leitura.
+        </Page.Description>
+      </Page.Header>
+      <Page.Content>
+        <Stack gap="5">
+          <Inline gap="2" wrap>
+            {(["visual", "json", "task"] as const).map((mode) => (
               <Button
-                variant="primary"
-                onClick={() => executeQuery.mutate()}
-                disabled={executeQuery.isPending}
+                key={mode}
+                variant={search.mode === mode ? "primary" : "secondary"}
+                onClick={() => void navigate({ search: (previous) => ({ ...previous, mode }) })}
               >
-                Executar consulta
+                {mode === "visual"
+                  ? "Visual"
+                  : mode === "json"
+                    ? "QueryPlan JSON"
+                    : "Tarefa completa"}
               </Button>
-            </Inline>
-            <MutationError mutation={validateQuery} />
-            <MutationError mutation={executeQuery} />
-            {queryEstimate ? (
-              <p role="status">
-                Plano válido · custo {queryEstimate.cost ?? 0} ·{" "}
-                {queryEstimate.columns?.length ?? 0} colunas
-              </p>
-            ) : null}
-            {queryExecution ? (
-              <p>
-                Execução {queryExecution.state}: {queryExecution.id}
-              </p>
-            ) : null}
-          </Surface>
-        ) : null}
+            ))}
+          </Inline>
 
-        {queryResult.data ? <AdvancedQueryResultView result={queryResult.data} /> : null}
-        {queryResult.isError ? <RequestError error={queryResult.error} /> : null}
+          {capability.isError ? <RequestError error={capability.error} /> : null}
+          {catalog.isError ? <RequestError error={catalog.error} /> : null}
+          {capability.data && !capability.data.semantic_interpretation ? (
+            <Alert tone="info" title="Interpretação semântica desativada">
+              A construção tipada continua disponível. Nenhum provedor externo recebe o texto da
+              tarefa.
+            </Alert>
+          ) : null}
 
-        {search.mode === "task" ? (
-          <>
+          {search.mode === "visual" ? (
+            <VisualQueryBuilder
+              catalog={catalog.data}
+              plan={parsedPlan}
+              fields={entityFields}
+              onChange={(plan) => setPlanText(JSON.stringify(plan, null, 2))}
+            />
+          ) : null}
+
+          {search.mode === "json" ? (
             <Surface className="task-workspace__panel">
-              <Stack gap="3">
-                <label className="task-workspace__field">
-                  Texto original da tarefa
-                  <textarea
-                    rows={8}
-                    value={taskText}
-                    onChange={(event) => setTaskText(event.target.value)}
-                    placeholder="Cole a tarefa completa aqui. A interpretação nunca executa automaticamente."
-                  />
-                </label>
-                <Button
-                  onClick={() => interpret.mutate()}
-                  disabled={
-                    !capability.data?.semantic_interpretation ||
-                    interpret.isPending ||
-                    !taskText.trim()
-                  }
-                >
-                  Propor especificação
+              <label className="task-workspace__field">
+                QueryPlan v2
+                <textarea
+                  aria-label="QueryPlan v2"
+                  rows={22}
+                  value={planText}
+                  onChange={(event) => setPlanText(event.target.value)}
+                  spellCheck={false}
+                />
+              </label>
+            </Surface>
+          ) : null}
+
+          {search.mode !== "task" ? (
+            <Surface className="task-workspace__panel">
+              <Inline gap="3" wrap>
+                <Button onClick={() => validateQuery.mutate()} disabled={validateQuery.isPending}>
+                  Validar plano
                 </Button>
-                <MutationError mutation={interpret} />
-              </Stack>
+                <Button
+                  variant="primary"
+                  onClick={() => executeQuery.mutate()}
+                  disabled={executeQuery.isPending}
+                >
+                  Executar consulta
+                </Button>
+              </Inline>
+              <MutationError mutation={validateQuery} />
+              <MutationError mutation={executeQuery} />
+              {queryEstimate ? (
+                <p role="status">
+                  Plano válido · custo {queryEstimate.cost ?? 0} ·{" "}
+                  {queryEstimate.columns?.length ?? 0} colunas
+                </p>
+              ) : null}
+              {queryExecution ? (
+                <p>
+                  Execução {queryExecution.state}: {queryExecution.id}
+                </p>
+              ) : null}
             </Surface>
+          ) : null}
 
-            <Surface className="task-workspace__panel">
-              <Stack gap="3">
-                <label className="task-workspace__field">
-                  TaskSpec revisável
-                  <textarea
-                    aria-label="TaskSpec revisável"
-                    rows={28}
-                    value={specText}
-                    onChange={(event) => setSpecText(event.target.value)}
-                    spellCheck={false}
-                  />
-                </label>
-                <Inline gap="3" wrap>
-                  <Button onClick={() => createDraft.mutate()} disabled={createDraft.isPending}>
-                    Salvar rascunho
-                  </Button>
-                  <Button
-                    onClick={() => reviewDraft.mutate()}
-                    disabled={!draft.data || reviewDraft.isPending}
-                  >
-                    Confirmar revisão
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onClick={() => startJob.mutate(undefined)}
-                    disabled={draft.data?.state !== "REVIEWED" || startJob.isPending}
-                  >
-                    Executar tarefa
-                  </Button>
-                </Inline>
-                <MutationError mutation={createDraft} />
-                <MutationError mutation={reviewDraft} />
-                <MutationError mutation={startJob} />
-                {draft.data ? <DraftSummary draft={draft.data} /> : null}
-              </Stack>
-            </Surface>
-          </>
-        ) : null}
+          {queryResult.data ? <AdvancedQueryResultView result={queryResult.data} /> : null}
+          {queryResult.isError ? <RequestError error={queryResult.error} /> : null}
 
-        {job.data ? (
-          <JobPanel
-            job={job.data}
-            streamMessage={streamMessage}
-            streamError={streamError}
-            onCancel={() => cancelJobMutation.mutate()}
-            onRetry={() => startJob.mutate(job.data.id)}
-            cancelling={cancelJobMutation.isPending}
-            retrying={startJob.isPending}
-          />
-        ) : null}
-        {job.isError ? <RequestError error={job.error} /> : null}
-        {results.data ? <TaskResultsView page={results.data} /> : null}
-        {results.isError ? <RequestError error={results.error} /> : null}
-      </Stack>
-    </Page>
+          {search.mode === "task" ? (
+            <>
+              <Surface className="task-workspace__panel">
+                <Stack gap="3">
+                  <label className="task-workspace__field">
+                    Texto original da tarefa
+                    <textarea
+                      rows={8}
+                      value={taskText}
+                      onChange={(event) => setTaskText(event.target.value)}
+                      placeholder="Cole a tarefa completa aqui. A interpretação nunca executa automaticamente."
+                    />
+                  </label>
+                  <Button
+                    onClick={() => interpret.mutate()}
+                    disabled={
+                      !capability.data?.semantic_interpretation ||
+                      interpret.isPending ||
+                      !taskText.trim()
+                    }
+                  >
+                    Propor especificação
+                  </Button>
+                  <MutationError mutation={interpret} />
+                </Stack>
+              </Surface>
+
+              <Surface className="task-workspace__panel">
+                <Stack gap="3">
+                  <label className="task-workspace__field">
+                    TaskSpec revisável
+                    <textarea
+                      aria-label="TaskSpec revisável"
+                      rows={28}
+                      value={specText}
+                      onChange={(event) => setSpecText(event.target.value)}
+                      spellCheck={false}
+                    />
+                  </label>
+                  <Inline gap="3" wrap>
+                    <Button onClick={() => createDraft.mutate()} disabled={createDraft.isPending}>
+                      Salvar rascunho
+                    </Button>
+                    <Button
+                      onClick={() => reviewDraft.mutate()}
+                      disabled={!draft.data || reviewDraft.isPending}
+                    >
+                      Confirmar revisão
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={() => startJob.mutate(undefined)}
+                      disabled={draft.data?.state !== "REVIEWED" || startJob.isPending}
+                    >
+                      Executar tarefa
+                    </Button>
+                  </Inline>
+                  <MutationError mutation={createDraft} />
+                  <MutationError mutation={reviewDraft} />
+                  <MutationError mutation={startJob} />
+                  {draft.data ? <DraftSummary draft={draft.data} /> : null}
+                </Stack>
+              </Surface>
+            </>
+          ) : null}
+
+          {job.data ? (
+            <JobPanel
+              job={job.data}
+              streamMessage={streamMessage}
+              streamError={streamError}
+              onCancel={() => cancelJobMutation.mutate()}
+              onRetry={() => startJob.mutate(job.data.id)}
+              cancelling={cancelJobMutation.isPending}
+              retrying={startJob.isPending}
+            />
+          ) : null}
+          {job.isError ? <RequestError error={job.error} /> : null}
+          {results.data ? <TaskResultsView page={results.data} /> : null}
+          {results.isError ? <RequestError error={results.error} /> : null}
+        </Stack>
+      </Page.Content>
+    </Page.Root>
   );
 }
 
@@ -591,7 +604,7 @@ function AdvancedQueryResultView({
         <tbody>
           {result.rows.map((row) => (
             <tr key={`${row.entity_kind}-${row.entity_id}`}>
-              {row.cells.map((cell) => (
+              {(row.cells ?? []).map((cell) => (
                 <td key={cell.column_position}>{renderCell(cell)}</td>
               ))}
             </tr>

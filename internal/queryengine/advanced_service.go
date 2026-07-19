@@ -211,7 +211,7 @@ func compileAdvancedForStore(plan QueryPlan, catalog resolvedCatalog, maximumCos
 	}
 	return CompiledPlan{
 		SQL: query, Arguments: advanced.Arguments, Columns: columns, Fingerprint: advanced.Fingerprint,
-		CatalogVersion: advanced.CatalogVersion, RootEntity: rootEntity, EntityKind: advanced.EntityKind,
+		CatalogVersion: advanced.CatalogVersion, RootEntity: rootEntity, EntityKind: rootEntity,
 		MaximumRows: advanced.MaximumRows, Cost: advanced.Cost,
 	}, normalized, nil
 }
@@ -285,7 +285,7 @@ func authorizedAdvancedResultPage(page ResultPage, expected Execution, catalog r
 		}
 		if strings.HasPrefix(column.FieldKey, "combination.") {
 			parts := strings.Split(column.FieldKey, ".")
-			if len(parts) < 5 {
+			if len(parts) < 4 {
 				return false
 			}
 			entity := strings.Join(parts[2:len(parts)-1], ".")
