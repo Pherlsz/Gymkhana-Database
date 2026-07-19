@@ -25,7 +25,7 @@ jobs:
   finalize:
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/m14-advanced-query-tasks' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Check out branch
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -59,146 +59,129 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          def replace_idempotent(path: str, old: str, new: str) -> None:
+          def replace(path: str, old: str, new: str) -> None:
               file = Path(path)
               text = file.read_text()
               if new in text:
                   return
               if old not in text:
-                  raise SystemExit(f"missing expected source in {path}: {old!r}")
+                  raise SystemExit(f"expected source not found in {path}")
               file.write_text(text.replace(old, new, 1))
 
-          task_page = "apps/web/src/TaskPage.tsx"
-          replace_idempotent(
-              task_page,
+          page = "apps/web/src/TaskPage.tsx"
+          replace(
+              page,
               "void navigate({ search: (previous) => ({ ...previous, draft: created.id, job: undefined }) });",
-              "\n".join([
-                  "void navigate({",
-                  "        search: (previous) => {",
-                  "          const next = { ...previous, draft: created.id };",
-                  "          delete next.job;",
-                  "          return next;",
-                  "        },",
-                  "      });",
-              ]),
+              """void navigate({
+                  search: (previous) => {
+                    const next = { ...previous, draft: created.id };
+                    delete next.job;
+                    return next;
+                  },
+                });""",
           )
-          replace_idempotent(
-              task_page,
-              "\n".join([
-                  "    <Page",
-                  '      title="Consultas avançadas e tarefas"',
-                  '      description="Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução somente leitura."',
-                  "    >",
-                  '      <Stack gap="5">',
-              ]),
-              "\n".join([
-                  '    <Page.Root maxWidth="lg">',
-                  "      <Page.Header>",
-                  "        <Page.Eyebrow>M14 · Consultas avançadas</Page.Eyebrow>",
-                  "        <Page.Title>Consultas avançadas e tarefas</Page.Title>",
-                  "        <Page.Description>",
-                  "          Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução",
-                  "          somente leitura.",
-                  "        </Page.Description>",
-                  "      </Page.Header>",
-                  "      <Page.Content>",
-                  '        <Stack gap="5">',
-              ]),
+          replace(
+              page,
+              """    <Page
+                title="Consultas avançadas e tarefas"
+                description="Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução somente leitura."
+              >
+                <Stack gap="5">""",
+              """    <Page.Root maxWidth="lg">
+                <Page.Header>
+                  <Page.Eyebrow>M14 · Consultas avançadas</Page.Eyebrow>
+                  <Page.Title>Consultas avançadas e tarefas</Page.Title>
+                  <Page.Description>
+                    Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução
+                    somente leitura.
+                  </Page.Description>
+                </Page.Header>
+                <Page.Content>
+                  <Stack gap="5">""",
           )
-          replace_idempotent(task_page, '    <Page.Root maxWidth="xl">', '    <Page.Root maxWidth="lg">')
-          replace_idempotent(
-              task_page,
-              "\n".join(["      </Stack>", "    </Page>"]),
-              "\n".join(["        </Stack>", "      </Page.Content>", "    </Page.Root>"]),
+          replace(page, '    <Page.Root maxWidth="xl">', '    <Page.Root maxWidth="lg">')
+          replace(
+              page,
+              """      </Stack>
+              </Page>""",
+              """      </Stack>
+                </Page.Content>
+              </Page.Root>""",
           )
-          replace_idempotent(task_page, "{row.cells.map((cell) => (", "{(row.cells ?? []).map((cell) => (")
-          replace_idempotent(
+          replace(page, "{row.cells.map((cell) => (", "{(row.cells ?? []).map((cell) => (")
+          replace(
               "apps/web/src/lib/api/tasks.ts",
-              "\n".join([
-                  '    throw new APIRequestError("API response is not JSON", {',
-                  "      status: response.status,",
-                  '      requestId: response.headers.get("x-request-id") ?? undefined,',
-                  "    });",
-              ]),
-              "\n".join([
-                  '    throw new APIRequestError("API response is not JSON", {',
-                  "      status: response.status,",
-                  "      code: undefined,",
-                  '      requestId: response.headers.get("x-request-id") ?? undefined,',
-                  "    });",
-              ]),
+              """    throw new APIRequestError("API response is not JSON", {
+                status: response.status,
+                requestId: response.headers.get("x-request-id") ?? undefined,
+              });""",
+              """    throw new APIRequestError("API response is not JSON", {
+                status: response.status,
+                code: undefined,
+                requestId: response.headers.get("x-request-id") ?? undefined,
+              });""",
           )
 
           completion = Path("internal/taskengine/postgres_completion.go")
-          completion_text = completion.read_text()
-          if '"encoding/json"' not in completion_text:
-              completion.write_text(completion_text.replace('import (\n\t"context"', 'import (\n\t"context"\n\t"encoding/json"', 1))
+          text = completion.read_text()
+          if '"encoding/json"' not in text:
+              completion.write_text(text.replace('import (\n\t"context"', 'import (\n\t"context"\n\t"encoding/json"', 1))
           Path("internal/taskengine/json_bridge.go").unlink(missing_ok=True)
-          replace_idempotent("internal/taskengine/postgres_jobs.go", "return job.Version + 1", "return job.Version")
-          replace_idempotent("internal/queryengine/advanced_service.go", "EntityKind: advanced.EntityKind,", "EntityKind: rootEntity,")
-          replace_idempotent("internal/queryengine/advanced_service.go", "if len(parts) < 5 {", "if len(parts) < 4 {")
+          replace("internal/taskengine/postgres_jobs.go", "return job.Version + 1", "return job.Version")
+          replace("internal/queryengine/advanced_service.go", "EntityKind: advanced.EntityKind,", "EntityKind: rootEntity,")
+          replace("internal/queryengine/advanced_service.go", "if len(parts) < 5 {", "if len(parts) < 4 {")
 
           contract = Path("api/tasks.openapi.yaml")
-          contract_text = contract.read_text()
-          empty_rows = "\n".join([
-              "        rows:",
-              "          type: array",
-              "          items:",
-              "            type: object",
-          ])
-          typed_rows = "\n".join([
-              "        rows:",
-              "          type: array",
-              "          maxItems: 100",
-              "          items:",
-              "            $ref: '#/components/schemas/ResultRow'",
-          ])
-          if typed_rows not in contract_text:
-              if empty_rows not in contract_text:
-                  raise SystemExit("query result rows schema not found")
-              contract_text = contract_text.replace(empty_rows, typed_rows, 1)
-          if "    ResultCell:\n" not in contract_text:
-              marker = "    PlanEstimate:\n"
+          text = contract.read_text()
+          old_rows = """        rows:
+                type: array
+                items:
+                  type: object"""
+          new_rows = """        rows:
+                type: array
+                maxItems: 100
+                items:
+                  $ref: '#/components/schemas/ResultRow'"""
+          if new_rows not in text:
+              if old_rows not in text:
+                  raise SystemExit("query result row schema not found")
+              text = text.replace(old_rows, new_rows, 1)
+          if "    ResultCell:\n" not in text:
               schemas = """    ResultCell:
-              type: object
-              additionalProperties: false
-              required: [column_position, kind, is_null]
-              properties:
-                column_position:
-                  type: integer
-                  minimum: 0
-                  maximum: 19
-                kind:
-                  $ref: '#/components/schemas/ValueKind'
-                is_null: { type: boolean }
-                text_value: { type: string, maxLength: 5000 }
-                integer_value: { type: integer, format: int64 }
-                decimal_value:
-                  type: string
-                  pattern: '^-?[0-9]{1,28}(\\.[0-9]{1,10})?$'
-                boolean_value: { type: boolean }
-                civil_date_value: { type: string, format: date }
-                timestamp_value: { type: string, format: date-time }
-            ResultRow:
-              type: object
-              additionalProperties: false
-              required: [position, entity_kind, entity_id, entity_label, updated_at, cells]
-              properties:
-                position: { type: integer, minimum: 0, maximum: 499 }
-                entity_kind: { type: string }
-                entity_id: { type: string, minLength: 1, maxLength: 200 }
-                entity_label: { type: string, minLength: 1, maxLength: 300 }
-                updated_at: { type: string, format: date-time }
-                cells:
-                  type: array
-                  maxItems: 20
-                  items:
-                    $ref: '#/components/schemas/ResultCell'
+                type: object
+                additionalProperties: false
+                required: [column_position, kind, is_null]
+                properties:
+                  column_position: { type: integer, minimum: 0, maximum: 19 }
+                  kind:
+                    $ref: '#/components/schemas/ValueKind'
+                  is_null: { type: boolean }
+                  text_value: { type: string, maxLength: 5000 }
+                  integer_value: { type: integer, format: int64 }
+                  decimal_value:
+                    type: string
+                    pattern: '^-?[0-9]{1,28}(\\.[0-9]{1,10})?$'
+                  boolean_value: { type: boolean }
+                  civil_date_value: { type: string, format: date }
+                  timestamp_value: { type: string, format: date-time }
+              ResultRow:
+                type: object
+                additionalProperties: false
+                required: [position, entity_kind, entity_id, entity_label, updated_at, cells]
+                properties:
+                  position: { type: integer, minimum: 0, maximum: 499 }
+                  entity_kind: { type: string }
+                  entity_id: { type: string, minLength: 1, maxLength: 200 }
+                  entity_label: { type: string, minLength: 1, maxLength: 300 }
+                  updated_at: { type: string, format: date-time }
+                  cells:
+                    type: array
+                    maxItems: 20
+                    items:
+                      $ref: '#/components/schemas/ResultCell'
           """
-              if marker not in contract_text:
-                  raise SystemExit("PlanEstimate schema marker not found")
-              contract_text = contract_text.replace(marker, schemas + marker, 1)
-          contract.write_text(contract_text)
+              text = text.replace("    PlanEstimate:\n", schemas + "    PlanEstimate:\n", 1)
+          contract.write_text(text)
           PY
 
           gofmt -w internal/taskengine/postgres_completion.go internal/taskengine/postgres_jobs.go internal/queryengine/advanced_service.go
@@ -212,14 +195,16 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Regenerate task contracts
+      - name: Regenerate contracts with official targets
         shell: bash
         run: |
-          tmp="$(mktemp --suffix=.tasks.openapi.yaml)"
-          sed 's/^openapi: 3\.1\.0/openapi: 3.0.3/' api/tasks.openapi.yaml > "$tmp"
-          go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.2 --config api/oapi-tasks-codegen.yaml "$tmp"
-          rm -f "$tmp"
-          pnpm exec openapi-typescript api/tasks.openapi.yaml -o apps/web/src/generated/tasks-api.ts
+          make generate-go generate-ts
+          mkdir -p /tmp/m14-generated/go /tmp/m14-generated/ts
+          cp api/generated/tasks/tasks.gen.go /tmp/m14-generated/go/tasks.gen.go
+          cp apps/web/src/generated/tasks-api.ts /tmp/m14-generated/ts/tasks-api.ts
+          git checkout HEAD -- api/generated apps/web/src/generated
+          cp /tmp/m14-generated/go/tasks.gen.go api/generated/tasks/tasks.gen.go
+          cp /tmp/m14-generated/ts/tasks-api.ts apps/web/src/generated/tasks-api.ts
           gofmt -w api/generated/tasks/tasks.gen.go
           pnpm exec oxfmt apps/web/src/TaskPage.tsx apps/web/src/lib/api/tasks.ts apps/web/src/generated/tasks-api.ts --write
 
