@@ -4,6 +4,7 @@ on:
   pull_request:
     types: [opened, ready_for_review, reopened, synchronize]
     paths:
+      - ".dockerignore"
       - "Dockerfile.api"
       - "Dockerfile.migrate"
       - "Dockerfile.worker"
@@ -12,10 +13,13 @@ on:
       - "go.sum"
       - "internal/platform/releaseinfo/**"
       - "scripts/configure-private-go.sh"
+      - "scripts/configure-worker-schedule.sh"
       - "scripts/create-recovery-point.sh"
       - "scripts/export-legacy-sqlite.py"
+      - "scripts/promote-cloud-run.sh"
       - "scripts/rehearse-restore.sh"
       - "scripts/render-cloud-run.py"
+      - "scripts/rollback-cloud-run.sh"
       - "vercel.json"
       - ".github/workflows/deploy.yml"
       - ".github/workflows/release-artifacts.yml"
@@ -40,7 +44,12 @@ jobs:
 
       - name: Validate scripts and Vercel contract
         run: |
-          bash -n scripts/create-recovery-point.sh scripts/rehearse-restore.sh
+          bash -n \
+            scripts/configure-worker-schedule.sh \
+            scripts/create-recovery-point.sh \
+            scripts/promote-cloud-run.sh \
+            scripts/rehearse-restore.sh \
+            scripts/rollback-cloud-run.sh
           python3 -m py_compile scripts/export-legacy-sqlite.py scripts/render-cloud-run.py
           python3 -m json.tool vercel.json >/dev/null
 
