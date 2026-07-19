@@ -42,13 +42,47 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Resolve immutable release metadata
+        id: release
+        shell: bash
+        run: |
+          echo "version=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          echo "commit=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo "built_at=$(git show -s --format=%cI "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+
       - name: Build application artifacts
         run: |
           go build ./cmd/...
           pnpm build:web
 
       - name: Build API image
-        run: docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN -f Dockerfile.api -t gymkhana-database-api:m1 .
+        run: |
+          docker build \
+            --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN \
+            --build-arg RELEASE_VERSION=${{ steps.release.outputs.version }} \
+            --build-arg RELEASE_COMMIT=${{ steps.release.outputs.commit }} \
+            --build-arg RELEASE_BUILT_AT=${{ steps.release.outputs.built_at }} \
+            -f Dockerfile.api \
+            -t gymkhana-database-api:${{ steps.release.outputs.commit }} .
 
       - name: Build worker image
-        run: docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN -f Dockerfile.worker -t gymkhana-database-worker:m1 .
+        run: |
+          docker build \
+            --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN \
+            --build-arg RELEASE_VERSION=${{ steps.release.outputs.version }} \
+            --build-arg RELEASE_COMMIT=${{ steps.release.outputs.commit }} \
+            --build-arg RELEASE_BUILT_AT=${{ steps.release.outputs.built_at }} \
+            -f Dockerfile.worker \
+            -t gymkhana-database-worker:${{ steps.release.outputs.commit }} .
+
+      - name: Verify image release labels
+        shell: bash
+        run: |
+          for image in \
+            gymkhana-database-api:${{ steps.release.outputs.commit }} \
+            gymkhana-database-worker:${{ steps.release.outputs.commit }}; do
+            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "${{ steps.release.outputs.version }}"
+            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "${{ steps.release.outputs.commit }}"
+            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.created" }}')" = "${{ steps.release.outputs.built_at }}"
+            test "$(docker image inspect "$image" --format '{{.Config.User}}')" = "nonroot:nonroot"
+          done
