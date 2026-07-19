@@ -14,144 +14,160 @@ import (
 )
 
 const (
-	defaultGitHubAuthorizeURL = "https://github.com/login/oauth/authorize"
-	defaultGitHubTokenURL     = "https://github.com/login/oauth/access_token"
-	defaultGitHubUserURL      = "https://api.github.com/user"
+	googleAuthorizationEndpoint = "https://accounts.google.com/o/oauth2/v2/auth"
+	googleTokenEndpoint         = "https://oauth2.googleapis.com/token"
+	googleUserInfoEndpoint      = "https://openidconnect.googleapis.com/v1/userinfo"
 )
 
-type GitHubProviderOptions struct {
+var ErrProviderExchange = errors.New("oauth provider exchange failed")
+
+type GoogleProviderOptions struct {
 	ClientID     string
 	ClientSecret string
 	RedirectURL  string
 	HTTPClient   *http.Client
+
+	// Endpoint overrides are restricted to tests. Production leaves them empty.
 	AuthorizeURL string
 	TokenURL     string
-	UserURL      string
+	UserInfoURL  string
 }
 
-type GitHubProvider struct {
+// Compatibility aliases keep existing composition code source-compatible while
+// the public configuration and documentation move from GitHub to Google.
+type GitHubProviderOptions = GoogleProviderOptions
+
+type GoogleProvider struct {
 	clientID     string
 	clientSecret string
 	redirectURL  string
 	httpClient   *http.Client
 	authorizeURL string
 	tokenURL     string
-	userURL      string
+	userInfoURL  string
 }
 
-func NewGitHubProvider(options GitHubProviderOptions) (*GitHubProvider, error) {
-	if strings.TrimSpace(options.ClientID) == "" || strings.TrimSpace(options.ClientSecret) == "" || strings.TrimSpace(options.RedirectURL) == "" {
-		return nil, errors.New("github oauth client id, secret, and redirect url are required")
-	}
-	if _, err := url.ParseRequestURI(options.RedirectURL); err != nil {
-		return nil, fmt.Errorf("parse github oauth redirect url: %w", err)
-	}
+type GitHubProvider = GoogleProvider
 
-	httpClient := options.HTTPClient
-	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 10 * time.Second}
+func NewGoogleProvider(options GoogleProviderOptions) (*GoogleProvider, error) {
+	if strings.TrimSpace(options.ClientID) == "" || strings.TrimSpace(options.ClientSecret) == "" || strings.TrimSpace(options.RedirectURL) == "" {
+		return nil, errors.New("google oauth client id, secret and redirect url are required")
 	}
-	return &GitHubProvider{
+	client := options.HTTPClient
+	if client == nil {
+		client = &http.Client{Timeout: 15 * time.Second}
+	}
+	authorizeURL := strings.TrimSpace(options.AuthorizeURL)
+	if authorizeURL == "" {
+		authorizeURL = googleAuthorizationEndpoint
+	}
+	tokenURL := strings.TrimSpace(options.TokenURL)
+	if tokenURL == "" {
+		tokenURL = googleTokenEndpoint
+	}
+	userInfoURL := strings.TrimSpace(options.UserInfoURL)
+	if userInfoURL == "" {
+		userInfoURL = googleUserInfoEndpoint
+	}
+	return &GoogleProvider{
 		clientID:     strings.TrimSpace(options.ClientID),
 		clientSecret: strings.TrimSpace(options.ClientSecret),
 		redirectURL:  strings.TrimSpace(options.RedirectURL),
-		httpClient:   httpClient,
-		authorizeURL: valueOrDefault(options.AuthorizeURL, defaultGitHubAuthorizeURL),
-		tokenURL:     valueOrDefault(options.TokenURL, defaultGitHubTokenURL),
-		userURL:      valueOrDefault(options.UserURL, defaultGitHubUserURL),
+		httpClient:   client,
+		authorizeURL: authorizeURL,
+		tokenURL:     tokenURL,
+		userInfoURL:  userInfoURL,
 	}, nil
 }
 
-func (provider *GitHubProvider) AuthorizationURL(state string) string {
-	query := url.Values{
-		"client_id":    {provider.clientID},
-		"redirect_uri": {provider.redirectURL},
-		"scope":        {"read:user"},
-		"state":        {state},
-	}
-	return provider.authorizeURL + "?" + query.Encode()
+func NewGitHubProvider(options GitHubProviderOptions) (*GoogleProvider, error) {
+	return NewGoogleProvider(options)
 }
 
-func (provider *GitHubProvider) Exchange(ctx context.Context, code string) (GitHubIdentity, error) {
-	requestBody, err := json.Marshal(map[string]string{
-		"client_id":     provider.clientID,
-		"client_secret": provider.clientSecret,
-		"code":          code,
-		"redirect_uri":  provider.redirectURL,
-	})
-	if err != nil {
-		return GitHubIdentity{}, err
-	}
+func (provider *GoogleProvider) AuthorizationURL(state string) string {
+	values := url.Values{}
+	values.Set("client_id", provider.clientID)
+	values.Set("redirect_uri", provider.redirectURL)
+	values.Set("response_type", "code")
+	values.Set("scope", "openid email profile")
+	values.Set("state", state)
+	values.Set("prompt", "select_account")
+	values.Set("include_granted_scopes", "true")
+	return provider.authorizeURL + "?" + values.Encode()
+}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, provider.tokenURL, bytes.NewReader(requestBody))
-	if err != nil {
-		return GitHubIdentity{}, err
+func (provider *GoogleProvider) Exchange(ctx context.Context, code string) (GoogleIdentity, error) {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return GoogleIdentity{}, ErrInvalidOAuthCode
 	}
-	request.Header.Set("Accept", "application/json")
-	request.Header.Set("Content-Type", "application/json")
+	form := url.Values{}
+	form.Set("client_id", provider.clientID)
+	form.Set("client_secret", provider.clientSecret)
+	form.Set("code", code)
+	form.Set("grant_type", "authorization_code")
+	form.Set("redirect_uri", provider.redirectURL)
 
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, provider.tokenURL, bytes.NewBufferString(form.Encode()))
+	if err != nil {
+		return GoogleIdentity{}, fmt.Errorf("%w: create token request: %v", ErrProviderExchange, err)
+	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	response, err := provider.httpClient.Do(request)
 	if err != nil {
-		return GitHubIdentity{}, err
+		return GoogleIdentity{}, fmt.Errorf("%w: token request: %v", ErrProviderExchange, err)
 	}
 	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return GitHubIdentity{}, fmt.Errorf("github token exchange returned status %d", response.StatusCode)
+	body, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	if err != nil {
+		return GoogleIdentity{}, fmt.Errorf("%w: read token response: %v", ErrProviderExchange, err)
 	}
-
-	var tokenPayload struct {
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return GoogleIdentity{}, fmt.Errorf("%w: token endpoint status %d", ErrProviderExchange, response.StatusCode)
+	}
+	var token struct {
 		AccessToken string `json:"access_token"`
-		Error       string `json:"error"`
+		TokenType   string `json:"token_type"`
 	}
-	if err := decodeLimitedJSON(response.Body, &tokenPayload); err != nil {
-		return GitHubIdentity{}, fmt.Errorf("decode github token response: %w", err)
-	}
-	if tokenPayload.Error != "" || tokenPayload.AccessToken == "" {
-		return GitHubIdentity{}, fmt.Errorf("github token exchange failed: %s", valueOrDefault(tokenPayload.Error, "missing access token"))
+	if err := json.Unmarshal(body, &token); err != nil || strings.TrimSpace(token.AccessToken) == "" {
+		return GoogleIdentity{}, fmt.Errorf("%w: invalid token response", ErrProviderExchange)
 	}
 
-	userRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, provider.userURL, nil)
+	userinfoRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, provider.userInfoURL, nil)
 	if err != nil {
-		return GitHubIdentity{}, err
+		return GoogleIdentity{}, fmt.Errorf("%w: create userinfo request: %v", ErrProviderExchange, err)
 	}
-	userRequest.Header.Set("Accept", "application/vnd.github+json")
-	userRequest.Header.Set("Authorization", "Bearer "+tokenPayload.AccessToken)
-	userRequest.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-
-	userResponse, err := provider.httpClient.Do(userRequest)
+	userinfoRequest.Header.Set("Authorization", "Bearer "+token.AccessToken)
+	userinfoResponse, err := provider.httpClient.Do(userinfoRequest)
 	if err != nil {
-		return GitHubIdentity{}, err
+		return GoogleIdentity{}, fmt.Errorf("%w: userinfo request: %v", ErrProviderExchange, err)
 	}
-	defer userResponse.Body.Close()
-	if userResponse.StatusCode != http.StatusOK {
-		return GitHubIdentity{}, fmt.Errorf("github user request returned status %d", userResponse.StatusCode)
+	defer userinfoResponse.Body.Close()
+	userinfoBody, err := io.ReadAll(io.LimitReader(userinfoResponse.Body, 1<<20))
+	if err != nil {
+		return GoogleIdentity{}, fmt.Errorf("%w: read userinfo response: %v", ErrProviderExchange, err)
 	}
-
-	var userPayload struct {
-		ID        int64  `json:"id"`
-		Login     string `json:"login"`
-		Name      string `json:"name"`
-		AvatarURL string `json:"avatar_url"`
+	if userinfoResponse.StatusCode < 200 || userinfoResponse.StatusCode >= 300 {
+		return GoogleIdentity{}, fmt.Errorf("%w: userinfo endpoint status %d", ErrProviderExchange, userinfoResponse.StatusCode)
 	}
-	if err := decodeLimitedJSON(userResponse.Body, &userPayload); err != nil {
-		return GitHubIdentity{}, fmt.Errorf("decode github user response: %w", err)
+	var userinfo struct {
+		Subject       string `json:"sub"`
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
+		Name          string `json:"name"`
+		Picture       string `json:"picture"`
 	}
-	return GitHubIdentity{
-		UserID:      userPayload.ID,
-		Login:       userPayload.Login,
-		DisplayName: userPayload.Name,
-		AvatarURL:   userPayload.AvatarURL,
+	if err := json.Unmarshal(userinfoBody, &userinfo); err != nil {
+		return GoogleIdentity{}, fmt.Errorf("%w: decode userinfo response: %v", ErrProviderExchange, err)
+	}
+	if strings.TrimSpace(userinfo.Subject) == "" || strings.TrimSpace(userinfo.Email) == "" || !userinfo.EmailVerified {
+		return GoogleIdentity{}, fmt.Errorf("%w: google identity is missing a verified email", ErrProviderExchange)
+	}
+	return GoogleIdentity{
+		Subject:       userinfo.Subject,
+		Email:         userinfo.Email,
+		EmailVerified: true,
+		DisplayName:   userinfo.Name,
+		AvatarURL:     userinfo.Picture,
 	}, nil
-}
-
-func decodeLimitedJSON(reader io.Reader, destination any) error {
-	decoder := json.NewDecoder(io.LimitReader(reader, 1<<20))
-	return decoder.Decode(destination)
-}
-
-func valueOrDefault(value, fallback string) string {
-	if strings.TrimSpace(value) == "" {
-		return fallback
-	}
-	return value
 }

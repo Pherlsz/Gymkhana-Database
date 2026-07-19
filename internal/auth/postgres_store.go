@@ -3,207 +3,128 @@ package auth
 import (
 	"context"
 	"errors"
-	"time"
 
-	"github.com/Pherlsz/Gymkhana-Database/internal/platform/postgres/dbgen"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PostgresStore struct {
-	queries *dbgen.Queries
+	pool *pgxpool.Pool
 }
 
 func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
-	return &PostgresStore{queries: dbgen.New(pool)}
+	return &PostgresStore{pool: pool}
 }
 
-func (store *PostgresStore) FindUserByGitHubID(ctx context.Context, githubUserID int64) (User, error) {
-	value, err := store.queries.GetAppUserByGitHubID(ctx, githubUserID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return User{}, ErrUserNotFound
-	}
-	if err != nil {
-		return User{}, err
-	}
-	return userFromDatabase(value), nil
+func (store *PostgresStore) FindUserByGitHubID(context.Context, int64) (User, error) {
+	return User{}, ErrUserNotFound
+}
+
+func (store *PostgresStore) FindUserByGoogleSubject(ctx context.Context, subject string) (User, error) {
+	return scanUser(store.pool.QueryRow(ctx, `
+SELECT id, google_subject, email, display_name, avatar_url, role, active
+FROM app_users
+WHERE google_subject = $1`, subject))
+}
+
+func (store *PostgresStore) FindUserByEmail(ctx context.Context, email string) (User, error) {
+	return scanUser(store.pool.QueryRow(ctx, `
+SELECT id, google_subject, email, display_name, avatar_url, role, active
+FROM app_users
+WHERE lower(email) = lower($1)`, email))
 }
 
 func (store *PostgresStore) FindUserByID(ctx context.Context, userID Identifier) (ManagedUser, error) {
-	value, err := store.queries.GetAppUserByID(ctx, databaseUUID(userID))
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ManagedUser{}, ErrUserNotFound
-	}
+	user, version, err := scanManagedUser(store.pool.QueryRow(ctx, `
+SELECT id, google_subject, email, display_name, avatar_url, role, active, version
+FROM app_users
+WHERE id = $1`, databaseUUID(userID)))
 	if err != nil {
 		return ManagedUser{}, err
 	}
-	return managedUserFromDatabase(value), nil
+	return ManagedUser{User: user, Version: version}, nil
 }
 
 func (store *PostgresStore) ListUsers(ctx context.Context, limit, offset int32) ([]ManagedUser, error) {
-	values, err := store.queries.ListAppUsers(ctx, dbgen.ListAppUsersParams{Limit: limit, Offset: offset})
+	rows, err := store.pool.Query(ctx, `
+SELECT id, google_subject, email, display_name, avatar_url, role, active, version
+FROM app_users
+ORDER BY lower(email), id
+LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
-	users := make([]ManagedUser, 0, len(values))
-	for _, value := range values {
-		users = append(users, managedUserFromDatabase(value))
+	defer rows.Close()
+	users := make([]ManagedUser, 0)
+	for rows.Next() {
+		user, version, scanErr := scanManagedUser(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		users = append(users, ManagedUser{User: user, Version: version})
 	}
-	return users, nil
+	return users, rows.Err()
 }
 
 func (store *PostgresStore) CreateUser(ctx context.Context, params CreateUserParams) (User, error) {
-	avatarURL := optionalString(params.Identity.AvatarURL)
-	value, err := store.queries.CreateAppUser(ctx, dbgen.CreateAppUserParams{
-		ID:           databaseUUID(params.ID),
-		GithubUserID: params.Identity.UserID,
-		GithubLogin:  params.Identity.Login,
-		DisplayName:  params.Identity.DisplayName,
-		AvatarUrl:    avatarURL,
-		Role:         string(params.Role),
-		Active:       true,
-	})
-	if err != nil {
-		return User{}, err
+	email := params.Identity.Email
+	if email == "" {
+		email = params.Identity.Login
 	}
-	return userFromDatabase(value), nil
+	return scanUser(store.pool.QueryRow(ctx, `
+INSERT INTO app_users (id, google_subject, email, display_name, avatar_url, role, active)
+VALUES ($1, $2, $3, $4, $5, $6, true)
+RETURNING id, google_subject, email, display_name, avatar_url, role, active`,
+		databaseUUID(params.ID), optionalString(params.Identity.Subject), email,
+		params.Identity.DisplayName, optionalString(params.Identity.AvatarURL), string(params.Role)))
 }
 
 func (store *PostgresStore) UpdateUserIdentity(ctx context.Context, userID Identifier, identity GitHubIdentity) (User, error) {
-	value, err := store.queries.UpdateAppUserIdentity(ctx, dbgen.UpdateAppUserIdentityParams{
-		ID:          databaseUUID(userID),
-		GithubLogin: identity.Login,
-		DisplayName: identity.DisplayName,
-		AvatarUrl:   optionalString(identity.AvatarURL),
-	})
-	if err != nil {
-		return User{}, err
+	return store.UpdateGoogleIdentity(ctx, userID, identity)
+}
+
+func (store *PostgresStore) UpdateGoogleIdentity(ctx context.Context, userID Identifier, identity GoogleIdentity) (User, error) {
+	email := identity.Email
+	if email == "" {
+		email = identity.Login
 	}
-	return userFromDatabase(value), nil
+	user, err := scanUser(store.pool.QueryRow(ctx, `
+UPDATE app_users
+SET google_subject = COALESCE(google_subject, $2),
+    email = $3,
+    display_name = $4,
+    avatar_url = $5,
+    updated_at = now(),
+    version = version + 1
+WHERE id = $1
+  AND (google_subject IS NULL OR google_subject = $2)
+RETURNING id, google_subject, email, display_name, avatar_url, role, active`,
+		databaseUUID(userID), optionalString(identity.Subject), email,
+		identity.DisplayName, optionalString(identity.AvatarURL)))
+	if errors.Is(err, ErrUserNotFound) {
+		return User{}, ErrAccessDenied
+	}
+	return user, err
 }
 
 func (store *PostgresStore) UpdateUserAccess(ctx context.Context, params UpdateUserAccessParams) (ManagedUser, error) {
-	value, err := store.queries.UpdateAppUserAccess(ctx, dbgen.UpdateAppUserAccessParams{
-		ID:      databaseUUID(params.UserID),
-		Role:    string(params.Role),
-		Active:  params.Active,
-		Version: params.Version,
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
+	user, version, err := scanManagedUser(store.pool.QueryRow(ctx, `
+UPDATE app_users
+SET role = $2, active = $3, updated_at = now(), version = version + 1
+WHERE id = $1 AND version = $4
+RETURNING id, google_subject, email, display_name, avatar_url, role, active, version`,
+		databaseUUID(params.UserID), string(params.Role), params.Active, params.Version))
+	if errors.Is(err, ErrUserNotFound) {
 		return ManagedUser{}, ErrUserAccessConflict
 	}
 	if err != nil {
 		return ManagedUser{}, err
 	}
-	return managedUserFromDatabase(value), nil
+	return ManagedUser{User: user, Version: version}, nil
 }
 
 func (store *PostgresStore) CountActiveSuperadmins(ctx context.Context) (int64, error) {
-	return store.queries.CountActiveSuperadmins(ctx)
-}
-
-func (store *PostgresStore) CreateSession(ctx context.Context, params CreateSessionParams) error {
-	_, err := store.queries.CreateAppSession(ctx, dbgen.CreateAppSessionParams{
-		ID:        databaseUUID(params.ID),
-		UserID:    databaseUUID(params.UserID),
-		TokenHash: params.TokenHash,
-		ExpiresAt: pgtype.Timestamptz{Time: params.ExpiresAt, Valid: true},
-	})
-	return err
-}
-
-func (store *PostgresStore) FindAuthenticatedSession(ctx context.Context, tokenHash []byte, now time.Time) (Session, error) {
-	value, err := store.queries.GetAuthenticatedAppSession(ctx, dbgen.GetAuthenticatedAppSessionParams{
-		TokenHash: tokenHash,
-		ExpiresAt: pgtype.Timestamptz{Time: now, Valid: true},
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Session{}, ErrSessionNotFound
-	}
-	if err != nil {
-		return Session{}, err
-	}
-	return Session{
-		ID: identifierFromDatabase(value.SessionID),
-		User: User{
-			ID:           identifierFromDatabase(value.AppUserID),
-			GitHubUserID: value.GithubUserID,
-			Login:        value.GithubLogin,
-			DisplayName:  value.DisplayName,
-			AvatarURL:    stringValue(value.AvatarUrl),
-			Role:         Role(value.Role),
-			Active:       value.Active,
-		},
-	}, nil
-}
-
-func (store *PostgresStore) TouchSession(ctx context.Context, sessionID Identifier) error {
-	return store.queries.TouchAppSession(ctx, databaseUUID(sessionID))
-}
-
-func (store *PostgresStore) RevokeSessionByTokenHash(ctx context.Context, tokenHash []byte) error {
-	return store.queries.RevokeAppSessionByTokenHash(ctx, tokenHash)
-}
-
-func (store *PostgresStore) RevokeAllSessionsForUser(ctx context.Context, userID Identifier) error {
-	return store.queries.RevokeAllAppSessionsForUser(ctx, databaseUUID(userID))
-}
-
-func (store *PostgresStore) RecordAuditEvent(ctx context.Context, event AuditEvent) error {
-	_, err := store.queries.CreateAuthAuditEvent(ctx, dbgen.CreateAuthAuditEventParams{
-		ID:            databaseUUID(event.ID),
-		ActorUserID:   optionalDatabaseUUID(event.ActorUserID),
-		SubjectUserID: optionalDatabaseUUID(event.SubjectUserID),
-		EventType:     string(event.EventType),
-		Outcome:       string(event.Outcome),
-		RequestID:     event.RequestID,
-		ProviderLogin: optionalString(event.ProviderLogin),
-	})
-	return err
-}
-
-func userFromDatabase(value dbgen.AppUser) User {
-	return User{
-		ID:           identifierFromDatabase(value.ID),
-		GitHubUserID: value.GithubUserID,
-		Login:        value.GithubLogin,
-		DisplayName:  value.DisplayName,
-		AvatarURL:    stringValue(value.AvatarUrl),
-		Role:         Role(value.Role),
-		Active:       value.Active,
-	}
-}
-
-func managedUserFromDatabase(value dbgen.AppUser) ManagedUser {
-	return ManagedUser{User: userFromDatabase(value), Version: value.Version}
-}
-
-func databaseUUID(value Identifier) pgtype.UUID {
-	return pgtype.UUID{Bytes: [16]byte(value), Valid: true}
-}
-
-func optionalDatabaseUUID(value *Identifier) pgtype.UUID {
-	if value == nil {
-		return pgtype.UUID{}
-	}
-	return databaseUUID(*value)
-}
-
-func identifierFromDatabase(value pgtype.UUID) Identifier {
-	return Identifier(value.Bytes)
-}
-
-func optionalString(value string) *string {
-	if value == "" {
-		return nil
-	}
-	return &value
-}
-
-func stringValue(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
+	var count int64
+	err := store.pool.QueryRow(ctx, `SELECT count(*) FROM app_users WHERE active AND role = 'SUPERADMIN'`).Scan(&count)
+	return count, err
 }
