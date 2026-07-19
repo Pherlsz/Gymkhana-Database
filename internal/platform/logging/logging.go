@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"
 )
 
 func New(level string) *slog.Logger {
@@ -19,5 +21,9 @@ func New(level string) *slog.Logger {
 		slogLevel = slog.LevelInfo
 	}
 
-	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slogLevel}))
+	build := releaseinfo.Current().Public()
+	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slogLevel})).With(
+		"build_version", build.Version,
+		"build_revision", build.Revision,
+	)
 }

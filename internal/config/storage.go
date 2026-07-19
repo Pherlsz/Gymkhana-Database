@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"
 )
 
 const (
@@ -32,6 +34,12 @@ type StorageConfig struct {
 }
 
 func LoadStorage() (StorageConfig, error) {
+	environment := Environment(strings.ToLower(valueOrDefault("APP_ENV", string(EnvironmentLocal))))
+	immutableRelease := environment == EnvironmentStaging || environment == EnvironmentProduction
+	if err := releaseinfo.Current().Validate(immutableRelease); err != nil {
+		return StorageConfig{}, fmt.Errorf("validate release identity: %w", err)
+	}
+
 	enabled, err := strconv.ParseBool(valueOrDefault("R2_ENABLED", "false"))
 	if err != nil {
 		return StorageConfig{}, fmt.Errorf("parse R2_ENABLED: %w", err)

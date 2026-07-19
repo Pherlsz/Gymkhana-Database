@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"
 	taskdomain "github.com/Pherlsz/Gymkhana-Database/internal/taskengine"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -42,15 +43,18 @@ type Options struct {
 	OCR            ocrService
 	SecureCookies  bool
 	ApplicationURL string
+	Release        releaseinfo.Info
 }
 
 type healthResponse struct {
-	Status    string `json:"status"`
-	RequestID string `json:"request_id,omitempty"`
+	Status    string                 `json:"status"`
+	RequestID string                 `json:"request_id,omitempty"`
+	Release   releaseinfo.PublicInfo `json:"release"`
+	Database  string                 `json:"database,omitempty"`
 }
 
 func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handler {
-	settings := Options{MaxBodyBytes: DefaultMaxBodyBytes, ApplicationURL: "/"}
+	settings := Options{MaxBodyBytes: DefaultMaxBodyBytes, ApplicationURL: "/", Release: releaseinfo.Current()}
 	if len(options) > 0 {
 		settings = options[0]
 		if settings.MaxBodyBytes <= 0 {
@@ -59,23 +63,27 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 		if settings.ApplicationURL == "" {
 			settings.ApplicationURL = "/"
 		}
+		if settings.Release.Version == "" {
+			settings.Release = releaseinfo.Current()
+		}
 	}
+	publicRelease := settings.Release.Public()
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health/live", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context())})
+		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context()), Release: publicRelease})
 	})
 	mux.HandleFunc("GET /health/ready", func(w http.ResponseWriter, r *http.Request) {
 		if pool == nil {
-			writeJSON(w, http.StatusServiceUnavailable, healthResponse{Status: "unavailable", RequestID: requestIDFromContext(r.Context())})
+			writeJSON(w, http.StatusServiceUnavailable, healthResponse{Status: "unavailable", RequestID: requestIDFromContext(r.Context()), Release: publicRelease, Database: "unavailable"})
 			return
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 		defer cancel()
 		if err := pool.Ping(ctx); err != nil {
-			writeJSON(w, http.StatusServiceUnavailable, healthResponse{Status: "unavailable", RequestID: requestIDFromContext(r.Context())})
+			writeJSON(w, http.StatusServiceUnavailable, healthResponse{Status: "unavailable", RequestID: requestIDFromContext(r.Context()), Release: publicRelease, Database: "unavailable"})
 			return
 		}
-		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context())})
+		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context()), Release: publicRelease, Database: "ok"})
 	})
 	registerAuthRoutes(mux, logger, settings.Auth, settings.SecureCookies, settings.ApplicationURL)
 	registerAdministrationRoutes(mux, logger, settings.Auth)

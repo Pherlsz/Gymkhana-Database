@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -706,13 +705,4 @@ func truncateTask(value string, maximum int) string {
 		return value
 	}
 	return value[:maximum]
-}
-
-func sortCandidates(values []Candidate) {
-	sort.Slice(values, func(left, right int) bool {
-		if values[left].Entity != values[right].Entity {
-			return values[left].Entity < values[right].Entity
-		}
-		return values[left].ID < values[right].ID
-	})
 }

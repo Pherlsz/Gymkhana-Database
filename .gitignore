@@ -11,13 +11,24 @@ coverage-web/
 playwright-report/
 test-results/
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
 # Environment
 .env
 .env.local
+gha-creds-*.json
 
 # Generated temporary files
 *.tgz
 .tmp/
+
+# Local migration and recovery data
+/migration-private/
+/recovery-private/
+*.pgdump
 
 # IDE and OS
 .DS_Store

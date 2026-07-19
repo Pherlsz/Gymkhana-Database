@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/config"
+	"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"
 )
 
 func main() {
@@ -18,13 +19,16 @@ func main() {
 		fmt.Fprintln(os.Stderr, "storage configuration invalid:", err)
 		os.Exit(1)
 	}
+	build := releaseinfo.Current().Public()
 
 	fmt.Printf(
-		"configuration valid: environment=%s authentication_enabled=%t secure_cookies=%t allowed_logins=%d attachments_enabled=%t\n",
+		"configuration valid: environment=%s authentication_enabled=%t secure_cookies=%t allowed_logins=%d attachments_enabled=%t build_version=%s build_revision=%s\n",
 		cfg.Environment,
 		cfg.Auth.Enabled,
 		cfg.Auth.SecureCookies,
 		len(cfg.Auth.AllowedLogins),
 		storage.Enabled,
+		build.Version,
+		build.Revision,
 	)
 }

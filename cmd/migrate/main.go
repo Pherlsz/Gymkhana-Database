@@ -7,10 +7,20 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
+
+	"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"
 )
 
 func main() {
+	environment := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
+	immutableRelease := environment == "staging" || environment == "production"
+	if err := releaseinfo.Current().Validate(immutableRelease); err != nil {
+		fmt.Fprintf(os.Stderr, "release identity validation failed: %v\n", err)
+		os.Exit(1)
+	}
+
 	command := flag.String("command", "migrate", "tern command to execute")
 	migrations := flag.String("migrations", "database/migrations", "migration directory")
 	configPath := flag.String("config", "database/tern.conf", "tern configuration file")
