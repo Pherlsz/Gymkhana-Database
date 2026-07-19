@@ -5,6 +5,7 @@ on:
     types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - "Dockerfile.api"
+      - "Dockerfile.migrate"
       - "Dockerfile.worker"
       - "deploy/**"
       - "go.mod"
@@ -59,6 +60,8 @@ jobs:
           API_IMAGE_DIGEST: us-central1-docker.pkg.dev/example/app/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
           WORKER_JOB_NAME: gymkhana-worker
           WORKER_IMAGE_DIGEST: us-central1-docker.pkg.dev/example/app/worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          MIGRATION_JOB_NAME: gymkhana-migrate
+          MIGRATION_IMAGE_DIGEST: us-central1-docker.pkg.dev/example/app/migrate@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           DATABASE_URL_SECRET: database-url
           DATABASE_URL_SECRET_VERSION: "1"
           GITHUB_OAUTH_CLIENT_ID_SECRET: github-client-id
@@ -73,13 +76,14 @@ jobs:
           python3 scripts/render-cloud-run.py --output-directory .tmp/cloud-run
           test -s .tmp/cloud-run/api.service.yaml
           test -s .tmp/cloud-run/worker.job.yaml
+          test -s .tmp/cloud-run/migrate.job.yaml
           ! grep -R '__[A-Z0-9_]*__' .tmp/cloud-run
           ! grep -R 'key: latest' .tmp/cloud-run
 
   images:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 25
+    timeout-minutes: 30
     env:
       GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
@@ -97,7 +101,7 @@ jobs:
       - name: Build release images
         shell: bash
         run: |
-          for target in api worker; do
+          for target in api migrate worker; do
             docker build \
               --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN \
               --build-arg RELEASE_VERSION=${{ steps.release.outputs.version }} \
@@ -110,7 +114,7 @@ jobs:
       - name: Verify immutable metadata and runtime user
         shell: bash
         run: |
-          for target in api worker; do
+          for target in api migrate worker; do
             image="gymkhana-database-${target}:${{ steps.release.outputs.commit }}"
             test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "${{ steps.release.outputs.version }}"
             test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "${{ steps.release.outputs.commit }}"
