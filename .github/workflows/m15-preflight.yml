@@ -1,0 +1,190 @@
+name: M15 draft preflight
+
+on:
+  pull_request:
+    types: [synchronize]
+    paths:
+      - ".github/workflows/m15-preflight.yml"
+
+permissions:
+  contents: write
+  packages: read
+
+concurrency:
+  group: m15-draft-preflight-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: ${{ github.event.pull_request.draft && github.event.pull_request.head.ref == 'agent/m15-hardening-migration-launch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
+      GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: gymkhana
+          POSTGRES_USER: gymkhana
+          POSTGRES_PASSWORD: gymkhana
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gymkhana -d gymkhana"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/m15-hardening-migration-launch
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: 1.26.5
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Configure private Core access
+        run: scripts/configure-private-go.sh
+
+      - name: Install dependencies
+        run: |
+          go mod download
+          pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Normalize source formatting
+        run: |
+          find cmd internal api/generated -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
+          pnpm format
+          go mod tidy
+
+      - name: Verify backend
+        run: |
+          go vet ./...
+          go test ./...
+          go build ./cmd/...
+          go install honnef.co/go/tools/cmd/staticcheck@v0.7.0
+          staticcheck ./...
+
+      - name: Verify frontend
+        run: pnpm check:web
+
+      - name: Verify PostgreSQL integration
+        run: |
+          make migrate
+          go test -p=1 -tags=integration ./internal/attachment ./internal/search ./internal/operations ./internal/googleforms ./internal/queryengine ./internal/matching ./internal/aichat ./internal/ocr
+
+      - name: Verify deployment contracts
+        env:
+          RELEASE_VERSION: sha-304b760a3fff
+          GCP_REGION: us-central1
+          RUNTIME_SERVICE_ACCOUNT: runtime@example.iam.gserviceaccount.com
+          APPLICATION_URL: https://database.example
+          API_BASE_URL: https://api.database.example
+          ALLOWED_GITHUB_LOGINS: member
+          SUPERADMIN_GITHUB_LOGIN: member
+          R2_ENDPOINT: https://example.r2.cloudflarestorage.com
+          R2_BUCKET: private-files
+          API_SERVICE_NAME: gymkhana-api
+          API_MAX_INSTANCES: "3"
+          API_IMAGE_DIGEST: us-central1-docker.pkg.dev/example/app/api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          WORKER_JOB_NAME: gymkhana-worker
+          WORKER_IMAGE_DIGEST: us-central1-docker.pkg.dev/example/app/worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          MIGRATION_JOB_NAME: gymkhana-migrate
+          MIGRATION_IMAGE_DIGEST: us-central1-docker.pkg.dev/example/app/migrate@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+          DATABASE_URL_SECRET: database-url
+          DATABASE_URL_SECRET_VERSION: "1"
+          GITHUB_OAUTH_CLIENT_ID_SECRET: github-client-id
+          GITHUB_OAUTH_CLIENT_ID_SECRET_VERSION: "1"
+          GITHUB_OAUTH_CLIENT_SECRET_SECRET: github-client-secret
+          GITHUB_OAUTH_CLIENT_SECRET_SECRET_VERSION: "1"
+          R2_ACCESS_KEY_ID_SECRET: r2-access-key-id
+          R2_ACCESS_KEY_ID_SECRET_VERSION: "1"
+          R2_SECRET_ACCESS_KEY_SECRET: r2-secret-access-key
+          R2_SECRET_ACCESS_KEY_SECRET_VERSION: "1"
+        run: |
+          bash -n \
+            scripts/configure-worker-schedule.sh \
+            scripts/create-recovery-point.sh \
+            scripts/promote-cloud-run.sh \
+            scripts/rehearse-restore.sh \
+            scripts/rollback-cloud-run.sh
+          python3 -m py_compile scripts/export-legacy-sqlite.py scripts/render-cloud-run.py
+          python3 -m json.tool vercel.json >/dev/null
+          python3 scripts/render-cloud-run.py --output-directory .tmp/cloud-run
+          test -s .tmp/cloud-run/api.service.yaml
+          test -s .tmp/cloud-run/worker.job.yaml
+          test -s .tmp/cloud-run/migrate.job.yaml
+          ! grep -R '__[A-Z0-9_]*__' .tmp/cloud-run
+          ! grep -R 'key: latest' .tmp/cloud-run
+
+      - name: Verify legacy export and reconciliation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import sqlite3
+          from pathlib import Path
+
+          path = Path(".tmp/legacy.db")
+          path.parent.mkdir(parents=True, exist_ok=True)
+          connection = sqlite3.connect(path)
+          connection.executescript('''
+          CREATE TABLE "Context" (id TEXT PRIMARY KEY, slug TEXT NOT NULL, name TEXT NOT NULL, icon TEXT, description TEXT, "order" INTEGER NOT NULL, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL);
+          CREATE TABLE "ColumnDefinition" (id TEXT PRIMARY KEY, contextId TEXT NOT NULL, key TEXT NOT NULL, label TEXT NOT NULL, type TEXT NOT NULL, groupName TEXT, "order" INTEGER NOT NULL, required INTEGER NOT NULL, options TEXT, formula TEXT, isComputed INTEGER NOT NULL, visible INTEGER NOT NULL, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL);
+          CREATE TABLE "Record" (id TEXT PRIMARY KEY, contextId TEXT NOT NULL, pessoaId TEXT, sourceIntegrationId TEXT, googleFormResponseId TEXT, data TEXT NOT NULL, searchText TEXT, usedInGincana INTEGER NOT NULL, returned INTEGER NOT NULL, usedAt TEXT, gincanaNote TEXT, isDigital INTEGER NOT NULL, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL);
+          CREATE TABLE "Attachment" (id TEXT PRIMARY KEY, recordId TEXT, fileName TEXT NOT NULL, mimeType TEXT NOT NULL, filePath TEXT NOT NULL, ocrRawText TEXT, ocrStatus TEXT NOT NULL, uploadedById TEXT, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL);
+          ''')
+          now = "2026-07-19T00:00:00Z"
+          connection.execute('INSERT INTO "Context" VALUES (?,?,?,?,?,?,?,?)', ("c1", "dados-pessoais", "Dados pessoais", None, None, 1, now, now))
+          connection.execute('INSERT INTO "ColumnDefinition" VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', ("col1", "c1", "name", "Nome", "TEXT", None, 1, 1, None, None, 0, 1, now, now))
+          connection.execute('INSERT INTO "Record" VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', ("r1", "c1", None, None, None, json.dumps({"name": "Pessoa Teste"}), "pessoa teste", 0, 0, None, None, 0, now, now))
+          connection.commit()
+          connection.close()
+          PY
+          python3 scripts/export-legacy-sqlite.py --database .tmp/legacy.db --output .tmp/legacy-bundle
+          go run ./cmd/legacy-reconcile --bundle .tmp/legacy-bundle --report .tmp/legacy-report.json --strict
+
+      - name: Build and inspect release images
+        shell: bash
+        run: |
+          release_version="sha-${GITHUB_SHA::12}"
+          release_built_at="$(git show -s --format=%cI "$GITHUB_SHA")"
+          for target in api migrate worker; do
+            image="gymkhana-database-${target}:${GITHUB_SHA}"
+            docker build \
+              --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN \
+              --build-arg RELEASE_VERSION="$release_version" \
+              --build-arg RELEASE_COMMIT="$GITHUB_SHA" \
+              --build-arg RELEASE_BUILT_AT="$release_built_at" \
+              -f "Dockerfile.${target}" \
+              -t "$image" .
+            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$release_version"
+            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$GITHUB_SHA"
+            test "$(docker image inspect "$image" --format '{{.Config.User}}')" = "nonroot:nonroot"
+          done
+
+      - name: Publish verified formatting
+        run: |
+          rm .github/workflows/m15-preflight.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "chore: finalize verified M15 foundation"
+          git push origin HEAD:agent/m15-hardening-migration-launch
