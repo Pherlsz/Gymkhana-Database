@@ -1,0 +1,107 @@
+.task-workspace__panel {
+  display: grid;
+  gap: var(--gym-space-4);
+  padding: var(--gym-space-5);
+}
+
+.task-workspace__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--gym-space-4);
+}
+
+.task-workspace__field {
+  display: grid;
+  gap: var(--gym-space-2);
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.task-workspace__field input,
+.task-workspace__field select,
+.task-workspace__field textarea {
+  inline-size: 100%;
+  min-block-size: 2.5rem;
+  padding: var(--gym-space-2) var(--gym-space-3);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface);
+  color: var(--gym-color-text);
+}
+
+.task-workspace__field textarea {
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  line-height: 1.5;
+}
+
+.task-workspace__fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: var(--gym-space-4);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+}
+
+.task-workspace__checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--gym-space-2) var(--gym-space-4);
+}
+
+.task-workspace__checks label {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-space-2);
+  min-block-size: 2.5rem;
+}
+
+.task-workspace__table-wrap {
+  overflow-x: auto;
+}
+
+.task-workspace__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.task-workspace__table th,
+.task-workspace__table td {
+  padding: var(--gym-space-3);
+  border-block-end: 1px solid var(--gym-color-border);
+  text-align: start;
+  white-space: nowrap;
+}
+
+.task-workspace__result {
+  padding: var(--gym-space-4);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  background: var(--gym-color-surface-raised);
+}
+
+.task-workspace__result summary {
+  min-block-size: 2.5rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.task-workspace__result small {
+  color: var(--gym-color-text-muted);
+}
+
+@media (max-width: 48rem) {
+  .task-workspace__panel {
+    padding: var(--gym-space-4);
+  }
+
+  .task-workspace__grid,
+  .task-workspace__checks {
+    grid-template-columns: 1fr;
+  }
+
+  .task-workspace__table th,
+  .task-workspace__table td {
+    padding: var(--gym-space-2);
+  }
+}

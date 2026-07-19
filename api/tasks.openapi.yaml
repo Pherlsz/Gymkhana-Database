@@ -1,0 +1,902 @@
+openapi: 3.1.0
+info:
+  title: Gymkhana Advanced Query Tasks API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+security:
+  - cookieAuth: []
+paths:
+  /query/v2/catalog:
+    get:
+      operationId: getAdvancedQueryCatalog
+      responses:
+        '200':
+          description: Permission-filtered QueryPlan v2 catalog.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryCatalog'
+        default:
+          $ref: '#/components/responses/Problem'
+  /query/v2/validate:
+    post:
+      operationId: validateAdvancedQueryPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryPlan'
+      responses:
+        '200':
+          description: Validated plan estimate.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanEstimate'
+        default:
+          $ref: '#/components/responses/Problem'
+  /query/v2/executions:
+    post:
+      operationId: executeAdvancedQueryPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [idempotency_key, plan]
+              properties:
+                idempotency_key:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+                  pattern: '^[A-Za-z0-9._:-]+$'
+                plan:
+                  $ref: '#/components/schemas/QueryPlan'
+      responses:
+        '200':
+          description: Completed or idempotently replayed execution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryExecution'
+        default:
+          $ref: '#/components/responses/Problem'
+  /query/v2/executions/{execution_id}/result:
+    get:
+      operationId: getAdvancedQueryResult
+      parameters:
+        - $ref: '#/components/parameters/ExecutionId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Owner-scoped, reauthorized query result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResultPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/capability:
+    get:
+      operationId: getTaskCapability
+      responses:
+        '200':
+          description: Task feature capability and active limits.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskCapability'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/interpret:
+    post:
+      operationId: interpretTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [task_text]
+              properties:
+                task_text:
+                  type: string
+                  minLength: 1
+                  maxLength: 20000
+      responses:
+        '200':
+          description: Unexecuted proposal that always requires human review.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskProposal'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/drafts:
+    post:
+      operationId: createTaskDraft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [spec]
+              properties:
+                spec:
+                  $ref: '#/components/schemas/TaskSpec'
+      responses:
+        '201':
+          description: Persisted proposed or directly reviewed draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDraft'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/drafts/{draft_id}:
+    get:
+      operationId: getTaskDraft
+      parameters:
+        - $ref: '#/components/parameters/DraftId'
+      responses:
+        '200':
+          description: Owner-scoped task draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDraft'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/drafts/{draft_id}/review:
+    put:
+      operationId: reviewTaskDraft
+      parameters:
+        - $ref: '#/components/parameters/DraftId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [spec, version]
+              properties:
+                spec:
+                  $ref: '#/components/schemas/TaskSpec'
+                version:
+                  type: integer
+                  format: int64
+                  minimum: 1
+      responses:
+        '200':
+          description: Reviewed and fingerprinted task draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDraft'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/jobs:
+    get:
+      operationId: listTaskJobs
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Owner-scoped task jobs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskJobPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: startTaskJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [draft_id, idempotency_key]
+              properties:
+                draft_id:
+                  type: string
+                  format: uuid
+                idempotency_key:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+                  pattern: '^[A-Za-z0-9._:-]+$'
+                retry_of_job_id:
+                  type: string
+                  format: uuid
+      responses:
+        '202':
+          description: Queued or idempotently replayed task job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskJob'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/jobs/{job_id}:
+    get:
+      operationId: getTaskJob
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Owner-scoped task job.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskJob'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/jobs/{job_id}/cancel:
+    post:
+      operationId: cancelTaskJob
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Cancellation requested or completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskJob'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/jobs/{job_id}/events:
+    get:
+      operationId: streamTaskJobEvents
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+        - name: after
+          in: query
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - name: Last-Event-ID
+          in: header
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Monotonic SSE stream. Event ids are resumable.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/jobs/{job_id}/results:
+    get:
+      operationId: getTaskJobResults
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Paginated explainable compositions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResultPage'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: gymkhana_session
+  parameters:
+    ExecutionId:
+      name: execution_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DraftId:
+      name: draft_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    JobId:
+      name: job_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 10000
+        default: 0
+  responses:
+    Problem:
+      description: Stable redacted API problem.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [status, code, message]
+      properties:
+        status:
+          type: integer
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+        field_errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [field, code, message]
+            properties:
+              field: { type: string }
+              code: { type: string }
+              message: { type: string }
+    ValueKind:
+      type: string
+      enum: [text, long_text, identifier, integer, decimal, boolean, civil_date, civil_month, timestamp, enum]
+    Operator:
+      type: string
+      enum: [eq, neq, contains, starts_with, gt, gte, lt, lte, between, in, is_null, not_null]
+    FilterNode:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [predicate, group, relation, not]
+        conjunction:
+          type: string
+          enum: [AND, OR]
+        field: { type: string }
+        operator:
+          $ref: '#/components/schemas/Operator'
+        values:
+          type: array
+          maxItems: 25
+          items: { type: string }
+        relation: { type: string }
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterNode'
+    Aggregate:
+      type: object
+      additionalProperties: false
+      required: [key, function]
+      properties:
+        key: { type: string }
+        function:
+          type: string
+          enum: [count, sum, average, minimum, maximum]
+        field: { type: string }
+        distinct: { type: boolean }
+    AggregateFilterNode:
+      type: object
+      additionalProperties: false
+      properties:
+        conjunction:
+          type: string
+          enum: [AND, OR]
+        predicate:
+          type: object
+          additionalProperties: false
+          required: [aggregate, operator]
+          properties:
+            aggregate: { type: string }
+            operator:
+              $ref: '#/components/schemas/Operator'
+            values:
+              type: array
+              items: { type: string }
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/AggregateFilterNode'
+        negated: { type: boolean }
+    PatternPredicate:
+      type: object
+      additionalProperties: false
+      required: [field, grammar, pattern]
+      properties:
+        field: { type: string }
+        grammar:
+          type: string
+          enum: [literal_sequence, character_class, binary_digits, digits, letters, alphanumeric]
+        pattern: { type: string, maxLength: 160 }
+        anchored: { type: boolean }
+        case_fold: { type: boolean }
+        allow_empty: { type: boolean }
+    QueryPlan:
+      type: object
+      additionalProperties: false
+      required: [version, catalog_version, maximum_rows]
+      properties:
+        version:
+          type: string
+          enum: [v2]
+        catalog_version:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        root_entity: { type: string }
+        projections:
+          type: array
+          maxItems: 20
+          items: { type: string }
+        filter:
+          $ref: '#/components/schemas/FilterNode'
+        sort:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            additionalProperties: false
+            required: [field, direction]
+            properties:
+              field: { type: string }
+              direction:
+                type: string
+                enum: [asc, desc]
+        maximum_rows:
+          type: integer
+          minimum: 1
+          maximum: 500
+        group_by:
+          type: array
+          maxItems: 8
+          items: { type: string }
+        aggregates:
+          type: array
+          maxItems: 12
+          items:
+            $ref: '#/components/schemas/Aggregate'
+        having:
+          $ref: '#/components/schemas/AggregateFilterNode'
+        patterns:
+          type: array
+          maxItems: 40
+          items:
+            $ref: '#/components/schemas/PatternPredicate'
+        set:
+          type: object
+          description: Bounded recursive union, intersection or difference expression.
+        combination:
+          type: object
+          description: Bounded cross-role combination expression.
+    QueryCatalog:
+      type: object
+      required: [version, entities, fields, relations, operators, limits, advanced]
+      properties:
+        version: { type: string }
+        entities:
+          type: array
+          items:
+            type: object
+            required: [key, label, kind, navigable, default_sort]
+            properties:
+              key: { type: string }
+              label: { type: string }
+              kind: { type: string }
+              navigable: { type: boolean }
+              default_sort: { type: string }
+        fields:
+          type: array
+          items:
+            type: object
+            required: [key, entity, label, kind, nullable, projectable, filterable, sortable, operators]
+            properties:
+              key: { type: string }
+              entity: { type: string }
+              label: { type: string }
+              kind:
+                $ref: '#/components/schemas/ValueKind'
+              nullable: { type: boolean }
+              projectable: { type: boolean }
+              filterable: { type: boolean }
+              sortable: { type: boolean }
+              operators:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Operator'
+        relations:
+          type: array
+          items:
+            type: object
+        operators:
+          type: array
+          items:
+            type: object
+        limits:
+          type: object
+        advanced:
+          type: object
+    ResultColumn:
+      type: object
+      required: [position, field_key, label, kind]
+      properties:
+        position: { type: integer }
+        field_key: { type: string }
+        label: { type: string }
+        kind:
+          $ref: '#/components/schemas/ValueKind'
+        aggregate_key: { type: string }
+        lineage:
+          type: array
+          items:
+            type: object
+            properties:
+              entity: { type: string }
+              field: { type: string }
+              relation: { type: string }
+    ResultCell:
+      type: object
+      additionalProperties: false
+      required: [column_position, kind, is_null]
+      properties:
+        column_position: { type: integer, minimum: 0, maximum: 19 }
+        kind:
+          $ref: '#/components/schemas/ValueKind'
+        is_null: { type: boolean }
+        text_value: { type: string, maxLength: 5000 }
+        integer_value: { type: integer, format: int64 }
+        decimal_value:
+          type: string
+          pattern: '^-?[0-9]{1,28}(\.[0-9]{1,10})?$'
+        boolean_value: { type: boolean }
+        civil_date_value: { type: string, format: date }
+        timestamp_value: { type: string, format: date-time }
+    ResultRow:
+      type: object
+      additionalProperties: false
+      required: [position, entity_kind, entity_id, entity_label, updated_at, cells]
+      properties:
+        position: { type: integer, minimum: 0, maximum: 499 }
+        entity_kind: { type: string }
+        entity_id: { type: string, minLength: 1, maxLength: 200 }
+        entity_label: { type: string, minLength: 1, maxLength: 300 }
+        updated_at: { type: string, format: date-time }
+        cells:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ResultCell'
+    PlanEstimate:
+      type: object
+      required: [valid]
+      properties:
+        valid: { type: boolean }
+        fingerprint: { type: string }
+        cost: { type: integer }
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResultColumn'
+    QueryExecution:
+      type: object
+      required: [id, state, catalog_version, root_entity, maximum_rows, row_count, column_count, started_at, expires_at, version]
+      properties:
+        id: { type: string, format: uuid }
+        state:
+          type: string
+          enum: [RUNNING, COMPLETED, FAILED, CANCELLED]
+        catalog_version: { type: string }
+        root_entity: { type: string }
+        maximum_rows: { type: integer }
+        row_count: { type: integer }
+        column_count: { type: integer }
+        error_code: { type: string }
+        started_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        version: { type: integer, format: int64 }
+    QueryResultPage:
+      type: object
+      required: [execution, columns, rows, total, limit, offset]
+      properties:
+        execution:
+          $ref: '#/components/schemas/QueryExecution'
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResultColumn'
+        rows:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/ResultRow'
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+    FieldBinding:
+      type: object
+      additionalProperties: false
+      required: [field]
+      properties:
+        field: { type: string }
+        relation_path:
+          type: array
+          maxItems: 3
+          items: { type: string }
+    Requirement:
+      type: object
+      additionalProperties: false
+      required: [key, role, binding]
+      properties:
+        key: { type: string }
+        role: { type: string }
+        binding:
+          $ref: '#/components/schemas/FieldBinding'
+        operator:
+          $ref: '#/components/schemas/Operator'
+        values:
+          type: array
+          maxItems: 25
+          items: { type: string }
+        pattern:
+          type: object
+          additionalProperties: false
+          required: [grammar, value]
+          properties:
+            grammar:
+              type: string
+              enum: [literal_sequence, character_class, binary_digits, digits, letters, alphanumeric]
+            value: { type: string, maxLength: 160 }
+            anchored: { type: boolean }
+            case_fold: { type: boolean }
+        optional: { type: boolean }
+    CandidateRole:
+      type: object
+      additionalProperties: false
+      required: [key, entity, minimum_count, maximum_count]
+      properties:
+        key: { type: string }
+        entity: { type: string }
+        minimum_count: { type: integer, minimum: 1, maximum: 8 }
+        maximum_count: { type: integer, minimum: 1, maximum: 8 }
+    ConstraintOperand:
+      type: object
+      additionalProperties: false
+      required: [role]
+      properties:
+        role: { type: string }
+        binding:
+          $ref: '#/components/schemas/FieldBinding'
+        kind:
+          $ref: '#/components/schemas/ValueKind'
+    Constraint:
+      type: object
+      additionalProperties: false
+      required: [key, kind, left]
+      properties:
+        key: { type: string }
+        kind:
+          type: string
+          enum: [equal, not_equal, membership, before, after, distinct]
+        left:
+          $ref: '#/components/schemas/ConstraintOperand'
+        right:
+          $ref: '#/components/schemas/ConstraintOperand'
+        values:
+          type: array
+          maxItems: 25
+          items: { type: string }
+    TaskSpec:
+      type: object
+      additionalProperties: false
+      required: [version, catalog_version, state, roles, requirements, goal]
+      properties:
+        version:
+          type: string
+          enum: [v1]
+        catalog_version: { type: string }
+        state:
+          type: string
+          enum: [PROPOSED, REVIEWED]
+        roles:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items:
+            $ref: '#/components/schemas/CandidateRole'
+        requirements:
+          type: array
+          maxItems: 64
+          items:
+            $ref: '#/components/schemas/Requirement'
+        constraints:
+          type: array
+          maxItems: 64
+          items:
+            $ref: '#/components/schemas/Constraint'
+        goal:
+          type: object
+          additionalProperties: false
+          required: [minimum_solutions, maximum_solutions]
+          properties:
+            minimum_solutions: { type: integer, minimum: 1, maximum: 100 }
+            maximum_solutions: { type: integer, minimum: 1, maximum: 100 }
+        ambiguities:
+          type: array
+          maxItems: 32
+          items:
+            type: object
+            additionalProperties: false
+            required: [key, code]
+            properties:
+              key: { type: string }
+              code: { type: string }
+              candidates:
+                type: array
+                items: { type: string }
+    TaskProposal:
+      type: object
+      required: [spec, interpreter, requires_human_review]
+      properties:
+        spec:
+          $ref: '#/components/schemas/TaskSpec'
+        interpreter: { type: string }
+        requires_human_review: { type: boolean }
+    TaskCapability:
+      type: object
+      required: [enabled, semantic_interpretation, direct_typed_specifications, maximum_task_text_runes, maximum_requirements, maximum_roles, maximum_constraints, maximum_candidates_per_role, maximum_branches, maximum_solutions, maximum_duration_seconds, maximum_requests_per_hour, retention_seconds]
+      properties:
+        enabled: { type: boolean }
+        semantic_interpretation: { type: boolean }
+        direct_typed_specifications: { type: boolean }
+        maximum_task_text_runes: { type: integer }
+        maximum_requirements: { type: integer }
+        maximum_roles: { type: integer }
+        maximum_constraints: { type: integer }
+        maximum_candidates_per_role: { type: integer }
+        maximum_branches: { type: integer }
+        maximum_solutions: { type: integer }
+        maximum_duration_seconds: { type: integer, format: int64 }
+        maximum_requests_per_hour: { type: integer }
+        retention_seconds: { type: integer, format: int64 }
+    TaskDraft:
+      type: object
+      required: [id, catalog_version, state, spec, version, expires_at, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        catalog_version: { type: string }
+        state:
+          type: string
+          enum: [PROPOSED, REVIEWED]
+        spec:
+          $ref: '#/components/schemas/TaskSpec'
+        version: { type: integer, format: int64 }
+        expires_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    TaskJob:
+      type: object
+      required: [id, draft_id, catalog_version, state, attempt_count, progress_current, progress_total, candidate_count, composition_count, expires_at, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        draft_id: { type: string, format: uuid }
+        retry_of_job_id: { type: string, format: uuid }
+        catalog_version: { type: string }
+        state:
+          type: string
+          enum: [QUEUED, RUNNING, COMPLETED, INCOMPLETE, FAILED, CANCELLED]
+        attempt_count: { type: integer }
+        progress_current: { type: integer }
+        progress_total: { type: integer }
+        candidate_count: { type: integer }
+        composition_count: { type: integer }
+        error_code: { type: string }
+        cancel_requested_at: { type: string, format: date-time }
+        started_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        version: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    TaskJobPage:
+      type: object
+      required: [jobs, total, limit, offset]
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskJob'
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+    Evidence:
+      type: object
+      required: [role, source_entity, source_id, satisfied, code]
+      properties:
+        requirement: { type: string }
+        constraint: { type: string }
+        role: { type: string }
+        field: { type: string }
+        source_entity: { type: string }
+        source_id: { type: string }
+        satisfied: { type: boolean }
+        code: { type: string }
+    Candidate:
+      type: object
+      required: [entity, id, label, evidence]
+      properties:
+        entity: { type: string }
+        id: { type: string }
+        label: { type: string }
+        values:
+          type: object
+          additionalProperties:
+            type: string
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evidence'
+    Composition:
+      type: object
+      required: [position, selected, evidence]
+      properties:
+        position: { type: integer }
+        selected:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/Candidate'
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evidence'
+    TaskResultPage:
+      type: object
+      required: [job, compositions, total, limit, offset]
+      properties:
+        job:
+          $ref: '#/components/schemas/TaskJob'
+        compositions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Composition'
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }

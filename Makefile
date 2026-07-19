@@ -70,6 +70,7 @@ generate-go:
 	@mkdir -p api/generated/matching
 	@mkdir -p api/generated/chat
 	@mkdir -p api/generated/ocr
+	@mkdir -p api/generated/tasks
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-codegen.yaml api/openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-attachments-codegen.yaml api/attachments.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-search-codegen.yaml api/search.openapi.yaml
@@ -79,6 +80,10 @@ generate-go:
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-matching-codegen.yaml api/matching.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-chat-codegen.yaml api/chat.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-ocr-codegen.yaml api/ocr.openapi.yaml
+	@tmp="$$(mktemp --suffix=.tasks.openapi.yaml)"; \
+	sed 's/^openapi: 3\.1\.0/openapi: 3.0.3/' api/tasks.openapi.yaml > "$$tmp"; \
+	$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-tasks-codegen.yaml "$$tmp"; \
+	status=$$?; rm -f "$$tmp"; exit $$status
 
 generate-ts:
 	@$(PNPM) generate:openapi:ts

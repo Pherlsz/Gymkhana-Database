@@ -28,6 +28,7 @@ import { OperationsPage, normalizeOperationsSearch } from "./OperationsPage";
 import { OCRPage, normalizeOCRSearch } from "./OCRPage";
 import { QueryPage } from "./QueryPage";
 import { SearchPage, normalizeGlobalSearch } from "./SearchPage";
+import { TaskPage, normalizeTaskSearch } from "./TaskPage";
 import {
   APIRequestError,
   apiURL,
@@ -94,6 +95,12 @@ export const queryRoute = createRoute({
   validateSearch: normalizeQuerySearch,
   component: QueryPage,
 });
+export const taskRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/tasks",
+  validateSearch: normalizeTaskSearch,
+  component: TaskPage,
+});
 export const matchingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/matching",
@@ -120,6 +127,7 @@ const routeTree = rootRoute.addChildren([
   operationsRoute,
   googleFormsRoute,
   queryRoute,
+  taskRoute,
   matchingRoute,
   chatRoute,
   ocrRoute,
@@ -255,6 +263,14 @@ function AuthenticatedShell() {
               to="/query"
             >
               Consultar
+            </Link>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeTaskSearch({})}
+              to="/tasks"
+            >
+              Tarefas
             </Link>
             <Link
               activeProps={{ className: "app-nav__link app-nav__link--active" }}
