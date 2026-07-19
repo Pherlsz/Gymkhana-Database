@@ -3,6 +3,8 @@ package config
 import (
 	"testing"
 	"time"
+
+	"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"
 )
 
 func TestLoadStorageDefaultsToDisabledSafeConfiguration(t *testing.T) {
@@ -22,6 +24,26 @@ func TestLoadStorageDefaultsToDisabledSafeConfiguration(t *testing.T) {
 	}
 	if cfg.MaximumFileSize != 50<<20 || cfg.MaximumTotalBytes != 5<<30 || cfg.UploadRateLimit != 12 {
 		t.Fatalf("attachment limits = file:%d total:%d rate:%d", cfg.MaximumFileSize, cfg.MaximumTotalBytes, cfg.UploadRateLimit)
+	}
+}
+
+func TestLoadStorageRequiresImmutableReleaseOutsideDevelopment(t *testing.T) {
+	clearStorageEnvironment(t)
+	t.Setenv("APP_ENV", "production")
+	if _, err := LoadStorage(); err == nil {
+		t.Fatal("LoadStorage() error = nil, want immutable release validation error")
+	}
+
+	originalVersion, originalCommit, originalBuiltAt := releaseinfo.Version, releaseinfo.Commit, releaseinfo.BuiltAt
+	t.Cleanup(func() {
+		releaseinfo.Version, releaseinfo.Commit, releaseinfo.BuiltAt = originalVersion, originalCommit, originalBuiltAt
+	})
+	releaseinfo.Version = "sha-304b760a3fff"
+	releaseinfo.Commit = "304b760a3fff934cefaf4bd36cb71bcebac060a2"
+	releaseinfo.BuiltAt = "2026-07-19T01:43:41Z"
+
+	if _, err := LoadStorage(); err != nil {
+		t.Fatalf("LoadStorage() error = %v", err)
 	}
 }
 
@@ -74,6 +96,7 @@ func TestLoadStorageRejectsQuotaBelowFileLimit(t *testing.T) {
 func clearStorageEnvironment(t *testing.T) {
 	t.Helper()
 	for _, name := range []string{
+		"APP_ENV",
 		"R2_ENABLED",
 		"R2_ENDPOINT",
 		"R2_BUCKET",
