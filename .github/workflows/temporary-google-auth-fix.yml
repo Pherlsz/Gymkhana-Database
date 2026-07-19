@@ -57,6 +57,22 @@ jobs:
       - name: Apply transformations and regenerate code
         run: |
           python3 scripts/fix-google-auth-consistency.py
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("internal/operations/postgres_exports.go")
+          text = path.read_text(encoding="utf-8")
+          old_scan = "&userID, &user.GitHubUserID, &user.Login, &user.DisplayName, &avatar, &user.Role, &user.Active"
+          new_scan = "&userID, &user.GoogleSubject, &user.Email, &user.DisplayName, &avatar, &user.Role, &user.Active"
+          if old_scan not in text:
+              raise SystemExit("operation actor scan was not found")
+          text = text.replace(old_scan, new_scan, 1)
+          old_id = "\tuser.ID = authIdentifierFromUUID(userID)\n"
+          if old_id not in text:
+              raise SystemExit("operation actor identifier assignment was not found")
+          text = text.replace(old_id, old_id + "\tuser.Login = user.Email\n", 1)
+          path.write_text(text, encoding="utf-8")
+          PY
           make generate-sql
           gofmt -w $(find cmd internal api/generated -type f -name '*.go')
           pnpm install --frozen-lockfile
