@@ -21,7 +21,7 @@ func TestWorkerRunWindowRequiresDurationForCloudRunJob(t *testing.T) {
 
 func TestWorkerRunWindowAcceptsBoundedDuration(t *testing.T) {
 	duration, bounded, err := workerRunWindow(environment(map[string]string{
-		"CLOUD_RUN_JOB":      "gymkhana-worker",
+		"CLOUD_RUN_JOB":       "gymkhana-worker",
 		"WORKER_RUN_DURATION": "14m",
 	}))
 	if err != nil || !bounded || duration != 14*time.Minute {

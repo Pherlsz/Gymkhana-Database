@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/jackc/pgx/v5"
@@ -149,5 +148,3 @@ func taskJSON(value any, maximum int) ([]byte, error) {
 	}
 	return encoded, nil
 }
-
-func taskNowValid(value time.Time) bool { return !value.IsZero() && value.Location() != nil }
