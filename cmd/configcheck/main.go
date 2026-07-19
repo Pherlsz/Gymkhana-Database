@@ -22,11 +22,10 @@ func main() {
 	build := releaseinfo.Current().Public()
 
 	fmt.Printf(
-		"configuration valid: environment=%s authentication_enabled=%t secure_cookies=%t allowed_logins=%d attachments_enabled=%t build_version=%s build_revision=%s\n",
+		"configuration valid: environment=%s authentication_enabled=%t secure_cookies=%t email_allowlist=database attachments_enabled=%t build_version=%s build_revision=%s\n",
 		cfg.Environment,
 		cfg.Auth.Enabled,
 		cfg.Auth.SecureCookies,
-		len(cfg.Auth.AllowedLogins),
 		storage.Enabled,
 		build.Version,
 		build.Revision,
