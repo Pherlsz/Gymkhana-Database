@@ -8,17 +8,19 @@ on:
       - "go.mod"
       - "go.sum"
       - "Makefile"
-      - "scripts/**"
+      - "scripts/configure-private-go.sh"
       - ".github/workflows/backend.yml"
-      - "database/**"
-      - "apps/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "deploy/**"
-      - "docs/**"
+      - "database/migrations/**"
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run Staticcheck and race tests
+        required: false
+        default: true
+        type: boolean
 
 permissions:
-  contents: write
+  contents: read
   packages: read
 
 concurrency:
@@ -26,10 +28,123 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  apply-google-auth-fix:
-    if: ${{ github.event.pull_request.head.ref == 'fix/google-auth-rebuild-migration' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+  quality:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: 1.26.5
+          cache: true
+
+      - name: Configure private Core access
+        run: scripts/configure-private-go.sh
+        env:
+          GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Normalize Go module metadata
+        id: modules
+        continue-on-error: true
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      - name: Preserve normalized Go module metadata
+        if: ${{ steps.modules.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: normalized-go-module-metadata
+          path: |
+            go.mod
+            go.sum
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Check formatting
+        id: formatting
+        continue-on-error: true
+        shell: bash
+        run: |
+          unformatted="$(gofmt -l $(find cmd internal api/generated -type f -name '*.go'))"
+          if [ -n "$unformatted" ]; then
+            echo "Unformatted Go files:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Prepare formatted Go sources
+        if: ${{ steps.formatting.outcome == 'failure' }}
+        run: find cmd internal api/generated -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
+
+      - name: Preserve formatted Go sources
+        if: ${{ steps.formatting.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: formatted-go-sources
+          path: |
+            cmd/**/*.go
+            internal/**/*.go
+            api/generated/**/*.go
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Fail when Go formatting differs
+        if: ${{ steps.formatting.outcome == 'failure' }}
+        run: exit 1
+
+      - name: Run vet
+        id: vet
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          go vet ./... 2>&1 | tee /tmp/go-vet.log
+
+      - name: Preserve Go vet diagnostics
+        if: ${{ steps.vet.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: go-vet-diagnostics
+          path: /tmp/go-vet.log
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Fail when Go vet fails
+        if: ${{ steps.vet.outcome == 'failure' }}
+        run: exit 1
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build executables
+        run: go build ./cmd/...
+
+      - name: Fail when Go module metadata differs
+        if: ${{ steps.modules.outcome == 'failure' }}
+        run: exit 1
+
+      - name: Run Staticcheck
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.full) || (github.event_name == 'pull_request' && github.event.action != 'synchronize') }}
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@v0.7.0
+          staticcheck ./...
+
+      - name: Run race tests
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.full) || (github.event_name == 'pull_request' && github.event.action != 'synchronize') }}
+        run: go test -race ./...
+
+  postgres-integration:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
     env:
       DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
     services:
@@ -47,11 +162,8 @@ jobs:
           --health-timeout 3s
           --health-retries 20
     steps:
-      - name: Check out PR branch
+      - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          ref: fix/google-auth-rebuild-migration
-          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
@@ -59,73 +171,13 @@ jobs:
           go-version: 1.26.5
           cache: true
 
-      - name: Set up Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 24
-          registry-url: https://npm.pkg.github.com
-
-      - name: Configure private dependencies
-        run: |
-          corepack enable
-          scripts/configure-private-go.sh
+      - name: Configure private Core access
+        run: scripts/configure-private-go.sh
         env:
           GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: Apply transformations and regenerate code
-        run: |
-          python3 scripts/fix-google-auth-consistency.py
-          make generate-sql
-          gofmt -w $(find cmd internal api/generated -type f -name '*.go')
-          pnpm install --frozen-lockfile
-          pnpm format
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Test TypeScript 7 compatibility
-        shell: bash
-        run: |
-          cp package.json /tmp/package.json.ts6
-          cp pnpm-lock.yaml /tmp/pnpm-lock.yaml.ts6
-          if pnpm add -Dw typescript@7.0.0 --lockfile-only && pnpm install --frozen-lockfile && pnpm typecheck:web; then
-            echo "TypeScript 7.0.0 passed installation and type checking; keeping it."
-          else
-            echo "TypeScript 7.0.0 remains incompatible; restoring TypeScript 6.0.3."
-            cp /tmp/package.json.ts6 package.json
-            cp /tmp/pnpm-lock.yaml.ts6 pnpm-lock.yaml
-            pnpm install --frozen-lockfile
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Verify migrations
-        run: |
-          make migrate
-          make migrate-status
-
-      - name: Run Go unit tests
-        run: go test ./...
+      - name: Apply migrations
+        run: make migrate
 
       - name: Run PostgreSQL integration tests
         run: go test -p=1 -tags=integration ./internal/attachment ./internal/search ./internal/operations ./internal/googleforms ./internal/queryengine ./internal/matching ./internal/aichat ./internal/ocr
-
-      - name: Run Go vet and build
-        run: |
-          go vet ./...
-          go build ./cmd/...
-
-      - name: Verify frontend
-        run: pnpm check:web
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Commit verified correction
-        run: |
-          rm -f scripts/fix-google-auth-consistency.py
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/backend.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "fix: complete Google auth migration consistency"
-          git push origin HEAD:fix/google-auth-rebuild-migration
