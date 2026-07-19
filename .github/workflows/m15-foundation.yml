@@ -1,0 +1,217 @@
+name: M15 release foundation
+
+on:
+  push:
+    branches: [agent/m15-hardening-migration-launch]
+    paths: [.github/workflows/m15-foundation.yml]
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: agent/m15-hardening-migration-launch
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: 1.26.5
+          cache: true
+
+      - name: Configure private Core access
+        run: scripts/configure-private-go.sh
+
+      - name: Apply release foundation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              if new in text:
+                  return
+              if old not in text:
+                  raise SystemExit(f"missing expected source in {path}: {old!r}")
+              file.write_text(text.replace(old, new, 1))
+
+          replace_once(
+              "internal/config/config.go",
+              '"strings"\n\t"time"\n)',
+              '"strings"\n\t"time"\n\n\t"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"\n)',
+          )
+          replace_once(
+              "internal/config/config.go",
+              "\tif err := cfg.validate(); err != nil {\n\t\treturn Config{}, err\n\t}\n\n\treturn cfg, nil",
+              "\tif err := cfg.validate(); err != nil {\n\t\treturn Config{}, err\n\t}\n\timmutableRelease := environment == EnvironmentStaging || environment == EnvironmentProduction\n\tif err := releaseinfo.Current().Validate(immutableRelease); err != nil {\n\t\treturn Config{}, fmt.Errorf(\"validate release identity: %w\", err)\n\t}\n\n\treturn cfg, nil",
+          )
+
+          replace_once(
+              "internal/config/config_test.go",
+              '"testing"\n\t"time"\n)',
+              '"testing"\n\t"time"\n\n\t"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"\n)',
+          )
+          replace_once(
+              "internal/config/config_test.go",
+              "func setValidLocalAuthentication(t *testing.T) {",
+              "func setValidImmutableRelease(t *testing.T) {\n\tt.Helper()\n\toriginalVersion, originalCommit, originalBuiltAt := releaseinfo.Version, releaseinfo.Commit, releaseinfo.BuiltAt\n\treleaseinfo.Version = \"sha-304b760a3fff\"\n\treleaseinfo.Commit = \"304b760a3fff934cefaf4bd36cb71bcebac060a2\"\n\treleaseinfo.BuiltAt = \"2026-07-19T01:43:41Z\"\n\tt.Cleanup(func() {\n\t\treleaseinfo.Version, releaseinfo.Commit, releaseinfo.BuiltAt = originalVersion, originalCommit, originalBuiltAt\n\t})\n}\n\nfunc setValidLocalAuthentication(t *testing.T) {",
+          )
+          replace_once(
+              "internal/config/config_test.go",
+              "\tsetValidLocalAuthentication(t)\n\tt.Setenv(\"APP_ENV\", \"production\")",
+              "\tsetValidLocalAuthentication(t)\n\tsetValidImmutableRelease(t)\n\tt.Setenv(\"APP_ENV\", \"production\")",
+          )
+
+          logging = '''package logging
+
+import (
+\t"log/slog"
+\t"os"
+\t"strings"
+
+\t"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"
+)
+
+func New(level string) *slog.Logger {
+\tvar slogLevel slog.Level
+\tswitch strings.ToLower(strings.TrimSpace(level)) {
+\tcase "debug":
+\t\tslogLevel = slog.LevelDebug
+\tcase "warn", "warning":
+\t\tslogLevel = slog.LevelWarn
+\tcase "error":
+\t\tslogLevel = slog.LevelError
+\tdefault:
+\t\tslogLevel = slog.LevelInfo
+\t}
+
+\trelease := releaseinfo.Current().Public()
+\treturn slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slogLevel})).With(
+\t\t"release_version", release.Version,
+\t\t"release_revision", release.Revision,
+\t)
+}
+'''
+          Path("internal/platform/logging/logging.go").write_text(logging)
+
+          replace_once(
+              "cmd/migrate/main.go",
+              '"os/signal"\n\t"syscall"\n)',
+              '"os/signal"\n\t"strings"\n\t"syscall"\n\n\t"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"\n)',
+          )
+          replace_once(
+              "cmd/migrate/main.go",
+              "func main() {\n\tcommand := flag.String",
+              "func main() {\n\tenvironment := strings.ToLower(strings.TrimSpace(os.Getenv(\"APP_ENV\")))\n\timmutableRelease := environment == \"staging\" || environment == \"production\"\n\tif err := releaseinfo.Current().Validate(immutableRelease); err != nil {\n\t\tfmt.Fprintf(os.Stderr, \"release identity validation failed: %v\\n\", err)\n\t\tos.Exit(1)\n\t}\n\n\tcommand := flag.String",
+          )
+
+          api_dockerfile = '''# syntax=docker/dockerfile:1
+ARG RELEASE_VERSION=dev
+ARG RELEASE_COMMIT=unknown
+ARG RELEASE_BUILT_AT=
+
+FROM golang:1.26.5-alpine AS build
+ARG RELEASE_VERSION
+ARG RELEASE_COMMIT
+ARG RELEASE_BUILT_AT
+RUN apk add --no-cache ca-certificates git
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN --mount=type=secret,id=github_token,required=true \\
+    token="$(cat /run/secrets/github_token)" && \\
+    git config --global url."https://x-access-token:${token}@github.com/".insteadOf "https://github.com/" && \\
+    GOPRIVATE=github.com/Pherlsz/Gymkhana-Core GONOSUMDB=github.com/Pherlsz/Gymkhana-Core go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath \\
+    -ldflags="-s -w -X github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo.Version=${RELEASE_VERSION} -X github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo.Commit=${RELEASE_COMMIT} -X github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo.BuiltAt=${RELEASE_BUILT_AT}" \\
+    -o /out/api ./cmd/api
+
+FROM gcr.io/distroless/static-debian12:nonroot
+ARG RELEASE_VERSION
+ARG RELEASE_COMMIT
+ARG RELEASE_BUILT_AT
+LABEL org.opencontainers.image.title="Gymkhana Database API" \\
+      org.opencontainers.image.version="${RELEASE_VERSION}" \\
+      org.opencontainers.image.revision="${RELEASE_COMMIT}" \\
+      org.opencontainers.image.created="${RELEASE_BUILT_AT}" \\
+      org.opencontainers.image.source="https://github.com/Pherlsz/Gymkhana-Database"
+COPY --from=build /out/api /api
+USER nonroot:nonroot
+EXPOSE 8080
+ENTRYPOINT ["/api"]
+'''
+          Path("Dockerfile.api").write_text(api_dockerfile)
+
+          worker_dockerfile = api_dockerfile.replace(
+              'Gymkhana Database API', 'Gymkhana Database Worker'
+          ).replace(
+              '-o /out/api ./cmd/api', '-o /out/worker ./cmd/worker'
+          ).replace(
+              'COPY --from=build /out/api /api\nUSER nonroot:nonroot\nEXPOSE 8080\nENTRYPOINT ["/api"]',
+              'COPY --from=build /out/worker /worker\nUSER nonroot:nonroot\nENTRYPOINT ["/worker"]',
+          )
+          Path("Dockerfile.worker").write_text(worker_dockerfile)
+
+          deploy = Path(".github/workflows/deploy.yml")
+          deploy_text = deploy.read_text()
+          marker = "      - name: Build application artifacts\n"
+          metadata = '''      - name: Resolve immutable release metadata
+        id: release
+        shell: bash
+        run: |
+          echo "version=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          echo "commit=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo "built_at=$(git show -s --format=%cI "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+
+'''
+          if metadata not in deploy_text:
+              if marker not in deploy_text:
+                  raise SystemExit("deploy workflow insertion point not found")
+              deploy_text = deploy_text.replace(marker, metadata + marker, 1)
+          deploy_text = deploy_text.replace(
+              'docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN -f Dockerfile.api -t gymkhana-database-api:m1 .',
+              'docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN --build-arg RELEASE_VERSION=${{ steps.release.outputs.version }} --build-arg RELEASE_COMMIT=${{ steps.release.outputs.commit }} --build-arg RELEASE_BUILT_AT=${{ steps.release.outputs.built_at }} -f Dockerfile.api -t gymkhana-database-api:${{ steps.release.outputs.commit }} .',
+          )
+          deploy_text = deploy_text.replace(
+              'docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN -f Dockerfile.worker -t gymkhana-database-worker:m1 .',
+              'docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN --build-arg RELEASE_VERSION=${{ steps.release.outputs.version }} --build-arg RELEASE_COMMIT=${{ steps.release.outputs.commit }} --build-arg RELEASE_BUILT_AT=${{ steps.release.outputs.built_at }} -f Dockerfile.worker -t gymkhana-database-worker:${{ steps.release.outputs.commit }} .',
+          )
+          deploy.write_text(deploy_text)
+
+          Path(".github/workflows/m15-foundation.yml").unlink()
+          PY
+
+          gofmt -w internal/config/config.go internal/config/config_test.go internal/platform/logging/logging.go cmd/migrate/main.go internal/platform/releaseinfo internal/platform/httpserver/server.go internal/platform/httpserver/server_test.go
+
+      - name: Verify Go
+        run: |
+          go mod download
+          go vet ./...
+          go test ./...
+          go build ./cmd/...
+
+      - name: Verify release images
+        run: |
+          release_version="sha-${GITHUB_SHA::12}"
+          release_built_at="$(git show -s --format=%cI "$GITHUB_SHA")"
+          docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN --build-arg RELEASE_VERSION="$release_version" --build-arg RELEASE_COMMIT="$GITHUB_SHA" --build-arg RELEASE_BUILT_AT="$release_built_at" -f Dockerfile.api -t gymkhana-database-api:"$GITHUB_SHA" .
+          docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN --build-arg RELEASE_VERSION="$release_version" --build-arg RELEASE_COMMIT="$GITHUB_SHA" --build-arg RELEASE_BUILT_AT="$release_built_at" -f Dockerfile.worker -t gymkhana-database-worker:"$GITHUB_SHA" .
+
+      - name: Publish verified foundation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "feat: establish M15 immutable release foundation"
+          git push origin HEAD:agent/m15-hardening-migration-launch
