@@ -1,0 +1,93 @@
+name: CI final gate
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened]
+    paths:
+      - "**/*.go"
+      - "apps/**"
+      - "api/**"
+      - "database/**"
+      - "deploy/**"
+      - "scripts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "go.mod"
+      - "go.sum"
+      - "Makefile"
+      - "Dockerfile.*"
+      - ".github/workflows/**"
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Verification scope
+        required: true
+        default: full
+        type: choice
+        options:
+          - changed
+          - quick
+          - full
+          - backend
+          - database
+          - frontend
+          - contracts
+          - security
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ci-final-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 35
+    env:
+      DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
+      GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
+      NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERIFY_SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.scope || 'full' }}
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: gymkhana
+          POSTGRES_USER: gymkhana
+          POSTGRES_PASSWORD: gymkhana
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gymkhana -d gymkhana"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: 1.26.5
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+          cache: pnpm
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Run consolidated verification
+        run: scripts/verify-local.sh "$VERIFY_SCOPE" --ci

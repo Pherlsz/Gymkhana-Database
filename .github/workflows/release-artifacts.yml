@@ -1,28 +1,6 @@
 name: Release artifacts
 
 on:
-  pull_request:
-    types: [opened, ready_for_review, reopened, synchronize]
-    paths:
-      - ".dockerignore"
-      - "Dockerfile.api"
-      - "Dockerfile.migrate"
-      - "Dockerfile.worker"
-      - "deploy/**"
-      - "go.mod"
-      - "go.sum"
-      - "internal/platform/releaseinfo/**"
-      - "scripts/configure-private-go.sh"
-      - "scripts/configure-worker-schedule.sh"
-      - "scripts/create-recovery-point.sh"
-      - "scripts/export-legacy-sqlite.py"
-      - "scripts/promote-cloud-run.sh"
-      - "scripts/rehearse-restore.sh"
-      - "scripts/render-cloud-run.py"
-      - "scripts/rollback-cloud-run.sh"
-      - "vercel.json"
-      - ".github/workflows/deploy.yml"
-      - ".github/workflows/release-artifacts.yml"
   workflow_dispatch:
 
 permissions:
@@ -30,18 +8,15 @@ permissions:
   packages: read
 
 concurrency:
-  group: release-artifacts-${{ github.event.pull_request.number || github.ref }}
+  group: release-artifacts-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   contracts:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: Check out repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Validate scripts and Vercel contract
         run: |
           bash -n \
@@ -52,7 +27,6 @@ jobs:
             scripts/rollback-cloud-run.sh
           python3 -m py_compile scripts/export-legacy-sqlite.py scripts/render-cloud-run.py
           python3 -m json.tool vercel.json >/dev/null
-
       - name: Render Cloud Run contracts with immutable fixtures
         env:
           RELEASE_VERSION: sha-304b760a3fff
@@ -60,8 +34,6 @@ jobs:
           RUNTIME_SERVICE_ACCOUNT: runtime@example.iam.gserviceaccount.com
           APPLICATION_URL: https://database.example
           API_BASE_URL: https://api.database.example
-          ALLOWED_GITHUB_LOGINS: member
-          SUPERADMIN_GITHUB_LOGIN: member
           R2_ENDPOINT: https://example.r2.cloudflarestorage.com
           R2_BUCKET: private-files
           API_SERVICE_NAME: gymkhana-api
@@ -73,10 +45,10 @@ jobs:
           MIGRATION_IMAGE_DIGEST: us-central1-docker.pkg.dev/example/app/migrate@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           DATABASE_URL_SECRET: database-url
           DATABASE_URL_SECRET_VERSION: "1"
-          GITHUB_OAUTH_CLIENT_ID_SECRET: github-client-id
-          GITHUB_OAUTH_CLIENT_ID_SECRET_VERSION: "1"
-          GITHUB_OAUTH_CLIENT_SECRET_SECRET: github-client-secret
-          GITHUB_OAUTH_CLIENT_SECRET_SECRET_VERSION: "1"
+          GOOGLE_LOGIN_OAUTH_CLIENT_ID_SECRET: google-login-client-id
+          GOOGLE_LOGIN_OAUTH_CLIENT_ID_SECRET_VERSION: "1"
+          GOOGLE_LOGIN_OAUTH_CLIENT_SECRET_SECRET: google-login-client-secret
+          GOOGLE_LOGIN_OAUTH_CLIENT_SECRET_SECRET_VERSION: "1"
           R2_ACCESS_KEY_ID_SECRET: r2-access-key-id
           R2_ACCESS_KEY_ID_SECRET_VERSION: "1"
           R2_SECRET_ACCESS_KEY_SECRET: r2-secret-access-key
@@ -90,15 +62,12 @@ jobs:
           ! grep -R 'key: latest' .tmp/cloud-run
 
   images:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     env:
       GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Resolve immutable release metadata
         id: release
         shell: bash
@@ -106,7 +75,6 @@ jobs:
           echo "version=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
           echo "commit=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
           echo "built_at=$(git show -s --format=%cI "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
-
       - name: Build release images
         shell: bash
         run: |
@@ -119,7 +87,6 @@ jobs:
               -f "Dockerfile.${target}" \
               -t "gymkhana-database-${target}:${{ steps.release.outputs.commit }}" .
           done
-
       - name: Verify immutable metadata and runtime user
         shell: bash
         run: |

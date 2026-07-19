@@ -1,15 +1,6 @@
-name: Migrations
+name: Migration diagnostics
 
 on:
-  pull_request:
-    types: [opened, ready_for_review, reopened, synchronize]
-    paths:
-      - "database/**"
-      - "internal/platform/postgres/dbgen/**"
-      - "go.mod"
-      - "go.sum"
-      - "Makefile"
-      - ".github/workflows/migrations.yml"
   workflow_dispatch:
 
 permissions:
@@ -17,16 +8,16 @@ permissions:
   packages: read
 
 concurrency:
-  group: migrations-${{ github.event.pull_request.number || github.ref }}
+  group: migration-diagnostics-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  validate:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+  verify:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
+      GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
     services:
       postgres:
         image: postgres:17-alpine
@@ -41,38 +32,10 @@ jobs:
           --health-interval 2s
           --health-timeout 3s
           --health-retries 20
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Set up Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: 1.26.5
           cache: true
-
-      - name: Configure private Core access
-        run: scripts/configure-private-go.sh
-        env:
-          GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
-
-      - name: Apply migrations
-        run: make migrate
-
-      - name: Check migration status
-        run: make migrate-status
-
-      - name: Verify latest migration rollback and reapply
-        run: |
-          make migrate-down-one
-          make migrate
-          make migrate-status
-
-      - name: Regenerate sqlc output
-        run: |
-          make generate-sql
-          find internal/platform/postgres/dbgen -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
-
-      - name: Verify generated files
-        run: git diff --exit-code -- internal/platform/postgres/dbgen
+      - run: scripts/verify-local.sh database --ci
