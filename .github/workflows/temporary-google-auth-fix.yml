@@ -101,7 +101,24 @@ jobs:
           fi
           rm -f .ci-unit-failure.log
       - name: Run PostgreSQL integration tests
-        run: go test -p=1 -tags=integration ./internal/attachment ./internal/search ./internal/operations ./internal/googleforms ./internal/queryengine ./internal/matching ./internal/aichat ./internal/ocr
+        shell: bash
+        run: |
+          set +e
+          go test -p=1 -tags=integration ./internal/attachment ./internal/search ./internal/operations ./internal/googleforms ./internal/queryengine ./internal/matching ./internal/aichat ./internal/ocr > /tmp/go-integration.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            tail -n 500 /tmp/go-integration.log > .ci-integration-failure.log
+            rm -f .ci-unit-failure.log
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A .ci-unit-failure.log .ci-integration-failure.log
+            git commit -m "chore: capture Google auth integration failure" || true
+            git push origin HEAD:fix/google-auth-rebuild-migration
+            cat .ci-integration-failure.log
+            exit "$status"
+          fi
+          rm -f .ci-integration-failure.log
       - name: Run Go vet and build
         run: |
           go vet ./...
@@ -112,7 +129,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Commit verified correction
         run: |
-          rm -f scripts/fix-google-auth-consistency.py .github/workflows/temporary-google-auth-fix.yml .ci-unit-failure.log
+          rm -f scripts/fix-google-auth-consistency.py .github/workflows/temporary-google-auth-fix.yml .ci-unit-failure.log .ci-integration-failure.log
           git fetch origin main
           git checkout origin/main -- .github/workflows/backend.yml
           git config user.name "github-actions[bot]"
