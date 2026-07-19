@@ -1,0 +1,66 @@
+name: Release artifacts
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
+    paths:
+      - "Dockerfile.api"
+      - "Dockerfile.worker"
+      - "go.mod"
+      - "go.sum"
+      - "internal/platform/releaseinfo/**"
+      - "scripts/configure-private-go.sh"
+      - ".github/workflows/deploy.yml"
+      - ".github/workflows/release-artifacts.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: release-artifacts-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  images:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 25
+    env:
+      GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Resolve immutable release metadata
+        id: release
+        shell: bash
+        run: |
+          echo "version=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          echo "commit=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo "built_at=$(git show -s --format=%cI "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+
+      - name: Build release images
+        shell: bash
+        run: |
+          for target in api worker; do
+            docker build \
+              --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN \
+              --build-arg RELEASE_VERSION=${{ steps.release.outputs.version }} \
+              --build-arg RELEASE_COMMIT=${{ steps.release.outputs.commit }} \
+              --build-arg RELEASE_BUILT_AT=${{ steps.release.outputs.built_at }} \
+              -f "Dockerfile.${target}" \
+              -t "gymkhana-database-${target}:${{ steps.release.outputs.commit }}" .
+          done
+
+      - name: Verify immutable metadata and runtime user
+        shell: bash
+        run: |
+          for target in api worker; do
+            image="gymkhana-database-${target}:${{ steps.release.outputs.commit }}"
+            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "${{ steps.release.outputs.version }}"
+            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "${{ steps.release.outputs.commit }}"
+            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.created" }}')" = "${{ steps.release.outputs.built_at }}"
+            test "$(docker image inspect "$image" --format '{{.Config.User}}')" = "nonroot:nonroot"
+          done
