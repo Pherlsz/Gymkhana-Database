@@ -34,9 +34,44 @@ spec:
                   value: 45s
                 - name: WORKER_RUN_DURATION
                   value: 14m
+                - name: AUTH_ENABLED
+                  value: "true"
+                - name: AUTH_APPLICATION_URL
+                  value: __APPLICATION_URL__
+                - name: AUTH_ALLOWED_GITHUB_LOGINS
+                  value: __ALLOWED_GITHUB_LOGINS__
+                - name: AUTH_SUPERADMIN_GITHUB_LOGIN
+                  value: __SUPERADMIN_GITHUB_LOGIN__
+                - name: GITHUB_OAUTH_REDIRECT_URL
+                  value: __API_BASE_URL__/auth/callback
                 - name: R2_ENABLED
                   value: "true"
                 - name: R2_ENDPOINT
                   value: __R2_ENDPOINT__
                 - name: R2_BUCKET
                   value: __R2_BUCKET__
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: __DATABASE_URL_SECRET__
+                      key: __DATABASE_URL_SECRET_VERSION__
+                - name: GITHUB_OAUTH_CLIENT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: __GITHUB_OAUTH_CLIENT_ID_SECRET__
+                      key: __GITHUB_OAUTH_CLIENT_ID_SECRET_VERSION__
+                - name: GITHUB_OAUTH_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: __GITHUB_OAUTH_CLIENT_SECRET_SECRET__
+                      key: __GITHUB_OAUTH_CLIENT_SECRET_SECRET_VERSION__
+                - name: R2_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: __R2_ACCESS_KEY_ID_SECRET__
+                      key: __R2_ACCESS_KEY_ID_SECRET_VERSION__
+                - name: R2_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: __R2_SECRET_ACCESS_KEY_SECRET__
+                      key: __R2_SECRET_ACCESS_KEY_SECRET_VERSION__

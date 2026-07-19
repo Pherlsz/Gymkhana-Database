@@ -58,10 +58,36 @@ spec:
               value: __R2_ENDPOINT__
             - name: R2_BUCKET
               value: __R2_BUCKET__
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: __DATABASE_URL_SECRET__
+                  key: __DATABASE_URL_SECRET_VERSION__
+            - name: GITHUB_OAUTH_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: __GITHUB_OAUTH_CLIENT_ID_SECRET__
+                  key: __GITHUB_OAUTH_CLIENT_ID_SECRET_VERSION__
+            - name: GITHUB_OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: __GITHUB_OAUTH_CLIENT_SECRET_SECRET__
+                  key: __GITHUB_OAUTH_CLIENT_SECRET_SECRET_VERSION__
+            - name: R2_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: __R2_ACCESS_KEY_ID_SECRET__
+                  key: __R2_ACCESS_KEY_ID_SECRET_VERSION__
+            - name: R2_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: __R2_SECRET_ACCESS_KEY_SECRET__
+                  key: __R2_SECRET_ACCESS_KEY_SECRET_VERSION__
           startupProbe:
             httpGet:
               path: /health/ready
               port: 8080
+            initialDelaySeconds: 0
             timeoutSeconds: 2
             periodSeconds: 2
             failureThreshold: 30
