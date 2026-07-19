@@ -109,6 +109,13 @@ def main() -> None:
         "WORKER_JOB_NAME": validate_name("WORKER_JOB_NAME", required("WORKER_JOB_NAME")),
         "WORKER_IMAGE_DIGEST": validate_digest("WORKER_IMAGE_DIGEST", required("WORKER_IMAGE_DIGEST")),
     }
+    migration_values = {
+        **shared,
+        "MIGRATION_JOB_NAME": validate_name("MIGRATION_JOB_NAME", required("MIGRATION_JOB_NAME")),
+        "MIGRATION_IMAGE_DIGEST": validate_digest(
+            "MIGRATION_IMAGE_DIGEST", required("MIGRATION_IMAGE_DIGEST")
+        ),
+    }
     root = Path(__file__).resolve().parents[1]
     render(
         root / "deploy/cloud-run/api.service.yaml.tmpl",
@@ -119,6 +126,11 @@ def main() -> None:
         root / "deploy/cloud-run/worker.job.yaml.tmpl",
         arguments.output_directory / "worker.job.yaml",
         worker_values,
+    )
+    render(
+        root / "deploy/cloud-run/migrate.job.yaml.tmpl",
+        arguments.output_directory / "migrate.job.yaml",
+        migration_values,
     )
 
 
