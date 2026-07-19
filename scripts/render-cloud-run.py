@@ -12,6 +12,8 @@ from pathlib import Path
 PLACEHOLDER = re.compile(r"__[A-Z0-9_]+__")
 DIGEST = re.compile(r"^[a-z0-9][a-z0-9._/-]*@[Ss][Hh][Aa]256:[a-f0-9]{64}$")
 SAFE_NAME = re.compile(r"^[a-z][a-z0-9-]{0,62}$")
+SECRET_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,254}$")
+SECRET_VERSION = re.compile(r"^[1-9][0-9]*$")
 VERSION = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$")
 
 
@@ -55,6 +57,18 @@ def validate_digest(name: str, value: str) -> str:
     return value
 
 
+def secret_reference(prefix: str) -> dict[str, str]:
+    name_key = f"{prefix}_SECRET"
+    version_key = f"{prefix}_SECRET_VERSION"
+    name = required(name_key)
+    version = required(version_key)
+    if not SECRET_NAME.fullmatch(name):
+        raise SystemExit(f"{name_key} has an invalid Secret Manager name")
+    if not SECRET_VERSION.fullmatch(version):
+        raise SystemExit(f"{version_key} must be a pinned numeric version")
+    return {name_key: name, version_key: version}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-directory", type=Path, default=Path(".tmp/cloud-run"))
@@ -76,6 +90,14 @@ def main() -> None:
         "R2_ENDPOINT": required("R2_ENDPOINT"),
         "R2_BUCKET": required("R2_BUCKET"),
     }
+    for prefix in (
+        "DATABASE_URL",
+        "GITHUB_OAUTH_CLIENT_ID",
+        "GITHUB_OAUTH_CLIENT_SECRET",
+        "R2_ACCESS_KEY_ID",
+        "R2_SECRET_ACCESS_KEY",
+    ):
+        shared.update(secret_reference(prefix))
     api_values = {
         **shared,
         "API_SERVICE_NAME": validate_name("API_SERVICE_NAME", required("API_SERVICE_NAME")),
