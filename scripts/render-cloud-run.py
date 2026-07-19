@@ -8,13 +8,18 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from urllib.parse import urlsplit
 
 PLACEHOLDER = re.compile(r"__[A-Z0-9_]+__")
-DIGEST = re.compile(r"^[a-z0-9][a-z0-9._/-]*@[Ss][Hh][Aa]256:[a-f0-9]{64}$")
-SAFE_NAME = re.compile(r"^[a-z][a-z0-9-]{0,62}$")
+DIGEST = re.compile(r"^[a-z0-9][a-z0-9._/-]*@sha256:[a-f0-9]{64}$")
+SAFE_NAME = re.compile(r"^[a-z][a-z0-9-]{0,48}$")
+REGION = re.compile(r"^[a-z]+[a-z0-9-]*[a-z0-9]$")
+SERVICE_ACCOUNT = re.compile(r"^[a-z][a-z0-9-]{4,28}[a-z0-9]@[a-z][a-z0-9-]{4,28}[a-z0-9]\.iam\.gserviceaccount\.com$")
 SECRET_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,254}$")
 SECRET_VERSION = re.compile(r"^[1-9][0-9]*$")
 VERSION = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$")
+GITHUB_LOGIN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
+BUCKET = re.compile(r"^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$")
 
 
 def required(name: str) -> str:
@@ -46,8 +51,8 @@ def render(template: Path, output: Path, values: dict[str, str]) -> None:
 
 
 def validate_name(name: str, value: str) -> str:
-    if not SAFE_NAME.fullmatch(value):
-        raise SystemExit(f"{name} must be a lowercase Cloud Run resource name")
+    if not SAFE_NAME.fullmatch(value) or value.endswith("-"):
+        raise SystemExit(f"{name} must be a lowercase Cloud Run resource name with at most 49 characters")
     return value
 
 
@@ -55,6 +60,34 @@ def validate_digest(name: str, value: str) -> str:
     if not DIGEST.fullmatch(value):
         raise SystemExit(f"{name} must use an immutable @sha256 image digest")
     return value
+
+
+def validate_origin(name: str, value: str) -> str:
+    parsed = urlsplit(value)
+    if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
+        raise SystemExit(f"{name} must be an HTTPS origin")
+    if parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
+        raise SystemExit(f"{name} must not contain a path, query, or fragment")
+    return f"https://{parsed.netloc.lower()}"
+
+
+def validate_logins(name: str, value: str) -> str:
+    logins = [item.strip() for item in value.split(",")]
+    if not logins or any(not GITHUB_LOGIN.fullmatch(item) for item in logins):
+        raise SystemExit(f"{name} must be a comma-separated list of GitHub logins")
+    if len({item.lower() for item in logins}) != len(logins):
+        raise SystemExit(f"{name} contains duplicate GitHub logins")
+    return ",".join(logins)
+
+
+def validate_positive_integer(name: str, value: str, maximum: int) -> str:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise SystemExit(f"{name} must be an integer") from exc
+    if parsed < 1 or parsed > maximum:
+        raise SystemExit(f"{name} must be between 1 and {maximum}")
+    return str(parsed)
 
 
 def secret_reference(prefix: str) -> dict[str, str]:
@@ -78,17 +111,34 @@ def main() -> None:
     if not VERSION.fullmatch(version):
         raise SystemExit("RELEASE_VERSION has an invalid format")
     region = required("GCP_REGION")
+    if not REGION.fullmatch(region):
+        raise SystemExit("GCP_REGION has an invalid format")
     runtime_account = required("RUNTIME_SERVICE_ACCOUNT")
+    if not SERVICE_ACCOUNT.fullmatch(runtime_account):
+        raise SystemExit("RUNTIME_SERVICE_ACCOUNT must be a Google service-account email")
+    application_url = validate_origin("APPLICATION_URL", required("APPLICATION_URL"))
+    api_base_url = validate_origin("API_BASE_URL", required("API_BASE_URL"))
+    allowed_logins = validate_logins("ALLOWED_GITHUB_LOGINS", required("ALLOWED_GITHUB_LOGINS"))
+    superadmin = required("SUPERADMIN_GITHUB_LOGIN")
+    if not GITHUB_LOGIN.fullmatch(superadmin):
+        raise SystemExit("SUPERADMIN_GITHUB_LOGIN must be one GitHub login")
+    if superadmin.lower() not in {item.lower() for item in allowed_logins.split(",")}:
+        raise SystemExit("SUPERADMIN_GITHUB_LOGIN must be present in ALLOWED_GITHUB_LOGINS")
+    r2_endpoint = validate_origin("R2_ENDPOINT", required("R2_ENDPOINT"))
+    r2_bucket = required("R2_BUCKET")
+    if not BUCKET.fullmatch(r2_bucket):
+        raise SystemExit("R2_BUCKET must be a lowercase 3-63 character bucket name")
+
     shared = {
         "REGION": region,
         "RELEASE_VERSION": version,
         "RUNTIME_SERVICE_ACCOUNT": runtime_account,
-        "APPLICATION_URL": required("APPLICATION_URL"),
-        "API_BASE_URL": required("API_BASE_URL"),
-        "ALLOWED_GITHUB_LOGINS": required("ALLOWED_GITHUB_LOGINS"),
-        "SUPERADMIN_GITHUB_LOGIN": required("SUPERADMIN_GITHUB_LOGIN"),
-        "R2_ENDPOINT": required("R2_ENDPOINT"),
-        "R2_BUCKET": required("R2_BUCKET"),
+        "APPLICATION_URL": application_url,
+        "API_BASE_URL": api_base_url,
+        "ALLOWED_GITHUB_LOGINS": allowed_logins,
+        "SUPERADMIN_GITHUB_LOGIN": superadmin,
+        "R2_ENDPOINT": r2_endpoint,
+        "R2_BUCKET": r2_bucket,
     }
     for prefix in (
         "DATABASE_URL",
@@ -101,7 +151,9 @@ def main() -> None:
     api_values = {
         **shared,
         "API_SERVICE_NAME": validate_name("API_SERVICE_NAME", required("API_SERVICE_NAME")),
-        "API_MAX_INSTANCES": required("API_MAX_INSTANCES"),
+        "API_MAX_INSTANCES": validate_positive_integer(
+            "API_MAX_INSTANCES", required("API_MAX_INSTANCES"), 100
+        ),
         "API_IMAGE_DIGEST": validate_digest("API_IMAGE_DIGEST", required("API_IMAGE_DIGEST")),
     }
     worker_values = {
