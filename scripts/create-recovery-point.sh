@@ -21,8 +21,9 @@ if [[ -n "$repository_root" ]]; then
   absolute_output="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve())' "$output")"
   case "$absolute_output" in
     "$repository_root"/*)
-      git check-ignore -q "$absolute_output" || {
-        echo "refusing to write a database backup to a tracked repository path" >&2
+      relative_output="${absolute_output#"$repository_root"/}"
+      git -C "$repository_root" check-ignore -q -- "$relative_output" || {
+        echo "refusing to write a database backup to a non-ignored repository path" >&2
         exit 2
       }
       ;;
