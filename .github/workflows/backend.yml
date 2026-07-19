@@ -58,128 +58,133 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
+          import textwrap
 
-          def replace(path: str, old: str, new: str) -> None:
+          def regex_patch(path: str, pattern: str, replacement: str, flags: int = 0) -> None:
               file = Path(path)
               text = file.read_text()
-              if new in text:
-                  return
-              if old not in text:
-                  raise SystemExit(f"expected source not found in {path}")
-              file.write_text(text.replace(old, new, 1))
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
+              if count == 0 and replacement not in text:
+                  raise SystemExit(f"patch target not found: {path}")
+              file.write_text(updated if count else text)
 
-          page = "apps/web/src/TaskPage.tsx"
-          replace(
-              page,
+          page = Path("apps/web/src/TaskPage.tsx")
+          text = page.read_text()
+          text = text.replace(
               "void navigate({ search: (previous) => ({ ...previous, draft: created.id, job: undefined }) });",
-              """void navigate({
-                  search: (previous) => {
-                    const next = { ...previous, draft: created.id };
-                    delete next.job;
-                    return next;
-                  },
-                });""",
+              textwrap.dedent("""\
+              void navigate({
+                search: (previous) => {
+                  const next = { ...previous, draft: created.id };
+                  delete next.job;
+                  return next;
+                },
+              });"""),
           )
-          replace(
-              page,
-              """    <Page
-                title="Consultas avançadas e tarefas"
-                description="Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução somente leitura."
-              >
-                <Stack gap="5">""",
-              """    <Page.Root maxWidth="lg">
-                <Page.Header>
-                  <Page.Eyebrow>M14 · Consultas avançadas</Page.Eyebrow>
-                  <Page.Title>Consultas avançadas e tarefas</Page.Title>
-                  <Page.Description>
-                    Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução
-                    somente leitura.
-                  </Page.Description>
-                </Page.Header>
-                <Page.Content>
-                  <Stack gap="5">""",
+          text = re.sub(
+              r'''    <Page\s+title="Consultas avançadas e tarefas"\s+description="Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução somente leitura\."\s*>\s*      <Stack gap="5">''',
+              textwrap.dedent("""\
+                  <Page.Root maxWidth="lg">
+                    <Page.Header>
+                      <Page.Eyebrow>M14 · Consultas avançadas</Page.Eyebrow>
+                      <Page.Title>Consultas avançadas e tarefas</Page.Title>
+                      <Page.Description>
+                        Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução
+                        somente leitura.
+                      </Page.Description>
+                    </Page.Header>
+                    <Page.Content>
+                      <Stack gap="5">"""),
+              text,
+              count=1,
           )
-          replace(page, '    <Page.Root maxWidth="xl">', '    <Page.Root maxWidth="lg">')
-          replace(
-              page,
-              """      </Stack>
-              </Page>""",
-              """      </Stack>
-                </Page.Content>
-              </Page.Root>""",
+          text = text.replace('<Page.Root maxWidth="xl">', '<Page.Root maxWidth="lg">')
+          text = re.sub(
+              r'''      </Stack>\s+    </Page>\s+  \);\s+}\s+\nfunction VisualQueryBuilder''',
+              textwrap.dedent("""\
+                      </Stack>
+                    </Page.Content>
+                  </Page.Root>
+                );
+              }
+
+              function VisualQueryBuilder"""),
+              text,
+              count=1,
           )
-          replace(page, "{row.cells.map((cell) => (", "{(row.cells ?? []).map((cell) => (")
-          replace(
-              "apps/web/src/lib/api/tasks.ts",
-              """    throw new APIRequestError("API response is not JSON", {
-                status: response.status,
-                requestId: response.headers.get("x-request-id") ?? undefined,
-              });""",
-              """    throw new APIRequestError("API response is not JSON", {
-                status: response.status,
-                code: undefined,
-                requestId: response.headers.get("x-request-id") ?? undefined,
-              });""",
+          text = text.replace("{row.cells.map((cell) => (", "{(row.cells ?? []).map((cell) => (")
+          page.write_text(text)
+
+          tasks = Path("apps/web/src/lib/api/tasks.ts")
+          text = tasks.read_text()
+          text = re.sub(
+              r'''(throw new APIRequestError\("API response is not JSON", \{\s+status: response\.status,)(\s+requestId:)''',
+              r'''\1
+              code: undefined,\2''',
+              text,
+              count=1,
           )
+          tasks.write_text(text)
 
           completion = Path("internal/taskengine/postgres_completion.go")
           text = completion.read_text()
           if '"encoding/json"' not in text:
-              completion.write_text(text.replace('import (\n\t"context"', 'import (\n\t"context"\n\t"encoding/json"', 1))
+              text = text.replace('import (\n\t"context"', 'import (\n\t"context"\n\t"encoding/json"', 1)
+          completion.write_text(text)
           Path("internal/taskengine/json_bridge.go").unlink(missing_ok=True)
-          replace("internal/taskengine/postgres_jobs.go", "return job.Version + 1", "return job.Version")
-          replace("internal/queryengine/advanced_service.go", "EntityKind: advanced.EntityKind,", "EntityKind: rootEntity,")
-          replace("internal/queryengine/advanced_service.go", "if len(parts) < 5 {", "if len(parts) < 4 {")
+
+          jobs = Path("internal/taskengine/postgres_jobs.go")
+          jobs.write_text(jobs.read_text().replace("return job.Version + 1", "return job.Version", 1))
+          advanced = Path("internal/queryengine/advanced_service.go")
+          text = advanced.read_text().replace("EntityKind: advanced.EntityKind,", "EntityKind: rootEntity,", 1)
+          text = text.replace("if len(parts) < 5 {", "if len(parts) < 4 {", 1)
+          advanced.write_text(text)
 
           contract = Path("api/tasks.openapi.yaml")
           text = contract.read_text()
-          old_rows = """        rows:
-                type: array
-                items:
-                  type: object"""
-          new_rows = """        rows:
-                type: array
-                maxItems: 100
-                items:
-                  $ref: '#/components/schemas/ResultRow'"""
-          if new_rows not in text:
-              if old_rows not in text:
-                  raise SystemExit("query result row schema not found")
-              text = text.replace(old_rows, new_rows, 1)
+          text = re.sub(
+              r'''        rows:\n          type: array\n          items:\n            type: object''',
+              "        rows:\n          type: array\n          maxItems: 100\n          items:\n            $ref: '#/components/schemas/ResultRow'",
+              text,
+              count=1,
+          )
           if "    ResultCell:\n" not in text:
-              schemas = """    ResultCell:
-                type: object
-                additionalProperties: false
-                required: [column_position, kind, is_null]
-                properties:
-                  column_position: { type: integer, minimum: 0, maximum: 19 }
-                  kind:
-                    $ref: '#/components/schemas/ValueKind'
-                  is_null: { type: boolean }
-                  text_value: { type: string, maxLength: 5000 }
-                  integer_value: { type: integer, format: int64 }
-                  decimal_value:
-                    type: string
-                    pattern: '^-?[0-9]{1,28}(\\.[0-9]{1,10})?$'
-                  boolean_value: { type: boolean }
-                  civil_date_value: { type: string, format: date }
-                  timestamp_value: { type: string, format: date-time }
-              ResultRow:
-                type: object
-                additionalProperties: false
-                required: [position, entity_kind, entity_id, entity_label, updated_at, cells]
-                properties:
-                  position: { type: integer, minimum: 0, maximum: 499 }
-                  entity_kind: { type: string }
-                  entity_id: { type: string, minLength: 1, maxLength: 200 }
-                  entity_label: { type: string, minLength: 1, maxLength: 300 }
-                  updated_at: { type: string, format: date-time }
-                  cells:
-                    type: array
-                    maxItems: 20
-                    items:
-                      $ref: '#/components/schemas/ResultCell'
-          """
+              schemas = textwrap.dedent("""\
+                  ResultCell:
+                    type: object
+                    additionalProperties: false
+                    required: [column_position, kind, is_null]
+                    properties:
+                      column_position: { type: integer, minimum: 0, maximum: 19 }
+                      kind:
+                        $ref: '#/components/schemas/ValueKind'
+                      is_null: { type: boolean }
+                      text_value: { type: string, maxLength: 5000 }
+                      integer_value: { type: integer, format: int64 }
+                      decimal_value:
+                        type: string
+                        pattern: '^-?[0-9]{1,28}(\\.[0-9]{1,10})?$'
+                      boolean_value: { type: boolean }
+                      civil_date_value: { type: string, format: date }
+                      timestamp_value: { type: string, format: date-time }
+                  ResultRow:
+                    type: object
+                    additionalProperties: false
+                    required: [position, entity_kind, entity_id, entity_label, updated_at, cells]
+                    properties:
+                      position: { type: integer, minimum: 0, maximum: 499 }
+                      entity_kind: { type: string }
+                      entity_id: { type: string, minLength: 1, maxLength: 200 }
+                      entity_label: { type: string, minLength: 1, maxLength: 300 }
+                      updated_at: { type: string, format: date-time }
+                      cells:
+                        type: array
+                        maxItems: 20
+                        items:
+                          $ref: '#/components/schemas/ResultCell'
+              """)
+              schemas = textwrap.indent(schemas, "    ")
               text = text.replace("    PlanEstimate:\n", schemas + "    PlanEstimate:\n", 1)
           contract.write_text(text)
           PY
@@ -199,12 +204,12 @@ jobs:
         shell: bash
         run: |
           make generate-go generate-ts
-          mkdir -p /tmp/m14-generated/go /tmp/m14-generated/ts
-          cp api/generated/tasks/tasks.gen.go /tmp/m14-generated/go/tasks.gen.go
-          cp apps/web/src/generated/tasks-api.ts /tmp/m14-generated/ts/tasks-api.ts
+          mkdir -p /tmp/m14-generated
+          cp api/generated/tasks/tasks.gen.go /tmp/m14-generated/tasks.gen.go
+          cp apps/web/src/generated/tasks-api.ts /tmp/m14-generated/tasks-api.ts
           git checkout HEAD -- api/generated apps/web/src/generated
-          cp /tmp/m14-generated/go/tasks.gen.go api/generated/tasks/tasks.gen.go
-          cp /tmp/m14-generated/ts/tasks-api.ts apps/web/src/generated/tasks-api.ts
+          cp /tmp/m14-generated/tasks.gen.go api/generated/tasks/tasks.gen.go
+          cp /tmp/m14-generated/tasks-api.ts apps/web/src/generated/tasks-api.ts
           gofmt -w api/generated/tasks/tasks.gen.go
           pnpm exec oxfmt apps/web/src/TaskPage.tsx apps/web/src/lib/api/tasks.ts apps/web/src/generated/tasks-api.ts --write
 
