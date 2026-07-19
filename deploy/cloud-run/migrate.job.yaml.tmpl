@@ -1,0 +1,32 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: __MIGRATION_JOB_NAME__
+  labels:
+    cloud.googleapis.com/location: __REGION__
+    app.kubernetes.io/name: gymkhana-database-migrate
+    app.kubernetes.io/version: __RELEASE_VERSION__
+spec:
+  template:
+    spec:
+      taskCount: 1
+      template:
+        spec:
+          serviceAccountName: __RUNTIME_SERVICE_ACCOUNT__
+          maxRetries: 0
+          timeoutSeconds: "900"
+          containers:
+            - name: migrate
+              image: __MIGRATION_IMAGE_DIGEST__
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 512Mi
+              env:
+                - name: APP_ENV
+                  value: production
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: __DATABASE_URL_SECRET__
+                      key: __DATABASE_URL_SECRET_VERSION__
