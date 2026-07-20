@@ -23,9 +23,9 @@ func (store *PostgresStore) CurrentUser(ctx context.Context, id auth.Identifier)
 	}
 	var value auth.User
 	var databaseID pgtype.UUID
-	var avatar pgtype.Text
-	err := store.pool.QueryRow(ctx, `SELECT id,github_user_id,github_login,display_name,avatar_url,role,active
-FROM app_users WHERE id=$1`, taskAuthUUID(id)).Scan(&databaseID, &value.GitHubUserID, &value.Login, &value.DisplayName, &avatar, &value.Role, &value.Active)
+	var subject, avatar pgtype.Text
+	err := store.pool.QueryRow(ctx, `SELECT id,google_subject,email,display_name,avatar_url,role,active
+FROM app_users WHERE id=$1`, taskAuthUUID(id)).Scan(&databaseID, &subject, &value.Email, &value.DisplayName, &avatar, &value.Role, &value.Active)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return auth.User{}, ErrForbidden
 	}
@@ -33,6 +33,9 @@ FROM app_users WHERE id=$1`, taskAuthUUID(id)).Scan(&databaseID, &value.GitHubUs
 		return auth.User{}, fmt.Errorf("load current task user: %w", err)
 	}
 	value.ID = auth.Identifier(databaseID.Bytes)
+	if subject.Valid {
+		value.GoogleSubject = subject.String
+	}
 	if avatar.Valid {
 		value.AvatarURL = avatar.String
 	}
