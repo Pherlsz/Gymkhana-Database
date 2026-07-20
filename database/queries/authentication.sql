@@ -1,14 +1,14 @@
 -- name: CreateAppUser :one
 INSERT INTO app_users (
   id,
-  github_user_id,
-  github_login,
+  google_subject,
+  email,
   display_name,
   avatar_url,
   role,
   active
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+VALUES ($1, $2, lower(btrim($3)), $4, $5, $6, $7)
 RETURNING *;
 
 -- name: GetAppUserByID :one
@@ -16,25 +16,32 @@ SELECT *
 FROM app_users
 WHERE id = $1;
 
--- name: GetAppUserByGitHubID :one
+-- name: GetAppUserByGoogleSubject :one
 SELECT *
 FROM app_users
-WHERE github_user_id = $1;
+WHERE google_subject = $1;
+
+-- name: GetAppUserByEmail :one
+SELECT *
+FROM app_users
+WHERE lower(email) = lower(btrim($1));
 
 -- name: ListAppUsers :many
 SELECT *
 FROM app_users
-ORDER BY lower(github_login), id
+ORDER BY lower(email), id
 LIMIT $1 OFFSET $2;
 
 -- name: UpdateAppUserIdentity :one
 UPDATE app_users
-SET github_login = $2,
-    display_name = $3,
-    avatar_url = $4,
+SET google_subject = COALESCE(google_subject, $2),
+    email = lower(btrim($3)),
+    display_name = $4,
+    avatar_url = $5,
     updated_at = now(),
     version = version + 1
 WHERE id = $1
+  AND (google_subject IS NULL OR google_subject = $2)
 RETURNING *;
 
 -- name: UpdateAppUserAccess :one
@@ -71,8 +78,8 @@ WHERE token_hash = $1;
 SELECT
   app_sessions.id AS session_id,
   app_users.id AS app_user_id,
-  app_users.github_user_id,
-  app_users.github_login,
+  app_users.google_subject,
+  app_users.email,
   app_users.display_name,
   app_users.avatar_url,
   app_users.role,
@@ -114,7 +121,7 @@ INSERT INTO auth_audit_events (
   event_type,
   outcome,
   request_id,
-  provider_login
+  provider_email
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
