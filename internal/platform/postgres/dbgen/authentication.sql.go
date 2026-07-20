@@ -65,32 +65,32 @@ func (q *Queries) CreateAppSession(ctx context.Context, arg CreateAppSessionPara
 const createAppUser = `-- name: CreateAppUser :one
 INSERT INTO app_users (
   id,
-  github_user_id,
-  github_login,
+  google_subject,
+  email,
   display_name,
   avatar_url,
   role,
   active
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+VALUES ($1, $2, lower(btrim($3)), $4, $5, $6, $7)
+RETURNING id, google_subject, email, display_name, avatar_url, role, active, version, created_at, updated_at
 `
 
 type CreateAppUserParams struct {
-	ID           pgtype.UUID `json:"id"`
-	GithubUserID int64       `json:"github_user_id"`
-	GithubLogin  string      `json:"github_login"`
-	DisplayName  string      `json:"display_name"`
-	AvatarUrl    *string     `json:"avatar_url"`
-	Role         string      `json:"role"`
-	Active       bool        `json:"active"`
+	ID            pgtype.UUID `json:"id"`
+	GoogleSubject *string     `json:"google_subject"`
+	Email         string      `json:"email"`
+	DisplayName   string      `json:"display_name"`
+	AvatarUrl     *string     `json:"avatar_url"`
+	Role          string      `json:"role"`
+	Active        bool        `json:"active"`
 }
 
 func (q *Queries) CreateAppUser(ctx context.Context, arg CreateAppUserParams) (AppUser, error) {
 	row := q.db.QueryRow(ctx, createAppUser,
 		arg.ID,
-		arg.GithubUserID,
-		arg.GithubLogin,
+		arg.GoogleSubject,
+		arg.Email,
 		arg.DisplayName,
 		arg.AvatarUrl,
 		arg.Role,
@@ -99,8 +99,8 @@ func (q *Queries) CreateAppUser(ctx context.Context, arg CreateAppUserParams) (A
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.GoogleSubject,
+		&i.Email,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,
@@ -120,10 +120,10 @@ INSERT INTO auth_audit_events (
   event_type,
   outcome,
   request_id,
-  provider_login
+  provider_email
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, actor_user_id, subject_user_id, event_type, outcome, request_id, provider_login, occurred_at
+RETURNING id, actor_user_id, subject_user_id, event_type, outcome, request_id, provider_email, occurred_at
 `
 
 type CreateAuthAuditEventParams struct {
@@ -133,7 +133,7 @@ type CreateAuthAuditEventParams struct {
 	EventType     string      `json:"event_type"`
 	Outcome       string      `json:"outcome"`
 	RequestID     string      `json:"request_id"`
-	ProviderLogin *string     `json:"provider_login"`
+	ProviderEmail *string     `json:"provider_email"`
 }
 
 func (q *Queries) CreateAuthAuditEvent(ctx context.Context, arg CreateAuthAuditEventParams) (AuthAuditEvent, error) {
@@ -144,7 +144,7 @@ func (q *Queries) CreateAuthAuditEvent(ctx context.Context, arg CreateAuthAuditE
 		arg.EventType,
 		arg.Outcome,
 		arg.RequestID,
-		arg.ProviderLogin,
+		arg.ProviderEmail,
 	)
 	var i AuthAuditEvent
 	err := row.Scan(
@@ -154,7 +154,7 @@ func (q *Queries) CreateAuthAuditEvent(ctx context.Context, arg CreateAuthAuditE
 		&i.EventType,
 		&i.Outcome,
 		&i.RequestID,
-		&i.ProviderLogin,
+		&i.ProviderEmail,
 		&i.OccurredAt,
 	)
 	return i, err
@@ -181,19 +181,43 @@ func (q *Queries) GetAppSessionByTokenHash(ctx context.Context, tokenHash []byte
 	return i, err
 }
 
-const getAppUserByGitHubID = `-- name: GetAppUserByGitHubID :one
-SELECT id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+const getAppUserByEmail = `-- name: GetAppUserByEmail :one
+SELECT id, google_subject, email, display_name, avatar_url, role, active, version, created_at, updated_at
 FROM app_users
-WHERE github_user_id = $1
+WHERE lower(email) = lower(btrim($1))
 `
 
-func (q *Queries) GetAppUserByGitHubID(ctx context.Context, githubUserID int64) (AppUser, error) {
-	row := q.db.QueryRow(ctx, getAppUserByGitHubID, githubUserID)
+func (q *Queries) GetAppUserByEmail(ctx context.Context, email string) (AppUser, error) {
+	row := q.db.QueryRow(ctx, getAppUserByEmail, email)
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.GoogleSubject,
+		&i.Email,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.Role,
+		&i.Active,
+		&i.Version,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAppUserByGoogleSubject = `-- name: GetAppUserByGoogleSubject :one
+SELECT id, google_subject, email, display_name, avatar_url, role, active, version, created_at, updated_at
+FROM app_users
+WHERE google_subject = $1
+`
+
+func (q *Queries) GetAppUserByGoogleSubject(ctx context.Context, googleSubject *string) (AppUser, error) {
+	row := q.db.QueryRow(ctx, getAppUserByGoogleSubject, googleSubject)
+	var i AppUser
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSubject,
+		&i.Email,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,
@@ -206,7 +230,7 @@ func (q *Queries) GetAppUserByGitHubID(ctx context.Context, githubUserID int64) 
 }
 
 const getAppUserByID = `-- name: GetAppUserByID :one
-SELECT id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+SELECT id, google_subject, email, display_name, avatar_url, role, active, version, created_at, updated_at
 FROM app_users
 WHERE id = $1
 `
@@ -216,8 +240,8 @@ func (q *Queries) GetAppUserByID(ctx context.Context, id pgtype.UUID) (AppUser, 
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.GoogleSubject,
+		&i.Email,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,
@@ -233,8 +257,8 @@ const getAuthenticatedAppSession = `-- name: GetAuthenticatedAppSession :one
 SELECT
   app_sessions.id AS session_id,
   app_users.id AS app_user_id,
-  app_users.github_user_id,
-  app_users.github_login,
+  app_users.google_subject,
+  app_users.email,
   app_users.display_name,
   app_users.avatar_url,
   app_users.role,
@@ -253,14 +277,14 @@ type GetAuthenticatedAppSessionParams struct {
 }
 
 type GetAuthenticatedAppSessionRow struct {
-	SessionID    pgtype.UUID `json:"session_id"`
-	AppUserID    pgtype.UUID `json:"app_user_id"`
-	GithubUserID int64       `json:"github_user_id"`
-	GithubLogin  string      `json:"github_login"`
-	DisplayName  string      `json:"display_name"`
-	AvatarUrl    *string     `json:"avatar_url"`
-	Role         string      `json:"role"`
-	Active       bool        `json:"active"`
+	SessionID     pgtype.UUID `json:"session_id"`
+	AppUserID     pgtype.UUID `json:"app_user_id"`
+	GoogleSubject *string     `json:"google_subject"`
+	Email         string      `json:"email"`
+	DisplayName   string      `json:"display_name"`
+	AvatarUrl     *string     `json:"avatar_url"`
+	Role          string      `json:"role"`
+	Active        bool        `json:"active"`
 }
 
 func (q *Queries) GetAuthenticatedAppSession(ctx context.Context, arg GetAuthenticatedAppSessionParams) (GetAuthenticatedAppSessionRow, error) {
@@ -269,8 +293,8 @@ func (q *Queries) GetAuthenticatedAppSession(ctx context.Context, arg GetAuthent
 	err := row.Scan(
 		&i.SessionID,
 		&i.AppUserID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.GoogleSubject,
+		&i.Email,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,
@@ -280,9 +304,9 @@ func (q *Queries) GetAuthenticatedAppSession(ctx context.Context, arg GetAuthent
 }
 
 const listAppUsers = `-- name: ListAppUsers :many
-SELECT id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+SELECT id, google_subject, email, display_name, avatar_url, role, active, version, created_at, updated_at
 FROM app_users
-ORDER BY lower(github_login), id
+ORDER BY lower(email), id
 LIMIT $1 OFFSET $2
 `
 
@@ -302,8 +326,8 @@ func (q *Queries) ListAppUsers(ctx context.Context, arg ListAppUsersParams) ([]A
 		var i AppUser
 		if err := rows.Scan(
 			&i.ID,
-			&i.GithubUserID,
-			&i.GithubLogin,
+			&i.GoogleSubject,
+			&i.Email,
 			&i.DisplayName,
 			&i.AvatarUrl,
 			&i.Role,
@@ -376,7 +400,7 @@ SET role = $2,
     version = version + 1
 WHERE id = $1
   AND version = $4
-RETURNING id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+RETURNING id, google_subject, email, display_name, avatar_url, role, active, version, created_at, updated_at
 `
 
 type UpdateAppUserAccessParams struct {
@@ -396,8 +420,8 @@ func (q *Queries) UpdateAppUserAccess(ctx context.Context, arg UpdateAppUserAcce
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.GoogleSubject,
+		&i.Email,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,
@@ -411,34 +435,38 @@ func (q *Queries) UpdateAppUserAccess(ctx context.Context, arg UpdateAppUserAcce
 
 const updateAppUserIdentity = `-- name: UpdateAppUserIdentity :one
 UPDATE app_users
-SET github_login = $2,
-    display_name = $3,
-    avatar_url = $4,
+SET google_subject = COALESCE(google_subject, $2),
+    email = lower(btrim($3)),
+    display_name = $4,
+    avatar_url = $5,
     updated_at = now(),
     version = version + 1
 WHERE id = $1
-RETURNING id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+  AND (google_subject IS NULL OR google_subject = $2)
+RETURNING id, google_subject, email, display_name, avatar_url, role, active, version, created_at, updated_at
 `
 
 type UpdateAppUserIdentityParams struct {
-	ID          pgtype.UUID `json:"id"`
-	GithubLogin string      `json:"github_login"`
-	DisplayName string      `json:"display_name"`
-	AvatarUrl   *string     `json:"avatar_url"`
+	ID            pgtype.UUID `json:"id"`
+	GoogleSubject *string     `json:"google_subject"`
+	Email         string      `json:"email"`
+	DisplayName   string      `json:"display_name"`
+	AvatarUrl     *string     `json:"avatar_url"`
 }
 
 func (q *Queries) UpdateAppUserIdentity(ctx context.Context, arg UpdateAppUserIdentityParams) (AppUser, error) {
 	row := q.db.QueryRow(ctx, updateAppUserIdentity,
 		arg.ID,
-		arg.GithubLogin,
+		arg.GoogleSubject,
+		arg.Email,
 		arg.DisplayName,
 		arg.AvatarUrl,
 	)
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.GoogleSubject,
+		&i.Email,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,
