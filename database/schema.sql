@@ -7,8 +7,18 @@ CREATE TABLE app_metadata (
 
 CREATE TABLE app_users (
   id UUID PRIMARY KEY,
-  github_user_id BIGINT NOT NULL UNIQUE CHECK (github_user_id > 0),
-  github_login TEXT NOT NULL CHECK (github_login = btrim(github_login) AND github_login <> ''),
+  google_subject TEXT CHECK (
+    google_subject IS NULL OR (
+      google_subject = btrim(google_subject) AND
+      google_subject <> '' AND
+      char_length(google_subject) <= 255
+    )
+  ),
+  email TEXT NOT NULL CHECK (
+    email = lower(btrim(email)) AND
+    email <> '' AND
+    char_length(email) <= 320
+  ),
   display_name TEXT NOT NULL CHECK (display_name = btrim(display_name) AND display_name <> ''),
   avatar_url TEXT,
   role TEXT NOT NULL CHECK (role IN ('MEMBER', 'ADMIN', 'SUPERADMIN')),
@@ -17,7 +27,8 @@ CREATE TABLE app_users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX app_users_github_login_ci_unique ON app_users (lower(github_login));
+CREATE UNIQUE INDEX app_users_google_subject_unique ON app_users (google_subject) WHERE google_subject IS NOT NULL;
+CREATE UNIQUE INDEX app_users_email_ci_unique ON app_users (lower(email));
 CREATE UNIQUE INDEX app_users_one_active_superadmin ON app_users (role) WHERE active AND role = 'SUPERADMIN';
 
 CREATE TABLE app_sessions (
@@ -41,7 +52,7 @@ CREATE TABLE auth_audit_events (
   event_type TEXT NOT NULL CHECK (event_type <> '' AND char_length(event_type) <= 100),
   outcome TEXT NOT NULL CHECK (outcome IN ('SUCCESS', 'DENIED', 'FAILURE')),
   request_id TEXT NOT NULL CHECK (request_id <> '' AND char_length(request_id) <= 128),
-  provider_login TEXT,
+  provider_email TEXT,
   occurred_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX auth_audit_events_occurred_at_index ON auth_audit_events (occurred_at DESC);
