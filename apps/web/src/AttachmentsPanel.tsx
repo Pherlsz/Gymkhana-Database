@@ -1,6 +1,6 @@
 import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "@pherlsz/gymkhana-ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { lazy, Suspense, useId, useState } from "react";
 import {
   downloadAttachment,
   listAttachments,
@@ -11,6 +11,12 @@ import {
   type AttachmentRecord,
 } from "./lib/api/attachments";
 import { APIRequestError } from "./lib/api/client";
+import { getDocument } from "./lib/api/documents";
+
+const DocumentTypedFields = lazy(async () => {
+  const module = await import("./CustomValuesPanel");
+  return { default: module.CustomValuesPanel };
+});
 
 const acceptedMIMEs = [
   "application/pdf",
@@ -48,6 +54,11 @@ export function AttachmentsPanel({
   const query = useQuery({
     queryKey,
     queryFn: ({ signal }) => listAttachments(owner, showTrash, signal),
+  });
+  const document = useQuery({
+    queryKey: ["document", "typed-fields", owner.owner_id],
+    queryFn: ({ signal }) => getDocument(owner.owner_id, signal),
+    enabled: owner.owner_kind === "DOCUMENT",
   });
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["attachments", owner] });
@@ -101,81 +112,104 @@ export function AttachmentsPanel({
   };
 
   return (
-    <Surface className="attachments-panel" tone="raised">
-      <Stack gap="4">
-        <div className="attachments-panel__header">
-          <div>
-            <h3>{title}</h3>
-            <p>{description}</p>
-          </div>
-          <label className="attachments-panel__trash-toggle">
-            <input
-              checked={showTrash}
-              type="checkbox"
-              onChange={(event) => setShowTrash(event.target.checked)}
+    <Stack gap="4">
+      {owner.owner_kind === "DOCUMENT" ? (
+        document.isLoading ? (
+          <p aria-live="polite">Carregando campos específicos do documento...</p>
+        ) : document.isError ? (
+          <Alert title="Não foi possível carregar os campos do documento" tone="danger">
+            {attachmentError(document.error)}
+          </Alert>
+        ) : document.data ? (
+          <Suspense fallback={<p aria-live="polite">Carregando campos específicos...</p>}>
+            <DocumentTypedFields
+              definitionTargetKind="DOCUMENT_TYPE"
+              definitionTargetId={document.data.document_type_id}
+              valueTargetKind="document"
+              valueTargetId={document.data.id}
+              onSaved={() =>
+                queryClient.invalidateQueries({ queryKey: ["document", "typed-fields", owner.owner_id] })
+              }
             />
-            Mostrar lixeira
-          </label>
-        </div>
-        {notice ? (
-          <Alert
-            title="Anexos"
-            tone={
-              notice.includes("Arquivo verificado") ||
-              notice.includes("restaurado") ||
-              notice.includes("movido")
-                ? "success"
-                : "warning"
-            }
-          >
-            {notice}
-          </Alert>
-        ) : null}
-        {error ? (
-          <Alert title="Não foi possível concluir a operação" tone="danger">
-            {attachmentError(error)}
-          </Alert>
-        ) : null}
-        <div className="attachments-panel__upload">
-          <label htmlFor={inputID}>Adicionar arquivo</label>
-          <input
-            id={inputID}
-            accept={acceptedMIMEs}
-            disabled={pending}
-            type="file"
-            onChange={(event) => {
-              selectFile(event.currentTarget.files?.[0]);
-              event.currentTarget.value = "";
-            }}
-          />
-          <small>PDF, imagens, texto/CSV, DOCX, XLSX, áudio e vídeo. Limite: 50 MB.</small>
-          {progress !== null ? (
-            <div aria-live="polite" className="attachments-panel__progress">
-              <progress max={100} value={progress} />
-              <span>{progress < 100 ? `Enviando ${progress}%` : "Verificando arquivo"}</span>
+          </Suspense>
+        ) : null
+      ) : null}
+      <Surface className="attachments-panel" tone="raised">
+        <Stack gap="4">
+          <div className="attachments-panel__header">
+            <div>
+              <h3>{title}</h3>
+              <p>{description}</p>
             </div>
+            <label className="attachments-panel__trash-toggle">
+              <input
+                checked={showTrash}
+                type="checkbox"
+                onChange={(event) => setShowTrash(event.target.checked)}
+              />
+              Mostrar lixeira
+            </label>
+          </div>
+          {notice ? (
+            <Alert
+              title="Anexos"
+              tone={
+                notice.includes("Arquivo verificado") ||
+                notice.includes("restaurado") ||
+                notice.includes("movido")
+                  ? "success"
+                  : "warning"
+              }
+            >
+              {notice}
+            </Alert>
           ) : null}
-        </div>
-        {query.isLoading ? <p aria-live="polite">Carregando anexos...</p> : null}
-        {!query.isLoading && (query.data?.length ?? 0) === 0 ? (
-          <p className="attachments-panel__empty">
-            {showTrash ? "Nenhum anexo ativo ou recuperável." : "Nenhum anexo ativo."}
-          </p>
-        ) : null}
-        <div className="attachments-panel__list">
-          {query.data?.map((value) => (
-            <AttachmentCard
-              key={value.id}
-              pending={pending}
-              value={value}
-              onDownload={() => download.mutate(value)}
-              onRestore={() => restore.mutate(value)}
-              onTrash={() => trash.mutate(value)}
+          {error ? (
+            <Alert title="Não foi possível concluir a operação" tone="danger">
+              {attachmentError(error)}
+            </Alert>
+          ) : null}
+          <div className="attachments-panel__upload">
+            <label htmlFor={inputID}>Adicionar arquivo</label>
+            <input
+              id={inputID}
+              accept={acceptedMIMEs}
+              disabled={pending}
+              type="file"
+              onChange={(event) => {
+                selectFile(event.currentTarget.files?.[0]);
+                event.currentTarget.value = "";
+              }}
             />
-          ))}
-        </div>
-      </Stack>
-    </Surface>
+            <small>PDF, imagens, texto/CSV, DOCX, XLSX, áudio e vídeo. Limite: 50 MB.</small>
+            {progress !== null ? (
+              <div aria-live="polite" className="attachments-panel__progress">
+                <progress max={100} value={progress} />
+                <span>{progress < 100 ? `Enviando ${progress}%` : "Verificando arquivo"}</span>
+              </div>
+            ) : null}
+          </div>
+          {query.isLoading ? <p aria-live="polite">Carregando anexos...</p> : null}
+          {!query.isLoading && (query.data?.length ?? 0) === 0 ? (
+            <p className="attachments-panel__empty">
+              {showTrash ? "Nenhum anexo ativo ou recuperável." : "Nenhum anexo ativo."}
+            </p>
+          ) : null}
+          <div className="attachments-panel__list">
+            {query.data?.map((value) => (
+              <AttachmentCard
+                key={value.id}
+                pending={pending}
+                value={value}
+                onDownload={() => download.mutate(value)}
+                onRestore={() => restore.mutate(value)}
+                onTrash={() => trash.mutate(value)}
+              />
+            ))}
+          </div>
+        </Stack>
+      </Surface>
+    </Stack>
   );
 }
 
@@ -240,12 +274,12 @@ function AttachmentCard({
 function attachmentError(error: unknown): string {
   if (error instanceof APIRequestError) {
     if (error.status === 409)
-      return "O anexo foi alterado por outra pessoa. Atualize e tente novamente.";
+      return "O registro foi alterado por outra pessoa. Atualize e tente novamente.";
     if (error.status === 410) return "O envio expirou. Selecione o arquivo novamente.";
-    if (error.status === 503) return "O armazenamento privado está indisponível no momento.";
+    if (error.status === 503) return "O serviço necessário está indisponível no momento.";
     return error.message;
   }
-  return error instanceof Error ? error.message : "Erro inesperado ao processar o anexo.";
+  return error instanceof Error ? error.message : "Erro inesperado ao processar o registro.";
 }
 
 function formatBytes(value: number): string {
