@@ -15,10 +15,6 @@ func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 	return &PostgresStore{pool: pool}
 }
 
-func (store *PostgresStore) FindUserByGitHubID(context.Context, int64) (User, error) {
-	return User{}, ErrUserNotFound
-}
-
 func (store *PostgresStore) FindUserByGoogleSubject(ctx context.Context, subject string) (User, error) {
 	return scanUser(store.pool.QueryRow(ctx, `
 SELECT id, google_subject, email, display_name, avatar_url, role, active
@@ -30,7 +26,7 @@ func (store *PostgresStore) FindUserByEmail(ctx context.Context, email string) (
 	return scanUser(store.pool.QueryRow(ctx, `
 SELECT id, google_subject, email, display_name, avatar_url, role, active
 FROM app_users
-WHERE lower(email) = lower($1)`, email))
+WHERE lower(email) = lower($1)`, normalizeEmail(email)))
 }
 
 func (store *PostgresStore) FindUserByID(ctx context.Context, userID Identifier) (ManagedUser, error) {
@@ -66,27 +62,17 @@ LIMIT $1 OFFSET $2`, limit, offset)
 }
 
 func (store *PostgresStore) CreateUser(ctx context.Context, params CreateUserParams) (User, error) {
-	email := params.Identity.Email
-	if email == "" {
-		email = params.Identity.Login
-	}
+	identity := normalizeIdentity(params.Identity)
 	return scanUser(store.pool.QueryRow(ctx, `
 INSERT INTO app_users (id, google_subject, email, display_name, avatar_url, role, active)
 VALUES ($1, $2, $3, $4, $5, $6, true)
 RETURNING id, google_subject, email, display_name, avatar_url, role, active`,
-		databaseUUID(params.ID), optionalString(params.Identity.Subject), email,
-		params.Identity.DisplayName, optionalString(params.Identity.AvatarURL), string(params.Role)))
-}
-
-func (store *PostgresStore) UpdateUserIdentity(ctx context.Context, userID Identifier, identity GitHubIdentity) (User, error) {
-	return store.UpdateGoogleIdentity(ctx, userID, identity)
+		databaseUUID(params.ID), optionalString(identity.Subject), identity.Email,
+		identity.DisplayName, optionalString(identity.AvatarURL), string(params.Role)))
 }
 
 func (store *PostgresStore) UpdateGoogleIdentity(ctx context.Context, userID Identifier, identity GoogleIdentity) (User, error) {
-	email := identity.Email
-	if email == "" {
-		email = identity.Login
-	}
+	identity = normalizeIdentity(identity)
 	user, err := scanUser(store.pool.QueryRow(ctx, `
 UPDATE app_users
 SET google_subject = COALESCE(google_subject, $2),
@@ -98,7 +84,7 @@ SET google_subject = COALESCE(google_subject, $2),
 WHERE id = $1
   AND (google_subject IS NULL OR google_subject = $2)
 RETURNING id, google_subject, email, display_name, avatar_url, role, active`,
-		databaseUUID(userID), optionalString(identity.Subject), email,
+		databaseUUID(userID), optionalString(identity.Subject), identity.Email,
 		identity.DisplayName, optionalString(identity.AvatarURL)))
 	if errors.Is(err, ErrUserNotFound) {
 		return User{}, ErrAccessDenied
