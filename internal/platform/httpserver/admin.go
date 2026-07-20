@@ -21,7 +21,7 @@ type adminUsersResponse struct {
 
 type adminUserResponse struct {
 	ID          string    `json:"id"`
-	Login       string    `json:"login"`
+	Email       string    `json:"email"`
 	DisplayName string    `json:"display_name"`
 	AvatarURL   string    `json:"avatar_url,omitempty"`
 	Role        auth.Role `json:"role"`
@@ -48,7 +48,6 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "User administration is not configured"})
 			return
 		}
-
 		limit, parseProblem := parseBoundedInt32(r.URL.Query().Get("limit"), 100, 1, 100)
 		if parseProblem != nil {
 			writeProblem(w, r, *parseProblem)
@@ -59,7 +58,6 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 			writeProblem(w, r, *parseProblem)
 			return
 		}
-
 		users, err := administration.ListUsers(r.Context(), actor, limit, offset, requestIDFromContext(r.Context()))
 		if err != nil {
 			if errors.Is(err, auth.ErrForbidden) {
@@ -70,7 +68,6 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 			writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Application users could not be loaded"})
 			return
 		}
-
 		response := adminUsersResponse{Users: make([]adminUserResponse, 0, len(users))}
 		for _, user := range users {
 			response.Users = append(response.Users, adminUser(user))
@@ -88,7 +85,6 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "User administration is not configured"})
 			return
 		}
-
 		userID, err := auth.ParseIdentifier(r.PathValue("userID"))
 		if err != nil {
 			writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "User identifier is invalid"})
@@ -99,12 +95,8 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 			writeProblem(w, r, *problem)
 			return
 		}
-
 		updated, err := administration.UpdateUserAccess(r.Context(), actor, auth.UpdateUserAccessParams{
-			UserID:  userID,
-			Role:    request.Role,
-			Active:  request.Active,
-			Version: request.Version,
+			UserID: userID, Role: request.Role, Active: request.Active, Version: request.Version,
 		}, requestIDFromContext(r.Context()))
 		if err != nil {
 			switch {
@@ -132,13 +124,8 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 
 func adminUser(user auth.ManagedUser) adminUserResponse {
 	return adminUserResponse{
-		ID:          user.User.ID.String(),
-		Login:       user.User.Login,
-		DisplayName: user.User.DisplayName,
-		AvatarURL:   user.User.AvatarURL,
-		Role:        user.User.Role,
-		Active:      user.User.Active,
-		Version:     user.Version,
+		ID: user.User.ID.String(), Email: user.User.Email, DisplayName: user.User.DisplayName,
+		AvatarURL: user.User.AvatarURL, Role: user.User.Role, Active: user.User.Active, Version: user.Version,
 	}
 }
 
