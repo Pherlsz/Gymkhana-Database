@@ -1,19 +1,19 @@
 import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "@pherlsz/gymkhana-ui";
 import { useCallback, useEffect, useState } from "react";
+import { APIRequestError } from "./lib/api/client";
 import {
-  APIRequestError,
   listApplicationUsers,
   updateApplicationUserAccess,
   type AdminUser,
   type UserRole,
-} from "./lib/api/client";
+} from "./lib/api/auth";
 
 type LoadState =
   | { kind: "loading" }
   | { kind: "ready"; users: AdminUser[] }
   | { kind: "error"; message: string };
 
-export function AdminUsersPanel({ currentLogin }: { currentLogin: string }) {
+export function AdminUsersPanel({ currentEmail }: { currentEmail: string }) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
@@ -53,7 +53,7 @@ export function AdminUsersPanel({ currentLogin }: { currentLogin: string }) {
     <Stack gap="4">
       {state.users.map((user) => (
         <ManagedUserCard
-          current={user.login === currentLogin}
+          current={user.email === currentEmail}
           key={user.id}
           user={user}
           onUpdated={(updated) =>
@@ -113,7 +113,7 @@ function ManagedUserCard({
         <Inline align="center" justify="between">
           <div>
             <strong>{user.display_name}</strong>
-            <p className="managed-user__secondary">@{user.login}</p>
+            <p className="managed-user__secondary">{user.email}</p>
           </div>
           <Inline align="center">
             {current ? <StatusBadge tone="info">Sua conta</StatusBadge> : null}
