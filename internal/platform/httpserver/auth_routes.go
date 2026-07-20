@@ -1,0 +1,134 @@
+package httpserver
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+
+	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
+)
+
+type authenticationService interface {
+	BeginLogin() (string, string, error)
+	CompleteLogin(context.Context, string, string) (auth.LoginResult, error)
+	CurrentSession(context.Context, string) (auth.Session, error)
+	SignOut(context.Context, string, string) error
+}
+
+type authSessionResponse struct {
+	Authenticated bool              `json:"authenticated"`
+	User          *authUserResponse `json:"user,omitempty"`
+}
+
+type authUserResponse struct {
+	Email       string    `json:"email"`
+	DisplayName string    `json:"display_name"`
+	AvatarURL   string    `json:"avatar_url,omitempty"`
+	Role        auth.Role `json:"role"`
+}
+
+func registerAuthRoutes(
+	mux *http.ServeMux,
+	logger *slog.Logger,
+	service authenticationService,
+	secureCookies bool,
+	applicationURL string,
+) {
+	mux.HandleFunc("GET /auth/login", func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "Authentication is not configured"})
+			return
+		}
+		state, authorizationURL, err := service.BeginLogin()
+		if err != nil {
+			logger.Error("begin authentication", "request_id", requestIDFromContext(r.Context()), "error", err)
+			writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Authentication could not be started"})
+			return
+		}
+		setOAuthStateCookie(w, state, secureCookies)
+		http.Redirect(w, r, authorizationURL, http.StatusFound)
+	})
+
+	mux.HandleFunc("GET /auth/callback", func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "Authentication is not configured"})
+			return
+		}
+		stateCookie, err := r.Cookie(oauthStateCookieName)
+		state := r.URL.Query().Get("state")
+		clearOAuthStateCookie(w, secureCookies)
+		if err != nil || !equalSecretValues(stateCookie.Value, state) {
+			writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeInvalidOAuthState, Message: "Authentication state is invalid or expired"})
+			return
+		}
+		result, err := service.CompleteLogin(r.Context(), r.URL.Query().Get("code"), requestIDFromContext(r.Context()))
+		if err != nil {
+			switch {
+			case errors.Is(err, auth.ErrAccessDenied):
+				writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "This Google account is not allowed"})
+			case errors.Is(err, auth.ErrInvalidOAuthCode):
+				writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Authentication code is missing"})
+			default:
+				logger.Error("complete authentication", "request_id", requestIDFromContext(r.Context()), "error", err)
+				writeProblem(w, r, Problem{Status: http.StatusBadGateway, Code: ErrorCodeAuthProvider, Message: "Google authentication failed"})
+			}
+			return
+		}
+		setSessionCookie(w, result.SessionValue, result.ExpiresAt, secureCookies)
+		http.Redirect(w, r, applicationURL, http.StatusFound)
+	})
+
+	mux.HandleFunc("GET /api/auth/session", func(w http.ResponseWriter, r *http.Request) {
+		session, problem := authenticatedSession(r, service)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		writeJSON(w, http.StatusOK, authSessionResponse{Authenticated: true, User: authUser(session.User)})
+	})
+
+	mux.HandleFunc("POST /api/auth/logout", func(w http.ResponseWriter, r *http.Request) {
+		if service == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "Authentication is not configured"})
+			return
+		}
+		cookie, _ := r.Cookie(sessionCookieName)
+		if cookie != nil {
+			if err := service.SignOut(r.Context(), cookie.Value, requestIDFromContext(r.Context())); err != nil {
+				logger.Error("sign out", "request_id", requestIDFromContext(r.Context()), "error", err)
+				writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Sign out failed"})
+				return
+			}
+		}
+		clearSessionCookie(w, secureCookies)
+		w.WriteHeader(http.StatusNoContent)
+	})
+}
+
+func authenticatedSession(r *http.Request, service authenticationService) (auth.Session, *Problem) {
+	if service == nil {
+		return auth.Session{}, &Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "Authentication is not configured"}
+	}
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil || cookie.Value == "" {
+		return auth.Session{}, &Problem{Status: http.StatusUnauthorized, Code: ErrorCodeUnauthorized, Message: "Authentication is required"}
+	}
+	session, err := service.CurrentSession(r.Context(), cookie.Value)
+	if errors.Is(err, auth.ErrUnauthenticated) {
+		return auth.Session{}, &Problem{Status: http.StatusUnauthorized, Code: ErrorCodeUnauthorized, Message: "Authentication is required"}
+	}
+	if err != nil {
+		return auth.Session{}, &Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Authentication could not be verified"}
+	}
+	return session, nil
+}
+
+func authUser(user auth.User) *authUserResponse {
+	return &authUserResponse{
+		Email:       user.Email,
+		DisplayName: user.DisplayName,
+		AvatarURL:   user.AvatarURL,
+		Role:        user.Role,
+	}
+}
