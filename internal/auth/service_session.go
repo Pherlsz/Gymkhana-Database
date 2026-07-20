@@ -6,10 +6,10 @@ import (
 	"fmt"
 )
 
-func (service *Service) createLoginSession(ctx context.Context, user User, providerLogin, requestID string) (LoginResult, error) {
+func (service *Service) createLoginSession(ctx context.Context, user User, providerEmail, requestID string) (LoginResult, error) {
 	sessionValue, err := NewOpaqueSessionValue()
 	if err != nil {
-		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, providerLogin)
+		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, providerEmail)
 		return LoginResult{}, fmt.Errorf("generate session value: %w", err)
 	}
 	hash, err := HashOpaqueSessionValue(sessionValue)
@@ -23,10 +23,10 @@ func (service *Service) createLoginSession(ctx context.Context, user User, provi
 	now := service.now().UTC()
 	expiresAt := SessionExpiresAt(now)
 	if err := service.store.CreateSession(ctx, CreateSessionParams{ID: sessionID, UserID: user.ID, TokenHash: hash[:], ExpiresAt: expiresAt}); err != nil {
-		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, providerLogin)
+		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, providerEmail)
 		return LoginResult{}, fmt.Errorf("create session: %w", err)
 	}
-	service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInSucceeded, AuditOutcomeSuccess, requestID, providerLogin)
+	service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInSucceeded, AuditOutcomeSuccess, requestID, providerEmail)
 	return LoginResult{SessionValue: sessionValue, ExpiresAt: expiresAt, User: user}, nil
 }
 
@@ -68,8 +68,8 @@ func (service *Service) SignOut(ctx context.Context, sessionValue, requestID str
 	return nil
 }
 
-func (service *Service) recordAudit(ctx context.Context, actorUserID, subjectUserID *Identifier, eventType AuditEventType, outcome AuditOutcome, requestID, providerLogin string) {
-	event := AuditEvent{ActorUserID: actorUserID, SubjectUserID: subjectUserID, EventType: eventType, Outcome: outcome, RequestID: requestID, ProviderLogin: providerLogin}
+func (service *Service) recordAudit(ctx context.Context, actorUserID, subjectUserID *Identifier, eventType AuditEventType, outcome AuditOutcome, requestID, providerEmail string) {
+	event := AuditEvent{ActorUserID: actorUserID, SubjectUserID: subjectUserID, EventType: eventType, Outcome: outcome, RequestID: requestID, ProviderEmail: providerEmail}
 	id, err := NewIdentifier()
 	if err != nil {
 		service.reportAuditFailure(ctx, event, fmt.Errorf("generate audit event id: %w", err))
