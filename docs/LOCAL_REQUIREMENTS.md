@@ -36,6 +36,28 @@ Fill `DATABASE_URL` with the Neon connection string for the database named exact
 
 Never point the application at the legacy `neondb` database. It is retained only as an isolated migration source.
 
+The Go processes read environment variables from the process environment; they do not parse `.env` directly. Load the file before running Make commands.
+
+Linux, macOS, WSL2, or Git Bash:
+
+```bash
+set -a
+source .env
+set +a
+```
+
+PowerShell:
+
+```powershell
+Get-Content .env | ForEach-Object {
+  if ($_ -match '^\s*([^#][^=]*)=(.*)$') {
+    [Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2], 'Process')
+  }
+}
+```
+
+Keep the terminal open after loading the variables. A new terminal must load `.env` again.
+
 ## Google login
 
 Create a Google OAuth Web client with:
@@ -62,6 +84,8 @@ make check-config
 make migrate-status
 ```
 
+Tern now reads `DATABASE_URL`, so `make migrate` and `make migrate-status` use the same explicitly loaded database target as the API.
+
 Apply migrations only after confirming the target:
 
 ```bash
@@ -72,7 +96,7 @@ Do not run rollback or destructive integration validation against the canonical 
 
 ## Run
 
-Use separate terminals:
+Use separate terminals. Load `.env` in the API terminal before starting it.
 
 ```bash
 make dev-api
@@ -106,5 +130,7 @@ Windows PowerShell:
 ```
 
 Focused scopes are `backend`, `database`, `frontend`, `contracts`, and `security`.
+
+The verification scripts create a disposable local PostgreSQL database when `DATABASE_URL` is not exported. For full or database validation, prefer a clean terminal without the canonical Neon URL loaded.
 
 Keep implementation PRs in draft while iterating. Mark a PR ready only after the relevant local checks pass.
