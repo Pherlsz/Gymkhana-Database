@@ -58,7 +58,7 @@ func (store *PostgresStore) RevokeAllSessionsForUser(ctx context.Context, userID
 func (store *PostgresStore) RecordAuditEvent(ctx context.Context, event AuditEvent) error {
 	_, err := store.pool.Exec(ctx, `
 INSERT INTO auth_audit_events (id, actor_user_id, subject_user_id, event_type, outcome, request_id, provider_email)
-VALUES ($1, $2, $3, $4, $5, $6, $7)`, databaseUUID(event.ID), optionalDatabaseUUID(event.ActorUserID), optionalDatabaseUUID(event.SubjectUserID), string(event.EventType), string(event.Outcome), event.RequestID, optionalString(event.ProviderLogin))
+VALUES ($1, $2, $3, $4, $5, $6, $7)`, databaseUUID(event.ID), optionalDatabaseUUID(event.ActorUserID), optionalDatabaseUUID(event.SubjectUserID), string(event.EventType), string(event.Outcome), event.RequestID, optionalString(event.ProviderEmail))
 	return err
 }
 
@@ -102,7 +102,6 @@ func userFromValues(id pgtype.UUID, subject *string, email, displayName string, 
 		ID:            identifierFromDatabase(id),
 		GoogleSubject: stringValue(subject),
 		Email:         email,
-		Login:         email,
 		DisplayName:   displayName,
 		AvatarURL:     stringValue(avatar),
 		Role:          Role(role),
