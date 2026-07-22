@@ -126,7 +126,7 @@ func TestOCRRoutesExposeProtectedStrictReviewAndApplyLifecycle(t *testing.T) {
 func TestOCRCapabilityDisabledAndAuthenticationAreExplicit(t *testing.T) {
 	actorID, _ := auth.NewIdentifier()
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
-		ID: actorID, Login: "member", Role: auth.RoleMember, Active: true,
+		ID: actorID, Email: "member@example.com", Role: auth.RoleMember, Active: true,
 	}}}}
 	handler := New(authTestLogger(), nil, Options{Auth: authentication})
 	response := serveChatRequest(handler, http.MethodGet, "/api/v1/ocr/capability", "", "")
@@ -216,7 +216,7 @@ func ocrHTTPFixture(t *testing.T) (*fakeOCRHTTPService, http.Handler, ocrdomain.
 		},
 	}
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
-		ID: actorID, Login: "member", Role: auth.RoleMember, Active: true,
+		ID: actorID, Email: "member@example.com", Role: auth.RoleMember, Active: true,
 	}}}}
 	return service, New(authTestLogger(), nil, Options{Auth: authentication, OCR: service}), jobID, attachmentID, suggestionID
 }

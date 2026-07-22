@@ -79,7 +79,7 @@ RETURNING id, google_subject, email, display_name, avatar_url, role, active, ver
 type CreateAppUserParams struct {
 	ID            pgtype.UUID `json:"id"`
 	GoogleSubject *string     `json:"google_subject"`
-	Email         string      `json:"email"`
+	Btrim         string      `json:"btrim"`
 	DisplayName   string      `json:"display_name"`
 	AvatarUrl     *string     `json:"avatar_url"`
 	Role          string      `json:"role"`
@@ -90,7 +90,7 @@ func (q *Queries) CreateAppUser(ctx context.Context, arg CreateAppUserParams) (A
 	row := q.db.QueryRow(ctx, createAppUser,
 		arg.ID,
 		arg.GoogleSubject,
-		arg.Email,
+		arg.Btrim,
 		arg.DisplayName,
 		arg.AvatarUrl,
 		arg.Role,
@@ -187,8 +187,8 @@ FROM app_users
 WHERE lower(email) = lower(btrim($1))
 `
 
-func (q *Queries) GetAppUserByEmail(ctx context.Context, email string) (AppUser, error) {
-	row := q.db.QueryRow(ctx, getAppUserByEmail, email)
+func (q *Queries) GetAppUserByEmail(ctx context.Context, btrim string) (AppUser, error) {
+	row := q.db.QueryRow(ctx, getAppUserByEmail, btrim)
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
@@ -449,7 +449,7 @@ RETURNING id, google_subject, email, display_name, avatar_url, role, active, ver
 type UpdateAppUserIdentityParams struct {
 	ID            pgtype.UUID `json:"id"`
 	GoogleSubject *string     `json:"google_subject"`
-	Email         string      `json:"email"`
+	Btrim         string      `json:"btrim"`
 	DisplayName   string      `json:"display_name"`
 	AvatarUrl     *string     `json:"avatar_url"`
 }
@@ -458,7 +458,7 @@ func (q *Queries) UpdateAppUserIdentity(ctx context.Context, arg UpdateAppUserId
 	row := q.db.QueryRow(ctx, updateAppUserIdentity,
 		arg.ID,
 		arg.GoogleSubject,
-		arg.Email,
+		arg.Btrim,
 		arg.DisplayName,
 		arg.AvatarUrl,
 	)

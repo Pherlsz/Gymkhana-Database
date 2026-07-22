@@ -115,7 +115,7 @@ func (store *fakeServiceStore) RecordAuditEvent(_ context.Context, event AuditEv
 
 func billActor(role auth.Role) auth.Session {
 	id, _ := auth.NewIdentifier()
-	return auth.Session{User: auth.User{ID: id, Login: "user", Role: role, Active: true}}
+	return auth.Session{User: auth.User{ID: id, Email: "user@example.com", Role: role, Active: true}}
 }
 
 func TestServiceNormalizesBillAndTypeLists(t *testing.T) {

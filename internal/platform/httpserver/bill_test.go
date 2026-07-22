@@ -96,7 +96,7 @@ func billHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeBillService
 	holderID, _ := profile.NewIdentifier()
 	now := time.Now().UTC()
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
-		ID: actorID, Login: "member", Role: auth.RoleMember, Active: true,
+		ID: actorID, Email: "member@example.com", Role: auth.RoleMember, Active: true,
 	}}}}
 	typeValue := bill.TypeDefinition{ID: typeID, Values: bill.TypeValues{TechnicalKey: "rg", Label: "RG", Active: true, SupportsCurrentUse: true}, Version: 1, CreatedAt: now, UpdatedAt: now}
 	currentUse := bill.CurrentUse{HolderProfileID: holderID, AssignedAt: now}

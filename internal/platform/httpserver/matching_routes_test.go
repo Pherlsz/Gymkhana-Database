@@ -88,7 +88,7 @@ func matchingHTTPFixture(t *testing.T, role auth.Role, service matchingService, 
 		t.Fatalf("auth.NewIdentifier() error = %v", err)
 	}
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{
-		session: auth.Session{User: auth.User{ID: actorID, Login: "reviewer", Role: role, Active: true}},
+		session: auth.Session{User: auth.User{ID: actorID, Email: "reviewer@example.com", Role: role, Active: true}},
 	}}
 	return New(logger, nil, Options{Auth: authentication, Matching: service})
 }

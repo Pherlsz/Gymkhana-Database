@@ -47,7 +47,7 @@ type fakeQueryStore struct {
 func newFakeQueryStore() *fakeQueryStore {
 	userID := auth.Identifier{1}
 	return &fakeQueryStore{
-		user:    auth.User{ID: userID, GitHubUserID: 1, Login: "member", DisplayName: "Member", Role: auth.RoleMember, Active: true},
+		user:    auth.User{ID: userID, GoogleSubject: "sub-1", Email: "member@example.com", DisplayName: "Member", Role: auth.RoleMember, Active: true},
 		created: true,
 	}
 }

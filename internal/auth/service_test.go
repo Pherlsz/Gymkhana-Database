@@ -8,22 +8,22 @@ import (
 )
 
 type fakeProvider struct {
-	identity GitHubIdentity
+	identity GoogleIdentity
 	err      error
 }
 
 func (provider fakeProvider) AuthorizationURL(state string) string {
-	return "https://github.example/authorize?state=" + state
+	return "https://accounts.google.com/o/oauth2/v2/auth?state=" + state
 }
 
-func (provider fakeProvider) Exchange(context.Context, string) (GitHubIdentity, error) {
+func (provider fakeProvider) Exchange(context.Context, string) (GoogleIdentity, error) {
 	return provider.identity, provider.err
 }
 
 type fakeStore struct {
 	user             User
 	findUserError    error
-	createdUser      CreateUserParams
+	updatedIdentity  GoogleIdentity
 	createdSession   CreateSessionParams
 	authSession      Session
 	authSessionError error
@@ -33,29 +33,24 @@ type fakeStore struct {
 	auditError       error
 }
 
-func (store *fakeStore) FindUserByGitHubID(context.Context, int64) (User, error) {
+func (store *fakeStore) FindUserByGoogleSubject(context.Context, string) (User, error) {
+	if store.user.GoogleSubject != "" {
+		return store.user, store.findUserError
+	}
+	return User{}, ErrUserNotFound
+}
+
+func (store *fakeStore) FindUserByEmail(context.Context, string) (User, error) {
 	return store.user, store.findUserError
 }
 
-func (store *fakeStore) CreateUser(_ context.Context, params CreateUserParams) (User, error) {
-	store.createdUser = params
-	return User{
-		ID:           params.ID,
-		GitHubUserID: params.Identity.UserID,
-		Login:        params.Identity.Login,
-		DisplayName:  params.Identity.DisplayName,
-		AvatarURL:    params.Identity.AvatarURL,
-		Role:         params.Role,
-		Active:       true,
-	}, nil
-}
-
-func (store *fakeStore) UpdateUserIdentity(_ context.Context, id Identifier, identity GitHubIdentity) (User, error) {
+func (store *fakeStore) UpdateGoogleIdentity(_ context.Context, id Identifier, identity GoogleIdentity) (User, error) {
 	store.user.ID = id
-	store.user.GitHubUserID = identity.UserID
-	store.user.Login = identity.Login
+	store.user.GoogleSubject = identity.Subject
+	store.user.Email = identity.Email
 	store.user.DisplayName = identity.DisplayName
 	store.user.AvatarURL = identity.AvatarURL
+	store.updatedIdentity = identity
 	return store.user, nil
 }
 
@@ -83,18 +78,25 @@ func (store *fakeStore) RecordAuditEvent(_ context.Context, event AuditEvent) er
 	return nil
 }
 
-func TestServiceBootstrapsAllowedSuperadminAndSession(t *testing.T) {
+func TestServiceGoogleLoginAndSession(t *testing.T) {
 	now := time.Date(2026, time.July, 14, 18, 0, 0, 0, time.UTC)
-	store := &fakeStore{findUserError: ErrUserNotFound}
-	service, err := NewService(fakeProvider{identity: GitHubIdentity{
-		UserID:      38593854,
-		Login:       " Pherlsz ",
-		DisplayName: "",
-		AvatarURL:   "https://example.test/avatar.png",
+	userID, _ := NewIdentifier()
+	store := &fakeStore{user: User{
+		ID:            userID,
+		GoogleSubject: "sub-123",
+		Email:         "pherlsz@example.com",
+		DisplayName:   "Pherlsz",
+		Role:          RoleSuperadmin,
+		Active:        true,
+	}}
+	service, err := NewService(fakeProvider{identity: GoogleIdentity{
+		Subject:       "sub-123",
+		Email:         "pherlsz@example.com",
+		EmailVerified: true,
+		DisplayName:   "Pherlsz",
+		AvatarURL:     "https://example.test/avatar.png",
 	}}, store, ServiceOptions{
-		AllowedLogins:   []string{"pherlsz", "member"},
-		SuperadminLogin: "Pherlsz",
-		Now:             func() time.Time { return now },
+		Now: func() time.Time { return now },
 	})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
@@ -108,11 +110,8 @@ func TestServiceBootstrapsAllowedSuperadminAndSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CompleteLogin() error = %v", err)
 	}
-	if result.User.Role != RoleSuperadmin || result.User.Login != "pherlsz" || result.User.DisplayName != "pherlsz" {
+	if result.User.Role != RoleSuperadmin || result.User.Email != "pherlsz@example.com" {
 		t.Fatalf("user = %#v", result.User)
-	}
-	if store.createdUser.Role != RoleSuperadmin {
-		t.Fatalf("created role = %q", store.createdUser.Role)
 	}
 	if result.ExpiresAt != now.Add(SessionTTL) || len(store.createdSession.TokenHash) != 32 {
 		t.Fatalf("session = %#v", store.createdSession)
@@ -124,9 +123,7 @@ func TestServiceBootstrapsAllowedSuperadminAndSession(t *testing.T) {
 
 func TestServiceAuditsInvalidOAuthCode(t *testing.T) {
 	store := &fakeStore{}
-	service, err := NewService(fakeProvider{}, store, ServiceOptions{
-		AllowedLogins: []string{"admin"}, SuperadminLogin: "admin",
-	})
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -142,24 +139,24 @@ func TestServiceAuditsInvalidOAuthCode(t *testing.T) {
 func TestServiceDeniesUnlistedAndInactiveUsers(t *testing.T) {
 	tests := []struct {
 		name      string
-		identity  GitHubIdentity
+		identity  GoogleIdentity
 		store     *fakeStore
 		wantAudit AuditEventType
 	}{
 		{
 			name:      "unlisted",
-			identity:  GitHubIdentity{UserID: 20, Login: "outsider"},
-			store:     &fakeStore{},
+			identity:  GoogleIdentity{Subject: "sub-99", Email: "outsider@example.com", EmailVerified: true},
+			store:     &fakeStore{findUserError: ErrUserNotFound},
 			wantAudit: AuditEventSignInDenied,
 		},
 		{
 			name:     "inactive",
-			identity: GitHubIdentity{UserID: 21, Login: "member"},
+			identity: GoogleIdentity{Subject: "sub-21", Email: "member@example.com", EmailVerified: true},
 			store: &fakeStore{user: User{
-				GitHubUserID: 21,
-				Login:        "member",
-				Role:         RoleMember,
-				Active:       false,
+				GoogleSubject: "sub-21",
+				Email:         "member@example.com",
+				Role:          RoleMember,
+				Active:        false,
 			}},
 			wantAudit: AuditEventSignInDenied,
 		},
@@ -167,10 +164,7 @@ func TestServiceDeniesUnlistedAndInactiveUsers(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			service, err := NewService(fakeProvider{identity: test.identity}, test.store, ServiceOptions{
-				AllowedLogins:   []string{"admin", "member"},
-				SuperadminLogin: "admin",
-			})
+			service, err := NewService(fakeProvider{identity: test.identity}, test.store, ServiceOptions{})
 			if err != nil {
 				t.Fatalf("NewService() error = %v", err)
 			}
@@ -189,18 +183,15 @@ func TestServiceReadsAndRevokesOpaqueSession(t *testing.T) {
 	sessionID, _ := NewIdentifier()
 	store := &fakeStore{authSession: Session{
 		ID:   sessionID,
-		User: User{ID: userID, Login: "member", Role: RoleMember, Active: true},
+		User: User{ID: userID, Email: "member@example.com", Role: RoleMember, Active: true},
 	}}
-	service, err := NewService(fakeProvider{}, store, ServiceOptions{
-		AllowedLogins:   []string{"admin"},
-		SuperadminLogin: "admin",
-	})
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
 
 	session, err := service.CurrentSession(context.Background(), "opaque-session")
-	if err != nil || session.User.Login != "member" {
+	if err != nil || session.User.Email != "member@example.com" {
 		t.Fatalf("CurrentSession() = %#v, %v", session, err)
 	}
 	if err := service.SignOut(context.Background(), "opaque-session", "request-3"); err != nil {
@@ -217,12 +208,10 @@ func TestServiceReadsAndRevokesOpaqueSession(t *testing.T) {
 func TestServiceAuditsSignOutFailure(t *testing.T) {
 	userID, _ := NewIdentifier()
 	store := &fakeStore{
-		authSession: Session{User: User{ID: userID, Login: "member"}},
+		authSession: Session{User: User{ID: userID, Email: "member@example.com"}},
 		revokeError: errors.New("database unavailable"),
 	}
-	service, err := NewService(fakeProvider{}, store, ServiceOptions{
-		AllowedLogins: []string{"admin"}, SuperadminLogin: "admin",
-	})
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -240,8 +229,6 @@ func TestServiceReportsAuditPersistenceFailure(t *testing.T) {
 	var reported AuditEvent
 	var reportedErr error
 	service, err := NewService(fakeProvider{}, store, ServiceOptions{
-		AllowedLogins:   []string{"admin"},
-		SuperadminLogin: "admin",
 		OnAuditFailure: func(_ context.Context, event AuditEvent, err error) {
 			reported = event
 			reportedErr = err
@@ -258,10 +245,7 @@ func TestServiceReportsAuditPersistenceFailure(t *testing.T) {
 }
 
 func TestServiceRejectsInvalidSetup(t *testing.T) {
-	_, err := NewService(fakeProvider{}, &fakeStore{}, ServiceOptions{
-		AllowedLogins:   []string{"member"},
-		SuperadminLogin: "admin",
-	})
+	_, err := NewService(nil, &fakeStore{}, ServiceOptions{})
 	if !errors.Is(err, ErrInvalidServiceSetup) {
 		t.Fatalf("NewService() error = %v", err)
 	}

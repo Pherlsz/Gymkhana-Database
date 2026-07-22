@@ -209,7 +209,7 @@ func (jobs *fakeJobs) Cancel(_ context.Context, id int64) error {
 }
 
 func matchingActor(role auth.Role) auth.Session {
-	return auth.Session{User: auth.User{ID: auth.Identifier(newTestIdentifier()), Login: "matching-test", Role: role, Active: true}}
+	return auth.Session{User: auth.User{ID: auth.Identifier(newTestIdentifier()), Email: "matching@example.com", Role: role, Active: true}}
 }
 
 func newTestIdentifier() Identifier {

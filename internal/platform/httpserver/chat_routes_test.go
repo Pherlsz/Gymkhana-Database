@@ -210,7 +210,7 @@ func TestChatRoutesExposeProtectedStrictLifecycleAndTypedReferences(t *testing.T
 func TestChatCapabilityAndDisabledRoutesAreExplicit(t *testing.T) {
 	actorID, _ := auth.NewIdentifier()
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
-		ID: actorID, Login: "member", Role: auth.RoleMember, Active: true,
+		ID: actorID, Email: "member@example.com", Role: auth.RoleMember, Active: true,
 	}}}}
 	handler := New(authTestLogger(), nil, Options{Auth: authentication})
 	response := serveChatRequest(handler, http.MethodGet, "/api/v1/chat/capability", "", "")
@@ -329,7 +329,7 @@ func chatHTTPFixture(t *testing.T, logger *slog.Logger, applicationURL string) (
 	reader := &fakeChatResultReader{output: chatdomain.ToolOutput{Kind: chatdomain.ToolResult, Payload: json.RawMessage(`{"reference_id":"` + referenceID.String() + `","results":[]}`), ByteCount: 64}}
 	launcher := &fakeChatLauncher{}
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
-		ID: actorID, Login: "member", Role: auth.RoleMember, Active: true,
+		ID: actorID, Email: "member@example.com", Role: auth.RoleMember, Active: true,
 	}}}}
 	return service, reader, launcher, New(logger, nil, Options{Auth: authentication, Chat: service, ChatResults: reader, ChatLauncher: launcher, ApplicationURL: applicationURL})
 }

@@ -118,7 +118,7 @@ func customDataFixture(t *testing.T) (*fakeAdministrationService, *fakeCustomDat
 	actorID, _ := auth.NewIdentifier()
 	id, _ := customdata.NewIdentifier()
 	now := time.Now().UTC()
-	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{ID: actorID, Login: "admin", Role: auth.RoleAdmin, Active: true}}}}
+	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{ID: actorID, Email: "admin@example.com", Role: auth.RoleAdmin, Active: true}}}}
 	service := &fakeCustomDataService{
 		entityType: customdata.EntityType{ID: id, Values: customdata.EntityTypeValues{TechnicalKey: "vehicle", Label: "Veículo", Active: true, ProfileCardinality: customdata.CardinalityManyPerProfile}, Version: 1, CreatedAt: now, UpdatedAt: now},
 		field:      customdata.FieldDefinition{ID: id, Values: customdata.FieldDefinitionValues{TargetKind: customdata.TargetProfile, TechnicalKey: "shirt_size", Label: "Camiseta", Kind: customdata.FieldText, Active: true}, Version: 1, CreatedAt: now, UpdatedAt: now},

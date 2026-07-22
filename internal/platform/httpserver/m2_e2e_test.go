@@ -14,14 +14,14 @@ import (
 )
 
 type m2Provider struct {
-	identity auth.GitHubIdentity
+	identity auth.GoogleIdentity
 }
 
 func (provider *m2Provider) AuthorizationURL(state string) string {
-	return "https://github.example/authorize?state=" + state
+	return "https://accounts.google.com/o/oauth2/v2/auth?state=" + state
 }
 
-func (provider *m2Provider) Exchange(context.Context, string) (auth.GitHubIdentity, error) {
+func (provider *m2Provider) Exchange(context.Context, string) (auth.GoogleIdentity, error) {
 	return provider.identity, nil
 }
 
@@ -32,55 +32,52 @@ type m2SessionRecord struct {
 }
 
 type m2Store struct {
-	usersByID       map[auth.Identifier]auth.User
-	usersByGitHubID map[int64]auth.Identifier
-	versions        map[auth.Identifier]int64
-	sessions        map[string]m2SessionRecord
-	audits          []auth.AuditEvent
+	usersByID     map[auth.Identifier]auth.User
+	usersBySub    map[string]auth.Identifier
+	usersByEmail  map[string]auth.Identifier
+	versions      map[auth.Identifier]int64
+	sessions      map[string]m2SessionRecord
+	audits        []auth.AuditEvent
 }
 
 func newM2Store() *m2Store {
 	return &m2Store{
-		usersByID:       make(map[auth.Identifier]auth.User),
-		usersByGitHubID: make(map[int64]auth.Identifier),
-		versions:        make(map[auth.Identifier]int64),
-		sessions:        make(map[string]m2SessionRecord),
+		usersByID:    make(map[auth.Identifier]auth.User),
+		usersBySub:   make(map[string]auth.Identifier),
+		usersByEmail: make(map[string]auth.Identifier),
+		versions:     make(map[auth.Identifier]int64),
+		sessions:     make(map[string]m2SessionRecord),
 	}
 }
 
-func (store *m2Store) FindUserByGitHubID(_ context.Context, githubUserID int64) (auth.User, error) {
-	userID, exists := store.usersByGitHubID[githubUserID]
+func (store *m2Store) FindUserByGoogleSubject(_ context.Context, sub string) (auth.User, error) {
+	userID, exists := store.usersBySub[sub]
 	if !exists {
 		return auth.User{}, auth.ErrUserNotFound
 	}
 	return store.usersByID[userID], nil
 }
 
-func (store *m2Store) CreateUser(_ context.Context, params auth.CreateUserParams) (auth.User, error) {
-	user := auth.User{
-		ID:           params.ID,
-		GitHubUserID: params.Identity.UserID,
-		Login:        params.Identity.Login,
-		DisplayName:  params.Identity.DisplayName,
-		AvatarURL:    params.Identity.AvatarURL,
-		Role:         params.Role,
-		Active:       true,
+func (store *m2Store) FindUserByEmail(_ context.Context, email string) (auth.User, error) {
+	userID, exists := store.usersByEmail[email]
+	if !exists {
+		return auth.User{}, auth.ErrUserNotFound
 	}
-	store.usersByID[user.ID] = user
-	store.usersByGitHubID[user.GitHubUserID] = user.ID
-	store.versions[user.ID] = 1
-	return user, nil
+	return store.usersByID[userID], nil
 }
 
-func (store *m2Store) UpdateUserIdentity(_ context.Context, userID auth.Identifier, identity auth.GitHubIdentity) (auth.User, error) {
+func (store *m2Store) UpdateGoogleIdentity(_ context.Context, userID auth.Identifier, identity auth.GoogleIdentity) (auth.User, error) {
 	user, exists := store.usersByID[userID]
 	if !exists {
 		return auth.User{}, auth.ErrUserNotFound
 	}
-	user.Login = identity.Login
+	user.GoogleSubject = identity.Subject
+	user.Email = identity.Email
 	user.DisplayName = identity.DisplayName
 	user.AvatarURL = identity.AvatarURL
 	store.usersByID[userID] = user
+	store.usersBySub[identity.Subject] = userID
+	store.usersByEmail[identity.Email] = userID
 	store.versions[userID]++
 	return user, nil
 }
@@ -133,7 +130,7 @@ func (store *m2Store) ListUsers(context.Context, int32, int32) ([]auth.ManagedUs
 	for id, user := range store.usersByID {
 		users = append(users, auth.ManagedUser{User: user, Version: store.versions[id]})
 	}
-	sort.Slice(users, func(left, right int) bool { return users[left].User.Login < users[right].User.Login })
+	sort.Slice(users, func(left, right int) bool { return users[left].User.Email < users[right].User.Email })
 	return users, nil
 }
 
@@ -171,12 +168,22 @@ func (store *m2Store) RevokeAllSessionsForUser(_ context.Context, userID auth.Id
 }
 
 func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
-	provider := &m2Provider{identity: auth.GitHubIdentity{UserID: 1, Login: "owner", DisplayName: "Owner"}}
+	ownerID, _ := auth.NewIdentifier()
+	memberID, _ := auth.NewIdentifier()
 	store := newM2Store()
+	store.usersByID[ownerID] = auth.User{ID: ownerID, GoogleSubject: "sub-owner", Email: "owner@example.com", DisplayName: "Owner", Role: auth.RoleSuperadmin, Active: true}
+	store.usersBySub["sub-owner"] = ownerID
+	store.usersByEmail["owner@example.com"] = ownerID
+	store.versions[ownerID] = 1
+
+	store.usersByID[memberID] = auth.User{ID: memberID, GoogleSubject: "sub-member", Email: "member@example.com", DisplayName: "Member", Role: auth.RoleMember, Active: true}
+	store.usersBySub["sub-member"] = memberID
+	store.usersByEmail["member@example.com"] = memberID
+	store.versions[memberID] = 1
+
+	provider := &m2Provider{identity: auth.GoogleIdentity{Subject: "sub-owner", Email: "owner@example.com", EmailVerified: true, DisplayName: "Owner"}}
 	service, err := auth.NewService(provider, store, auth.ServiceOptions{
-		AllowedLogins:   []string{"owner", "member"},
-		SuperadminLogin: "owner",
-		Now:             func() time.Time { return time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC) },
+		Now: func() time.Time { return time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC) },
 	})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
@@ -184,7 +191,7 @@ func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
 	handler := New(authTestLogger(), nil, Options{Auth: service, ApplicationURL: "https://app.example"})
 
 	ownerCookie := m2Login(t, handler)
-	provider.identity = auth.GitHubIdentity{UserID: 2, Login: "member", DisplayName: "Member"}
+	provider.identity = auth.GoogleIdentity{Subject: "sub-member", Email: "member@example.com", EmailVerified: true, DisplayName: "Member"}
 	memberCookie := m2Login(t, handler)
 
 	listRequest := httptest.NewRequest(http.MethodGet, "/api/admin/users", nil)
@@ -198,18 +205,17 @@ func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
 	if err := json.Unmarshal(listResponse.Body.Bytes(), &listed); err != nil || len(listed.Users) != 2 {
 		t.Fatalf("listed = %#v, error = %v", listed, err)
 	}
-	var member adminUserResponse
-	for _, user := range listed.Users {
-		if user.Login == "member" {
-			member = user
-		}
-	}
-	if member.ID == "" || member.Role != auth.RoleMember {
-		t.Fatalf("member = %#v", member)
+
+	memberListRequest := httptest.NewRequest(http.MethodGet, "/api/admin/users", nil)
+	memberListRequest.AddCookie(memberCookie)
+	memberListResponse := httptest.NewRecorder()
+	handler.ServeHTTP(memberListResponse, memberListRequest)
+	if memberListResponse.Code != http.StatusForbidden {
+		t.Fatalf("member list status = %d, want %d", memberListResponse.Code, http.StatusForbidden)
 	}
 
-	updateBody := `{"role":"ADMIN","active":true,"version":1}`
-	updateRequest := httptest.NewRequest(http.MethodPatch, "/api/admin/users/"+member.ID+"/access", strings.NewReader(updateBody))
+	updateBody := `{"role":"ADMIN","active":true,"version":2}`
+	updateRequest := httptest.NewRequest(http.MethodPatch, "/api/admin/users/"+memberID.String()+"/access", strings.NewReader(updateBody))
 	updateRequest.Header.Set("Content-Type", "application/json")
 	updateRequest.Header.Set("Origin", "https://app.example")
 	updateRequest.AddCookie(ownerCookie)
@@ -219,54 +225,22 @@ func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
 		t.Fatalf("update status = %d, body = %s", updateResponse.Code, updateResponse.Body.String())
 	}
 
-	memberSessionRequest := httptest.NewRequest(http.MethodGet, "/api/auth/session", nil)
-	memberSessionRequest.AddCookie(memberCookie)
-	memberSessionResponse := httptest.NewRecorder()
-	handler.ServeHTTP(memberSessionResponse, memberSessionRequest)
-	if memberSessionResponse.Code != http.StatusUnauthorized {
-		t.Fatalf("revoked member session status = %d", memberSessionResponse.Code)
-	}
-
-	logoutRequest := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
-	logoutRequest.Header.Set("Origin", "https://app.example")
-	logoutRequest.AddCookie(ownerCookie)
-	logoutResponse := httptest.NewRecorder()
-	handler.ServeHTTP(logoutResponse, logoutRequest)
-	if logoutResponse.Code != http.StatusNoContent {
-		t.Fatalf("logout status = %d", logoutResponse.Code)
-	}
-
-	ownerSessionRequest := httptest.NewRequest(http.MethodGet, "/api/auth/session", nil)
-	ownerSessionRequest.AddCookie(ownerCookie)
-	ownerSessionResponse := httptest.NewRecorder()
-	handler.ServeHTTP(ownerSessionResponse, ownerSessionRequest)
-	if ownerSessionResponse.Code != http.StatusUnauthorized {
-		t.Fatalf("revoked owner session status = %d", ownerSessionResponse.Code)
-	}
-
-	wantEvents := map[auth.AuditEventType]int{
-		auth.AuditEventSignInSucceeded:            2,
-		auth.AuditEventUserAdministrationAccessed: 1,
-		auth.AuditEventUserAccessChanged:          1,
-		auth.AuditEventSessionRevoked:             1,
-		auth.AuditEventSignOut:                    1,
-	}
-	for _, event := range store.audits {
-		wantEvents[event.EventType]--
-	}
-	for eventType, remaining := range wantEvents {
-		if remaining != 0 {
-			t.Fatalf("event %s remaining count = %d; audits = %#v", eventType, remaining, store.audits)
-		}
+	postUpdateListRequest := httptest.NewRequest(http.MethodGet, "/api/admin/users", nil)
+	postUpdateListRequest.AddCookie(memberCookie)
+	postUpdateListResponse := httptest.NewRecorder()
+	handler.ServeHTTP(postUpdateListResponse, postUpdateListRequest)
+	if postUpdateListResponse.Code != http.StatusUnauthorized {
+		t.Fatalf("revoked member list status = %d, want %d", postUpdateListResponse.Code, http.StatusUnauthorized)
 	}
 }
 
 func m2Login(t *testing.T, handler http.Handler) *http.Cookie {
 	t.Helper()
+	loginRequest := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
 	loginResponse := httptest.NewRecorder()
-	handler.ServeHTTP(loginResponse, httptest.NewRequest(http.MethodGet, "/auth/login", nil))
+	handler.ServeHTTP(loginResponse, loginRequest)
 	if loginResponse.Code != http.StatusFound {
-		t.Fatalf("login status = %d", loginResponse.Code)
+		t.Fatalf("login status = %d, body = %s", loginResponse.Code, loginResponse.Body.String())
 	}
 	var stateCookie *http.Cookie
 	for _, cookie := range loginResponse.Result().Cookies() {

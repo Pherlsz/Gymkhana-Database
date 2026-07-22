@@ -43,10 +43,7 @@ func (store *fakeAdministrationStore) RevokeAllSessionsForUser(_ context.Context
 
 func newAdministrationService(t *testing.T, store Store) *Service {
 	t.Helper()
-	service, err := NewService(fakeProvider{}, store, ServiceOptions{
-		AllowedLogins:   []string{"owner"},
-		SuperadminLogin: "owner",
-	})
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -64,20 +61,20 @@ func TestAdministrationAuditsListAccess(t *testing.T) {
 	}{
 		{
 			name:        "denied",
-			actor:       Session{User: User{ID: actorID, Login: "member", Role: RoleMember, Active: true}},
+			actor:       Session{User: User{ID: actorID, Email: "member@example.com", Role: RoleMember, Active: true}},
 			store:       &fakeAdministrationStore{},
 			wantErr:     ErrForbidden,
 			wantOutcome: AuditOutcomeDenied,
 		},
 		{
 			name:        "success",
-			actor:       Session{User: User{ID: actorID, Login: "owner", Role: RoleAdmin, Active: true}},
-			store:       &fakeAdministrationStore{users: []ManagedUser{{User: User{Login: "member"}}}},
+			actor:       Session{User: User{ID: actorID, Email: "owner@example.com", Role: RoleAdmin, Active: true}},
+			store:       &fakeAdministrationStore{users: []ManagedUser{{User: User{Email: "member@example.com"}}}},
 			wantOutcome: AuditOutcomeSuccess,
 		},
 		{
 			name:        "failure",
-			actor:       Session{User: User{ID: actorID, Login: "owner", Role: RoleAdmin, Active: true}},
+			actor:       Session{User: User{ID: actorID, Email: "owner@example.com", Role: RoleAdmin, Active: true}},
 			store:       &fakeAdministrationStore{listErr: errors.New("database unavailable")},
 			wantOutcome: AuditOutcomeFailure,
 		},
@@ -108,7 +105,7 @@ func TestAdministrationRejectsSelfAccessChanges(t *testing.T) {
 	actorID, _ := NewIdentifier()
 	store := &fakeAdministrationStore{}
 	service := newAdministrationService(t, store)
-	actor := Session{User: User{ID: actorID, Login: "admin", Role: RoleAdmin, Active: true}}
+	actor := Session{User: User{ID: actorID, Email: "admin@example.com", Role: RoleAdmin, Active: true}}
 
 	_, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
 		UserID:  actorID,
@@ -131,7 +128,7 @@ func TestAdministrationProtectsSuperadminAndRejectsPromotion(t *testing.T) {
 		User:    User{ID: targetID, Role: RoleSuperadmin, Active: true},
 		Version: 1,
 	}})
-	actor := Session{User: User{ID: actorID, Login: "owner", Role: RoleSuperadmin, Active: true}}
+	actor := Session{User: User{ID: actorID, Email: "owner@example.com", Role: RoleSuperadmin, Active: true}}
 
 	_, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
 		UserID:  targetID,
@@ -159,11 +156,11 @@ func TestNoOpAccessChangeDoesNotRevokeSessions(t *testing.T) {
 	actorID, _ := NewIdentifier()
 	targetID, _ := NewIdentifier()
 	store := &fakeAdministrationStore{target: ManagedUser{
-		User:    User{ID: targetID, Login: "member", Role: RoleMember, Active: true},
+		User:    User{ID: targetID, Email: "member@example.com", Role: RoleMember, Active: true},
 		Version: 3,
 	}}
 	service := newAdministrationService(t, store)
-	actor := Session{User: User{ID: actorID, Login: "admin", Role: RoleAdmin, Active: true}}
+	actor := Session{User: User{ID: actorID, Email: "admin@example.com", Role: RoleAdmin, Active: true}}
 
 	updated, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
 		UserID:  targetID,
@@ -183,11 +180,11 @@ func TestAccessChangeFailureIsAudited(t *testing.T) {
 	actorID, _ := NewIdentifier()
 	targetID, _ := NewIdentifier()
 	store := &fakeAdministrationStore{
-		target:    ManagedUser{User: User{ID: targetID, Login: "member", Role: RoleMember, Active: true}, Version: 3},
+		target:    ManagedUser{User: User{ID: targetID, Email: "member@example.com", Role: RoleMember, Active: true}, Version: 3},
 		updateErr: ErrUserAccessConflict,
 	}
 	service := newAdministrationService(t, store)
-	actor := Session{User: User{ID: actorID, Login: "owner", Role: RoleSuperadmin, Active: true}}
+	actor := Session{User: User{ID: actorID, Email: "owner@example.com", Role: RoleSuperadmin, Active: true}}
 
 	_, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
 		UserID: targetID, Role: RoleAdmin, Active: true, Version: 3,
@@ -204,11 +201,11 @@ func TestAccessChangeRevokesSessionsAndRecordsAudit(t *testing.T) {
 	actorID, _ := NewIdentifier()
 	targetID, _ := NewIdentifier()
 	store := &fakeAdministrationStore{
-		target:  ManagedUser{User: User{ID: targetID, Login: "member", Role: RoleMember, Active: true}, Version: 3},
-		updated: ManagedUser{User: User{ID: targetID, Login: "member", Role: RoleAdmin, Active: true}, Version: 4},
+		target:  ManagedUser{User: User{ID: targetID, Email: "member@example.com", Role: RoleMember, Active: true}, Version: 3},
+		updated: ManagedUser{User: User{ID: targetID, Email: "member@example.com", Role: RoleAdmin, Active: true}, Version: 4},
 	}
 	service := newAdministrationService(t, store)
-	actor := Session{User: User{ID: actorID, Login: "owner", Role: RoleSuperadmin, Active: true}}
+	actor := Session{User: User{ID: actorID, Email: "owner@example.com", Role: RoleSuperadmin, Active: true}}
 
 	updated, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
 		UserID:  targetID,
