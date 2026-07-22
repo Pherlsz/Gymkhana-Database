@@ -51,6 +51,13 @@ func TestCatalogIsDeterministicPermissionFilteredAndLogical(t *testing.T) {
 	if strings.Contains(field.Expression, "Ativo") || !strings.Contains(field.Expression, "technical_key") {
 		t.Fatalf("dynamic select expression must use technical keys: %s", field.Expression)
 	}
+	motherName, ok := first.Fields["profile.mother_name"]
+	if !ok || motherName.Public.Entity != "profiles" || motherName.Public.Kind != ValueText || !motherName.Public.Filterable || !motherName.Public.Projectable {
+		t.Fatalf("canonical profile detail field = %#v", motherName.Public)
+	}
+	if !strings.Contains(first.Entities["profiles"].FromTemplate, "LEFT JOIN profile_details") || motherName.Expression != "{root}_details.mother_name" {
+		t.Fatalf("profile details are not joined through the canonical profile entity: %#v / %q", first.Entities["profiles"], motherName.Expression)
+	}
 	for index := 1; index < len(first.Public.Fields); index++ {
 		left, right := first.Public.Fields[index-1], first.Public.Fields[index]
 		if left.Entity > right.Entity || left.Entity == right.Entity && left.Label > right.Label {
@@ -67,7 +74,7 @@ func TestCatalogIsDeterministicPermissionFilteredAndLogical(t *testing.T) {
 		}
 	}
 	encoded, err := json.Marshal(first.Public)
-	if err != nil || strings.Contains(string(encoded), "custom_field_values") || strings.Contains(string(encoded), "JOIN ") || strings.Contains(string(encoded), "technical_key") {
+	if err != nil || strings.Contains(string(encoded), "custom_field_values") || strings.Contains(string(encoded), "profile_details") || strings.Contains(string(encoded), "JOIN ") || strings.Contains(string(encoded), "technical_key") {
 		t.Fatalf("serialized catalog leaked physical metadata: %s, error=%v", encoded, err)
 	}
 	fullName := first.Fields["profile.full_name"].Public
@@ -107,7 +114,7 @@ func TestCompilerBuildsParameterizedNestedPlanWithoutMutatingInput(t *testing.T)
 	if err != nil {
 		t.Fatalf("compilePlan() error = %v", err)
 	}
-	if !strings.Contains(compiled.SQL, "EXISTS (SELECT 1 FROM documents q1") || !strings.Contains(compiled.SQL, "$1::text") ||
+	if !strings.Contains(compiled.SQL, "LEFT JOIN profile_details q0_details") || !strings.Contains(compiled.SQL, "EXISTS (SELECT 1 FROM documents q1") || !strings.Contains(compiled.SQL, "$1::text") ||
 		!strings.Contains(compiled.SQL, "LIMIT $3::integer") || strings.Contains(compiled.SQL, "OR true") {
 		t.Fatalf("compiled SQL is not safely parameterized:\n%s", compiled.SQL)
 	}
@@ -120,6 +127,43 @@ func TestCompilerBuildsParameterizedNestedPlanWithoutMutatingInput(t *testing.T)
 	if normalized.Version != PlanVersionV1 || normalized.Filter.Children[0].Values[0] != "Ana%' OR true --" ||
 		compiled.EntityKind != "profile" || len(compiled.Columns) != 2 || compiled.Cost <= 0 {
 		t.Fatalf("normalized/compiled plan = %#v / %#v", normalized, compiled)
+	}
+}
+
+func TestCompilerCombinesNameCityAndMotherName(t *testing.T) {
+	catalog, err := loadCatalog(context.Background(), newFakeQueryStore(), auth.RoleMember)
+	if err != nil {
+		t.Fatalf("loadCatalog() error = %v", err)
+	}
+	plan := QueryPlan{
+		Version:        PlanVersionV1,
+		CatalogVersion: catalog.Public.Version,
+		RootEntity:     "profiles",
+		Projections:    []string{"profile.full_name", "profile.address_city", "profile.mother_name"},
+		MaximumRows:    50,
+		Filter: &FilterNode{Kind: FilterGroup, Conjunction: ConjunctionAnd, Children: []FilterNode{
+			{Kind: FilterPredicate, Field: "profile.full_name", Operator: OperatorContains, Values: []string{"Ana Souza"}},
+			{Kind: FilterPredicate, Field: "profile.address_city", Operator: OperatorEqual, Values: []string{"Campinas"}},
+			{Kind: FilterPredicate, Field: "profile.mother_name", Operator: OperatorContains, Values: []string{"Maria Oliveira"}},
+		}},
+	}
+	compiled, _, err := compilePlan(plan, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("compilePlan() error = %v", err)
+	}
+	for _, fragment := range []string{
+		"LEFT JOIN profile_details q0_details ON q0_details.profile_id=q0.id",
+		"(q0_details.mother_name)::text AS value_2",
+		"lower((q0.address_city)::text) = lower($2::text)",
+		"lower((q0_details.mother_name)::text) LIKE $3::text",
+		"LIMIT $4::integer",
+	} {
+		if !strings.Contains(compiled.SQL, fragment) {
+			t.Fatalf("compiled SQL missing %q:\n%s", fragment, compiled.SQL)
+		}
+	}
+	if len(compiled.Arguments) != 4 || compiled.Arguments[0] != "%ana souza%" || compiled.Arguments[1] != "Campinas" || compiled.Arguments[2] != "%maria oliveira%" || compiled.Arguments[3] != 50 {
+		t.Fatalf("compiled arguments = %#v", compiled.Arguments)
 	}
 }
 
