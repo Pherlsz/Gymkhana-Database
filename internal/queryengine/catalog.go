@@ -48,12 +48,22 @@ func loadCatalog(ctx context.Context, store Store, role auth.Role) (resolvedCata
 		return resolvedCatalog{}, err
 	}
 	resolved := resolvedCatalog{
-		Entities: make(map[string]sqlEntityDefinition),
-		Fields:   make(map[string]sqlFieldDefinition), Relations: make(map[string]sqlRelationDefinition),
+		Entities:  make(map[string]sqlEntityDefinition),
+		Fields:    make(map[string]sqlFieldDefinition),
+		Relations: make(map[string]sqlRelationDefinition),
 	}
 	if role.CanReadProfiles() {
-		resolved.addEntity(sqlEntityDefinition{Public: EntityDefinition{Key: "profiles", Label: "Pessoas", Kind: "profile", Navigable: true, DefaultSort: "profile.full_name"},
-			FromTemplate: "profiles {root}", IDExpression: "{root}.id::text", LabelExpression: "{root}.full_name", UpdatedExpression: "{root}.updated_at"})
+		resolved.addEntity(sqlEntityDefinition{
+			Public: EntityDefinition{
+				Key: "profiles", Label: "Pessoas", Kind: "profile", Navigable: true,
+				DefaultSort: "profile.full_name",
+			},
+			FromTemplate: `profiles {root}
+LEFT JOIN profile_details {root}_details ON {root}_details.profile_id={root}.id`,
+			IDExpression:      "{root}.id::text",
+			LabelExpression:   "{root}.full_name",
+			UpdatedExpression: "{root}.updated_at",
+		})
 	}
 	if role.CanReadDocuments() {
 		resolved.addEntity(sqlEntityDefinition{Public: EntityDefinition{Key: "documents", Label: "Documentos", Kind: "document", Navigable: true, DefaultSort: "document.identifier"},
@@ -124,6 +134,27 @@ func addStaticFields(catalog *resolvedCatalog) {
 		field("profile.address_state", "profiles", "UF", ValueEnum, true, true, true, true, "{root}.address_state"),
 		field("profile.address_postal_code", "profiles", "CEP", ValueIdentifier, true, true, true, true, "{root}.address_postal_code"),
 		field("profile.notes", "profiles", "Observações", ValueLongText, true, true, true, false, "{root}.notes"),
+		field("profile.birth_date", "profiles", "Data de nascimento", ValueCivilDate, true, true, true, true, "{root}_details.birth_date"),
+		field("profile.gender", "profiles", "Gênero", ValueText, true, true, true, true, "{root}_details.gender"),
+		field("profile.nationality", "profiles", "Nacionalidade", ValueText, true, true, true, true, "{root}_details.nationality"),
+		field("profile.birth_city", "profiles", "Cidade de nascimento", ValueText, true, true, true, true, "{root}_details.birth_city"),
+		field("profile.marital_status", "profiles", "Estado civil", ValueText, true, true, true, true, "{root}_details.marital_status"),
+		field("profile.wedding_date", "profiles", "Data de casamento", ValueCivilDate, true, true, true, true, "{root}_details.wedding_date"),
+		field("profile.father_name", "profiles", "Nome do pai", ValueText, true, true, true, true, "{root}_details.father_name"),
+		field("profile.father_birth_date", "profiles", "Nascimento do pai", ValueCivilDate, true, true, true, true, "{root}_details.father_birth_date"),
+		field("profile.mother_name", "profiles", "Nome da mãe", ValueText, true, true, true, true, "{root}_details.mother_name"),
+		field("profile.mother_birth_date", "profiles", "Nascimento da mãe", ValueCivilDate, true, true, true, true, "{root}_details.mother_birth_date"),
+		field("profile.health_plan", "profiles", "Plano de saúde", ValueText, true, true, true, true, "{root}_details.health_plan"),
+		field("profile.blood_donor", "profiles", "Doador de sangue", ValueBoolean, true, true, true, true, "{root}_details.blood_donor"),
+		field("profile.organ_donor", "profiles", "Doador de órgãos", ValueBoolean, true, true, true, true, "{root}_details.organ_donor"),
+		field("profile.team", "profiles", "Equipe", ValueText, true, true, true, true, "{root}_details.team"),
+		field("profile.sector", "profiles", "Setor", ValueText, true, true, true, true, "{root}_details.sector"),
+		field("profile.collections", "profiles", "Coleções", ValueLongText, true, true, true, false, "{root}_details.collections"),
+		field("profile.vehicle_model", "profiles", "Modelo do veículo", ValueText, true, true, true, true, "{root}_details.vehicle_model"),
+		field("profile.vehicle_color", "profiles", "Cor do veículo", ValueText, true, true, true, true, "{root}_details.vehicle_color"),
+		field("profile.vehicle_plate", "profiles", "Placa do veículo", ValueIdentifier, true, true, true, true, "{root}_details.vehicle_plate"),
+		field("profile.vehicle_year", "profiles", "Ano do veículo", ValueInteger, true, true, true, true, "{root}_details.vehicle_year"),
+		field("profile.club_membership", "profiles", "Vínculo com clube", ValueText, true, true, true, true, "{root}_details.club_membership"),
 		field("profile.updated_at", "profiles", "Atualizado em", ValueTimestamp, false, true, true, true, "{root}.updated_at"),
 
 		field("document.id", "documents", "ID", ValueIdentifier, false, true, true, true, "{root}.id"),
