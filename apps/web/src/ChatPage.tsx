@@ -1,4 +1,8 @@
-import { Alert, Button, Inline, Page, Stack, StatusBadge, Surface } from "./ui";
+function toneToType(tone: string): "info" | "success" | "warning" | "error" {
+  return tone === "danger" ? "error" : tone as any;
+}
+
+import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -97,29 +101,27 @@ export function ChatPage() {
   }
 
   return (
-    <Page.Root maxWidth="full">
-      <Page.Header>
-        <Page.Eyebrow>Assistente privado · somente leitura</Page.Eyebrow>
-        <Page.Title>Chat com os dados autorizados</Page.Title>
-        <Page.Description>
+    <Layout style={{ maxWidth: "full", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">Assistente privado · somente leitura</div>
+        <Typography.Title level={1} className="page-title">Chat com os dados autorizados</Typography.Title>
+        <Typography.Paragraph className="page-description">
           Consulte Busca e Consultas tipadas sem SQL, mutações ou acesso fora das suas permissões.
-        </Page.Description>
-        <Page.Actions>
+        </Typography.Paragraph>
+        <div className="page-actions">
           <Button disabled={createThread.isPending} onClick={() => createThread.mutate()}>
             {createThread.isPending ? "Criando" : "Nova conversa"}
           </Button>
-        </Page.Actions>
-      </Page.Header>
-      <Page.Content>
+        </div>
+      </header>
+      <div className="page-content">
         {createThread.isError ? (
-          <Alert title="Não foi possível criar a conversa" tone="danger">
-            {chatErrorMessage(createThread.error)}
-          </Alert>
+          <Alert message="Não foi possível criar a conversa" type="error" description={<>{chatErrorMessage(createThread.error)}
+          </>} />
         ) : null}
         {threads.isError ? (
-          <Alert title="Não foi possível listar as conversas" tone="danger">
-            {chatErrorMessage(threads.error)}
-          </Alert>
+          <Alert message="Não foi possível listar as conversas" type="error" description={<>{chatErrorMessage(threads.error)}
+          </>} />
         ) : null}
         <div className="chat-workspace">
           <ThreadSidebar
@@ -140,24 +142,24 @@ export function ChatPage() {
               onThreadChanged={refreshThreads}
             />
           ) : (
-            <Surface className="chat-empty" tone="raised">
-              <Stack gap="3">
+            <Card className="chat-empty" style={{ padding: "1rem" }}>
+              <Flex vertical gap="0.75rem">
                 <h2>Comece uma conversa</h2>
                 <p>
                   Crie uma thread privada. O conteúdo é separado por usuário e removido conforme a
                   retenção configurada.
                 </p>
-                <Inline>
+                <Flex>
                   <Button disabled={createThread.isPending} onClick={() => createThread.mutate()}>
                     Nova conversa
                   </Button>
-                </Inline>
-              </Stack>
-            </Surface>
+                </Flex>
+              </Flex>
+            </Card>
           )}
         </div>
-      </Page.Content>
-    </Page.Root>
+      </div>
+    </Layout>
   );
 }
 
@@ -171,17 +173,17 @@ function ChatPageState({
   children: ReactNode;
 }) {
   return (
-    <Page.Root maxWidth="lg">
-      <Page.Header>
-        <Page.Eyebrow>Assistente privado</Page.Eyebrow>
-        <Page.Title>Chat com os dados autorizados</Page.Title>
-      </Page.Header>
-      <Page.Content>
-        <Alert title={title} tone={tone}>
+    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">Assistente privado</div>
+        <Typography.Title level={1} className="page-title">Chat com os dados autorizados</Typography.Title>
+      </header>
+      <div className="page-content">
+        <Alert title={title} type={toneToType(tone)} description={<>
           {children}
-        </Alert>
-      </Page.Content>
-    </Page.Root>
+        </>} />
+      </div>
+    </Layout>
   );
 }
 
@@ -197,7 +199,7 @@ function ThreadSidebar({
   onSelect: (id: string) => void;
 }) {
   return (
-    <Surface className="chat-threads" tone="raised">
+    <Card className="chat-threads" style={{ padding: "1rem" }}>
       <h2>Conversas</h2>
       {pending ? <p role="status">Carregando conversas…</p> : null}
       {!pending && threads.length === 0 ? <p>Nenhuma conversa privada.</p> : null}
@@ -215,7 +217,7 @@ function ThreadSidebar({
           </button>
         ))}
       </nav>
-    </Surface>
+    </Card>
   );
 }
 
@@ -407,7 +409,7 @@ function Conversation({
   const shownReferences = new Set<string>();
 
   return (
-    <Surface aria-busy={isActiveChatRun(currentRun)} className="chat-conversation" tone="raised">
+    <Card aria-busy={isActiveChatRun(currentRun)} className="chat-conversation" style={{ padding: "1rem" }}>
       <div className="chat-conversation__header">
         <div>
           <label className="chat-title-control">
@@ -420,7 +422,7 @@ function Conversation({
           </label>
           <p>Retida até {formatDateTime(thread.retention_expires_at)}.</p>
         </div>
-        <Inline align="center">
+        <Flex align="center">
           <Button
             disabled={!title.trim() || title.trim() === thread.title || rename.isPending}
             onClick={() => rename.mutate()}
@@ -442,13 +444,12 @@ function Conversation({
               <Button onClick={() => setConfirmingDelete(false)}>Manter</Button>
             </>
           )}
-        </Inline>
+        </Flex>
       </div>
 
       {rename.isError || remove.isError ? (
-        <Alert title="Não foi possível alterar a conversa" tone="danger">
-          {chatErrorMessage(rename.error ?? remove.error)}
-        </Alert>
+        <Alert message="Não foi possível alterar a conversa" type="error" description={<>{chatErrorMessage(rename.error ?? remove.error)}
+        </>} />
       ) : null}
       {thread.active_result_reference_id ? (
         <div className="chat-active-context">
@@ -464,17 +465,15 @@ function Conversation({
         </div>
       ) : null}
       {referenceError || activeResult.isError ? (
-        <Alert title="Não foi possível revalidar o contexto" tone="danger">
-          {chatErrorMessage(referenceError ?? activeResult.error)}
-        </Alert>
+        <Alert message="Não foi possível revalidar o contexto" type="error" description={<>{chatErrorMessage(referenceError ?? activeResult.error)}
+        </>} />
       ) : null}
 
       <div className="chat-messages" role="log" aria-label="Mensagens da conversa">
         {messages.isPending ? <p role="status">Carregando mensagens…</p> : null}
         {messages.isError ? (
-          <Alert title="Não foi possível carregar as mensagens" tone="danger">
-            {chatErrorMessage(messages.error)}
-          </Alert>
+          <Alert message="Não foi possível carregar as mensagens" type="error" description={<>{chatErrorMessage(messages.error)}
+          </>} />
         ) : null}
         {!messages.isPending && messages.data?.messages.length === 0 ? (
           <div className="chat-welcome">
@@ -497,20 +496,19 @@ function Conversation({
       </div>
 
       <div aria-live="polite" className="chat-activity" role="status">
-        <StatusBadge tone={runTone(currentRun)}>{runLabel(currentRun)}</StatusBadge>
+        <Tag color={runTone(currentRun)}>{runLabel(currentRun)}</Tag>
         <span>{activity}</span>
       </div>
       {streamError || turn.isError || cancel.isError ? (
-        <Alert title="A resposta não pôde ser concluída" tone="danger">
-          {chatErrorMessage(streamError ?? turn.error ?? cancel.error)}
-        </Alert>
+        <Alert message="A resposta não pôde ser concluída" type="error" description={<>{chatErrorMessage(streamError ?? turn.error ?? cancel.error)}
+        </>} />
       ) : null}
       {currentRun && (currentRun.state === "FAILED" || currentRun.state === "CANCELLED") ? (
-        <Inline>
+        <Flex>
           <Button disabled={turn.isPending} onClick={() => submit(currentRun.id)}>
             Tentar novamente
           </Button>
-        </Inline>
+        </Flex>
       ) : null}
 
       {resultPages.map((result) => {
@@ -553,7 +551,7 @@ function Conversation({
           <span>
             {countRunes(composer)} / {capability.maximum_message_runes}
           </span>
-          <Inline>
+          <Flex>
             {isActiveChatRun(currentRun) ? (
               <Button disabled={cancel.isPending} onClick={() => cancel.mutate()}>
                 {cancel.isPending ? "Cancelando" : "Cancelar resposta"}
@@ -561,14 +559,14 @@ function Conversation({
             ) : null}
             <Button
               disabled={!composer.trim() || turn.isPending || isActiveChatRun(currentRun)}
-              type="submit"
+              htmlType="submit"
             >
               {turn.isPending ? "Enviando" : "Enviar"}
             </Button>
-          </Inline>
+          </Flex>
         </div>
       </form>
-    </Surface>
+    </Card>
   );
 }
 
@@ -607,18 +605,18 @@ function ChatResultCard({
             {formatDateTime(result.reference.expires_at)}
           </p>
         </div>
-        <Inline align="center">
-          <StatusBadge tone={result.reference.kind === "QUERY" ? "info" : "neutral"}>
+        <Flex align="center">
+          <Tag color={result.reference.kind === "QUERY" ? "info" : "neutral"}>
             {result.reference.kind === "QUERY" ? "Consulta" : "Busca"}
-          </StatusBadge>
+          </Tag>
           {active ? (
-            <StatusBadge tone="success">Contexto ativo</StatusBadge>
+            <Tag color="success">Contexto ativo</Tag>
           ) : (
             <Button disabled={busy} onClick={onActivate}>
               Usar nas próximas perguntas
             </Button>
           )}
-        </Inline>
+        </Flex>
       </div>
       {result.reference.kind === "SEARCH" ? (
         <SearchEvidenceGrid data={result.data as SearchReferenceData} />
@@ -648,13 +646,13 @@ function SearchEvidenceGrid({ data }: { data: SearchReferenceData }) {
       loading={false}
       loadingLabel="Carregando evidências"
       renderCard={(row) => (
-        <Surface className="chat-result-card" tone="raised">
-          <Stack gap="2">
+        <Card className="chat-result-card" style={{ padding: "1rem" }}>
+          <Flex vertical gap="0.5rem">
             <strong>{row.entity_label}</strong>
             <span>{row.field_label}</span>
             <p>{row.preview}</p>
-          </Stack>
-        </Surface>
+          </Flex>
+        </Card>
       )}
     />
   );
@@ -684,16 +682,16 @@ function QueryEvidenceGrid({ data }: { data: QueryReferenceData }) {
       loading={false}
       loadingLabel="Carregando resultado"
       renderCard={(row) => (
-        <Surface className="chat-result-card" tone="raised">
-          <Stack gap="2">
+        <Card className="chat-result-card" style={{ padding: "1rem" }}>
+          <Flex vertical gap="0.5rem">
             <strong>{row.entity_label}</strong>
             {data.columns.map((column) => (
               <span key={column.position}>
                 <b>{column.label}:</b> {formatQueryCell(row, column.position)}
               </span>
             ))}
-          </Stack>
-        </Surface>
+          </Flex>
+        </Card>
       )}
     />
   );

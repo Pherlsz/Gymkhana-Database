@@ -1,13 +1,4 @@
-import {
-  Alert,
-  AppShell,
-  Button,
-  Inline,
-  Page,
-  Stack,
-  StatusBadge,
-  Surface,
-} from "./ui";
+import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Link,
@@ -233,9 +224,9 @@ function AuthenticatedShell() {
   if (!context) throw new Error("Application session is unavailable");
   const { session, signingOut, signOut } = context;
   return (
-    <AppShell.Root>
-      <AppShell.Header className="app-header">
-        <Inline align="center">
+    <Layout>
+      <Layout.Header className="app-header">
+        <Flex align="center" gap="1rem">
           <strong>Gymkhana Database</strong>
           <nav aria-label="Navegação principal" className="app-nav">
             <Link
@@ -326,65 +317,67 @@ function AuthenticatedShell() {
               </Link>
             ) : null}
           </nav>
-        </Inline>
-        <Inline align="center">
+        </Flex>
+        <Flex align="center" gap="0.5rem">
           <span className="current-user">@{session.user.login}</span>
-          <StatusBadge tone="success">{roleLabel(session.user.role)}</StatusBadge>
+          <Tag color="success">{roleLabel(session.user.role)}</Tag>
           <Button disabled={signingOut} onClick={signOut}>
             {signingOut ? "Saindo" : "Sair"}
           </Button>
-        </Inline>
-      </AppShell.Header>
-      <AppShell.Main>
+        </Flex>
+      </Layout.Header>
+      <Layout.Content>
         <Outlet />
-      </AppShell.Main>
-    </AppShell.Root>
+      </Layout.Content>
+    </Layout>
   );
 }
 
 function HomePage() {
   const session = useApplicationSession();
   return (
-    <Page.Root maxWidth="lg">
-      <Page.Header>
-        <Page.Eyebrow>Aplicação privada</Page.Eyebrow>
-        <Page.Title>Gymkhana Database</Page.Title>
-        <Page.Description>
+    <Layout style={{ maxWidth: "64rem", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">Aplicação privada</div>
+        <Typography.Title level={1} className="page-title">Gymkhana Database</Typography.Title>
+        <Typography.Paragraph className="page-description">
           Gerencie pessoas e permissões com sessões privadas e dados normalizados.
-        </Page.Description>
-      </Page.Header>
-      <Page.Content>
-        <Stack gap="6">
-          <Surface className="authentication-panel" tone="raised">
-            <Stack gap="3">
+        </Typography.Paragraph>
+      </header>
+      <div className="page-content">
+        <Flex vertical gap="1.5rem">
+          <Card className="authentication-panel" style={{ padding: "1rem" }}>
+            <Flex vertical gap="0.75rem">
               <strong>{session.user.display_name}</strong>
               <span className="authentication-panel__description">
                 @{session.user.login} · {roleLabel(session.user.role)}
               </span>
-              <StatusBadge tone="success">Sessão ativa</StatusBadge>
-            </Stack>
-          </Surface>
+              <Tag color="success">Sessão ativa</Tag>
+            </Flex>
+          </Card>
           {canManageUsers(session.user.role) ? (
-            <Page.Section
-              description="Funções, acesso ativo e revogação de sessões são controlados pela aplicação."
-              title="Administração de usuários"
-            >
+            <section className="page-section">
+              <Typography.Title level={2}>Administração de usuários</Typography.Title>
+              <Typography.Paragraph>
+                Funções, acesso ativo e revogação de sessões são controlados pela aplicação.
+              </Typography.Paragraph>
               <AdminUsersPanel currentLogin={session.user.login} />
-            </Page.Section>
+            </section>
           ) : null}
-          <Page.Section
-            description="A infraestrutura compartilhada continua consumida somente por versões exatas."
-            title="Foundation status"
-          >
-            <Inline align="stretch">
+          <section className="page-section">
+            <Typography.Title level={2}>Foundation status</Typography.Title>
+            <Typography.Paragraph>
+              A infraestrutura compartilhada continua consumida somente por versões exatas.
+            </Typography.Paragraph>
+            <Flex gap="0.5rem" align="stretch">
               <FoundationCard label="Frontend" value="React + TypeScript" />
               <FoundationCard label="Core" value="v0.2.1" />
               <FoundationCard label="UI" value="v0.3.0" />
-            </Inline>
-          </Page.Section>
-        </Stack>
-      </Page.Content>
-    </Page.Root>
+            </Flex>
+          </section>
+        </Flex>
+      </div>
+    </Layout>
   );
 }
 
@@ -398,31 +391,29 @@ function PublicShell(props: {
   onRefreshHealth: () => void;
 }) {
   return (
-    <AppShell.Root>
-      <AppShell.Header className="app-header">
+    <Layout>
+      <Layout.Header className="app-header">
         <strong>Gymkhana Database</strong>
-        <StatusBadge tone={authenticationTone(props.authentication)}>Acesso privado</StatusBadge>
-      </AppShell.Header>
-      <AppShell.Main>
-        <Page.Root maxWidth="lg">
-          <Page.Header>
-            <Page.Eyebrow>Private application access</Page.Eyebrow>
-            <Page.Title>Gymkhana Database</Page.Title>
-            <Page.Description>
+        <Tag color={authenticationTone(props.authentication)}>Acesso privado</Tag>
+      </Layout.Header>
+      <Layout.Content>
+        <Layout style={{ maxWidth: "64rem", margin: "0 auto" }}>
+          <header className="page-header">
+            <div className="page-eyebrow">Private application access</div>
+            <Typography.Title level={1} className="page-title">Gymkhana Database</Typography.Title>
+            <Typography.Paragraph className="page-description">
               Acesso privado com GitHub, sessões revogáveis de 24 horas e permissões da aplicação.
-            </Page.Description>
-            <Page.Actions>
+            </Typography.Paragraph>
+            <div className="page-actions">
               <Button disabled={props.health === "checking"} onClick={props.onRefreshHealth}>
                 Verificar API
               </Button>
-            </Page.Actions>
-          </Page.Header>
-          <Page.Content>
-            <Stack gap="6">
+            </div>
+          </header>
+          <div className="page-content">
+            <Flex vertical gap="1.5rem">
               {props.health === "unavailable" ? (
-                <Alert title="API indisponível" tone="danger">
-                  Verifique se o serviço está em execução e tente novamente.
-                </Alert>
+                <Alert message="API indisponível" type="error" description="Verifique se o serviço está em execução e tente novamente." />
               ) : null}
               <AuthenticationPanel
                 authentication={props.authentication}
@@ -431,11 +422,11 @@ function PublicShell(props: {
                 onRetry={props.onRetry}
                 onSignOut={props.onSignOut}
               />
-            </Stack>
-          </Page.Content>
-        </Page.Root>
-      </AppShell.Main>
-    </AppShell.Root>
+            </Flex>
+          </div>
+        </Layout>
+      </Layout.Content>
+    </Layout>
   );
 }
 
@@ -454,64 +445,66 @@ function AuthenticationPanel({
 }) {
   switch (authentication.kind) {
     case "checking":
-      return <Alert title="Verificando acesso">Validando a sessão da aplicação.</Alert>;
+      return <Alert message="Verificando acesso" description="Validando a sessão da aplicação." type="info" />;
     case "unauthenticated":
       return (
-        <Surface className="authentication-panel" tone="raised">
-          <Stack gap="4">
+        <Card className="authentication-panel" style={{ padding: "1rem" }}>
+          <Flex vertical gap="1rem">
             <div>
               <strong>Autenticação necessária</strong>
               <p className="authentication-panel__description">
                 Entre com uma conta GitHub previamente autorizada.
               </p>
             </div>
-            <Inline>
+            <Flex gap="0.5rem">
               <Button onClick={onLogin}>Entrar com GitHub</Button>
-            </Inline>
-          </Stack>
-        </Surface>
+            </Flex>
+          </Flex>
+        </Card>
       );
     case "disabled":
       return (
-        <Alert title="Autenticação desativada neste ambiente" tone="info">
-          Configure as variáveis OAuth para testar o acesso privado localmente.
-        </Alert>
+        <Alert
+          message="Autenticação desativada neste ambiente"
+          description="Configure as variáveis OAuth para testar o acesso privado localmente."
+          type="info"
+        />
       );
     case "unavailable":
       return (
-        <Alert title="Não foi possível verificar a sessão" tone="danger">
-          <Stack gap="3">
+        <Alert message="Não foi possível verificar a sessão" type="error" description={<>
+          <Flex vertical gap="0.75rem">
             <span>Tente novamente sem recarregar a página.</span>
-            <Inline>
+            <Flex gap="0.5rem">
               <Button onClick={onRetry}>Tentar novamente</Button>
-            </Inline>
-          </Stack>
-        </Alert>
+            </Flex>
+          </Flex>
+        </>} />
       );
     case "authenticated":
       return (
-        <Surface className="authentication-panel" tone="raised">
-          <Stack gap="4">
+        <Card className="authentication-panel" style={{ padding: "1rem" }}>
+          <Flex vertical gap="1rem">
             <strong>{authentication.session.user.display_name}</strong>
-            <Inline>
-              <StatusBadge tone="success">Sessão ativa</StatusBadge>
+            <Flex gap="0.5rem">
+              <Tag color="success">Sessão ativa</Tag>
               <Button disabled={signingOut} onClick={onSignOut}>
                 {signingOut ? "Saindo" : "Sair"}
               </Button>
-            </Inline>
-          </Stack>
-        </Surface>
+            </Flex>
+          </Flex>
+        </Card>
       );
   }
 }
 function FoundationCard({ label, value }: { label: string; value: string }) {
   return (
-    <Surface className="foundation-card" tone="raised">
-      <Stack gap="2">
+    <Card className="foundation-card" style={{ padding: "1rem" }}>
+      <Flex vertical gap="0.5rem">
         <span className="foundation-card__label">{label}</span>
         <strong>{value}</strong>
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 function canManageUsers(role: "MEMBER" | "ADMIN" | "SUPERADMIN") {

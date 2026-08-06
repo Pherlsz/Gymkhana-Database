@@ -1,4 +1,8 @@
-import { Alert, Button, Inline, Page, Stack, StatusBadge, Surface } from "./ui";
+function toneToType(tone: string): "info" | "success" | "warning" | "error" {
+  return tone === "danger" ? "error" : tone as any;
+}
+
+import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ocrRoute } from "./App";
@@ -105,23 +109,21 @@ export function OCRPage() {
   }
 
   return (
-    <Page.Root maxWidth="full">
-      <Page.Header>
-        <Page.Eyebrow>Extração privada · revisão humana obrigatória</Page.Eyebrow>
-        <Page.Title>OCR de anexos</Page.Title>
-        <Page.Description>
+    <Layout style={{ maxWidth: "full", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">Extração privada · revisão humana obrigatória</div>
+        <Typography.Title level={1} className="page-title">OCR de anexos</Typography.Title>
+        <Typography.Paragraph className="page-description">
           Extraia campos de PDF, JPEG ou PNG, confira evidências e aplique somente as sugestões
           aprovadas explicitamente.
-        </Page.Description>
-      </Page.Header>
-      <Page.Content>
-        <Stack gap="5">
-          <Alert title="Nenhuma alteração é automática" tone="info">
-            A extração apenas cria sugestões. Aceitar uma sugestão ainda não altera o cadastro; a
-            aplicação é uma segunda ação explícita e protegida por versão.
-          </Alert>
-          <Surface className="ocr-start" tone="raised">
-            <Stack gap="3">
+        </Typography.Paragraph>
+      </header>
+      <div className="page-content">
+        <Flex vertical gap="1.25rem">
+          <Alert message="Nenhuma alteração é automática" type="info" description="A extração apenas cria sugestões. Aceitar uma sugestão ainda não altera o cadastro; a
+            aplicação é uma segunda ação explícita e protegida por versão." />
+          <Card className="ocr-start" style={{ padding: "1rem" }}>
+            <Flex vertical gap="0.75rem">
               <h2>Nova extração</h2>
               <label>
                 Identificador do anexo
@@ -132,7 +134,7 @@ export function OCRPage() {
                   onChange={(event) => setAttachmentID(event.target.value)}
                 />
               </label>
-              <Inline>
+              <Flex>
                 <Button
                   disabled={start.isPending || !attachmentID.trim()}
                   onClick={() => start.mutate({ attachment: attachmentID })}
@@ -144,18 +146,16 @@ export function OCRPage() {
                   {capability.data.maximum_pages} páginas ou{" "}
                   {formatNumber(capability.data.maximum_pixels)} pixels.
                 </span>
-              </Inline>
-            </Stack>
-          </Surface>
+              </Flex>
+            </Flex>
+          </Card>
           {start.isError ? (
-            <Alert title="Não foi possível iniciar a extração" tone="danger">
-              {ocrErrorMessage(start.error)}
-            </Alert>
+            <Alert message="Não foi possível iniciar a extração" type="error" description={<>{ocrErrorMessage(start.error)}
+            </>} />
           ) : null}
           {jobs.isError ? (
-            <Alert title="Não foi possível listar as extrações" tone="danger">
-              {ocrErrorMessage(jobs.error)}
-            </Alert>
+            <Alert message="Não foi possível listar as extrações" type="error" description={<>{ocrErrorMessage(jobs.error)}
+            </>} />
           ) : null}
           <div className="ocr-workspace">
             <JobSidebar
@@ -166,11 +166,10 @@ export function OCRPage() {
             />
             {search.job ? (
               selectedJob.isError ? (
-                <Surface className="ocr-empty" tone="raised">
-                  <Alert title="Não foi possível abrir a extração" tone="danger">
-                    {ocrErrorMessage(selectedJob.error)}
-                  </Alert>
-                </Surface>
+                <Card className="ocr-empty" style={{ padding: "1rem" }}>
+                  <Alert message="Não foi possível abrir a extração" type="error" description={<>{ocrErrorMessage(selectedJob.error)}
+                  </>} />
+                </Card>
               ) : selectedJob.data ? (
                 <OCRJobWorkspace
                   job={selectedJob.data}
@@ -184,22 +183,22 @@ export function OCRPage() {
                   }
                 />
               ) : (
-                <Surface className="ocr-empty" tone="raised">
+                <Card className="ocr-empty" style={{ padding: "1rem" }}>
                   <p role="status">Carregando extração…</p>
-                </Surface>
+                </Card>
               )
             ) : (
-              <Surface className="ocr-empty" tone="raised">
-                <Stack gap="2">
+              <Card className="ocr-empty" style={{ padding: "1rem" }}>
+                <Flex vertical gap="0.5rem">
                   <h2>Selecione uma extração</h2>
                   <p>Os jobs e suas evidências são privados para o usuário autenticado.</p>
-                </Stack>
-              </Surface>
+                </Flex>
+              </Card>
             )}
           </div>
-        </Stack>
-      </Page.Content>
-    </Page.Root>
+        </Flex>
+      </div>
+    </Layout>
   );
 }
 
@@ -213,17 +212,17 @@ function OCRPageState({
   children: ReactNode;
 }) {
   return (
-    <Page.Root maxWidth="lg">
-      <Page.Header>
-        <Page.Eyebrow>Extração privada</Page.Eyebrow>
-        <Page.Title>OCR de anexos</Page.Title>
-      </Page.Header>
-      <Page.Content>
-        <Alert title={title} tone={tone}>
+    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">Extração privada</div>
+        <Typography.Title level={1} className="page-title">OCR de anexos</Typography.Title>
+      </header>
+      <div className="page-content">
+        <Alert title={title} type={toneToType(tone)} description={<>
           {children}
-        </Alert>
-      </Page.Content>
-    </Page.Root>
+        </>} />
+      </div>
+    </Layout>
   );
 }
 
@@ -239,7 +238,7 @@ function JobSidebar({
   onSelect: (id: string) => void;
 }) {
   return (
-    <Surface className="ocr-jobs" tone="raised">
+    <Card className="ocr-jobs" style={{ padding: "1rem" }}>
       <h2>Extrações</h2>
       {pending ? <p role="status">Carregando extrações…</p> : null}
       {!pending && jobs.length === 0 ? <p>Nenhuma extração criada.</p> : null}
@@ -256,11 +255,11 @@ function JobSidebar({
               <strong>{mimeLabel(job.source_mime)}</strong>
               <small>{shortIdentifier(job.attachment_id)}</small>
             </span>
-            <StatusBadge tone={jobTone(job)}>{jobStateLabel(job.state)}</StatusBadge>
+            <Tag color={jobTone(job)}>{jobStateLabel(job.state)}</Tag>
           </button>
         ))}
       </nav>
-    </Surface>
+    </Card>
   );
 }
 
@@ -307,9 +306,9 @@ function OCRJobWorkspace({
 
   return (
     <div className="ocr-review-workspace">
-      <Surface className="ocr-job-summary" tone="raised">
-        <Stack gap="3">
-          <Inline align="center">
+      <Card className="ocr-job-summary" style={{ padding: "1rem" }}>
+        <Flex vertical gap="0.75rem">
+          <Flex align="center">
             <div>
               <h2>Extração {shortIdentifier(job.id)}</h2>
               <p className="ocr-muted">
@@ -317,8 +316,8 @@ function OCRJobWorkspace({
                 {formatBytes(job.source_bytes)}
               </p>
             </div>
-            <StatusBadge tone={jobTone(job)}>{jobStateLabel(job.state)}</StatusBadge>
-          </Inline>
+            <Tag color={jobTone(job)}>{jobStateLabel(job.state)}</Tag>
+          </Flex>
           <div className="ocr-job-metrics">
             <Metric label="Tentativa" value={`${job.attempt_count}/3`} />
             <Metric label="Páginas" value={String(job.page_count)} />
@@ -328,26 +327,22 @@ function OCRJobWorkspace({
           </div>
           {isActiveOCRJob(job) ? <p aria-live="polite">{activity}</p> : null}
           {job.error_code ? (
-            <Alert title="Extração encerrada" tone="danger">
-              Código seguro: {job.error_code}
-            </Alert>
+            <Alert message="Extração encerrada" type="error" description={<>Código seguro: {job.error_code}
+            </>} />
           ) : null}
           {streamError ? (
-            <Alert title="Acompanhamento em tempo real interrompido" tone="warning">
-              {ocrErrorMessage(streamError)} Atualize o job para consultar o estado durável.
-            </Alert>
+            <Alert message="Acompanhamento em tempo real interrompido" type="warning" description={<>{ocrErrorMessage(streamError)} Atualize o job para consultar o estado durável.
+            </>} />
           ) : null}
           {cancel.isError ? (
-            <Alert title="Não foi possível cancelar" tone="danger">
-              {ocrErrorMessage(cancel.error)}
-            </Alert>
+            <Alert message="Não foi possível cancelar" type="error" description={<>{ocrErrorMessage(cancel.error)}
+            </>} />
           ) : null}
           {download.isError ? (
-            <Alert title="Não foi possível abrir o anexo" tone="danger">
-              {ocrErrorMessage(download.error)}
-            </Alert>
+            <Alert message="Não foi possível abrir o anexo" type="error" description={<>{ocrErrorMessage(download.error)}
+            </>} />
           ) : null}
-          <Inline>
+          <Flex>
             <Button disabled={download.isPending} onClick={() => download.mutate()}>
               {download.isPending ? "Preparando anexo" : "Abrir original"}
             </Button>
@@ -359,17 +354,17 @@ function OCRJobWorkspace({
             {(job.state === "FAILED" || job.state === "CANCELLED") && (
               <Button onClick={() => onRetry(job)}>Tentar novamente</Button>
             )}
-          </Inline>
-        </Stack>
-      </Surface>
+          </Flex>
+        </Flex>
+      </Card>
       {job.state === "COMPLETED" ? <SuggestionReview job={job} /> : null}
       {job.state === "QUEUED" || job.state === "RUNNING" ? (
-        <Surface className="ocr-empty" tone="raised">
-          <Stack gap="2">
+        <Card className="ocr-empty" style={{ padding: "1rem" }}>
+          <Flex vertical gap="0.5rem">
             <h2>Processando com limites seguros</h2>
             <p>O arquivo permanece privado e as sugestões aparecerão após a validação completa.</p>
-          </Stack>
-        </Surface>
+          </Flex>
+        </Card>
       ) : null}
     </div>
   );
@@ -443,23 +438,22 @@ function SuggestionReview({ job }: { job: OCRJob }) {
 
   if (suggestions.isPending) {
     return (
-      <Surface className="ocr-empty" tone="raised">
+      <Card className="ocr-empty" style={{ padding: "1rem" }}>
         <p role="status">Carregando sugestões e versões atuais…</p>
-      </Surface>
+      </Card>
     );
   }
   if (suggestions.isError) {
     return (
-      <Alert title="Não foi possível carregar as sugestões" tone="danger">
-        {ocrErrorMessage(suggestions.error)}
-      </Alert>
+      <Alert message="Não foi possível carregar as sugestões" type="error" description={<>{ocrErrorMessage(suggestions.error)}
+      </>} />
     );
   }
 
   return (
-    <Stack gap="4">
-      <Surface className="ocr-apply-bar" tone="raised">
-        <Inline align="center">
+    <Flex vertical gap="1rem">
+      <Card className="ocr-apply-bar" style={{ padding: "1rem" }}>
+        <Flex align="center">
           <div>
             <strong>Aplicação explícita</strong>
             <p className="ocr-muted">
@@ -474,46 +468,41 @@ function SuggestionReview({ job }: { job: OCRJob }) {
               Revisar aplicação
             </Button>
           ) : null}
-        </Inline>
-      </Surface>
+        </Flex>
+      </Card>
       {confirmingApply ? (
-        <Surface className="ocr-confirm" tone="raised">
-          <Stack gap="3">
-            <Alert title="Confirmar alteração dos cadastros" tone="warning">
-              Esta ação aplicará {acceptedSelected.length} valor(es) já revisado(s) usando as
+        <Card className="ocr-confirm" style={{ padding: "1rem" }}>
+          <Flex vertical gap="0.75rem">
+            <Alert message="Confirmar alteração dos cadastros" type="warning" description={<>Esta ação aplicará {acceptedSelected.length} valor(es) já revisado(s) usando as
               versões atuais. Conflitos não serão sobrescritos.
-            </Alert>
+            </>} />
             <ul>
               {acceptedSelected.map((suggestion) => (
                 <li key={suggestion.id}>{suggestion.field_label}</li>
               ))}
             </ul>
-            <Inline>
+            <Flex>
               <Button disabled={apply.isPending} onClick={() => apply.mutate()}>
                 {apply.isPending ? "Aplicando" : "Confirmar aplicação"}
               </Button>
               <Button disabled={apply.isPending} onClick={() => setConfirmingApply(false)}>
                 Voltar à revisão
               </Button>
-            </Inline>
-          </Stack>
-        </Surface>
+            </Flex>
+          </Flex>
+        </Card>
       ) : null}
       {review.isError ? (
-        <Alert title="Não foi possível registrar a revisão" tone="danger">
-          {ocrErrorMessage(review.error)}
-        </Alert>
+        <Alert message="Não foi possível registrar a revisão" type="error" description={<>{ocrErrorMessage(review.error)}
+        </>} />
       ) : null}
       {apply.isError ? (
-        <Alert title="Não foi possível aplicar as sugestões" tone="danger">
-          {ocrErrorMessage(apply.error)}
-        </Alert>
+        <Alert message="Não foi possível aplicar as sugestões" type="error" description={<>{ocrErrorMessage(apply.error)}
+        </>} />
       ) : null}
       {receipt ? <ApplicationReceipt receipt={receipt} /> : null}
       {suggestions.data.suggestions.length === 0 ? (
-        <Alert title="Nenhum campo reconhecido" tone="info">
-          O job foi concluído com segurança, mas o provedor não retornou sugestões válidas.
-        </Alert>
+        <Alert message="Nenhum campo reconhecido" type="info" description="O job foi concluído com segurança, mas o provedor não retornou sugestões válidas." />
       ) : null}
       <div className="ocr-suggestions">
         {suggestions.data.suggestions.map((view) => (
@@ -545,7 +534,7 @@ function SuggestionReview({ job }: { job: OCRJob }) {
           />
         ))}
       </div>
-    </Stack>
+    </Flex>
   );
 }
 
@@ -572,18 +561,18 @@ function SuggestionCard({
   const immutable = suggestion.review_state === "APPLIED" || suggestion.review_state === "STALE";
   const canApply = suggestion.review_state === "ACCEPTED" && !view.stale;
   return (
-    <Surface className="ocr-suggestion" tone="raised">
-      <Stack gap="4">
-        <Inline align="center">
+    <Card className="ocr-suggestion" style={{ padding: "1rem" }}>
+      <Flex vertical gap="1rem">
+        <Flex align="center">
           <div>
             <span className="ocr-field-key">{suggestion.field_key}</span>
             <h3>{suggestion.field_label}</h3>
           </div>
-          <Inline align="center">
-            {view.stale ? <StatusBadge tone="warning">Destino alterado</StatusBadge> : null}
-            <StatusBadge tone={reviewTone(suggestion.review_state)}>
+          <Flex align="center">
+            {view.stale ? <Tag color="warning">Destino alterado</Tag> : null}
+            <Tag color={reviewTone(suggestion.review_state)}>
               {reviewStateLabel(suggestion.review_state)}
-            </StatusBadge>
+            </Tag>
             {canApply ? (
               <label className="ocr-selection">
                 <input
@@ -595,8 +584,8 @@ function SuggestionCard({
                 Aplicar
               </label>
             ) : null}
-          </Inline>
-        </Inline>
+          </Flex>
+        </Flex>
         <div className="ocr-comparison">
           <div>
             <span>Valor atual</span>
@@ -638,17 +627,17 @@ function SuggestionCard({
           </small>
         </div>
         {!immutable ? (
-          <Inline>
+          <Flex>
             <Button disabled={pending || !draft.trim()} onClick={onAccept}>
               Aceitar valor revisado
             </Button>
             <Button disabled={pending} onClick={onReject}>
               Rejeitar sugestão
             </Button>
-          </Inline>
+          </Flex>
         ) : null}
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 
@@ -657,10 +646,10 @@ function ApplicationReceipt({ receipt }: { receipt: OCRApplyReceipt }) {
   const stale = receipt.results.filter((result) => result.outcome === "STALE").length;
   const failed = receipt.results.filter((result) => result.outcome === "FAILED").length;
   return (
-    <Alert title="Aplicação concluída" tone={failed || stale ? "warning" : "success"}>
+    <Alert title="Aplicação concluída" type={toneToType(failed || stale ? "warning" : "success")} description={<>
       {applied} aplicada(s), {stale} desatualizada(s) e {failed} com falha. Recibo{" "}
       {shortIdentifier(receipt.id)}.
-    </Alert>
+    </>} />
   );
 }
 

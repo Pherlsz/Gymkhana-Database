@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Page, Stack, StatusBadge, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { taskRoute } from "./App";
@@ -217,22 +217,22 @@ export function TaskPage() {
   }, [catalog.data, parsedPlan]);
 
   return (
-    <Page.Root maxWidth="lg">
-      <Page.Header>
-        <Page.Eyebrow>M14 · Consultas avançadas</Page.Eyebrow>
-        <Page.Title>Consultas avançadas e tarefas</Page.Title>
-        <Page.Description>
+    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">M14 · Consultas avançadas</div>
+        <Typography.Title level={1} className="page-title">Consultas avançadas e tarefas</Typography.Title>
+        <Typography.Paragraph className="page-description">
           Monte consultas tipadas ou revise uma tarefa completa antes de qualquer execução somente
           leitura.
-        </Page.Description>
-      </Page.Header>
-      <Page.Content>
-        <Stack gap="5">
-          <Inline gap="2" wrap>
+        </Typography.Paragraph>
+      </header>
+      <div className="page-content">
+        <Flex vertical gap="1.25rem">
+          <Flex gap="0.5rem" wrap>
             {(["visual", "json", "task"] as const).map((mode) => (
               <Button
                 key={mode}
-                variant={search.mode === mode ? "primary" : "secondary"}
+                type={search.mode === mode ? "primary" : "default"}
                 onClick={() => void navigate({ search: (previous) => ({ ...previous, mode }) })}
               >
                 {mode === "visual"
@@ -242,15 +242,13 @@ export function TaskPage() {
                     : "Tarefa completa"}
               </Button>
             ))}
-          </Inline>
+          </Flex>
 
           {capability.isError ? <RequestError error={capability.error} /> : null}
           {catalog.isError ? <RequestError error={catalog.error} /> : null}
           {capability.data && !capability.data.semantic_interpretation ? (
-            <Alert tone="info" title="Interpretação semântica desativada">
-              A construção tipada continua disponível. Nenhum provedor externo recebe o texto da
-              tarefa.
-            </Alert>
+            <Alert type="info" title="Interpretação semântica desativada" description="A construção tipada continua disponível. Nenhum provedor externo recebe o texto da
+              tarefa." />
           ) : null}
 
           {search.mode === "visual" ? (
@@ -263,7 +261,7 @@ export function TaskPage() {
           ) : null}
 
           {search.mode === "json" ? (
-            <Surface className="task-workspace__panel">
+            <Card className="task-workspace__panel" style={{ padding: "1rem" }}>
               <label className="task-workspace__field">
                 QueryPlan v2
                 <textarea
@@ -274,23 +272,22 @@ export function TaskPage() {
                   spellCheck={false}
                 />
               </label>
-            </Surface>
+            </Card>
           ) : null}
 
           {search.mode !== "task" ? (
-            <Surface className="task-workspace__panel">
-              <Inline gap="3" wrap>
+            <Card className="task-workspace__panel" style={{ padding: "1rem" }}>
+              <Flex gap="0.75rem" wrap>
                 <Button onClick={() => validateQuery.mutate()} disabled={validateQuery.isPending}>
                   Validar plano
                 </Button>
-                <Button
-                  variant="primary"
+                <Button type="primary"
                   onClick={() => executeQuery.mutate()}
                   disabled={executeQuery.isPending}
                 >
                   Executar consulta
                 </Button>
-              </Inline>
+              </Flex>
               <MutationError mutation={validateQuery} />
               <MutationError mutation={executeQuery} />
               {queryEstimate ? (
@@ -304,7 +301,7 @@ export function TaskPage() {
                   Execução {queryExecution.state}: {queryExecution.id}
                 </p>
               ) : null}
-            </Surface>
+            </Card>
           ) : null}
 
           {queryResult.data ? <AdvancedQueryResultView result={queryResult.data} /> : null}
@@ -312,8 +309,8 @@ export function TaskPage() {
 
           {search.mode === "task" ? (
             <>
-              <Surface className="task-workspace__panel">
-                <Stack gap="3">
+              <Card className="task-workspace__panel" style={{ padding: "1rem" }}>
+                <Flex vertical gap="0.75rem">
                   <label className="task-workspace__field">
                     Texto original da tarefa
                     <textarea
@@ -334,11 +331,11 @@ export function TaskPage() {
                     Propor especificação
                   </Button>
                   <MutationError mutation={interpret} />
-                </Stack>
-              </Surface>
+                </Flex>
+              </Card>
 
-              <Surface className="task-workspace__panel">
-                <Stack gap="3">
+              <Card className="task-workspace__panel" style={{ padding: "1rem" }}>
+                <Flex vertical gap="0.75rem">
                   <label className="task-workspace__field">
                     TaskSpec revisável
                     <textarea
@@ -349,7 +346,7 @@ export function TaskPage() {
                       spellCheck={false}
                     />
                   </label>
-                  <Inline gap="3" wrap>
+                  <Flex gap="0.75rem" wrap>
                     <Button onClick={() => createDraft.mutate()} disabled={createDraft.isPending}>
                       Salvar rascunho
                     </Button>
@@ -359,20 +356,19 @@ export function TaskPage() {
                     >
                       Confirmar revisão
                     </Button>
-                    <Button
-                      variant="primary"
+                    <Button type="primary"
                       onClick={() => startJob.mutate(undefined)}
                       disabled={draft.data?.state !== "REVIEWED" || startJob.isPending}
                     >
                       Executar tarefa
                     </Button>
-                  </Inline>
+                  </Flex>
                   <MutationError mutation={createDraft} />
                   <MutationError mutation={reviewDraft} />
                   <MutationError mutation={startJob} />
                   {draft.data ? <DraftSummary draft={draft.data} /> : null}
-                </Stack>
-              </Surface>
+                </Flex>
+              </Card>
             </>
           ) : null}
 
@@ -390,9 +386,9 @@ export function TaskPage() {
           {job.isError ? <RequestError error={job.error} /> : null}
           {results.data ? <TaskResultsView page={results.data} /> : null}
           {results.isError ? <RequestError error={results.error} /> : null}
-        </Stack>
-      </Page.Content>
-    </Page.Root>
+        </Flex>
+      </div>
+    </Layout>
   );
 }
 
@@ -408,13 +404,13 @@ function VisualQueryBuilder({
   onChange: (plan: AdvancedQueryPlan) => void;
 }) {
   if (!catalog || !plan)
-    return <Surface className="task-workspace__panel">Carregando catálogo…</Surface>;
+    return <Card className="task-workspace__panel" style={{ padding: "1rem" }}>Carregando catálogo…</Card>;
   const projections = plan.projections ?? [];
   const groupBy = plan.group_by ?? [];
   const aggregates = plan.aggregates ?? [];
   return (
-    <Surface className="task-workspace__panel">
-      <Stack gap="4">
+    <Card className="task-workspace__panel" style={{ padding: "1rem" }}>
+      <Flex vertical gap="1rem">
         <div className="task-workspace__grid">
           <label className="task-workspace__field">
             Entidade principal
@@ -486,7 +482,7 @@ function VisualQueryBuilder({
               ))}
           </div>
         </fieldset>
-        <Inline gap="3" wrap>
+        <Flex gap="0.75rem" wrap>
           <Button
             onClick={() =>
               onChange({
@@ -517,7 +513,7 @@ function VisualQueryBuilder({
           >
             Adicionar padrão
           </Button>
-        </Inline>
+        </Flex>
         {(plan.patterns ?? []).map((pattern, index) => (
           <div className="task-workspace__grid" key={`${pattern.field}-${index}`}>
             <label className="task-workspace__field">
@@ -580,8 +576,8 @@ function VisualQueryBuilder({
             </label>
           </div>
         ))}
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 
@@ -591,7 +587,7 @@ function AdvancedQueryResultView({
   result: Awaited<ReturnType<typeof getAdvancedQueryResult>>;
 }) {
   return (
-    <Surface className="task-workspace__panel task-workspace__table-wrap">
+    <Card className="task-workspace__panel task-workspace__table-wrap" style={{ padding: "1rem" }}>
       <h2>Resultado da consulta</h2>
       <table className="task-workspace__table">
         <thead>
@@ -611,7 +607,7 @@ function AdvancedQueryResultView({
           ))}
         </tbody>
       </table>
-    </Surface>
+    </Card>
   );
 }
 
@@ -641,22 +637,20 @@ function JobPanel({
   retrying: boolean;
 }) {
   return (
-    <Surface className="task-workspace__panel">
-      <Stack gap="3">
-        <Inline gap="3" align="center" wrap>
+    <Card className="task-workspace__panel" style={{ padding: "1rem" }}>
+      <Flex vertical gap="0.75rem">
+        <Flex gap="0.75rem" align="center" wrap>
           <h2>Job</h2>
-          <StatusBadge tone={jobTone(job.state)}>{job.state}</StatusBadge>
-        </Inline>
+          <Tag color={jobTone(job.state)}>{job.state}</Tag>
+        </Flex>
         <p>
           {streamMessage ||
             `${job.progress_current}/${job.progress_total} etapas · ${job.candidate_count} candidatos`}
         </p>
         {streamError && !isTerminalJob(job.state) ? (
-          <Alert tone="warning" title="Reconectando eventos">
-            O status também será conferido por consulta periódica.
-          </Alert>
+          <Alert type="warning" title="Reconectando eventos" description="O status também será conferido por consulta periódica." />
         ) : null}
-        <Inline gap="3" wrap>
+        <Flex gap="0.75rem" wrap>
           {!isTerminalJob(job.state) ? (
             <Button onClick={onCancel} disabled={cancelling}>
               Cancelar
@@ -667,17 +661,17 @@ function JobPanel({
               Repetir explicitamente
             </Button>
           ) : null}
-        </Inline>
-      </Stack>
-    </Surface>
+        </Flex>
+      </Flex>
+    </Card>
   );
 }
 
 function TaskResultsView({ page }: { page: TaskResultPage }) {
   return (
-    <Surface className="task-workspace__panel">
+    <Card className="task-workspace__panel" style={{ padding: "1rem" }}>
       <h2>Composições encontradas ({page.total})</h2>
-      <Stack gap="3">
+      <Flex vertical gap="0.75rem">
         {page.compositions.map((composition) => (
           <details key={composition.position} className="task-workspace__result">
             <summary>Composição {composition.position + 1}</summary>
@@ -709,8 +703,8 @@ function TaskResultsView({ page }: { page: TaskResultPage }) {
             </details>
           </details>
         ))}
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 
@@ -718,9 +712,9 @@ function RequestError({ error }: { error: unknown }) {
   const message =
     error instanceof APIRequestError ? error.message : "Não foi possível carregar os dados.";
   return (
-    <Alert tone="danger" title="Falha na solicitação">
+    <Alert type="error" title="Falha na solicitação" description={<>
       {message}
-    </Alert>
+    </>} />
   );
 }
 

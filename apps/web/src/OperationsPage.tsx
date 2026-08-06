@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Page, Stack, StatusBadge, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -135,21 +135,20 @@ export function OperationsPage() {
     [moduleLabels],
   );
   return (
-    <Page.Root maxWidth="lg">
-      <Page.Header>
-        <Page.Eyebrow>M8 · Operações</Page.Eyebrow>
-        <Page.Title>Importações e exportações XLSX</Page.Title>
-        <Page.Description>
+    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">M8 · Operações</div>
+        <Typography.Title level={1} className="page-title">Importações e exportações XLSX</Typography.Title>
+        <Typography.Paragraph className="page-description">
           Envie planilhas privadas, revise o mapeamento e as alterações antes da execução e gere
           exportações completas conforme suas permissões.
-        </Page.Description>
-      </Page.Header>
-      <Page.Content>
-        <Stack gap="6">
+        </Typography.Paragraph>
+      </header>
+      <div className="page-content">
+        <Flex vertical gap="1.5rem">
           {catalog.isError ? (
-            <Alert title="Operações indisponíveis" tone="danger">
-              {operationError(catalog.error)}
-            </Alert>
+            <Alert message="Operações indisponíveis" type="error" description={<>{operationError(catalog.error)}
+            </>} />
           ) : null}
           {catalog.data ? (
             <ImportCreator
@@ -160,14 +159,13 @@ export function OperationsPage() {
               }}
             />
           ) : null}
-          <Page.Section
-            description="Cada upload é validado e processado em segundo plano. Somente suas operações aparecem aqui."
-            title="Importações"
+          <section className="page-section"
           >
+      <Typography.Title level={2}>Importações</Typography.Title>
+      <Typography.Paragraph>Cada upload é validado e processado em segundo plano. Somente suas operações aparecem aqui.</Typography.Paragraph>
             {imports.isError ? (
-              <Alert title="Não foi possível carregar importações" tone="danger">
-                {operationError(imports.error)}
-              </Alert>
+              <Alert message="Não foi possível carregar importações" type="error" description={<>{operationError(imports.error)}
+              </>} />
             ) : null}
             <DataGrid
               caption="Importações XLSX"
@@ -188,7 +186,7 @@ export function OperationsPage() {
               )}
               selectedRowId={selectedImportID}
             />
-          </Page.Section>
+          </section>
           {selectedImportID ? (
             <ImportWorkspace
               catalog={catalog.data?.modules ?? []}
@@ -217,9 +215,9 @@ export function OperationsPage() {
               onUpdated={refreshOperations}
             />
           ) : null}
-        </Stack>
-      </Page.Content>
-    </Page.Root>
+        </Flex>
+      </div>
+    </Layout>
   );
 }
 
@@ -246,7 +244,7 @@ function ImportCreator({
   });
   if (modules.length === 0) return null;
   return (
-    <Surface className="operations-creator" tone="raised">
+    <Card className="operations-creator" style={{ padding: "1rem" }}>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -254,7 +252,7 @@ function ImportCreator({
           mutation.mutate();
         }}
       >
-        <Stack gap="4">
+        <Flex vertical gap="1rem">
           <div>
             <strong>Nova importação</strong>
             <p className="operations-muted">
@@ -286,9 +284,8 @@ function ImportCreator({
             </label>
           </div>
           {mutation.isError ? (
-            <Alert title="Não foi possível enviar a planilha" tone="danger">
-              {operationError(mutation.error)}
-            </Alert>
+            <Alert message="Não foi possível enviar a planilha" type="error" description={<>{operationError(mutation.error)}
+            </>} />
           ) : null}
           {mutation.isPending ? (
             <div aria-live="polite" className="operations-progress">
@@ -296,14 +293,14 @@ function ImportCreator({
               <progress max={100} value={progress} />
             </div>
           ) : null}
-          <Inline>
-            <Button disabled={!file || mutation.isPending} type="submit">
+          <Flex>
+            <Button disabled={!file || mutation.isPending} htmlType="submit">
               {mutation.isPending ? "Enviando" : "Enviar planilha"}
             </Button>
-          </Inline>
-        </Stack>
+          </Flex>
+        </Flex>
       </form>
-    </Surface>
+    </Card>
   );
 }
 
@@ -328,56 +325,46 @@ function ImportWorkspace({
   reportError: Error | null;
   reportLoading: boolean;
 }) {
-  if (loading) return <Alert title="Carregando importação">Aguarde…</Alert>;
+  if (loading) return <Alert message="Carregando importação" type="info" description="Aguarde…" />;
   if (error || !value)
     return (
-      <Alert title="Não foi possível abrir a importação" tone="danger">
-        {operationError(error)}
-      </Alert>
+      <Alert message="Não foi possível abrir a importação" type="error" description={<>{operationError(error)}
+      </>} />
     );
   const module = catalog.find((candidate) => candidate.id === value.module);
   return (
-    <Surface className="operations-workspace" tone="raised">
-      <Stack gap="5">
-        <Inline align="center" className="operations-heading">
+    <Card className="operations-workspace" style={{ padding: "1rem" }}>
+      <Flex vertical gap="1.25rem">
+        <Flex align="center" className="operations-heading">
           <div>
             <span className="operations-muted">Importação selecionada</span>
             <h2>{value.original_filename ?? "Importação do Google Forms"}</h2>
           </div>
-          <Inline>
+          <Flex>
             <OperationStatus value={value.state} />
             <Button onClick={onClose}>Fechar</Button>
-          </Inline>
-        </Inline>
+          </Flex>
+        </Flex>
         <ImportSummary value={value} />
         {value.state === "PARSING" || value.state === "QUEUED" || value.state === "RUNNING" ? (
-          <Alert title="Processamento em segundo plano" tone="info">
-            Esta tela é atualizada automaticamente. Você pode sair e retornar depois.
-          </Alert>
+          <Alert message="Processamento em segundo plano" type="info" description="Esta tela é atualizada automaticamente. Você pode sair e retornar depois." />
         ) : null}
         {value.state === "FAILED" ? (
-          <Alert title="A importação falhou" tone="danger">
-            Código seguro: {value.error_code || "operation_failed"}. Corrija a planilha e crie uma
+          <Alert message="A importação falhou" type="error" description={<>Código seguro: {value.error_code || "operation_failed"}. Corrija a planilha e crie uma
             nova importação.
-          </Alert>
+          </>} />
         ) : null}
         {value.state === "PREVIEW_READY" && value.conflicted_count > 0 ? (
-          <Alert title="Um registro mudou após o preview" tone="warning">
-            Revalide a planilha e confirme novamente as decisões. As linhas já concluídas não serão
-            repetidas.
-          </Alert>
+          <Alert message="Um registro mudou após o preview" type="warning" description="Revalide a planilha e confirme novamente as decisões. As linhas já concluídas não serão
+            repetidas." />
         ) : null}
         {value.state === "CANCELLED" ? (
-          <Alert title="A importação foi cancelada" tone="warning">
-            Nenhuma nova linha será processada. Os resultados já confirmados permanecem no relatório
-            auditável.
-          </Alert>
+          <Alert message="A importação foi cancelada" type="warning" description="Nenhuma nova linha será processada. Os resultados já confirmados permanecem no relatório
+            auditável." />
         ) : null}
         {value.state === "EXPIRED" ? (
-          <Alert title="A importação expirou" tone="warning">
-            O arquivo privado atingiu o prazo de retenção e foi removido. Crie uma nova importação
-            para tentar novamente.
-          </Alert>
+          <Alert message="A importação expirou" type="warning" description="O arquivo privado atingiu o prazo de retenção e foi removido. Crie uma nova importação
+            para tentar novamente." />
         ) : null}
         {["MAPPING", "PREVIEW_READY", "DECISIONS_REQUIRED", "READY"].includes(value.state) ? (
           <MappingWorkspace module={module} onUpdated={onUpdated} value={value} />
@@ -391,8 +378,8 @@ function ImportWorkspace({
         {!operationTerminal(value.state) ? (
           <CancelImportButton onUpdated={onUpdated} value={value} />
         ) : null}
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 
@@ -444,12 +431,11 @@ function ImportReportPanel({
   loading: boolean;
   error: Error | null;
 }) {
-  if (loading) return <Alert title="Carregando relatório final">Aguarde…</Alert>;
+  if (loading) return <Alert message="Carregando relatório final" type="info" description="Aguarde…" />;
   if (error)
     return (
-      <Alert title="Não foi possível carregar o relatório final" tone="danger">
-        {operationError(error)}
-      </Alert>
+      <Alert message="Não foi possível carregar o relatório final" type="error" description={<>{operationError(error)}
+      </>} />
     );
   if (!value) return null;
   const items = [
@@ -464,7 +450,7 @@ function ImportReportPanel({
     ["Erros de validação", value.validation_errors],
   ];
   return (
-    <Stack gap="4">
+    <Flex vertical gap="1rem">
       <div>
         <h3>Relatório final</h3>
         <p className="operations-muted">
@@ -497,7 +483,7 @@ function ImportReportPanel({
           </article>
         )}
       />
-    </Stack>
+    </Flex>
   );
 }
 
@@ -562,10 +548,10 @@ function MappingWorkspace({
     (column) => (column.target_field ?? "") !== (mapping[column.source_column] ?? ""),
   );
   return (
-    <Stack gap="4">
+    <Flex vertical gap="1rem">
       <div>
         <h3>1. Selecione a aba</h3>
-        <Inline>
+        <Flex>
           {value.sheets.map((sheet) => (
             <Button
               aria-pressed={value.selected_sheet_index === sheet.index}
@@ -577,13 +563,11 @@ function MappingWorkspace({
               {value.selected_sheet_index === sheet.index ? " · selecionada" : ""}
             </Button>
           ))}
-        </Inline>
+        </Flex>
       </div>
       {mappingLocked ? (
-        <Alert title="Mapeamento preservado" tone="info">
-          Há linhas já confirmadas. A aba e o mapeamento ficam bloqueados para que esses resultados
-          nunca sejam apagados ou repetidos; revalide o preview para continuar.
-        </Alert>
+        <Alert message="Mapeamento preservado" type="info" description="Há linhas já confirmadas. A aba e o mapeamento ficam bloqueados para que esses resultados
+          nunca sejam apagados ou repetidos; revalide o preview para continuar." />
       ) : null}
       {value.selected_sheet_index !== undefined ? (
         <div>
@@ -619,7 +603,7 @@ function MappingWorkspace({
               </label>
             ))}
           </div>
-          <Inline>
+          <Flex>
             <Button
               disabled={mappingLocked || !mappingReady || save.isPending}
               onClick={() => save.mutate()}
@@ -632,15 +616,14 @@ function MappingWorkspace({
             >
               Validar e visualizar
             </Button>
-          </Inline>
+          </Flex>
         </div>
       ) : null}
       {mutationError ? (
-        <Alert title="Não foi possível preparar a importação" tone="danger">
-          {operationError(mutationError)}
-        </Alert>
+        <Alert message="Não foi possível preparar a importação" type="error" description={<>{operationError(mutationError)}
+        </>} />
       ) : null}
-    </Stack>
+    </Flex>
   );
 }
 
@@ -734,7 +717,7 @@ function PreviewWorkspace({
     [actions],
   );
   return (
-    <Stack gap="4">
+    <Flex vertical gap="1rem">
       <div>
         <h3>Preview da planilha</h3>
         <p className="operations-muted">
@@ -743,9 +726,8 @@ function PreviewWorkspace({
         </p>
       </div>
       {value.validation_error_count > 0 ? (
-        <Alert title="Corrija a planilha ou o mapeamento" tone="warning">
-          Há {value.validation_error_count} erro(s) de validação. Nenhuma alteração foi aplicada.
-        </Alert>
+        <Alert message="Corrija a planilha ou o mapeamento" type="warning" description={<>Há {value.validation_error_count} erro(s) de validação. Nenhuma alteração foi aplicada.
+        </>} />
       ) : null}
       <DataGrid
         caption={`Preview de ${module?.label ?? value.module}`}
@@ -800,16 +782,14 @@ function PreviewWorkspace({
         </Button>
       ) : null}
       {value.state === "COMPLETED" ? (
-        <Alert title="Importação concluída" tone="info">
-          {importResultLabel(value)}. Cada linha possui um resultado idempotente e auditável.
-        </Alert>
+        <Alert message="Importação concluída" type="info" description={<>{importResultLabel(value)}. Cada linha possui um resultado idempotente e auditável.
+        </>} />
       ) : null}
       {decisions.error || execute.error ? (
-        <Alert title="Não foi possível avançar" tone="danger">
-          {operationError(decisions.error ?? execute.error)}
-        </Alert>
+        <Alert message="Não foi possível avançar" type="error" description={<>{operationError(decisions.error ?? execute.error)}
+        </>} />
       ) : null}
-    </Stack>
+    </Flex>
   );
 }
 
@@ -825,18 +805,17 @@ function CancelImportButton({
     onSuccess: onUpdated,
   });
   return (
-    <Stack gap="2">
-      <Inline>
+    <Flex vertical gap="0.5rem">
+      <Flex>
         <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
           Cancelar operação
         </Button>
-      </Inline>
+      </Flex>
       {mutation.isError ? (
-        <Alert title="Não foi possível cancelar" tone="danger">
-          {operationError(mutation.error)}
-        </Alert>
+        <Alert message="Não foi possível cancelar" type="error" description={<>{operationError(mutation.error)}
+        </>} />
       ) : null}
-    </Stack>
+    </Flex>
   );
 }
 
@@ -892,12 +871,12 @@ function ExportWorkspace({
     [download.isPending, download.mutate, moduleLabels],
   );
   return (
-    <Page.Section
-      description="A exportação consulta a tabela completa no servidor e gera um XLSX privado com validade curta."
-      title="Exportações"
+    <section className="page-section"
     >
-      <Stack gap="4">
-        <Inline>
+      <Typography.Title level={2}>Exportações</Typography.Title>
+      <Typography.Paragraph>A exportação consulta a tabela completa no servidor e gera um XLSX privado com validade curta.</Typography.Paragraph>
+      <Flex vertical gap="1rem">
+        <Flex>
           {available.map((module) => (
             <Button
               disabled={mutation.isPending}
@@ -907,11 +886,10 @@ function ExportWorkspace({
               Exportar {module.label}
             </Button>
           ))}
-        </Inline>
+        </Flex>
         {mutation.isError || download.isError || error ? (
-          <Alert title="Não foi possível concluir a exportação" tone="danger">
-            {operationError(mutation.error ?? download.error ?? error)}
-          </Alert>
+          <Alert message="Não foi possível concluir a exportação" type="error" description={<>{operationError(mutation.error ?? download.error ?? error)}
+          </>} />
         ) : null}
         <DataGrid
           caption="Exportações XLSX"
@@ -936,8 +914,8 @@ function ExportWorkspace({
             </article>
           )}
         />
-      </Stack>
-    </Page.Section>
+      </Flex>
+    </section>
   );
 }
 
@@ -974,13 +952,13 @@ function BulkDeleteWorkspace({
     }
   };
   return (
-    <Page.Section
-      description="A exclusão exige IDs e versões atuais, confirmação literal e permissão administrativa. Toda a seleção é transacional."
-      title="Exclusão em lote"
+    <section className="page-section"
     >
-      <Surface className="operations-danger-zone" tone="raised">
+      <Typography.Title level={2}>Exclusão em lote</Typography.Title>
+      <Typography.Paragraph>A exclusão exige IDs e versões atuais, confirmação literal e permissão administrativa. Toda a seleção é transacional.</Typography.Paragraph>
+      <Card className="operations-danger-zone" style={{ padding: "1rem" }}>
         <form onSubmit={submit}>
-          <Stack gap="4">
+          <Flex vertical gap="1rem">
             <div className="operations-form-grid">
               <label>
                 Módulo
@@ -1022,32 +1000,29 @@ function BulkDeleteWorkspace({
               a confirmação exata.
             </span>
             {parseError ? (
-              <Alert title="Revise a seleção" tone="warning">
-                {parseError}
-              </Alert>
+              <Alert message="Revise a seleção" type="warning" description={<>{parseError}
+              </>} />
             ) : null}
             {mutation.isError ? (
-              <Alert title="Nenhum registro foi excluído" tone="danger">
-                {operationError(mutation.error)}
-              </Alert>
+              <Alert message="Nenhum registro foi excluído" type="error" description={<>{operationError(mutation.error)}
+              </>} />
             ) : null}
             {mutation.isSuccess ? (
-              <Alert title="Exclusão concluída" tone="info">
-                {mutation.data.deleted} registro(s) excluído(s).
-              </Alert>
+              <Alert message="Exclusão concluída" type="info" description={<>{mutation.data.deleted} registro(s) excluído(s).
+              </>} />
             ) : null}
-            <Inline>
+            <Flex>
               <Button
                 disabled={confirmation !== "Confirmar" || !selection.trim() || mutation.isPending}
-                type="submit"
+                htmlType="submit"
               >
                 Excluir seleção
               </Button>
-            </Inline>
-          </Stack>
+            </Flex>
+          </Flex>
         </form>
-      </Surface>
-    </Page.Section>
+      </Card>
+    </section>
   );
 }
 
@@ -1078,7 +1053,7 @@ function OperationStatus({
 }: {
   value: OperationImport["state"] | OperationExport["state"];
 }) {
-  return <StatusBadge tone={statusTone(value)}>{stateLabel(value)}</StatusBadge>;
+  return <Tag color={statusTone(value)}>{stateLabel(value)}</Tag>;
 }
 
 function operationActive(state: OperationImport["state"]): boolean {

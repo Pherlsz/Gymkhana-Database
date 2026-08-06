@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Page, Stack, StatusBadge, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -157,27 +157,25 @@ export function MatchingPage() {
   const pageCount = Math.max(1, Math.ceil((cases.data?.total ?? 0) / pageSize));
 
   return (
-    <Page.Root maxWidth="lg">
-      <Page.Header>
-        <Page.Eyebrow>M11 · Matching de perfis</Page.Eyebrow>
-        <Page.Title>Revisão de possíveis duplicidades</Page.Title>
-        <Page.Description>
+    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">M11 · Matching de perfis</div>
+        <Typography.Title level={1} className="page-title">Revisão de possíveis duplicidades</Typography.Title>
+        <Typography.Paragraph className="page-description">
           Gere candidatos sob demanda, confira as evidências e registre uma decisão humana. Nenhum
           perfil é mesclado automaticamente.
-        </Page.Description>
-      </Page.Header>
-      <Page.Content>
-        <Stack gap="6">
+        </Typography.Paragraph>
+      </header>
+      <div className="page-content">
+        <Flex vertical gap="1.5rem">
           {catalog.isError ? (
-            <Alert title="Matching indisponível" tone="danger">
-              {matchingError(catalog.error)}
-            </Alert>
+            <Alert message="Matching indisponível" type="error" description={<>{matchingError(catalog.error)}
+            </>} />
           ) : null}
           {lastMerge ? (
-            <Alert title="Perfis mesclados" tone="success">
-              A pessoa preservada foi atualizada para a versão {lastMerge.survivor_version}; todas
+            <Alert message="Perfis mesclados" type="success" description={<>A pessoa preservada foi atualizada para a versão {lastMerge.survivor_version}; todas
               as dependências indicadas na prévia foram movidas atomicamente.
-            </Alert>
+            </>} />
           ) : null}
           <AnalysisPanel
             analysis={analysis.data ?? startAnalysis.data}
@@ -192,12 +190,12 @@ export function MatchingPage() {
             }}
             starting={startAnalysis.isPending}
           />
-          <Page.Section
-            description="Casos persistem entre análises. Um descarte só é reaberto quando a versão de um dos perfis muda."
-            title="Fila de revisão"
+          <section className="page-section"
           >
-            <Stack gap="4">
-              <Inline className="matching-filters">
+      <Typography.Title level={2}>Fila de revisão</Typography.Title>
+      <Typography.Paragraph>Casos persistem entre análises. Um descarte só é reaberto quando a versão de um dos perfis muda.</Typography.Paragraph>
+            <Flex vertical gap="1rem">
+              <Flex className="matching-filters">
                 <label>
                   Decisão
                   <select
@@ -277,11 +275,10 @@ export function MatchingPage() {
                 <Button disabled={cases.isFetching} onClick={() => void refreshCases()}>
                   {cases.isFetching ? "Atualizando…" : "Atualizar fila"}
                 </Button>
-              </Inline>
+              </Flex>
               {cases.isError ? (
-                <Alert title="Não foi possível carregar os casos" tone="danger">
-                  {matchingError(cases.error)}
-                </Alert>
+                <Alert message="Não foi possível carregar os casos" type="error" description={<>{matchingError(cases.error)}
+                </>} />
               ) : null}
               <div aria-label="Casos de possível duplicidade" className="matching-case-list">
                 {cases.data?.cases.map((value) => (
@@ -293,13 +290,11 @@ export function MatchingPage() {
                   />
                 ))}
                 {!cases.isLoading && cases.data?.cases.length === 0 ? (
-                  <Alert title="Nenhum caso nesta seleção">
-                    Execute uma análise ou altere os filtros para consultar decisões anteriores.
-                  </Alert>
+                  <Alert message="Nenhum caso nesta seleção" type="info" description="Execute uma análise ou altere os filtros para consultar decisões anteriores." />
                 ) : null}
                 {cases.isLoading ? <span>Carregando casos…</span> : null}
               </div>
-              <Inline align="center" className="matching-pagination">
+              <Flex align="center" className="matching-pagination">
                 <Button
                   disabled={search.matching_page <= 1}
                   onClick={() =>
@@ -325,9 +320,9 @@ export function MatchingPage() {
                 >
                   Próxima
                 </Button>
-              </Inline>
-            </Stack>
-          </Page.Section>
+              </Flex>
+            </Flex>
+          </section>
           {search.matching_case ? (
             <CaseWorkspace
               canMerge={canMerge && catalog.data?.can_merge === true}
@@ -355,9 +350,9 @@ export function MatchingPage() {
               value={selected.data}
             />
           ) : null}
-        </Stack>
-      </Page.Content>
-    </Page.Root>
+        </Flex>
+      </div>
+    </Layout>
   );
 }
 
@@ -387,9 +382,9 @@ function AnalysisPanel({
   starting: boolean;
 }) {
   return (
-    <Surface className="matching-analysis" tone="raised">
-      <Stack gap="4">
-        <Inline align="center" className="matching-heading">
+    <Card className="matching-analysis" style={{ padding: "1rem" }}>
+      <Flex vertical gap="1rem">
+        <Flex align="center" className="matching-heading">
           <div>
             <h2>Análise sob demanda</h2>
             <p className="matching-muted">
@@ -397,7 +392,7 @@ function AnalysisPanel({
               {limits?.maximum_candidates ?? 2_000} candidatos por execução.
             </p>
           </div>
-          <Inline>
+          <Flex>
             <Button
               disabled={starting || (analysis ? analysisActive(analysis.state) : false)}
               onClick={onStart}
@@ -409,8 +404,8 @@ function AnalysisPanel({
                 {cancelling ? "Cancelando…" : "Cancelar"}
               </Button>
             ) : null}
-          </Inline>
-        </Inline>
+          </Flex>
+        </Flex>
         {limits ? (
           <span className="matching-muted">
             {limits.maximum_analyses_per_window} análises por{" "}
@@ -418,9 +413,8 @@ function AnalysisPanel({
           </span>
         ) : null}
         {error || cancelError ? (
-          <Alert title="Não foi possível concluir a solicitação" tone="danger">
-            {matchingError(error ?? cancelError)}
-          </Alert>
+          <Alert message="Não foi possível concluir a solicitação" type="error" description={<>{matchingError(error ?? cancelError)}
+          </>} />
         ) : null}
         {analysis ? (
           <div className="matching-analysis-summary" aria-live="polite">
@@ -442,8 +436,8 @@ function AnalysisPanel({
             </div>
           </div>
         ) : null}
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 
@@ -458,7 +452,7 @@ function CaseCard({
 }) {
   return (
     <article className={`matching-case-card${selected ? " matching-case-card--selected" : ""}`}>
-      <Inline align="center" className="matching-heading">
+      <Flex align="center" className="matching-heading">
         <div>
           <strong>
             {value.left?.full_name ?? "Perfil A"} × {value.right?.full_name ?? "Perfil B"}
@@ -467,14 +461,14 @@ function CaseCard({
             {value.evidence.length} evidências · atualizado em {formatDate(value.updated_at)}
           </p>
         </div>
-        <Inline>
-          <StatusBadge tone={scoreBandTone(value.score_band)}>
+        <Flex>
+          <Tag color={scoreBandTone(value.score_band)}>
             {value.score}% · {scoreBandLabel(value.score_band)}
-          </StatusBadge>
-          <StatusBadge tone={caseStateTone(value.state)}>{caseStateLabel(value.state)}</StatusBadge>
+          </Tag>
+          <Tag color={caseStateTone(value.state)}>{caseStateLabel(value.state)}</Tag>
           <Button onClick={onOpen}>Revisar</Button>
-        </Inline>
-      </Inline>
+        </Flex>
+      </Flex>
     </article>
   );
 }
@@ -507,13 +501,13 @@ function CaseWorkspace({
     onSuccess: onDismissed,
   });
   return (
-    <Page.Section
-      description="Confira os valores originais. Evidência indica semelhança, não prova identidade."
-      title="Revisão do caso"
+    <section className="page-section"
     >
-      <Surface className="matching-workspace" tone="raised">
-        <Stack gap="5">
-          <Inline align="center" className="matching-heading">
+      <Typography.Title level={2}>Revisão do caso</Typography.Title>
+      <Typography.Paragraph>Confira os valores originais. Evidência indica semelhança, não prova identidade.</Typography.Paragraph>
+      <Card className="matching-workspace" style={{ padding: "1rem" }}>
+        <Flex vertical gap="1.25rem">
+          <Flex align="center" className="matching-heading">
             <div>
               <h2 ref={heading} tabIndex={-1}>
                 Comparação detalhada
@@ -525,36 +519,30 @@ function CaseWorkspace({
               ) : null}
             </div>
             <Button onClick={onClose}>Fechar</Button>
-          </Inline>
+          </Flex>
           {loading ? <span>Carregando comparação…</span> : null}
           {error ? (
-            <Alert title="Caso indisponível" tone="danger">
-              {matchingError(error)}
-            </Alert>
+            <Alert message="Caso indisponível" type="error" description={<>{matchingError(error)}
+            </>} />
           ) : null}
           {dismiss.isError ? (
-            <Alert title="Não foi possível registrar a decisão" tone="danger">
-              {matchingError(dismiss.error)}
-            </Alert>
+            <Alert message="Não foi possível registrar a decisão" type="error" description={<>{matchingError(dismiss.error)}
+            </>} />
           ) : null}
           {value ? (
             <>
               {value.state !== "PENDING" ? (
-                <Alert title={`Caso ${caseStateLabel(value.state).toLowerCase()}`} tone="info">
-                  Este histórico está em modo de consulta e não aceita uma nova decisão nesta
-                  versão.
-                </Alert>
+                <Alert title={`Caso ${caseStateLabel(value.state).toLowerCase()}`} type="info" description="Este histórico está em modo de consulta e não aceita uma nova decisão nesta
+                  versão." />
               ) : null}
               <EvidencePanel labels={evidenceLabels} value={value} />
               {value.left && value.right ? (
                 <ProfileComparison left={value.left} right={value.right} />
               ) : (
-                <Alert title="Perfis não disponíveis" tone="warning">
-                  Um dos perfis mudou ou não está mais acessível. Execute uma nova análise.
-                </Alert>
+                <Alert message="Perfis não disponíveis" type="warning" description="Um dos perfis mudou ou não está mais acessível. Execute uma nova análise." />
               )}
               {value.state === "PENDING" ? (
-                <Inline>
+                <Flex>
                   <Button
                     disabled={dismiss.isPending}
                     onClick={() => {
@@ -567,21 +555,19 @@ function CaseWorkspace({
                   >
                     {dismiss.isPending ? "Registrando…" : "Não são duplicados"}
                   </Button>
-                </Inline>
+                </Flex>
               ) : null}
               {value.state === "PENDING" && canMerge && value.left && value.right ? (
                 <MergeWorkspace onMerged={onMerged} value={value} />
               ) : value.state === "PENDING" && !canMerge ? (
-                <Alert title="Mesclagem requer administrador" tone="info">
-                  Membros podem revisar e descartar casos. A exclusão do perfil absorvido e a
-                  transferência das dependências exigem ADMIN ou SUPERADMIN.
-                </Alert>
+                <Alert message="Mesclagem requer administrador" type="info" description="Membros podem revisar e descartar casos. A exclusão do perfil absorvido e a
+                  transferência das dependências exigem ADMIN ou SUPERADMIN." />
               ) : null}
             </>
           ) : null}
-        </Stack>
-      </Surface>
-    </Page.Section>
+        </Flex>
+      </Card>
+    </section>
   );
 }
 
@@ -717,8 +703,8 @@ function MergeWorkspace({
   };
 
   return (
-    <Surface className="matching-merge" tone="raised">
-      <Stack gap="4">
+    <Card className="matching-merge" style={{ padding: "1rem" }}>
+      <Flex vertical gap="1rem">
         <div>
           <h3>Mesclagem administrativa</h3>
           <p className="matching-muted">
@@ -740,7 +726,7 @@ function MergeWorkspace({
             </label>
           ))}
         </fieldset>
-        <Inline>
+        <Flex>
           <Button disabled={preview.isPending} onClick={() => preview.mutate(request)}>
             {preview.isPending
               ? "Calculando…"
@@ -748,23 +734,19 @@ function MergeWorkspace({
                 ? "Atualizar prévia"
                 : "Gerar prévia da mesclagem"}
           </Button>
-        </Inline>
+        </Flex>
         {preview.isError ? (
-          <Alert title="Não foi possível gerar a prévia" tone="danger">
-            {matchingError(preview.error)}
-          </Alert>
+          <Alert message="Não foi possível gerar a prévia" type="error" description={<>{matchingError(preview.error)}
+          </>} />
         ) : null}
         {merge.isError ? (
-          <Alert title="A mesclagem não foi aplicada" tone="danger">
-            {matchingError(merge.error)}
-          </Alert>
+          <Alert message="A mesclagem não foi aplicada" type="error" description={<>{matchingError(merge.error)}
+          </>} />
         ) : null}
         {preview.data ? (
           <>
             {!previewFresh ? (
-              <Alert title="Prévia desatualizada" tone="warning">
-                As escolhas mudaram. Atualize a prévia antes de confirmar.
-              </Alert>
+              <Alert message="Prévia desatualizada" type="warning" description="As escolhas mudaram. Atualize a prévia antes de confirmar." />
             ) : null}
             <MergeFields
               choices={choices}
@@ -775,16 +757,13 @@ function MergeWorkspace({
             />
             <DependencyPreview preview={preview.data} />
             {preview.data.unresolved_field_count > 0 ? (
-              <Alert title="Escolhas obrigatórias pendentes" tone="warning">
-                Escolha explicitamente a origem de {preview.data.unresolved_field_count} campo(s) e
+              <Alert message="Escolhas obrigatórias pendentes" type="warning" description={<>Escolha explicitamente a origem de {preview.data.unresolved_field_count} campo(s) e
                 atualize a prévia.
-              </Alert>
+              </>} />
             ) : null}
             {preview.data.conflicts.length > 0 ? (
-              <Alert title="Dependências incompatíveis" tone="danger">
-                A mesclagem está bloqueada. Corrija os registros conflitantes nos cadastros e gere
-                uma nova prévia.
-              </Alert>
+              <Alert message="Dependências incompatíveis" type="error" description="A mesclagem está bloqueada. Corrija os registros conflitantes nos cadastros e gere
+                uma nova prévia." />
             ) : null}
             {ready ? (
               <div className="matching-confirmation">
@@ -807,8 +786,8 @@ function MergeWorkspace({
             ) : null}
           </>
         ) : null}
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 
@@ -897,7 +876,7 @@ function AnalysisStatus({ value }: { value: MatchingAnalysis["state"] }) {
         : value === "CANCELLED"
           ? "warning"
           : "info";
-  return <StatusBadge tone={tone}>{analysisStateLabel(value)}</StatusBadge>;
+  return <Tag color={tone}>{analysisStateLabel(value)}</Tag>;
 }
 
 function analysisActive(value: MatchingAnalysis["state"]): boolean {

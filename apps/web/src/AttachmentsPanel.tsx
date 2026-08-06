@@ -1,4 +1,8 @@
-import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "./ui";
+function toneToType(tone: string): "info" | "success" | "warning" | "error" {
+  return tone === "danger" ? "error" : tone as any;
+}
+
+import { Alert, Button, Card, Flex, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import {
@@ -101,8 +105,8 @@ export function AttachmentsPanel({
   };
 
   return (
-    <Surface className="attachments-panel" tone="raised">
-      <Stack gap="4">
+    <Card className="attachments-panel" style={{ padding: "1rem" }}>
+      <Flex vertical gap="1rem">
         <div className="attachments-panel__header">
           <div>
             <h3>{title}</h3>
@@ -120,21 +124,20 @@ export function AttachmentsPanel({
         {notice ? (
           <Alert
             title="Anexos"
-            tone={
+            type={toneToType(
               notice.includes("Arquivo verificado") ||
               notice.includes("restaurado") ||
               notice.includes("movido")
                 ? "success"
                 : "warning"
-            }
-          >
+            )}
+           description={<>
             {notice}
-          </Alert>
+          </>} />
         ) : null}
         {error ? (
-          <Alert title="Não foi possível concluir a operação" tone="danger">
-            {attachmentError(error)}
-          </Alert>
+          <Alert message="Não foi possível concluir a operação" type="error" description={<>{attachmentError(error)}
+          </>} />
         ) : null}
         <div className="attachments-panel__upload">
           <label htmlFor={inputID}>Adicionar arquivo</label>
@@ -174,8 +177,8 @@ export function AttachmentsPanel({
             />
           ))}
         </div>
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 
@@ -204,10 +207,10 @@ function AttachmentCard({
           <span>Exclusão definitiva em {formatDate(value.purge_after)}</span>
         ) : null}
       </div>
-      <Inline align="center" className="attachment-card__actions">
-        <StatusBadge tone={value.lifecycle_state === "ACTIVE" ? "success" : "warning"}>
+      <Flex align="center" className="attachment-card__actions">
+        <Tag color={value.lifecycle_state === "ACTIVE" ? "success" : "warning"}>
           {value.lifecycle_state === "ACTIVE" ? "Ativo" : "Na lixeira"}
-        </StatusBadge>
+        </Tag>
         {value.lifecycle_state === "ACTIVE" ? (
           <>
             {["application/pdf", "image/jpeg", "image/png"].includes(value.detected_mime) ? (
@@ -232,7 +235,7 @@ function AttachmentCard({
             Restaurar
           </Button>
         )}
-      </Inline>
+      </Flex>
     </article>
   );
 }

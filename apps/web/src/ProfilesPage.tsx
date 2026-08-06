@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Page, Stack, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Layout, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
@@ -226,31 +226,29 @@ export function ProfilesPage() {
   const totalPages = Math.max(1, Math.ceil((query.data?.page.total ?? 0) / search.limit));
 
   return (
-    <Page.Root maxWidth="lg">
-      <Page.Header>
-        <Page.Eyebrow>M4 · Profiles e registros</Page.Eyebrow>
-        <Page.Title>Pessoas</Page.Title>
-        <Page.Description>
+    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">M4 · Profiles e registros</div>
+        <Typography.Title level={1} className="page-title">Pessoas</Typography.Title>
+        <Typography.Paragraph className="page-description">
           Cadastre pessoas e gerencie seus documentos, contas e comprovantes. Todo o estado de
           navegação permanece na URL.
-        </Page.Description>
-        <Page.Actions>
+        </Typography.Paragraph>
+        <div className="page-actions">
           <Button onClick={() => updateSearch({ selected: undefined, mode: "create" })}>
             Nova pessoa
           </Button>
-        </Page.Actions>
-      </Page.Header>
-      <Page.Content>
-        <Stack gap="5">
+        </div>
+      </header>
+      <div className="page-content">
+        <Flex vertical gap="1.25rem">
           {notice ? (
-            <Alert title="Atualização" tone="success">
-              {notice}
-            </Alert>
+            <Alert message="Atualização" type="success" description={<>{notice}
+            </>} />
           ) : null}
           {query.isError ? (
-            <Alert title="Não foi possível carregar pessoas" tone="danger">
-              {errorMessage(query.error)}
-            </Alert>
+            <Alert message="Não foi possível carregar pessoas" type="error" description={<>{errorMessage(query.error)}
+            </>} />
           ) : null}
           <ProfileFilters
             search={search}
@@ -291,8 +289,8 @@ export function ProfilesPage() {
             tableWrapClassName="profiles-table-wrap"
           />
           {canDelete && bulkSelection.size > 0 ? (
-            <Surface className="profiles-bulk-delete" tone="raised">
-              <Stack gap="3">
+            <Card className="profiles-bulk-delete" style={{ padding: "1rem" }}>
+              <Flex vertical gap="0.75rem">
                 <strong>Excluir {bulkSelection.size} pessoa(s) selecionada(s)</strong>
                 <span className="authentication-panel__description">
                   A seleção não altera dados. Para excluir toda a seleção em uma única transação,
@@ -307,11 +305,10 @@ export function ProfilesPage() {
                   />
                 </label>
                 {bulkDeleteMutation.isError ? (
-                  <Alert title="Nenhuma pessoa foi excluída" tone="danger">
-                    {errorMessage(bulkDeleteMutation.error)}
-                  </Alert>
+                  <Alert message="Nenhuma pessoa foi excluída" type="error" description={<>{errorMessage(bulkDeleteMutation.error)}
+                  </>} />
                 ) : null}
-                <Inline>
+                <Flex>
                   <Button
                     disabled={bulkConfirmation !== "Confirmar" || bulkDeleteMutation.isPending}
                     onClick={() => bulkDeleteMutation.mutate()}
@@ -327,9 +324,9 @@ export function ProfilesPage() {
                   >
                     Cancelar
                   </Button>
-                </Inline>
-              </Stack>
-            </Surface>
+                </Flex>
+              </Flex>
+            </Card>
           ) : null}
           <DataGridPagination
             label="pessoas"
@@ -338,8 +335,8 @@ export function ProfilesPage() {
             total={query.data?.page.total ?? 0}
             totalPages={totalPages}
           />
-        </Stack>
-      </Page.Content>
+        </Flex>
+      </div>
       {search.mode ? (
         <ProfilePanel
           key={`${search.mode}:${selected?.id ?? "new"}:${selected?.version ?? 0}`}
@@ -372,7 +369,7 @@ export function ProfilesPage() {
           pending={duplicateMutation.isPending || deleteMutation.isPending}
         />
       ) : null}
-    </Page.Root>
+    </Layout>
   );
 }
 
@@ -384,7 +381,7 @@ function ProfileFilters({
   onChange: (patch: Partial<ProfileListSearch>) => void;
 }) {
   return (
-    <Surface className="profile-filters" tone="raised">
+    <Card className="profile-filters" style={{ padding: "1rem" }}>
       <label>
         Nome
         <input
@@ -453,7 +450,7 @@ function ProfileFilters({
           <option value={1000}>1000</option>
         </select>
       </label>
-    </Surface>
+    </Card>
   );
 }
 
@@ -518,15 +515,15 @@ function InlineEditor({
 }
 function ProfileCard({ value, onOpen }: { value: Profile; onOpen: () => void }) {
   return (
-    <Surface className="profile-card" tone="raised">
-      <Stack gap="2">
+    <Card className="profile-card" style={{ padding: "1rem" }}>
+      <Flex vertical gap="0.5rem">
         <strong>{value.full_name}</strong>
         <span>{formatCPF(value.cpf) || "CPF não informado"}</span>
         <span>{value.email || "E-mail não informado"}</span>
         <span>{value.address.city || "Cidade não informada"}</span>
         <Button onClick={onOpen}>Abrir</Button>
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 
@@ -578,9 +575,7 @@ function ProfilePanel(props: {
   if (props.mode !== "create" && !props.profile)
     return (
       <aside className="profile-panel">
-        <Alert title="Pessoa não encontrada" tone="danger">
-          Atualize a lista e tente novamente.
-        </Alert>
+        <Alert message="Pessoa não encontrada" type="error" description="Atualize a lista e tente novamente." />
         <Button onClick={props.onClose}>Fechar</Button>
       </aside>
     );
@@ -629,9 +624,8 @@ function ProfilePanel(props: {
       ) : (
         <>
           {error ? (
-            <Alert title="Não foi possível salvar" tone="danger">
-              {error}
-            </Alert>
+            <Alert message="Não foi possível salvar" type="error" description={<>{error}
+            </>} />
           ) : null}
           <div className="profile-form">
             <label>
@@ -753,7 +747,7 @@ function ProfilePanel(props: {
               />
             </label>
           </div>
-          <Inline className="profile-panel__actions">
+          <Flex className="profile-panel__actions">
             {editable ? (
               <Button disabled={saving} onClick={() => void submit()}>
                 {saving ? "Salvando" : "Salvar"}
@@ -766,10 +760,10 @@ function ProfilePanel(props: {
                 Duplicar
               </Button>
             ) : null}
-          </Inline>
+          </Flex>
           {props.profile && props.canDelete ? (
-            <Surface className="profile-delete" tone="raised">
-              <Stack gap="3">
+            <Card className="profile-delete" style={{ padding: "1rem" }}>
+              <Flex vertical gap="0.75rem">
                 <strong>Exclusão permanente</strong>
                 <span>Digite Confirmar para excluir esta pessoa.</span>
                 <input
@@ -782,8 +776,8 @@ function ProfilePanel(props: {
                 >
                   Excluir permanentemente
                 </Button>
-              </Stack>
-            </Surface>
+              </Flex>
+            </Card>
           ) : null}
         </>
       )}

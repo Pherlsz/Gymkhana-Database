@@ -1,4 +1,4 @@
-import { Page, Stack } from "./ui";
+import { Flex, Layout, Typography } from "antd";
 import { useState } from "react";
 import "./customdata.css";
 import { useApplicationSession } from "./App";
@@ -14,17 +14,17 @@ export function CustomDataPage() {
   const [section, setSection] = useState<Section>("values");
   const canAdminister = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN";
   return (
-    <Page.Root maxWidth="lg">
-      <Page.Header>
-        <Page.Eyebrow>M5 · Dados personalizados tipados</Page.Eyebrow>
-        <Page.Title>Dados personalizados</Page.Title>
-        <Page.Description>
+    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">M5 · Dados personalizados tipados</div>
+        <Typography.Title level={1} className="page-title">Dados personalizados</Typography.Title>
+        <Typography.Paragraph className="page-description">
           Defina campos tipados reutilizáveis e cadastre entidades vinculadas ou independentes sem
           depender de JSON livre.
-        </Page.Description>
-      </Page.Header>
-      <Page.Content>
-        <Stack gap="5">
+        </Typography.Paragraph>
+      </header>
+      <div className="page-content">
+        <Flex vertical gap="1.25rem">
           <nav aria-label="Seções de dados personalizados" className="custom-data-tabs">
             <button
               className={section === "values" ? "custom-data-tabs__active" : undefined}
@@ -59,8 +59,8 @@ export function CustomDataPage() {
           {section === "types" && canAdminister ? <CustomEntityTypesAdmin /> : null}
           {section === "fields" && canAdminister ? <CustomFieldsAdmin /> : null}
           {section === "entities" ? <CustomEntitiesAdmin /> : null}
-        </Stack>
-      </Page.Content>
-    </Page.Root>
+        </Flex>
+      </div>
+    </Layout>
   );
 }

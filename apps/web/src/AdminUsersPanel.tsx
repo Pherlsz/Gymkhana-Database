@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Tag } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import {
   APIRequestError,
@@ -34,23 +34,22 @@ export function AdminUsersPanel({ currentLogin }: { currentLogin: string }) {
   }, [refresh]);
 
   if (state.kind === "loading") {
-    return <Alert title="Carregando usuários">Consultando acessos da aplicação.</Alert>;
+    return <Alert message="Carregando usuários" type="info" description="Consultando acessos da aplicação." />;
   }
   if (state.kind === "error") {
     return (
-      <Alert title="Não foi possível carregar usuários" tone="danger">
-        <Stack gap="3">
+      <Alert message="Não foi possível carregar usuários" type="error" description={<><Flex vertical gap="0.75rem">
           <span>{state.message}</span>
-          <Inline>
+          <Flex>
             <Button onClick={() => void refresh()}>Tentar novamente</Button>
-          </Inline>
-        </Stack>
-      </Alert>
+          </Flex>
+        </Flex>
+      </>} />
     );
   }
 
   return (
-    <Stack gap="4">
+    <Flex vertical gap="1rem">
       {state.users.map((user) => (
         <ManagedUserCard
           current={user.login === currentLogin}
@@ -68,7 +67,7 @@ export function AdminUsersPanel({ currentLogin }: { currentLogin: string }) {
           }
         />
       ))}
-    </Stack>
+    </Flex>
   );
 }
 
@@ -108,23 +107,23 @@ function ManagedUserCard({
   };
 
   return (
-    <Surface className="managed-user" tone="raised">
-      <Stack gap="4">
-        <Inline align="center" justify="between">
+    <Card className="managed-user" style={{ padding: "1rem" }}>
+      <Flex vertical gap="1rem">
+        <Flex align="center" justify="space-between">
           <div>
             <strong>{user.display_name}</strong>
             <p className="managed-user__secondary">@{user.login}</p>
           </div>
-          <Inline align="center">
-            {current ? <StatusBadge tone="info">Sua conta</StatusBadge> : null}
-            {protectedAccount ? <StatusBadge tone="neutral">Protegido</StatusBadge> : null}
-            <StatusBadge tone={user.active ? "success" : "neutral"}>
+          <Flex align="center">
+            {current ? <Tag color="info">Sua conta</Tag> : null}
+            {protectedAccount ? <Tag color="neutral">Protegido</Tag> : null}
+            <Tag color={user.active ? "success" : "neutral"}>
               {user.active ? "Ativo" : "Inativo"}
-            </StatusBadge>
-          </Inline>
-        </Inline>
+            </Tag>
+          </Flex>
+        </Flex>
 
-        <Inline align="end">
+        <Flex align="end">
           <label className="managed-user__field">
             <span>Função</span>
             <select
@@ -154,7 +153,7 @@ function ManagedUserCard({
           >
             {saving ? "Salvando" : "Salvar acesso"}
           </Button>
-        </Inline>
+        </Flex>
 
         {current ? (
           <span className="managed-user__secondary">
@@ -167,12 +166,11 @@ function ManagedUserCard({
           </span>
         ) : null}
         {error ? (
-          <Alert title="Alteração não aplicada" tone="danger">
-            {error}
-          </Alert>
+          <Alert message="Alteração não aplicada" type="error" description={<>{error}
+          </>} />
         ) : null}
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 

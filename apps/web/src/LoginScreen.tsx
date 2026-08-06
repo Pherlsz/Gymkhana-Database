@@ -49,7 +49,7 @@ export function LoginScreen({ onLogin }: { onLogin: () => void }) {
           <Title level={2} style={{ marginBottom: 8 }}>
             Gymkhana Database
           </Title>
-          <Text type="secondary">Faça login para continuar</Text>
+          <Text>Faça login para continuar</Text>
         </div>
 
         <Button
@@ -69,7 +69,7 @@ export function LoginScreen({ onLogin }: { onLogin: () => void }) {
         </Button>
 
         <div style={{ marginTop: 24, textAlign: "center" }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
+          <Text style={{ fontSize: 12 }}>
             Apenas usuários autorizados podem acessar
           </Text>
         </div>

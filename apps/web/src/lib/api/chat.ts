@@ -257,11 +257,11 @@ function isChatEvent(value: unknown): value is ChatEvent {
 
 function abortableDelay(milliseconds: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(resolve, milliseconds);
+    const timeout = setTimeout(resolve, milliseconds);
     signal.addEventListener(
       "abort",
       () => {
-        window.clearTimeout(timeout);
+        clearTimeout(timeout);
         reject(signal.reason);
       },
       { once: true },

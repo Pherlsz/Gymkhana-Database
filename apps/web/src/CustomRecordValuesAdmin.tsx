@@ -1,4 +1,4 @@
-import { Alert, Stack, Surface } from "./ui";
+import { Alert, Card, Flex } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { SectionTitle } from "./CustomDataShared";
@@ -65,17 +65,16 @@ export function CustomRecordValuesAdmin() {
   );
   const error = profiles.error ?? documents.error ?? bills.error;
   return (
-    <Stack gap="4">
+    <Flex vertical gap="1rem">
       <SectionTitle
         title="Valores por registro"
         description="Edite os campos tipados de pessoas, documentos e contas sem sair da área de dados personalizados."
       />
       {error ? (
-        <Alert title="Não foi possível carregar os registros" tone="danger">
-          {customDataError(error)}
-        </Alert>
+        <Alert message="Não foi possível carregar os registros" type="error" description={<>{customDataError(error)}
+        </>} />
       ) : null}
-      <Surface className="custom-admin-form" tone="raised">
+      <Card className="custom-admin-form" style={{ padding: "1rem" }}>
         <div className="custom-admin-grid">
           <label>
             Registro
@@ -123,7 +122,7 @@ export function CustomRecordValuesAdmin() {
             </label>
           ) : null}
         </div>
-      </Surface>
+      </Card>
       {target === "profile" && profileId ? (
         <CustomValuesPanel
           definitionTargetKind="PROFILE"
@@ -147,6 +146,6 @@ export function CustomRecordValuesAdmin() {
           valueTargetId={selectedBill.id}
         />
       ) : null}
-    </Stack>
+    </Flex>
   );
 }

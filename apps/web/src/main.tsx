@@ -1,8 +1,5 @@
-import "./ui/tokens.css";
-import "./ui/styles.css";
 import { ConfigProvider } from "antd";
 import ptBR from "antd/locale/pt_BR";
-import { ThemeProvider } from "./ui";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
@@ -35,9 +32,7 @@ createRoot(root).render(
         },
       }}
     >
-      <ThemeProvider theme="light">
-        <App />
-      </ThemeProvider>
+      <App />
     </ConfigProvider>
   </StrictMode>
 );

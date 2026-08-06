@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Stack, Surface } from "./ui";
+import { Alert, Button, Card, Flex } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { customDataError } from "./CustomValuesPanel";
@@ -44,19 +44,18 @@ export function CustomOptionsAdmin({
       queryClient.invalidateQueries({ queryKey: ["custom-field-options", field.id] }),
   });
   return (
-    <Surface className="custom-admin-form" tone="raised">
-      <Stack gap="4">
-        <Inline align="center" className="custom-admin-card__header">
+    <Card className="custom-admin-form" style={{ padding: "1rem" }}>
+      <Flex vertical gap="1rem">
+        <Flex align="center" className="custom-admin-card__header">
           <div>
             <strong>Opções de {field.label}</strong>
             <p>Opções inativas continuam legíveis em valores históricos.</p>
           </div>
           <Button onClick={onClose}>Fechar</Button>
-        </Inline>
+        </Flex>
         {save.isError || remove.isError || query.isError ? (
-          <Alert title="Não foi possível alterar opções" tone="danger">
-            {customDataError(save.error ?? remove.error ?? query.error)}
-          </Alert>
+          <Alert message="Não foi possível alterar opções" type="error" description={<>{customDataError(save.error ?? remove.error ?? query.error)}
+          </>} />
         ) : null}
         <div className="custom-admin-grid">
           <label>
@@ -93,7 +92,7 @@ export function CustomOptionsAdmin({
             Ativa
           </label>
         </div>
-        <Inline>
+        <Flex>
           <Button
             disabled={!draft.technical_key || !draft.label || save.isPending}
             onClick={() => save.mutate()}
@@ -110,14 +109,14 @@ export function CustomOptionsAdmin({
               Cancelar
             </Button>
           ) : null}
-        </Inline>
+        </Flex>
         <div className="custom-option-list">
           {query.data?.options.map((value) => (
             <div key={value.id} className="custom-option-row">
               <span>
                 {value.label} · {value.technical_key}
               </span>
-              <Inline>
+              <Flex>
                 <Button
                   onClick={() => {
                     setEditing(value);
@@ -127,11 +126,11 @@ export function CustomOptionsAdmin({
                   Editar
                 </Button>
                 <Button onClick={() => remove.mutate(value)}>Excluir</Button>
-              </Inline>
+              </Flex>
             </div>
           ))}
         </div>
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
