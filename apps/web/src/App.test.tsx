@@ -110,7 +110,7 @@ describe("App", () => {
     await screen.findByText("Member Name");
     fireEvent.click(screen.getByRole("link", { name: "Pessoas" }));
     expect(await screen.findAllByText("Ana da Silva")).not.toHaveLength(0);
-    const nameFilter = screen.getByLabelText("Nome");
+    const nameFilter = screen.getByLabelText("Nome", { selector: "input" });
     fireEvent.change(nameFilter, { target: { value: "Ana" } });
     await waitFor(() => expect(window.location.search).toContain("full_name=Ana"));
     const editor = await screen.findByLabelText("full_name de Ana da Silva");

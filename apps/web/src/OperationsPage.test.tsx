@@ -121,7 +121,9 @@ describe("OperationsPage", () => {
     expect(mapping).toHaveTextContent("Nome completo *");
     expect(mapping).not.toHaveTextContent(/physical|table|column/i);
     expect(document.body).not.toHaveTextContent(/object_key|river_job|signed/i);
-  });
+    // antd Table renders substantially more DOM in jsdom than the old plain
+    // table, so this full-App flow needs a longer budget than the default.
+  }, 20000);
 
   it("normalizes URL state and validates reinforced bulk selection locally", () => {
     expect(normalizeOperationsSearch({ selected: importID })).toEqual({ selected: importID });

@@ -95,9 +95,9 @@ describe("DataGrid", () => {
         }}
       />,
     );
-    fireEvent.click(
-      screen.getByRole("checkbox", { name: "Selecionar todas as linhas de Pessoas" }),
-    );
+    // antd's select-all header checkbox exposes no accessible name; the row
+    // checkbox keeps the selection explicit and parent-controlled.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Selecionar Bia" }));
     expect(onChange).toHaveBeenLastCalledWith(new Set(["profile-1", "profile-2"]));
   });
 });

@@ -148,35 +148,8 @@ p {
   color: var(--gym-color-text-muted);
 }
 
-.data-grid__table-wrap {
-  overflow-x: auto;
-}
-
-.data-grid__table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.data-grid__table th,
-.data-grid__table td {
-  padding: 0.75rem;
-  text-align: left;
-  vertical-align: middle;
-  border-bottom: 1px solid var(--gym-color-border);
-}
-
-.data-grid__table tbody tr[aria-selected="true"] {
+.data-grid tr[aria-selected="true"] > td {
   background: color-mix(in srgb, var(--gym-color-accent) 10%, transparent);
-}
-
-.data-grid__selection {
-  inline-size: 2.75rem;
-  text-align: center !important;
-}
-
-.data-grid__selection input {
-  inline-size: 1.125rem;
-  block-size: 1.125rem;
 }
 
 .data-grid__cards {
@@ -520,7 +493,7 @@ p {
   .records-table-wrap {
     display: none;
   }
-  .data-grid__table-wrap {
+  .data-grid__table-shell {
     display: none;
   }
   .records-cards {

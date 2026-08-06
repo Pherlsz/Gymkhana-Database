@@ -134,7 +134,8 @@
     display: grid;
   }
 
-  .operations-workspace .data-grid__table-wrap {
+  .operations-workspace .data-grid__table-shell {
     max-block-size: 60vh;
+    overflow: auto;
   }
 }
