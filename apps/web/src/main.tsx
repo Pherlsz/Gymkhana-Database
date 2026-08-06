@@ -1,3 +1,4 @@
+import "@ant-design/v5-patch-for-react-19";
 import "./ui/tokens.css";
 import "./ui/styles.css";
 import { ThemeProvider } from "./ui";
@@ -26,5 +27,5 @@ createRoot(root).render(
     <ThemeProvider density="comfortable" theme="system">
       <App />
     </ThemeProvider>
-  </StrictMode>,
+  </StrictMode>
 );
