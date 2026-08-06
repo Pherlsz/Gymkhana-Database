@@ -182,7 +182,7 @@ func TestMatchingHTTPRequiresAuthenticationAndConfiguredService(t *testing.T) {
 	if response.Code != http.StatusUnauthorized {
 		t.Fatalf("unauthenticated response = %d, %s", response.Code, response.Body.String())
 	}
-	handler = matchingHTTPFixture(t, auth.RoleMember, nil, authTestLogger())
+	handler = matchingHTTPFixture(t, auth.RoleExternal, nil, authTestLogger())
 	response = serveMatchingRequest(handler, http.MethodGet, "/api/v1/matching/catalog", "")
 	if response.Code != http.StatusServiceUnavailable {
 		t.Fatalf("unconfigured response = %d, %s", response.Code, response.Body.String())
@@ -191,7 +191,7 @@ func TestMatchingHTTPRequiresAuthenticationAndConfiguredService(t *testing.T) {
 
 func TestMatchingHTTPRejectsInvalidInputsAndMapsStableErrors(t *testing.T) {
 	service := &fakeMatchingHTTPService{}
-	handler := matchingHTTPFixture(t, auth.RoleMember, service, authTestLogger())
+	handler := matchingHTTPFixture(t, auth.RoleExternal, service, authTestLogger())
 	for _, request := range []struct{ method, path, body string }{
 		{http.MethodGet, "/api/v1/matching/analyses/not-a-uuid", ""},
 		{http.MethodGet, "/api/v1/matching/cases?limit=101", ""},
@@ -228,7 +228,7 @@ func TestMatchingHTTPRejectsInvalidInputsAndMapsStableErrors(t *testing.T) {
 	for _, test := range tests {
 		var logs bytes.Buffer
 		service.err = test.err
-		handler = matchingHTTPFixture(t, auth.RoleMember, service, slog.New(slog.NewJSONHandler(&logs, nil)))
+		handler = matchingHTTPFixture(t, auth.RoleExternal, service, slog.New(slog.NewJSONHandler(&logs, nil)))
 		response := serveMatchingRequest(handler, http.MethodGet, "/api/v1/matching/catalog", "")
 		if response.Code != test.status || !strings.Contains(response.Body.String(), `"code":"`+string(test.code)+`"`) ||
 			strings.Contains(response.Body.String(), "private_email") {

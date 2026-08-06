@@ -623,7 +623,7 @@ export interface components {
       role: components["schemas"]["UserRole"];
     };
     /** @enum {string} */
-    UserRole: "MEMBER" | "ADMIN" | "SUPERADMIN";
+    UserRole: "EXTERNAL" | "ADMIN" | "SUPERADMIN";
     AdminUsersResponse: {
       users: components["schemas"]["AdminUser"][];
     };

@@ -15,14 +15,14 @@ var ErrEmptySessionValue = errors.New("session value cannot be empty")
 type Role string
 
 const (
-	RoleMember     Role = "MEMBER"
+	RoleExternal   Role = "EXTERNAL"
 	RoleAdmin      Role = "ADMIN"
 	RoleSuperadmin Role = "SUPERADMIN"
 )
 
 func (role Role) Valid() bool {
 	switch role {
-	case RoleMember, RoleAdmin, RoleSuperadmin:
+	case RoleExternal, RoleAdmin, RoleSuperadmin:
 		return true
 	default:
 		return false

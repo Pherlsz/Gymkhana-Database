@@ -38,7 +38,7 @@ function jsonResponse(payload: unknown, status = 200): Response {
 function renderRecords(
   section: "documents" | "bills",
   patch: Record<string, unknown> = {},
-  role: UserRole = "MEMBER",
+  role: UserRole = "EXTERNAL",
 ) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onSearch = vi.fn<(patch: Partial<ProfileListSearch>) => void>();

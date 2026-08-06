@@ -44,7 +44,7 @@ func searchActor(t *testing.T, active bool) auth.Session {
 	if err != nil {
 		t.Fatalf("auth.NewIdentifier() error = %v", err)
 	}
-	return auth.Session{User: auth.User{ID: id, Role: auth.RoleMember, Active: active}}
+	return auth.Session{User: auth.User{ID: id, Role: auth.RoleExternal, Active: active}}
 }
 
 func TestCatalogIsLogicalPermissionFilteredAndDynamic(t *testing.T) {

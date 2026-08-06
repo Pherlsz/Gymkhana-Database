@@ -19,7 +19,7 @@ func TestServiceAnalysisLifecycleAndPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
-	member := matchingActor(auth.RoleMember)
+	member := matchingActor(auth.RoleExternal)
 	if catalog, err := service.Catalog(member); err != nil || len(catalog) != len(evidenceCatalog) {
 		t.Fatalf("Catalog() = %d definitions, error=%v", len(catalog), err)
 	}
@@ -46,7 +46,7 @@ func TestServiceAnalysisLifecycleAndPermissions(t *testing.T) {
 
 func TestServiceReplaysUnattachedAnalysisThroughUniqueQueue(t *testing.T) {
 	now := time.Date(2026, 7, 17, 18, 30, 0, 0, time.UTC)
-	actor := matchingActor(auth.RoleMember)
+	actor := matchingActor(auth.RoleExternal)
 	analysisID := newTestIdentifier()
 	store := newFakeStore(now)
 	store.created = false
@@ -75,7 +75,7 @@ func TestServiceMergeRequiresAdministrativeExplicitPreview(t *testing.T) {
 	store.preview = MergePreview{CaseID: caseID, Survivor: ProfileSnapshot{ID: survivorID, FullName: "Ana", Version: 2},
 		Source: ProfileSnapshot{ID: sourceID, FullName: "Anna", Version: 3}, Confirmation: "MESCLAR Ana"}
 	store.preview.PreviewFingerprint = sha256.Sum256([]byte("preview"))
-	if _, err := service.PreviewMerge(context.Background(), matchingActor(auth.RoleMember), input, "member-preview"); !errors.Is(err, ErrForbidden) {
+	if _, err := service.PreviewMerge(context.Background(), matchingActor(auth.RoleExternal), input, "member-preview"); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("PreviewMerge(member) error = %v", err)
 	}
 	admin := matchingActor(auth.RoleAdmin)
@@ -86,7 +86,7 @@ func TestServiceMergeRequiresAdministrativeExplicitPreview(t *testing.T) {
 	merge := MergeInput{MergePreviewInput: input, PreviewFingerprint: preview.PreviewFingerprint,
 		IdempotencyKey: "merge-key-0001", Confirmation: preview.Confirmation}
 	store.result = MergeResult{CaseID: caseID, SurvivorProfileID: survivorID, SourceProfileID: sourceID, SurvivorVersion: 3, MergedAt: now}
-	if _, err := service.Merge(context.Background(), matchingActor(auth.RoleMember), merge, "member-merge"); !errors.Is(err, ErrForbidden) {
+	if _, err := service.Merge(context.Background(), matchingActor(auth.RoleExternal), merge, "member-merge"); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("Merge(member) error = %v", err)
 	}
 	if result, err := service.Merge(context.Background(), admin, merge, "merge-request"); err != nil || result.SurvivorProfileID != survivorID {

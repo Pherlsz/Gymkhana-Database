@@ -12,7 +12,7 @@ function jsonResponse(payload: unknown, status = 200): Response {
 function authenticatedSession() {
   return {
     authenticated: true,
-    user: { login: "member", display_name: "Member Name", role: "MEMBER" },
+    user: { login: "member", display_name: "Member Name", role: "EXTERNAL" },
   };
 }
 

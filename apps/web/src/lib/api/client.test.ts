@@ -17,7 +17,7 @@ describe("generated API client helpers", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           authenticated: true,
-          user: { login: "member", display_name: "Member", role: "MEMBER" },
+          user: { login: "member", display_name: "Member", role: "EXTERNAL" },
         }),
       );
     vi.stubGlobal("fetch", fetchMock);

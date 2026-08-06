@@ -84,7 +84,7 @@ func (service *Service) UpdateUserAccess(ctx context.Context, actor Session, par
 		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeDenied, requestID, actor.User.Login)
 		return ManagedUser{}, ErrForbidden
 	}
-	if (params.Role != RoleMember && params.Role != RoleAdmin) || params.Version <= 0 {
+	if (params.Role != RoleExternal && params.Role != RoleAdmin) || params.Version <= 0 {
 		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventUserAccessChanged, AuditOutcomeDenied, requestID, actor.User.Login)
 		return ManagedUser{}, ErrInvalidUserAccess
 	}

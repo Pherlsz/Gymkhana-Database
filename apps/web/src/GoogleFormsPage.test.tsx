@@ -153,7 +153,7 @@ describe("GoogleFormsPage", () => {
   });
 
   it("denies actionable controls to members", async () => {
-    sessionState.role = "MEMBER";
+    sessionState.role = "EXTERNAL";
     renderPage();
     expect(await screen.findByText("Acesso administrativo necessário")).toBeInTheDocument();
     expect(getGoogleFormsStatus).not.toHaveBeenCalled();

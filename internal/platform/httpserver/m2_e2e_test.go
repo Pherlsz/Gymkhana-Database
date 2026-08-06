@@ -204,7 +204,7 @@ func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
 			member = user
 		}
 	}
-	if member.ID == "" || member.Role != auth.RoleMember {
+	if member.ID == "" || member.Role != auth.RoleExternal {
 		t.Fatalf("member = %#v", member)
 	}
 

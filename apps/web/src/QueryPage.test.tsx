@@ -126,7 +126,7 @@ describe("QueryPage", () => {
         return Promise.resolve(
           jsonResponse({
             authenticated: true,
-            user: { login: "member", display_name: "Member", role: "MEMBER" },
+            user: { login: "member", display_name: "Member", role: "EXTERNAL" },
           }),
         );
       if (url.endsWith("/api/v1/query/catalog"))
@@ -249,7 +249,7 @@ describe("QueryPage", () => {
         return Promise.resolve(
           jsonResponse({
             authenticated: true,
-            user: { login: "member", display_name: "Member", role: "MEMBER" },
+            user: { login: "member", display_name: "Member", role: "EXTERNAL" },
           }),
         );
       if (url.endsWith("/api/v1/query/catalog"))
@@ -294,7 +294,7 @@ describe("QueryPage", () => {
         return Promise.resolve(
           jsonResponse({
             authenticated: true,
-            user: { login: "member", display_name: "Member", role: "MEMBER" },
+            user: { login: "member", display_name: "Member", role: "EXTERNAL" },
           }),
         );
       if (url.endsWith("/api/v1/query/catalog"))
@@ -353,7 +353,7 @@ describe("QueryPage", () => {
           return Promise.resolve(
             jsonResponse({
               authenticated: true,
-              user: { login: "member", display_name: "Member", role: "MEMBER" },
+              user: { login: "member", display_name: "Member", role: "EXTERNAL" },
             }),
           );
         if (url.endsWith("/api/v1/query/catalog"))

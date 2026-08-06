@@ -64,7 +64,7 @@ func TestAdministrationAuditsListAccess(t *testing.T) {
 	}{
 		{
 			name:        "denied",
-			actor:       Session{User: User{ID: actorID, Login: "member", Role: RoleMember, Active: true}},
+			actor:       Session{User: User{ID: actorID, Login: "member", Role: RoleExternal, Active: true}},
 			store:       &fakeAdministrationStore{},
 			wantErr:     ErrForbidden,
 			wantOutcome: AuditOutcomeDenied,
@@ -112,7 +112,7 @@ func TestAdministrationRejectsSelfAccessChanges(t *testing.T) {
 
 	_, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
 		UserID:  actorID,
-		Role:    RoleMember,
+		Role:    RoleExternal,
 		Active:  true,
 		Version: 1,
 	}, "request-self")
@@ -159,7 +159,7 @@ func TestNoOpAccessChangeDoesNotRevokeSessions(t *testing.T) {
 	actorID, _ := NewIdentifier()
 	targetID, _ := NewIdentifier()
 	store := &fakeAdministrationStore{target: ManagedUser{
-		User:    User{ID: targetID, Login: "member", Role: RoleMember, Active: true},
+		User:    User{ID: targetID, Login: "member", Role: RoleExternal, Active: true},
 		Version: 3,
 	}}
 	service := newAdministrationService(t, store)
@@ -167,7 +167,7 @@ func TestNoOpAccessChangeDoesNotRevokeSessions(t *testing.T) {
 
 	updated, err := service.UpdateUserAccess(context.Background(), actor, UpdateUserAccessParams{
 		UserID:  targetID,
-		Role:    RoleMember,
+		Role:    RoleExternal,
 		Active:  true,
 		Version: 3,
 	}, "request-noop")
@@ -183,7 +183,7 @@ func TestAccessChangeFailureIsAudited(t *testing.T) {
 	actorID, _ := NewIdentifier()
 	targetID, _ := NewIdentifier()
 	store := &fakeAdministrationStore{
-		target:    ManagedUser{User: User{ID: targetID, Login: "member", Role: RoleMember, Active: true}, Version: 3},
+		target:    ManagedUser{User: User{ID: targetID, Login: "member", Role: RoleExternal, Active: true}, Version: 3},
 		updateErr: ErrUserAccessConflict,
 	}
 	service := newAdministrationService(t, store)
@@ -204,7 +204,7 @@ func TestAccessChangeRevokesSessionsAndRecordsAudit(t *testing.T) {
 	actorID, _ := NewIdentifier()
 	targetID, _ := NewIdentifier()
 	store := &fakeAdministrationStore{
-		target:  ManagedUser{User: User{ID: targetID, Login: "member", Role: RoleMember, Active: true}, Version: 3},
+		target:  ManagedUser{User: User{ID: targetID, Login: "member", Role: RoleExternal, Active: true}, Version: 3},
 		updated: ManagedUser{User: User{ID: targetID, Login: "member", Role: RoleAdmin, Active: true}, Version: 4},
 	}
 	service := newAdministrationService(t, store)

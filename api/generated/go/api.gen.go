@@ -430,7 +430,7 @@ func (e SortOrder) Valid() bool {
 // Defines values for UserRole.
 const (
 	ADMIN      UserRole = "ADMIN"
-	MEMBER     UserRole = "MEMBER"
+	EXTERNAL   UserRole = "EXTERNAL"
 	SUPERADMIN UserRole = "SUPERADMIN"
 )
 
@@ -439,7 +439,7 @@ func (e UserRole) Valid() bool {
 	switch e {
 	case ADMIN:
 		return true
-	case MEMBER:
+	case EXTERNAL:
 		return true
 	case SUPERADMIN:
 		return true

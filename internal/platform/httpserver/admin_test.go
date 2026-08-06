@@ -42,7 +42,7 @@ func TestAdministrationListsAndUpdatesUsers(t *testing.T) {
 			ID: actorID, Login: "owner", Role: auth.RoleSuperadmin, Active: true,
 		}}},
 		users: []auth.ManagedUser{{User: auth.User{
-			ID: targetID, Login: "member", DisplayName: "Member", Role: auth.RoleMember, Active: true,
+			ID: targetID, Login: "member", DisplayName: "Member", Role: auth.RoleExternal, Active: true,
 		}, Version: 1}},
 		updated: auth.ManagedUser{User: auth.User{
 			ID: targetID, Login: "member", DisplayName: "Member", Role: auth.RoleAdmin, Active: true,

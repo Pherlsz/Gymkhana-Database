@@ -183,7 +183,7 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 	user, err := service.store.FindUserByGitHubID(ctx, identity.UserID)
 	switch {
 	case errors.Is(err, ErrUserNotFound):
-		role := RoleMember
+		role := RoleExternal
 		if identity.Login == service.superadminLogin {
 			role = RoleSuperadmin
 		}

@@ -54,7 +54,7 @@ func profileHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeProfileS
 	actorID, _ := auth.NewIdentifier()
 	id, _ := profile.NewIdentifier()
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
-		ID: actorID, Login: "member", Role: auth.RoleMember, Active: true,
+		ID: actorID, Login: "member", Role: auth.RoleExternal, Active: true,
 	}}}}
 	value := profile.Profile{ID: id, Values: profile.Values{FullName: "Ana"}, Version: 1, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
 	service := &fakeProfileService{value: value, page: profile.Page{Profiles: []profile.Profile{value}, Total: 1, Limit: 100, SortField: profile.SortFullName, SortOrder: profile.SortAscending}}

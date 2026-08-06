@@ -158,7 +158,7 @@ func TestServiceDeniesUnlistedAndInactiveUsers(t *testing.T) {
 			store: &fakeStore{user: User{
 				GitHubUserID: 21,
 				Login:        "member",
-				Role:         RoleMember,
+				Role:         RoleExternal,
 				Active:       false,
 			}},
 			wantAudit: AuditEventSignInDenied,
@@ -189,7 +189,7 @@ func TestServiceReadsAndRevokesOpaqueSession(t *testing.T) {
 	sessionID, _ := NewIdentifier()
 	store := &fakeStore{authSession: Session{
 		ID:   sessionID,
-		User: User{ID: userID, Login: "member", Role: RoleMember, Active: true},
+		User: User{ID: userID, Login: "member", Role: RoleExternal, Active: true},
 	}}
 	service, err := NewService(fakeProvider{}, store, ServiceOptions{
 		AllowedLogins:   []string{"admin"},

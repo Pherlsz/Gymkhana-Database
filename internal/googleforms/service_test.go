@@ -91,7 +91,7 @@ func TestGoogleFormsAuthorizationRequiresActiveAdminAndSession(t *testing.T) {
 		t.Fatalf("authorize(admin) error = %v", err)
 	}
 	for _, denied := range []auth.Session{
-		{ID: sessionID, User: auth.User{ID: userID, Role: auth.RoleMember, Active: true}},
+		{ID: sessionID, User: auth.User{ID: userID, Role: auth.RoleExternal, Active: true}},
 		{ID: sessionID, User: auth.User{ID: userID, Role: auth.RoleAdmin, Active: false}},
 		{User: auth.User{ID: userID, Role: auth.RoleAdmin, Active: true}},
 	} {
