@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Pherlsz/Gymkhana-Core/normalize"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/matching"
 )
@@ -533,7 +534,7 @@ func matchingCaseFromDomain(value matching.Case, detailed bool) matchingCaseResp
 
 func matchingProfileFromDomain(value matching.ProfileSnapshot, detailed bool) matchingProfileResponse {
 	response := matchingProfileResponse{
-		ID: value.ID.String(), FullName: value.FullName, SocialName: value.SocialName, CPF: value.CPF,
+		ID: value.ID.String(), FullName: value.FullName, SocialName: value.SocialName, CPF: normalize.MaskCPF(value.CPF),
 		Email: value.Email, MobilePhone: value.MobilePhone, LandlinePhone: value.LandlinePhone,
 		AddressCity: value.AddressCity, AddressState: value.AddressState, Version: value.Version, UpdatedAt: value.UpdatedAt,
 	}

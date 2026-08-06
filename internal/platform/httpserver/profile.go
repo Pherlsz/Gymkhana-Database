@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Pherlsz/Gymkhana-Core/normalize"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
 )
@@ -260,7 +261,7 @@ func (request updateProfileRequest) domainValues() profile.Values {
 	return profileValuesRequest{FullName: request.FullName, SocialName: request.SocialName, CPF: request.CPF, Email: request.Email, MobilePhone: request.MobilePhone, LandlinePhone: request.LandlinePhone, Address: request.Address, Notes: request.Notes}.domainValues()
 }
 func profileFromDomain(value profile.Profile) profileResponse {
-	return profileResponse{ID: value.ID.String(), FullName: value.Values.FullName, SocialName: value.Values.SocialName, CPF: value.Values.CPF, Email: value.Values.Email, MobilePhone: value.Values.MobilePhone, LandlinePhone: value.Values.LandlinePhone,
+	return profileResponse{ID: value.ID.String(), FullName: value.Values.FullName, SocialName: value.Values.SocialName, CPF: normalize.MaskCPF(value.Values.CPF), Email: value.Values.Email, MobilePhone: value.Values.MobilePhone, LandlinePhone: value.Values.LandlinePhone,
 		Address: profileAddressResponse{Street: value.Values.Address.Street, Number: value.Values.Address.Number, Complement: value.Values.Address.Complement, Neighborhood: value.Values.Address.Neighborhood, City: value.Values.Address.City, State: value.Values.Address.State, PostalCode: value.Values.Address.PostalCode}, Notes: value.Values.Notes, Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
 }
 func parseProfileIdentifier(value string) (profile.Identifier, *Problem) {
