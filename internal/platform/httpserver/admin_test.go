@@ -34,6 +34,18 @@ func (service *fakeAdministrationService) UpdateUserAccess(_ context.Context, ac
 	return service.updated, service.updateErr
 }
 
+func (service *fakeAdministrationService) GrantCapability(_ context.Context, _ auth.Session, _ auth.CapabilityGrant, _ string) error {
+	return nil
+}
+
+func (service *fakeAdministrationService) RevokeCapability(_ context.Context, _ auth.Session, _ auth.CapabilityGrant, _ string) error {
+	return nil
+}
+
+func (service *fakeAdministrationService) ListCapabilities(_ context.Context, _ auth.Session, _ auth.Identifier, _ string) ([]auth.Capability, error) {
+	return nil, nil
+}
+
 func TestAdministrationListsAndUpdatesUsers(t *testing.T) {
 	actorID, _ := auth.NewIdentifier()
 	targetID, _ := auth.NewIdentifier()

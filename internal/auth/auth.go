@@ -123,6 +123,8 @@ const (
 	AuditEventSessionRevoked             AuditEventType = "SESSION_REVOKED"
 	AuditEventUserAdministrationAccessed AuditEventType = "USER_ADMINISTRATION_ACCESSED"
 	AuditEventUserAccessChanged          AuditEventType = "USER_ACCESS_CHANGED"
+	AuditEventCapabilityGranted          AuditEventType = "CAPABILITY_GRANTED"
+	AuditEventCapabilityRevoked          AuditEventType = "CAPABILITY_REVOKED"
 )
 
 func (eventType AuditEventType) Valid() bool {
@@ -133,7 +135,9 @@ func (eventType AuditEventType) Valid() bool {
 		AuditEventSignOut,
 		AuditEventSessionRevoked,
 		AuditEventUserAdministrationAccessed,
-		AuditEventUserAccessChanged:
+		AuditEventUserAccessChanged,
+		AuditEventCapabilityGranted,
+		AuditEventCapabilityRevoked:
 		return true
 	default:
 		return false

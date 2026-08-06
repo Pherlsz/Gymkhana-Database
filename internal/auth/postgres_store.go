@@ -13,10 +13,11 @@ import (
 
 type PostgresStore struct {
 	queries *dbgen.Queries
+	pool    *pgxpool.Pool
 }
 
 func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
-	return &PostgresStore{queries: dbgen.New(pool)}
+	return &PostgresStore{queries: dbgen.New(pool), pool: pool}
 }
 
 func (store *PostgresStore) FindUserByGitHubID(ctx context.Context, githubUserID int64) (User, error) {
@@ -148,6 +149,73 @@ func (store *PostgresStore) RevokeSessionByTokenHash(ctx context.Context, tokenH
 
 func (store *PostgresStore) RevokeAllSessionsForUser(ctx context.Context, userID Identifier) error {
 	return store.queries.RevokeAllAppSessionsForUser(ctx, databaseUUID(userID))
+}
+
+func (store *PostgresStore) GrantCapability(ctx context.Context, userID Identifier, cap Capability) error {
+	query := `
+		INSERT INTO app_user_capabilities (user_id, capability, created_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT (user_id, capability) DO NOTHING
+	`
+	result, err := store.pool.Exec(ctx, query, databaseUUID(userID), cap)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return ErrCapabilityAlreadyGranted
+	}
+	return nil
+}
+
+func (store *PostgresStore) RevokeCapability(ctx context.Context, userID Identifier, cap Capability) error {
+	query := `
+		DELETE FROM app_user_capabilities
+		WHERE user_id = $1 AND capability = $2
+	`
+	result, err := store.pool.Exec(ctx, query, databaseUUID(userID), cap)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return ErrCapabilityNotFound
+	}
+	return nil
+}
+
+func (store *PostgresStore) ListUserCapabilities(ctx context.Context, userID Identifier) ([]Capability, error) {
+	query := `
+		SELECT capability
+		FROM app_user_capabilities
+		WHERE user_id = $1
+		ORDER BY capability
+	`
+	rows, err := store.pool.Query(ctx, query, databaseUUID(userID))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var capabilities []Capability
+	for rows.Next() {
+		var cap Capability
+		if err := rows.Scan(&cap); err != nil {
+			return nil, err
+		}
+		capabilities = append(capabilities, cap)
+	}
+	return capabilities, rows.Err()
+}
+
+func (store *PostgresStore) UserHasCapability(ctx context.Context, userID Identifier, cap Capability) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM app_user_capabilities
+			WHERE user_id = $1 AND capability = $2
+		)
+	`
+	var hasCap bool
+	err := store.pool.QueryRow(ctx, query, databaseUUID(userID), cap).Scan(&hasCap)
+	return hasCap, err
 }
 
 func (store *PostgresStore) RecordAuditEvent(ctx context.Context, event AuditEvent) error {
