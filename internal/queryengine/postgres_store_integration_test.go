@@ -103,8 +103,8 @@ VALUES($1,$2,$3,'DECIMAL',12.34)`, valueID.String(), fieldID.String(), profileID
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
-	actor := auth.Session{User: auth.User{ID: actorID, Role: auth.RoleMember, Active: true}}
-	otherActor := auth.Session{User: auth.User{ID: otherActorID, Role: auth.RoleMember, Active: true}}
+	actor := auth.Session{User: auth.User{ID: actorID, Role: auth.RoleExternal, Active: true}}
+	otherActor := auth.Session{User: auth.User{ID: otherActorID, Role: auth.RoleExternal, Active: true}}
 	catalog, err := service.Catalog(ctx, actor, "integration-catalog")
 	if err != nil {
 		t.Fatalf("Catalog() error = %v", err)
@@ -252,7 +252,7 @@ func insertQueryActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id 
 	t.Helper()
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
 (id, github_user_id, github_login, display_name, role, active)
-VALUES($1,$2,$3,'Query integration actor','MEMBER',true)`, id.String(), githubID, login); err != nil {
+VALUES($1,$2,$3,'Query integration actor','EXTERNAL',true)`, id.String(), githubID, login); err != nil {
 		t.Fatalf("insert query actor: %v", err)
 	}
 }

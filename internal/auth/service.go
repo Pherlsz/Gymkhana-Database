@@ -30,21 +30,20 @@ func NewIdentifier() (Identifier, error) {
 	return value, nil
 }
 
-type GitHubIdentity struct {
-	UserID      int64
-	Login       string
+type GoogleIdentity struct {
+	Email       string
 	DisplayName string
 	AvatarURL   string
+	Subject     string
 }
 
 type User struct {
-	ID           Identifier
-	GitHubUserID int64
-	Login        string
-	DisplayName  string
-	AvatarURL    string
-	Role         Role
-	Active       bool
+	ID          Identifier
+	Email       string
+	DisplayName string
+	AvatarURL   string
+	Role        Role
+	Active      bool
 }
 
 type Session struct {
@@ -54,7 +53,7 @@ type Session struct {
 
 type CreateUserParams struct {
 	ID       Identifier
-	Identity GitHubIdentity
+	Identity GoogleIdentity
 	Role     Role
 }
 
@@ -76,9 +75,10 @@ type AuditEvent struct {
 }
 
 type Store interface {
-	FindUserByGitHubID(context.Context, int64) (User, error)
+	FindUserByEmail(context.Context, string) (User, error)
 	CreateUser(context.Context, CreateUserParams) (User, error)
-	UpdateUserIdentity(context.Context, Identifier, GitHubIdentity) (User, error)
+	UpdateUserIdentity(context.Context, Identifier, GoogleIdentity) (User, error)
+	IsEmailAllowed(context.Context, string) (bool, error)
 	CreateSession(context.Context, CreateSessionParams) error
 	FindAuthenticatedSession(context.Context, []byte, time.Time) (Session, error)
 	TouchSession(context.Context, Identifier) error
@@ -86,27 +86,36 @@ type Store interface {
 	RecordAuditEvent(context.Context, AuditEvent) error
 }
 
+type AllowlistStore interface {
+	IsEmailAllowed(context.Context, string) (bool, error)
+	AddAllowedEmail(context.Context, string, *Identifier) error
+	RemoveAllowedEmail(context.Context, string) error
+	ListAllowedEmails(context.Context) ([]string, error)
+}
+
 type OAuthProvider interface {
 	AuthorizationURL(state string) string
-	Exchange(context.Context, string) (GitHubIdentity, error)
+	Exchange(context.Context, string) (GoogleIdentity, error)
 }
 
 type AuditFailureHandler func(context.Context, AuditEvent, error)
 
 type ServiceOptions struct {
-	AllowedLogins   []string
-	SuperadminLogin string
-	Now             func() time.Time
-	OnAuditFailure  AuditFailureHandler
+	AllowedEmails    []string
+	SuperadminEmail  string
+	AllowlistStore   AllowlistStore
+	Now              func() time.Time
+	OnAuditFailure   AuditFailureHandler
 }
 
 type Service struct {
-	provider        OAuthProvider
-	store           Store
-	allowedLogins   map[string]struct{}
-	superadminLogin string
-	now             func() time.Time
-	onAuditFailure  AuditFailureHandler
+	provider         OAuthProvider
+	store            Store
+	allowlistStore   AllowlistStore
+	allowedEmails    map[string]struct{}
+	superadminEmail  string
+	now              func() time.Time
+	onAuditFailure   AuditFailureHandler
 }
 
 type LoginResult struct {
@@ -120,20 +129,20 @@ func NewService(provider OAuthProvider, store Store, options ServiceOptions) (*S
 		return nil, fmt.Errorf("%w: provider and store are required", ErrInvalidServiceSetup)
 	}
 
-	allowedLogins := make(map[string]struct{}, len(options.AllowedLogins))
-	for _, login := range options.AllowedLogins {
-		normalized := normalizeLogin(login)
+	allowedEmails := make(map[string]struct{}, len(options.AllowedEmails))
+	for _, email := range options.AllowedEmails {
+		normalized := normalizeEmail(email)
 		if normalized != "" {
-			allowedLogins[normalized] = struct{}{}
+			allowedEmails[normalized] = struct{}{}
 		}
 	}
-	if len(allowedLogins) == 0 {
-		return nil, fmt.Errorf("%w: at least one allowed login is required", ErrInvalidServiceSetup)
+	if len(allowedEmails) == 0 {
+		return nil, fmt.Errorf("%w: at least one allowed email is required", ErrInvalidServiceSetup)
 	}
 
-	superadminLogin := normalizeLogin(options.SuperadminLogin)
-	if _, allowed := allowedLogins[superadminLogin]; superadminLogin == "" || !allowed {
-		return nil, fmt.Errorf("%w: superadmin login must be allowed", ErrInvalidServiceSetup)
+	superadminEmail := normalizeEmail(options.SuperadminEmail)
+	if _, allowed := allowedEmails[superadminEmail]; superadminEmail == "" || !allowed {
+		return nil, fmt.Errorf("%w: superadmin email must be allowed", ErrInvalidServiceSetup)
 	}
 
 	now := options.Now
@@ -142,12 +151,13 @@ func NewService(provider OAuthProvider, store Store, options ServiceOptions) (*S
 	}
 
 	return &Service{
-		provider:        provider,
-		store:           store,
-		allowedLogins:   allowedLogins,
-		superadminLogin: superadminLogin,
-		now:             now,
-		onAuditFailure:  options.OnAuditFailure,
+		provider:         provider,
+		store:            store,
+		allowlistStore:   options.AllowlistStore,
+		allowedEmails:    allowedEmails,
+		superadminEmail:  superadminEmail,
+		now:              now,
+		onAuditFailure:   options.OnAuditFailure,
 	}, nil
 }
 
@@ -171,53 +181,67 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 		return LoginResult{}, fmt.Errorf("exchange oauth code: %w", err)
 	}
 	identity = normalizeIdentity(identity)
-	if identity.UserID <= 0 || identity.Login == "" {
-		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Login)
+	if identity.Email == "" {
+		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
 		return LoginResult{}, errors.New("oauth provider returned an invalid identity")
 	}
-	if _, allowed := service.allowedLogins[identity.Login]; !allowed {
-		service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Login)
+	
+	// Check DB allowlist first if configured, fall back to in-memory map
+	allowed := false
+	if service.allowlistStore != nil {
+		dbAllowed, err := service.allowlistStore.IsEmailAllowed(ctx, identity.Email)
+		if err != nil {
+			service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
+			return LoginResult{}, fmt.Errorf("check email allowlist: %w", err)
+		}
+		allowed = dbAllowed
+	} else {
+		_, allowed = service.allowedEmails[identity.Email]
+	}
+	
+	if !allowed {
+		service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
 		return LoginResult{}, ErrAccessDenied
 	}
 
-	user, err := service.store.FindUserByGitHubID(ctx, identity.UserID)
+	user, err := service.store.FindUserByEmail(ctx, identity.Email)
 	switch {
 	case errors.Is(err, ErrUserNotFound):
-		role := RoleMember
-		if identity.Login == service.superadminLogin {
+		role := RoleExternal
+		if identity.Email == service.superadminEmail {
 			role = RoleSuperadmin
 		}
 		userID, idErr := NewIdentifier()
 		if idErr != nil {
-			service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Login)
+			service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
 			return LoginResult{}, fmt.Errorf("generate user id: %w", idErr)
 		}
 		user, err = service.store.CreateUser(ctx, CreateUserParams{ID: userID, Identity: identity, Role: role})
 	case err == nil:
 		if !user.Active {
-			service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Login)
+			service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
 			return LoginResult{}, ErrAccessDenied
 		}
 		user, err = service.store.UpdateUserIdentity(ctx, user.ID, identity)
 	}
 	if err != nil {
-		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Login)
+		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
 		return LoginResult{}, fmt.Errorf("persist authenticated user: %w", err)
 	}
 
 	sessionValue, err := NewOpaqueSessionValue()
 	if err != nil {
-		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Login)
+		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
 		return LoginResult{}, fmt.Errorf("generate session value: %w", err)
 	}
 	hash, err := HashOpaqueSessionValue(sessionValue)
 	if err != nil {
-		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Login)
+		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
 		return LoginResult{}, err
 	}
 	sessionID, err := NewIdentifier()
 	if err != nil {
-		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Login)
+		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
 		return LoginResult{}, fmt.Errorf("generate session id: %w", err)
 	}
 	now := service.now().UTC()
@@ -228,11 +252,11 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 		TokenHash: hash[:],
 		ExpiresAt: expiresAt,
 	}); err != nil {
-		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Login)
+		service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
 		return LoginResult{}, fmt.Errorf("create session: %w", err)
 	}
 
-	service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInSucceeded, AuditOutcomeSuccess, requestID, identity.Login)
+	service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInSucceeded, AuditOutcomeSuccess, requestID, identity.Email)
 	return LoginResult{SessionValue: sessionValue, ExpiresAt: expiresAt, User: user}, nil
 }
 
@@ -275,6 +299,44 @@ func (service *Service) SignOut(ctx context.Context, sessionValue, requestID str
 	return nil
 }
 
+func (service *Service) ListAllowedEmails(ctx context.Context, actor Session) ([]string, error) {
+	if !actor.User.Role.CanManageUsers() {
+		return nil, errors.New("only admins can manage the email allowlist")
+	}
+	if service.allowlistStore == nil {
+		return nil, errors.New("allowlist store not configured")
+	}
+	return service.allowlistStore.ListAllowedEmails(ctx)
+}
+
+func (service *Service) AddAllowedEmail(ctx context.Context, actor Session, email string) error {
+	if !actor.User.Role.CanManageUsers() {
+		return errors.New("only admins can manage the email allowlist")
+	}
+	if service.allowlistStore == nil {
+		return errors.New("allowlist store not configured")
+	}
+	email = normalizeEmail(email)
+	if email == "" {
+		return errors.New("email cannot be empty")
+	}
+	return service.allowlistStore.AddAllowedEmail(ctx, email, &actor.User.ID)
+}
+
+func (service *Service) RemoveAllowedEmail(ctx context.Context, actor Session, email string) error {
+	if !actor.User.Role.CanManageUsers() {
+		return errors.New("only admins can manage the email allowlist")
+	}
+	if service.allowlistStore == nil {
+		return errors.New("allowlist store not configured")
+	}
+	email = normalizeEmail(email)
+	if email == "" {
+		return errors.New("email cannot be empty")
+	}
+	return service.allowlistStore.RemoveAllowedEmail(ctx, email)
+}
+
 func (service *Service) recordAudit(
 	ctx context.Context,
 	actorUserID *Identifier,
@@ -309,16 +371,16 @@ func (service *Service) reportAuditFailure(ctx context.Context, event AuditEvent
 	}
 }
 
-func normalizeIdentity(identity GitHubIdentity) GitHubIdentity {
-	identity.Login = normalizeLogin(identity.Login)
+func normalizeIdentity(identity GoogleIdentity) GoogleIdentity {
+	identity.Email = normalizeEmail(identity.Email)
 	identity.DisplayName = strings.TrimSpace(identity.DisplayName)
 	identity.AvatarURL = strings.TrimSpace(identity.AvatarURL)
 	if identity.DisplayName == "" {
-		identity.DisplayName = identity.Login
+		identity.DisplayName = identity.Email
 	}
 	return identity
 }
 
-func normalizeLogin(login string) string {
-	return strings.ToLower(strings.TrimSpace(login))
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }

@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "@pherlsz/gymkhana-ui";
+import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "./ui";
 import { useCallback, useEffect, useState } from "react";
 import {
   APIRequestError,
@@ -132,7 +132,7 @@ function ManagedUserCard({
               onChange={(event) => setRole(event.target.value as UserRole)}
               value={role}
             >
-              <option value="MEMBER">Membro</option>
+              <option value="EXTERNAL">Membro</option>
               <option value="ADMIN">Admin</option>
               <option disabled value="SUPERADMIN">
                 Superadmin

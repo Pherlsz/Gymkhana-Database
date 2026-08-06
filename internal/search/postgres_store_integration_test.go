@@ -50,7 +50,7 @@ func TestPostgresSearchAcrossRelationsDynamicFieldsAttachmentsAndRateLimit(t *te
 
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
 (id, github_user_id, github_login, display_name, role, active)
-VALUES($1,$2,$3,$4,'MEMBER',true)`, actorID.String(), githubID, key, "Search test actor"); err != nil {
+VALUES($1,$2,$3,$4,'EXTERNAL',true)`, actorID.String(), githubID, key, "Search test actor"); err != nil {
 		t.Fatalf("insert app user: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO profiles
@@ -114,7 +114,7 @@ VALUES($1,'DOCUMENT',$2,$3,'application/pdf','application/pdf',128,$4,$5,'ACTIVE
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
-	actor := auth.Session{User: auth.User{ID: actorID, Role: auth.RoleMember, Active: true}}
+	actor := auth.Session{User: auth.User{ID: actorID, Role: auth.RoleExternal, Active: true}}
 
 	relational, err := service.Search(ctx, actor, Query{
 		Terms:   []string{"Ana", `%_`},

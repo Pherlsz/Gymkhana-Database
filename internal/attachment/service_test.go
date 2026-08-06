@@ -206,7 +206,7 @@ func newTestService(t *testing.T, store *memoryStore, objects *memoryObjects, no
 }
 
 func testActor(seed byte) auth.Session {
-	return auth.Session{User: auth.User{ID: auth.Identifier{seed}, Role: auth.RoleMember, Active: true}}
+	return auth.Session{User: auth.User{ID: auth.Identifier{seed}, Role: auth.RoleExternal, Active: true}}
 }
 
 func testIdentifier(seed byte) Identifier {

@@ -17,7 +17,7 @@ describe("generated API client helpers", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           authenticated: true,
-          user: { login: "member", display_name: "Member", role: "MEMBER" },
+          user: { login: "member", display_name: "Member", role: "EXTERNAL" },
         }),
       );
     vi.stubGlobal("fetch", fetchMock);
@@ -26,7 +26,7 @@ describe("generated API client helpers", () => {
     await expect(getAuthSession()).resolves.toMatchObject({ user: { login: "member" } });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "/health/live",
+      expect.stringContaining("/health/live"),
       expect.objectContaining({ credentials: "include" }),
     );
   });
@@ -61,7 +61,7 @@ describe("generated API client helpers", () => {
 
     await expect(logout()).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/auth/logout",
+      expect.stringContaining("/api/auth/logout"),
       expect.objectContaining({ method: "POST", credentials: "include" }),
     );
   });

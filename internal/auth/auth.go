@@ -15,14 +15,14 @@ var ErrEmptySessionValue = errors.New("session value cannot be empty")
 type Role string
 
 const (
-	RoleMember     Role = "MEMBER"
+	RoleExternal   Role = "EXTERNAL"
 	RoleAdmin      Role = "ADMIN"
 	RoleSuperadmin Role = "SUPERADMIN"
 )
 
 func (role Role) Valid() bool {
 	switch role {
-	case RoleMember, RoleAdmin, RoleSuperadmin:
+	case RoleExternal, RoleAdmin, RoleSuperadmin:
 		return true
 	default:
 		return false
@@ -123,6 +123,8 @@ const (
 	AuditEventSessionRevoked             AuditEventType = "SESSION_REVOKED"
 	AuditEventUserAdministrationAccessed AuditEventType = "USER_ADMINISTRATION_ACCESSED"
 	AuditEventUserAccessChanged          AuditEventType = "USER_ACCESS_CHANGED"
+	AuditEventCapabilityGranted          AuditEventType = "CAPABILITY_GRANTED"
+	AuditEventCapabilityRevoked          AuditEventType = "CAPABILITY_REVOKED"
 )
 
 func (eventType AuditEventType) Valid() bool {
@@ -133,7 +135,9 @@ func (eventType AuditEventType) Valid() bool {
 		AuditEventSignOut,
 		AuditEventSessionRevoked,
 		AuditEventUserAdministrationAccessed,
-		AuditEventUserAccessChanged:
+		AuditEventUserAccessChanged,
+		AuditEventCapabilityGranted,
+		AuditEventCapabilityRevoked:
 		return true
 	default:
 		return false

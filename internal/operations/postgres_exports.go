@@ -519,8 +519,8 @@ func (store *PostgresStore) GetActor(ctx context.Context, id auth.Identifier) (a
 	var user auth.User
 	var userID pgtype.UUID
 	var avatar pgtype.Text
-	if err := store.pool.QueryRow(ctx, `SELECT id, github_user_id, github_login, display_name, avatar_url, role, active
- FROM app_users WHERE id=$1`, authDatabaseUUID(id)).Scan(&userID, &user.GitHubUserID, &user.Login, &user.DisplayName, &avatar, &user.Role, &user.Active); errors.Is(err, pgx.ErrNoRows) {
+	if err := store.pool.QueryRow(ctx, `SELECT id, email, display_name, avatar_url, role, active
+ FROM app_users WHERE id=$1`, authDatabaseUUID(id)).Scan(&userID, &user.Email, &user.DisplayName, &avatar, &user.Role, &user.Active); errors.Is(err, pgx.ErrNoRows) {
 		return auth.Session{}, ErrForbidden
 	} else if err != nil {
 		return auth.Session{}, fmt.Errorf("get operation actor: %w", err)

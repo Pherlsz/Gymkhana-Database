@@ -10,7 +10,7 @@ import (
 )
 
 func TestValidateMappingRejectsDuplicateTargetsAndIncompleteMoneyPair(t *testing.T) {
-	profiles, ok := moduleCatalog(auth.RoleMember, ModuleProfiles)
+	profiles, ok := moduleCatalog(auth.RoleExternal, ModuleProfiles)
 	if !ok {
 		t.Fatal("profiles catalog is unavailable")
 	}
@@ -34,7 +34,7 @@ func TestValidateMappingRejectsDuplicateTargetsAndIncompleteMoneyPair(t *testing
 		t.Fatalf("logical custom mapping error = %v", err)
 	}
 
-	bills, ok := moduleCatalog(auth.RoleMember, ModuleBills)
+	bills, ok := moduleCatalog(auth.RoleExternal, ModuleBills)
 	if !ok {
 		t.Fatal("bills catalog is unavailable")
 	}

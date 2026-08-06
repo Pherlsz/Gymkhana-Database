@@ -8,15 +8,15 @@ import (
 )
 
 type fakeProvider struct {
-	identity GitHubIdentity
+	identity GoogleIdentity
 	err      error
 }
 
 func (provider fakeProvider) AuthorizationURL(state string) string {
-	return "https://github.example/authorize?state=" + state
+	return "https://accounts.google.com/authorize?state=" + state
 }
 
-func (provider fakeProvider) Exchange(context.Context, string) (GitHubIdentity, error) {
+func (provider fakeProvider) Exchange(context.Context, string) (GoogleIdentity, error) {
 	return provider.identity, provider.err
 }
 
@@ -31,29 +31,28 @@ type fakeStore struct {
 	revokeError      error
 	audits           []AuditEvent
 	auditError       error
+	allowedEmails    map[string]struct{}
 }
 
-func (store *fakeStore) FindUserByGitHubID(context.Context, int64) (User, error) {
+func (store *fakeStore) FindUserByEmail(context.Context, string) (User, error) {
 	return store.user, store.findUserError
 }
 
 func (store *fakeStore) CreateUser(_ context.Context, params CreateUserParams) (User, error) {
 	store.createdUser = params
 	return User{
-		ID:           params.ID,
-		GitHubUserID: params.Identity.UserID,
-		Login:        params.Identity.Login,
-		DisplayName:  params.Identity.DisplayName,
-		AvatarURL:    params.Identity.AvatarURL,
-		Role:         params.Role,
-		Active:       true,
+		ID:          params.ID,
+		Email:       params.Identity.Email,
+		DisplayName: params.Identity.DisplayName,
+		AvatarURL:   params.Identity.AvatarURL,
+		Role:        params.Role,
+		Active:      true,
 	}, nil
 }
 
-func (store *fakeStore) UpdateUserIdentity(_ context.Context, id Identifier, identity GitHubIdentity) (User, error) {
+func (store *fakeStore) UpdateUserIdentity(_ context.Context, id Identifier, identity GoogleIdentity) (User, error) {
 	store.user.ID = id
-	store.user.GitHubUserID = identity.UserID
-	store.user.Login = identity.Login
+	store.user.Email = identity.Email
 	store.user.DisplayName = identity.DisplayName
 	store.user.AvatarURL = identity.AvatarURL
 	return store.user, nil
@@ -69,6 +68,13 @@ func (store *fakeStore) FindAuthenticatedSession(context.Context, []byte, time.T
 }
 
 func (store *fakeStore) TouchSession(context.Context, Identifier) error { return nil }
+
+func (store *fakeStore) IsEmailAllowed(_ context.Context, email string) (bool, error) {
+	if _, ok := store.allowedEmails[email]; ok {
+		return true, nil
+	}
+	return false, nil
+}
 
 func (store *fakeStore) RevokeSessionByTokenHash(_ context.Context, hash []byte) error {
 	store.revokedHash = append([]byte(nil), hash...)
@@ -86,14 +92,13 @@ func (store *fakeStore) RecordAuditEvent(_ context.Context, event AuditEvent) er
 func TestServiceBootstrapsAllowedSuperadminAndSession(t *testing.T) {
 	now := time.Date(2026, time.July, 14, 18, 0, 0, 0, time.UTC)
 	store := &fakeStore{findUserError: ErrUserNotFound}
-	service, err := NewService(fakeProvider{identity: GitHubIdentity{
-		UserID:      38593854,
-		Login:       " Pherlsz ",
+	service, err := NewService(fakeProvider{identity: GoogleIdentity{
+		Email:       " Pherlsz@example.com ",
 		DisplayName: "",
 		AvatarURL:   "https://example.test/avatar.png",
 	}}, store, ServiceOptions{
-		AllowedLogins:   []string{"pherlsz", "member"},
-		SuperadminLogin: "Pherlsz",
+		AllowedEmails:   []string{"pherlsz@example.com", "member@example.com"},
+		SuperadminEmail: "Pherlsz@example.com",
 		Now:             func() time.Time { return now },
 	})
 	if err != nil {
@@ -108,7 +113,7 @@ func TestServiceBootstrapsAllowedSuperadminAndSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CompleteLogin() error = %v", err)
 	}
-	if result.User.Role != RoleSuperadmin || result.User.Login != "pherlsz" || result.User.DisplayName != "pherlsz" {
+	if result.User.Role != RoleSuperadmin || result.User.Email != "pherlsz@example.com" || result.User.DisplayName != "pherlsz@example.com" {
 		t.Fatalf("user = %#v", result.User)
 	}
 	if store.createdUser.Role != RoleSuperadmin {
@@ -125,7 +130,7 @@ func TestServiceBootstrapsAllowedSuperadminAndSession(t *testing.T) {
 func TestServiceAuditsInvalidOAuthCode(t *testing.T) {
 	store := &fakeStore{}
 	service, err := NewService(fakeProvider{}, store, ServiceOptions{
-		AllowedLogins: []string{"admin"}, SuperadminLogin: "admin",
+		AllowedEmails: []string{"admin@example.com"}, SuperadminEmail: "admin@example.com",
 	})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
@@ -142,24 +147,23 @@ func TestServiceAuditsInvalidOAuthCode(t *testing.T) {
 func TestServiceDeniesUnlistedAndInactiveUsers(t *testing.T) {
 	tests := []struct {
 		name      string
-		identity  GitHubIdentity
+		identity  GoogleIdentity
 		store     *fakeStore
 		wantAudit AuditEventType
 	}{
 		{
 			name:      "unlisted",
-			identity:  GitHubIdentity{UserID: 20, Login: "outsider"},
+			identity:  GoogleIdentity{Email: "outsider@example.com"},
 			store:     &fakeStore{},
 			wantAudit: AuditEventSignInDenied,
 		},
 		{
 			name:     "inactive",
-			identity: GitHubIdentity{UserID: 21, Login: "member"},
+			identity: GoogleIdentity{Email: "member@example.com"},
 			store: &fakeStore{user: User{
-				GitHubUserID: 21,
-				Login:        "member",
-				Role:         RoleMember,
-				Active:       false,
+				Email:  "member@example.com",
+				Role:   RoleExternal,
+				Active: false,
 			}},
 			wantAudit: AuditEventSignInDenied,
 		},
@@ -168,8 +172,8 @@ func TestServiceDeniesUnlistedAndInactiveUsers(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			service, err := NewService(fakeProvider{identity: test.identity}, test.store, ServiceOptions{
-				AllowedLogins:   []string{"admin", "member"},
-				SuperadminLogin: "admin",
+				AllowedEmails:   []string{"admin@example.com", "member@example.com"},
+				SuperadminEmail: "admin@example.com",
 			})
 			if err != nil {
 				t.Fatalf("NewService() error = %v", err)
@@ -189,18 +193,18 @@ func TestServiceReadsAndRevokesOpaqueSession(t *testing.T) {
 	sessionID, _ := NewIdentifier()
 	store := &fakeStore{authSession: Session{
 		ID:   sessionID,
-		User: User{ID: userID, Login: "member", Role: RoleMember, Active: true},
+		User: User{ID: userID, Email: "member@example.com", Role: RoleExternal, Active: true},
 	}}
 	service, err := NewService(fakeProvider{}, store, ServiceOptions{
-		AllowedLogins:   []string{"admin"},
-		SuperadminLogin: "admin",
+		AllowedEmails:   []string{"admin@example.com"},
+		SuperadminEmail: "admin@example.com",
 	})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
 
 	session, err := service.CurrentSession(context.Background(), "opaque-session")
-	if err != nil || session.User.Login != "member" {
+	if err != nil || session.User.Email != "member@example.com" {
 		t.Fatalf("CurrentSession() = %#v, %v", session, err)
 	}
 	if err := service.SignOut(context.Background(), "opaque-session", "request-3"); err != nil {
@@ -217,11 +221,11 @@ func TestServiceReadsAndRevokesOpaqueSession(t *testing.T) {
 func TestServiceAuditsSignOutFailure(t *testing.T) {
 	userID, _ := NewIdentifier()
 	store := &fakeStore{
-		authSession: Session{User: User{ID: userID, Login: "member"}},
+		authSession: Session{User: User{ID: userID, Email: "member@example.com"}},
 		revokeError: errors.New("database unavailable"),
 	}
 	service, err := NewService(fakeProvider{}, store, ServiceOptions{
-		AllowedLogins: []string{"admin"}, SuperadminLogin: "admin",
+		AllowedEmails: []string{"admin@example.com"}, SuperadminEmail: "admin@example.com",
 	})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
@@ -240,8 +244,8 @@ func TestServiceReportsAuditPersistenceFailure(t *testing.T) {
 	var reported AuditEvent
 	var reportedErr error
 	service, err := NewService(fakeProvider{}, store, ServiceOptions{
-		AllowedLogins:   []string{"admin"},
-		SuperadminLogin: "admin",
+		AllowedEmails:   []string{"admin@example.com"},
+		SuperadminEmail: "admin@example.com",
 		OnAuditFailure: func(_ context.Context, event AuditEvent, err error) {
 			reported = event
 			reportedErr = err
@@ -259,8 +263,8 @@ func TestServiceReportsAuditPersistenceFailure(t *testing.T) {
 
 func TestServiceRejectsInvalidSetup(t *testing.T) {
 	_, err := NewService(fakeProvider{}, &fakeStore{}, ServiceOptions{
-		AllowedLogins:   []string{"member"},
-		SuperadminLogin: "admin",
+		AllowedEmails:   []string{"member@example.com"},
+		SuperadminEmail: "admin@example.com",
 	})
 	if !errors.Is(err, ErrInvalidServiceSetup) {
 		t.Fatalf("NewService() error = %v", err)

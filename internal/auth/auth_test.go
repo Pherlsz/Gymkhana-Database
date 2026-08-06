@@ -9,7 +9,7 @@ import (
 )
 
 func TestRolesExposeStablePermissions(t *testing.T) {
-	for _, role := range []Role{RoleMember, RoleAdmin, RoleSuperadmin} {
+	for _, role := range []Role{RoleExternal, RoleAdmin, RoleSuperadmin} {
 		if !role.Valid() {
 			t.Fatalf("role %q is not valid", role)
 		}
@@ -17,21 +17,21 @@ func TestRolesExposeStablePermissions(t *testing.T) {
 	if Role("OWNER").Valid() {
 		t.Fatal("unexpected role is valid")
 	}
-	if RoleMember.CanManageUsers() {
+	if RoleExternal.CanManageUsers() {
 		t.Fatal("member can manage users")
 	}
 	if !RoleAdmin.CanManageUsers() || !RoleSuperadmin.CanManageUsers() {
 		t.Fatal("administrative role cannot manage users")
 	}
-	if RoleMember.CanManageGoogleForms() || !RoleAdmin.CanManageGoogleForms() || !RoleSuperadmin.CanManageGoogleForms() {
+	if RoleExternal.CanManageGoogleForms() || !RoleAdmin.CanManageGoogleForms() || !RoleSuperadmin.CanManageGoogleForms() {
 		t.Fatal("Google Forms administration permissions are not role-scoped")
 	}
-	for _, role := range []Role{RoleMember, RoleAdmin, RoleSuperadmin} {
+	for _, role := range []Role{RoleExternal, RoleAdmin, RoleSuperadmin} {
 		if !role.CanReadCustomData() || !role.CanReadAttachments() || !role.CanSearch() || !role.CanUseOperations() || !role.CanReviewProfileMatches() {
 			t.Fatalf("role %q cannot use authorized Search or Operations modules", role)
 		}
 	}
-	if RoleMember.CanMergeProfiles() || !RoleAdmin.CanMergeProfiles() || !RoleSuperadmin.CanMergeProfiles() {
+	if RoleExternal.CanMergeProfiles() || !RoleAdmin.CanMergeProfiles() || !RoleSuperadmin.CanMergeProfiles() {
 		t.Fatal("Profile merge permissions are not administrative")
 	}
 	if Role("UNKNOWN").CanSearch() || Role("UNKNOWN").CanUseOperations() || Role("UNKNOWN").CanManageGoogleForms() || Role("UNKNOWN").CanReadCustomData() || Role("UNKNOWN").CanReadAttachments() || Role("UNKNOWN").CanReviewProfileMatches() || Role("UNKNOWN").CanMergeProfiles() {

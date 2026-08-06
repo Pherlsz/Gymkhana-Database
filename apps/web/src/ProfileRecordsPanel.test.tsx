@@ -34,7 +34,7 @@ function jsonResponse(payload: unknown): Response {
   });
 }
 
-function renderPanel(role: "MEMBER" | "ADMIN" = "MEMBER") {
+function renderPanel(role: "EXTERNAL" | "ADMIN" = "EXTERNAL") {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onSearch = vi.fn();
   const onNotice = vi.fn();
@@ -164,7 +164,7 @@ describe("ProfileRecordsPanel", () => {
         }),
       ),
     );
-    renderPanel("MEMBER");
+    renderPanel("EXTERNAL");
     await screen.findByText("Nenhum documento cadastrado para esta pessoa.");
     expect(screen.queryByRole("button", { name: "Administrar tipos" })).not.toBeInTheDocument();
     cleanup();

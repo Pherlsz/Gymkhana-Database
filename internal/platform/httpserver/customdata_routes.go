@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func registerCustomDataRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service customDataService) {
-	registerCustomDataDefinitionRoutes(mux, logger, authentication, service)
-	registerCustomDataValueRoutes(mux, logger, authentication, service)
+func registerCustomDataRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service customDataService) {
+	registerCustomDataDefinitionRoutes(mux, logger, authentication, checker, service)
+	registerCustomDataValueRoutes(mux, logger, authentication, checker, service)
 }

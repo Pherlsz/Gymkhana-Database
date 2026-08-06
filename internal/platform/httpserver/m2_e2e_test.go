@@ -14,14 +14,14 @@ import (
 )
 
 type m2Provider struct {
-	identity auth.GitHubIdentity
+	identity auth.GoogleIdentity
 }
 
 func (provider *m2Provider) AuthorizationURL(state string) string {
 	return "https://github.example/authorize?state=" + state
 }
 
-func (provider *m2Provider) Exchange(context.Context, string) (auth.GitHubIdentity, error) {
+func (provider *m2Provider) Exchange(context.Context, string) (auth.GoogleIdentity, error) {
 	return provider.identity, nil
 }
 
@@ -32,24 +32,24 @@ type m2SessionRecord struct {
 }
 
 type m2Store struct {
-	usersByID       map[auth.Identifier]auth.User
-	usersByGitHubID map[int64]auth.Identifier
-	versions        map[auth.Identifier]int64
-	sessions        map[string]m2SessionRecord
-	audits          []auth.AuditEvent
+	usersByID    map[auth.Identifier]auth.User
+	usersByEmail map[string]auth.Identifier
+	versions     map[auth.Identifier]int64
+	sessions     map[string]m2SessionRecord
+	audits       []auth.AuditEvent
 }
 
 func newM2Store() *m2Store {
 	return &m2Store{
-		usersByID:       make(map[auth.Identifier]auth.User),
-		usersByGitHubID: make(map[int64]auth.Identifier),
-		versions:        make(map[auth.Identifier]int64),
-		sessions:        make(map[string]m2SessionRecord),
+		usersByID:    make(map[auth.Identifier]auth.User),
+		usersByEmail: make(map[string]auth.Identifier),
+		versions:     make(map[auth.Identifier]int64),
+		sessions:     make(map[string]m2SessionRecord),
 	}
 }
 
-func (store *m2Store) FindUserByGitHubID(_ context.Context, githubUserID int64) (auth.User, error) {
-	userID, exists := store.usersByGitHubID[githubUserID]
+func (store *m2Store) FindUserByEmail(_ context.Context, email string) (auth.User, error) {
+	userID, exists := store.usersByEmail[email]
 	if !exists {
 		return auth.User{}, auth.ErrUserNotFound
 	}
@@ -58,26 +58,25 @@ func (store *m2Store) FindUserByGitHubID(_ context.Context, githubUserID int64) 
 
 func (store *m2Store) CreateUser(_ context.Context, params auth.CreateUserParams) (auth.User, error) {
 	user := auth.User{
-		ID:           params.ID,
-		GitHubUserID: params.Identity.UserID,
-		Login:        params.Identity.Login,
-		DisplayName:  params.Identity.DisplayName,
-		AvatarURL:    params.Identity.AvatarURL,
-		Role:         params.Role,
-		Active:       true,
+		ID:          params.ID,
+		Email:       params.Identity.Email,
+		DisplayName: params.Identity.DisplayName,
+		AvatarURL:   params.Identity.AvatarURL,
+		Role:        params.Role,
+		Active:      true,
 	}
 	store.usersByID[user.ID] = user
-	store.usersByGitHubID[user.GitHubUserID] = user.ID
+	store.usersByEmail[user.Email] = user.ID
 	store.versions[user.ID] = 1
 	return user, nil
 }
 
-func (store *m2Store) UpdateUserIdentity(_ context.Context, userID auth.Identifier, identity auth.GitHubIdentity) (auth.User, error) {
+func (store *m2Store) UpdateUserIdentity(_ context.Context, userID auth.Identifier, identity auth.GoogleIdentity) (auth.User, error) {
 	user, exists := store.usersByID[userID]
 	if !exists {
 		return auth.User{}, auth.ErrUserNotFound
 	}
-	user.Login = identity.Login
+	user.Email = identity.Email
 	user.DisplayName = identity.DisplayName
 	user.AvatarURL = identity.AvatarURL
 	store.usersByID[userID] = user
@@ -113,6 +112,11 @@ func (store *m2Store) FindAuthenticatedSession(_ context.Context, tokenHash []by
 
 func (store *m2Store) TouchSession(context.Context, auth.Identifier) error { return nil }
 
+func (store *m2Store) IsEmailAllowed(_ context.Context, email string) (bool, error) {
+	_, exists := store.usersByEmail[email]
+	return exists, nil
+}
+
 func (store *m2Store) RevokeSessionByTokenHash(_ context.Context, tokenHash []byte) error {
 	key := string(tokenHash)
 	record, exists := store.sessions[key]
@@ -133,7 +137,7 @@ func (store *m2Store) ListUsers(context.Context, int32, int32) ([]auth.ManagedUs
 	for id, user := range store.usersByID {
 		users = append(users, auth.ManagedUser{User: user, Version: store.versions[id]})
 	}
-	sort.Slice(users, func(left, right int) bool { return users[left].User.Login < users[right].User.Login })
+	sort.Slice(users, func(left, right int) bool { return users[left].User.Email < users[right].User.Email })
 	return users, nil
 }
 
@@ -171,11 +175,11 @@ func (store *m2Store) RevokeAllSessionsForUser(_ context.Context, userID auth.Id
 }
 
 func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
-	provider := &m2Provider{identity: auth.GitHubIdentity{UserID: 1, Login: "owner", DisplayName: "Owner"}}
+	provider := &m2Provider{identity: auth.GoogleIdentity{Subject: "1", Email: "owner", DisplayName: "Owner"}}
 	store := newM2Store()
 	service, err := auth.NewService(provider, store, auth.ServiceOptions{
-		AllowedLogins:   []string{"owner", "member"},
-		SuperadminLogin: "owner",
+		AllowedEmails:   []string{"owner", "member"},
+		SuperadminEmail: "owner",
 		Now:             func() time.Time { return time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC) },
 	})
 	if err != nil {
@@ -184,7 +188,7 @@ func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
 	handler := New(authTestLogger(), nil, Options{Auth: service, ApplicationURL: "https://app.example"})
 
 	ownerCookie := m2Login(t, handler)
-	provider.identity = auth.GitHubIdentity{UserID: 2, Login: "member", DisplayName: "Member"}
+	provider.identity = auth.GoogleIdentity{Subject: "2", Email: "member", DisplayName: "Member"}
 	memberCookie := m2Login(t, handler)
 
 	listRequest := httptest.NewRequest(http.MethodGet, "/api/admin/users", nil)
@@ -200,11 +204,11 @@ func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
 	}
 	var member adminUserResponse
 	for _, user := range listed.Users {
-		if user.Login == "member" {
+		if user.Email == "member" {
 			member = user
 		}
 	}
-	if member.ID == "" || member.Role != auth.RoleMember {
+	if member.ID == "" || member.Role != auth.RoleExternal {
 		t.Fatalf("member = %#v", member)
 	}
 

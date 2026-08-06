@@ -24,8 +24,8 @@ func (store *PostgresStore) CurrentUser(ctx context.Context, id auth.Identifier)
 	var value auth.User
 	var databaseID pgtype.UUID
 	var avatar pgtype.Text
-	err := store.pool.QueryRow(ctx, `SELECT id,github_user_id,github_login,display_name,avatar_url,role,active
-FROM app_users WHERE id=$1`, taskAuthUUID(id)).Scan(&databaseID, &value.GitHubUserID, &value.Login, &value.DisplayName, &avatar, &value.Role, &value.Active)
+	err := store.pool.QueryRow(ctx, `SELECT id,email,display_name,avatar_url,role,active
+FROM app_users WHERE id=$1`, taskAuthUUID(id)).Scan(&databaseID, &value.Email, &value.DisplayName, &avatar, &value.Role, &value.Active)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return auth.User{}, ErrForbidden
 	}

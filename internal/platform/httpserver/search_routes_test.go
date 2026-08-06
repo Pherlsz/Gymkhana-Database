@@ -42,7 +42,7 @@ func searchHTTPFixture(t *testing.T, service *fakeSearchService, logger *slog.Lo
 		t.Fatalf("auth.NewIdentifier() error = %v", err)
 	}
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{
-		session: auth.Session{User: auth.User{ID: actorID, Login: "member", Role: auth.RoleMember, Active: true}},
+		session: auth.Session{User: auth.User{ID: actorID, Email: "member", Role: auth.RoleExternal, Active: true}},
 	}}
 	return New(logger, nil, Options{Auth: authentication, Search: service})
 }

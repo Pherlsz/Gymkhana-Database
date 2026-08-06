@@ -43,7 +43,7 @@ func authTestLogger() *slog.Logger {
 func TestAuthenticationLoginCallbackAndProtectedSession(t *testing.T) {
 	service := &fakeAuthenticationService{
 		loginResult: auth.LoginResult{SessionValue: "session-value", ExpiresAt: time.Now().Add(auth.SessionTTL)},
-		session:     auth.Session{User: auth.User{Login: "member", DisplayName: "Member Name", Role: auth.RoleMember, Active: true}},
+		session:     auth.Session{User: auth.User{Email: "member", DisplayName: "Member Name", Role: auth.RoleExternal, Active: true}},
 	}
 	handler := New(authTestLogger(), nil, Options{Auth: service, ApplicationURL: "https://app.example"})
 

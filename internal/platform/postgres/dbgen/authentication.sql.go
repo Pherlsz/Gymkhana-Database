@@ -65,32 +65,32 @@ func (q *Queries) CreateAppSession(ctx context.Context, arg CreateAppSessionPara
 const createAppUser = `-- name: CreateAppUser :one
 INSERT INTO app_users (
   id,
-  github_user_id,
-  github_login,
+  email,
+  subject,
   display_name,
   avatar_url,
   role,
   active
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+RETURNING id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at
 `
 
 type CreateAppUserParams struct {
-	ID           pgtype.UUID `json:"id"`
-	GithubUserID int64       `json:"github_user_id"`
-	GithubLogin  string      `json:"github_login"`
-	DisplayName  string      `json:"display_name"`
-	AvatarUrl    *string     `json:"avatar_url"`
-	Role         string      `json:"role"`
-	Active       bool        `json:"active"`
+	ID          pgtype.UUID `json:"id"`
+	Email       string      `json:"email"`
+	Subject     string      `json:"subject"`
+	DisplayName string      `json:"display_name"`
+	AvatarUrl   *string     `json:"avatar_url"`
+	Role        string      `json:"role"`
+	Active      bool        `json:"active"`
 }
 
 func (q *Queries) CreateAppUser(ctx context.Context, arg CreateAppUserParams) (AppUser, error) {
 	row := q.db.QueryRow(ctx, createAppUser,
 		arg.ID,
-		arg.GithubUserID,
-		arg.GithubLogin,
+		arg.Email,
+		arg.Subject,
 		arg.DisplayName,
 		arg.AvatarUrl,
 		arg.Role,
@@ -99,8 +99,8 @@ func (q *Queries) CreateAppUser(ctx context.Context, arg CreateAppUserParams) (A
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.Email,
+		&i.Subject,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,
@@ -181,19 +181,19 @@ func (q *Queries) GetAppSessionByTokenHash(ctx context.Context, tokenHash []byte
 	return i, err
 }
 
-const getAppUserByGitHubID = `-- name: GetAppUserByGitHubID :one
-SELECT id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+const getAppUserByEmail = `-- name: GetAppUserByEmail :one
+SELECT id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at
 FROM app_users
-WHERE github_user_id = $1
+WHERE lower(email) = lower($1)
 `
 
-func (q *Queries) GetAppUserByGitHubID(ctx context.Context, githubUserID int64) (AppUser, error) {
-	row := q.db.QueryRow(ctx, getAppUserByGitHubID, githubUserID)
+func (q *Queries) GetAppUserByEmail(ctx context.Context, email string) (AppUser, error) {
+	row := q.db.QueryRow(ctx, getAppUserByEmail, email)
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.Email,
+		&i.Subject,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,
@@ -206,7 +206,7 @@ func (q *Queries) GetAppUserByGitHubID(ctx context.Context, githubUserID int64) 
 }
 
 const getAppUserByID = `-- name: GetAppUserByID :one
-SELECT id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+SELECT id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at
 FROM app_users
 WHERE id = $1
 `
@@ -216,8 +216,8 @@ func (q *Queries) GetAppUserByID(ctx context.Context, id pgtype.UUID) (AppUser, 
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.Email,
+		&i.Subject,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,
@@ -233,8 +233,8 @@ const getAuthenticatedAppSession = `-- name: GetAuthenticatedAppSession :one
 SELECT
   app_sessions.id AS session_id,
   app_users.id AS app_user_id,
-  app_users.github_user_id,
-  app_users.github_login,
+  app_users.email,
+  app_users.subject,
   app_users.display_name,
   app_users.avatar_url,
   app_users.role,
@@ -253,14 +253,14 @@ type GetAuthenticatedAppSessionParams struct {
 }
 
 type GetAuthenticatedAppSessionRow struct {
-	SessionID    pgtype.UUID `json:"session_id"`
-	AppUserID    pgtype.UUID `json:"app_user_id"`
-	GithubUserID int64       `json:"github_user_id"`
-	GithubLogin  string      `json:"github_login"`
-	DisplayName  string      `json:"display_name"`
-	AvatarUrl    *string     `json:"avatar_url"`
-	Role         string      `json:"role"`
-	Active       bool        `json:"active"`
+	SessionID   pgtype.UUID `json:"session_id"`
+	AppUserID   pgtype.UUID `json:"app_user_id"`
+	Email       string      `json:"email"`
+	Subject     string      `json:"subject"`
+	DisplayName string      `json:"display_name"`
+	AvatarUrl   *string     `json:"avatar_url"`
+	Role        string      `json:"role"`
+	Active      bool        `json:"active"`
 }
 
 func (q *Queries) GetAuthenticatedAppSession(ctx context.Context, arg GetAuthenticatedAppSessionParams) (GetAuthenticatedAppSessionRow, error) {
@@ -269,8 +269,8 @@ func (q *Queries) GetAuthenticatedAppSession(ctx context.Context, arg GetAuthent
 	err := row.Scan(
 		&i.SessionID,
 		&i.AppUserID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.Email,
+		&i.Subject,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,
@@ -280,9 +280,9 @@ func (q *Queries) GetAuthenticatedAppSession(ctx context.Context, arg GetAuthent
 }
 
 const listAppUsers = `-- name: ListAppUsers :many
-SELECT id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+SELECT id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at
 FROM app_users
-ORDER BY lower(github_login), id
+ORDER BY lower(email), id
 LIMIT $1 OFFSET $2
 `
 
@@ -302,8 +302,8 @@ func (q *Queries) ListAppUsers(ctx context.Context, arg ListAppUsersParams) ([]A
 		var i AppUser
 		if err := rows.Scan(
 			&i.ID,
-			&i.GithubUserID,
-			&i.GithubLogin,
+			&i.Email,
+			&i.Subject,
 			&i.DisplayName,
 			&i.AvatarUrl,
 			&i.Role,
@@ -376,7 +376,7 @@ SET role = $2,
     version = version + 1
 WHERE id = $1
   AND version = $4
-RETURNING id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+RETURNING id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at
 `
 
 type UpdateAppUserAccessParams struct {
@@ -396,8 +396,8 @@ func (q *Queries) UpdateAppUserAccess(ctx context.Context, arg UpdateAppUserAcce
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.Email,
+		&i.Subject,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,
@@ -411,18 +411,18 @@ func (q *Queries) UpdateAppUserAccess(ctx context.Context, arg UpdateAppUserAcce
 
 const updateAppUserIdentity = `-- name: UpdateAppUserIdentity :one
 UPDATE app_users
-SET github_login = $2,
+SET email = $2,
     display_name = $3,
     avatar_url = $4,
     updated_at = now(),
     version = version + 1
 WHERE id = $1
-RETURNING id, github_user_id, github_login, display_name, avatar_url, role, active, version, created_at, updated_at
+RETURNING id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at
 `
 
 type UpdateAppUserIdentityParams struct {
 	ID          pgtype.UUID `json:"id"`
-	GithubLogin string      `json:"github_login"`
+	Email       string      `json:"email"`
 	DisplayName string      `json:"display_name"`
 	AvatarUrl   *string     `json:"avatar_url"`
 }
@@ -430,15 +430,15 @@ type UpdateAppUserIdentityParams struct {
 func (q *Queries) UpdateAppUserIdentity(ctx context.Context, arg UpdateAppUserIdentityParams) (AppUser, error) {
 	row := q.db.QueryRow(ctx, updateAppUserIdentity,
 		arg.ID,
-		arg.GithubLogin,
+		arg.Email,
 		arg.DisplayName,
 		arg.AvatarUrl,
 	)
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
-		&i.GithubUserID,
-		&i.GithubLogin,
+		&i.Email,
+		&i.Subject,
 		&i.DisplayName,
 		&i.AvatarUrl,
 		&i.Role,

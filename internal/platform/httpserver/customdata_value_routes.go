@@ -1,14 +1,15 @@
 package httpserver
 
 import (
+	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"log/slog"
 	"net/http"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/customdata"
 )
 
-func registerCustomDataValueRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service customDataService) {
-	mux.HandleFunc("GET /api/v1/custom-values/{target_kind}/{target_id}", func(w http.ResponseWriter, r *http.Request) {
+func registerCustomDataValueRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service customDataService) {
+	mux.HandleFunc("GET /api/v1/custom-values/{target_kind}/{target_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -24,8 +25,8 @@ func registerCustomDataValueRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		writeJSON(w, http.StatusOK, customValueSetFromDomain(value))
-	})
-	mux.HandleFunc("PUT /api/v1/custom-values/{target_kind}/{target_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("PUT /api/v1/custom-values/{target_kind}/{target_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -51,8 +52,8 @@ func registerCustomDataValueRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		writeJSON(w, http.StatusOK, customValueSetFromDomain(value))
-	})
-	mux.HandleFunc("GET /api/v1/custom-entities", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/custom-entities", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -87,8 +88,8 @@ func registerCustomDataValueRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			response.Entities = append(response.Entities, customEntityFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
-	mux.HandleFunc("POST /api/v1/custom-entities", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/custom-entities", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -119,8 +120,8 @@ func registerCustomDataValueRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		writeJSON(w, http.StatusCreated, customEntityFromDomain(value))
-	})
-	mux.HandleFunc("GET /api/v1/custom-entities/{entity_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/custom-entities/{entity_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -136,8 +137,8 @@ func registerCustomDataValueRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		writeJSON(w, http.StatusOK, customEntityFromDomain(value))
-	})
-	mux.HandleFunc("PUT /api/v1/custom-entities/{entity_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("PUT /api/v1/custom-entities/{entity_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -163,8 +164,8 @@ func registerCustomDataValueRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		writeJSON(w, http.StatusOK, customEntityFromDomain(value))
-	})
-	mux.HandleFunc("DELETE /api/v1/custom-entities/{entity_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("DELETE /api/v1/custom-entities/{entity_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -184,5 +185,5 @@ func registerCustomDataValueRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}))
 }

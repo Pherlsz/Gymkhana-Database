@@ -27,11 +27,11 @@ func TestCatalogIsDeterministicPermissionFilteredAndLogical(t *testing.T) {
 				Options: []OptionDefinition{{Key: "active", Label: "Ativo"}, {Key: "inactive", Label: "Inativo"}}},
 		},
 	}
-	first, err := loadCatalog(context.Background(), store, auth.RoleMember)
+	first, err := loadCatalog(context.Background(), store, auth.RoleExternal)
 	if err != nil {
 		t.Fatalf("loadCatalog() error = %v", err)
 	}
-	second, err := loadCatalog(context.Background(), store, auth.RoleMember)
+	second, err := loadCatalog(context.Background(), store, auth.RoleExternal)
 	if err != nil {
 		t.Fatalf("second loadCatalog() error = %v", err)
 	}
@@ -60,7 +60,7 @@ func TestCatalogIsDeterministicPermissionFilteredAndLogical(t *testing.T) {
 	if _, err := loadCatalog(context.Background(), store, auth.Role("UNKNOWN")); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("loadCatalog(unknown role) error = %v", err)
 	}
-	for _, role := range []auth.Role{auth.RoleMember, auth.RoleAdmin, auth.RoleSuperadmin} {
+	for _, role := range []auth.Role{auth.RoleExternal, auth.RoleAdmin, auth.RoleSuperadmin} {
 		permitted, err := loadCatalog(context.Background(), store, role)
 		if err != nil || len(permitted.Public.Entities) != 5 || len(permitted.Public.Relations) == 0 {
 			t.Fatalf("loadCatalog(%s) = %d entities/%d relations, error=%v", role, len(permitted.Public.Entities), len(permitted.Public.Relations), err)
@@ -75,7 +75,7 @@ func TestCatalogIsDeterministicPermissionFilteredAndLogical(t *testing.T) {
 		t.Fatalf("non-null field exposes null operators: %#v", fullName.Operators)
 	}
 	store.definitions = CatalogDefinitions{}
-	changed, err := loadCatalog(context.Background(), store, auth.RoleMember)
+	changed, err := loadCatalog(context.Background(), store, auth.RoleExternal)
 	if err != nil || changed.Public.Version == first.Public.Version {
 		t.Fatalf("dynamic catalog did not refresh: %q / %q, error=%v", first.Public.Version, changed.Public.Version, err)
 	}
@@ -86,7 +86,7 @@ func TestCatalogIsDeterministicPermissionFilteredAndLogical(t *testing.T) {
 
 func TestCompilerBuildsParameterizedNestedPlanWithoutMutatingInput(t *testing.T) {
 	store := newFakeQueryStore()
-	catalog, err := loadCatalog(context.Background(), store, auth.RoleMember)
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
 	if err != nil {
 		t.Fatalf("loadCatalog() error = %v", err)
 	}
@@ -125,7 +125,7 @@ func TestCompilerBuildsParameterizedNestedPlanWithoutMutatingInput(t *testing.T)
 
 func TestCompilerRejectsStaleInvalidAndOverCostPlans(t *testing.T) {
 	store := newFakeQueryStore()
-	catalog, err := loadCatalog(context.Background(), store, auth.RoleMember)
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
 	if err != nil {
 		t.Fatalf("loadCatalog() error = %v", err)
 	}
@@ -174,7 +174,7 @@ func FuzzCompilePlanFailsClosed(f *testing.F) {
 	f.Add("profile.full_name; DROP TABLE profiles", "eq", "x")
 	f.Fuzz(func(t *testing.T, field, operator, value string) {
 		store := newFakeQueryStore()
-		catalog, err := loadCatalog(context.Background(), store, auth.RoleMember)
+		catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
 		if err != nil {
 			t.Fatalf("loadCatalog() error = %v", err)
 		}

@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Page, Stack, StatusBadge, Surface } from "@pherlsz/gymkhana-ui";
+import { Alert, Button, Inline, Page, Stack, StatusBadge, Surface } from "./ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useEffect, useMemo, useState, type FormEvent } from "react";

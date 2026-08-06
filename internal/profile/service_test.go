@@ -62,7 +62,7 @@ func (store *fakeServiceStore) RecordAuditEvent(_ context.Context, event AuditEv
 
 func profileActor(role auth.Role) auth.Session {
 	id, _ := auth.NewIdentifier()
-	return auth.Session{User: auth.User{ID: id, Login: "user", Role: role, Active: true}}
+	return auth.Session{User: auth.User{ID: id, Email: "user", Role: role, Active: true}}
 }
 
 func TestServiceListsWithNormalizedOptions(t *testing.T) {
@@ -71,7 +71,7 @@ func TestServiceListsWithNormalizedOptions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	page, err := service.List(context.Background(), profileActor(auth.RoleMember), ListOptions{
+	page, err := service.List(context.Background(), profileActor(auth.RoleExternal), ListOptions{
 		Limit: 200, SortField: SortUpdatedAt, SortOrder: SortDescending,
 		Filters: Filters{FullName: "  ÁNA  ", CPF: "12.3", Email: " TEST@EXAMPLE.COM ", State: "rs"},
 	})
@@ -89,7 +89,7 @@ func TestServiceListsWithNormalizedOptions(t *testing.T) {
 func TestServiceAuditsMutationsAndProtectsDelete(t *testing.T) {
 	store := &fakeServiceStore{}
 	service, _ := NewService(store, ServiceOptions{})
-	member := profileActor(auth.RoleMember)
+	member := profileActor(auth.RoleExternal)
 	created, err := service.Create(context.Background(), member, Values{FullName: "Ana"}, "req-create")
 	if err != nil {
 		t.Fatal(err)
@@ -115,7 +115,7 @@ func TestServiceAuditsMutationsAndProtectsDelete(t *testing.T) {
 func TestServiceReportsValidationAsDeniedAudit(t *testing.T) {
 	store := &fakeServiceStore{err: &ValidationError{Fields: []FieldError{{Field: "full_name", Code: "required"}}}}
 	service, _ := NewService(store, ServiceOptions{})
-	_, err := service.Create(context.Background(), profileActor(auth.RoleMember), Values{}, "req")
+	_, err := service.Create(context.Background(), profileActor(auth.RoleExternal), Values{}, "req")
 	var validation *ValidationError
 	if !errors.As(err, &validation) {
 		t.Fatalf("error = %v", err)

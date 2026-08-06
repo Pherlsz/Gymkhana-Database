@@ -54,7 +54,7 @@ func TestPostgresGoogleFormsOAuthPaginationDriftStagingAndOwnership(t *testing.T
 	}
 	insertGoogleFormsActor(t, ctx, pool, actorID, githubID, key+"_owner", auth.RoleAdmin)
 	insertGoogleFormsActor(t, ctx, pool, otherID, githubID+1, key+"_other", auth.RoleAdmin)
-	insertGoogleFormsActor(t, ctx, pool, memberID, githubID+2, key+"_member", auth.RoleMember)
+	insertGoogleFormsActor(t, ctx, pool, memberID, githubID+2, key+"_member", auth.RoleExternal)
 	insertGoogleFormsSession(t, ctx, pool, sessionID, actorID, 1)
 	insertGoogleFormsSession(t, ctx, pool, otherSessionID, actorID, 2)
 	insertGoogleFormsSession(t, ctx, pool, otherUserSessionID, otherID, 3)
@@ -104,7 +104,7 @@ func TestPostgresGoogleFormsOAuthPaginationDriftStagingAndOwnership(t *testing.T
 	wrongSession := actor
 	wrongSession.ID = otherSessionID
 	other := auth.Session{ID: otherUserSessionID, User: auth.User{ID: otherID, Role: auth.RoleAdmin, Active: true}}
-	member := auth.Session{ID: memberSessionID, User: auth.User{ID: memberID, Role: auth.RoleMember, Active: true}}
+	member := auth.Session{ID: memberSessionID, User: auth.User{ID: memberID, Role: auth.RoleExternal, Active: true}}
 
 	if _, err := service.BeginOAuth(ctx, member, "/google-forms", "member-denied"); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("member BeginOAuth() error = %v", err)

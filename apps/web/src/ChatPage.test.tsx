@@ -70,7 +70,7 @@ describe("AI Chat page", () => {
         return Promise.resolve(
           jsonResponse({
             authenticated: true,
-            user: { login: "member", display_name: "Member Name", role: "MEMBER" },
+            user: { login: "member", display_name: "Member Name", role: "EXTERNAL" },
           }),
         );
       if (url.endsWith("/health/live")) return Promise.resolve(jsonResponse({ status: "ok" }));
@@ -110,7 +110,7 @@ describe("AI Chat page", () => {
         return Promise.resolve(
           jsonResponse({
             authenticated: true,
-            user: { login: "member", display_name: "Member Name", role: "MEMBER" },
+            user: { login: "member", display_name: "Member Name", role: "EXTERNAL" },
           }),
         );
       if (url.endsWith("/health/live")) return Promise.resolve(jsonResponse({ status: "ok" }));
@@ -313,7 +313,7 @@ describe("AI Chat page", () => {
         return Promise.resolve(
           jsonResponse({
             authenticated: true,
-            user: { login: "member", display_name: "Member Name", role: "MEMBER" },
+            user: { login: "member", display_name: "Member Name", role: "EXTERNAL" },
           }),
         );
       if (url.endsWith("/health/live")) return Promise.resolve(jsonResponse({ status: "ok" }));

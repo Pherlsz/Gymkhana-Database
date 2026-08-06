@@ -7,7 +7,7 @@ import {
   Stack,
   StatusBadge,
   Surface,
-} from "@pherlsz/gymkhana-ui";
+} from "./ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Link,
@@ -509,10 +509,10 @@ function FoundationCard({ label, value }: { label: string; value: string }) {
     </Surface>
   );
 }
-function canManageUsers(role: "MEMBER" | "ADMIN" | "SUPERADMIN") {
+function canManageUsers(role: "EXTERNAL" | "ADMIN" | "SUPERADMIN") {
   return role === "ADMIN" || role === "SUPERADMIN";
 }
-function roleLabel(role: "MEMBER" | "ADMIN" | "SUPERADMIN") {
+function roleLabel(role: "EXTERNAL" | "ADMIN" | "SUPERADMIN") {
   return role === "SUPERADMIN" ? "Superadmin" : role === "ADMIN" ? "Admin" : "Membro";
 }
 function authenticationTone(authentication: AuthState): "neutral" | "success" | "danger" | "info" {

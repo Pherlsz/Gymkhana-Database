@@ -34,18 +34,42 @@ func (service *fakeAdministrationService) UpdateUserAccess(_ context.Context, ac
 	return service.updated, service.updateErr
 }
 
+func (service *fakeAdministrationService) GrantCapability(_ context.Context, _ auth.Session, _ auth.CapabilityGrant, _ string) error {
+	return nil
+}
+
+func (service *fakeAdministrationService) RevokeCapability(_ context.Context, _ auth.Session, _ auth.CapabilityGrant, _ string) error {
+	return nil
+}
+
+func (service *fakeAdministrationService) ListCapabilities(_ context.Context, _ auth.Session, _ auth.Identifier, _ string) ([]auth.Capability, error) {
+	return nil, nil
+}
+
+func (service *fakeAdministrationService) ListAllowedEmails(_ context.Context, _ auth.Session) ([]string, error) {
+	return nil, nil
+}
+
+func (service *fakeAdministrationService) AddAllowedEmail(_ context.Context, _ auth.Session, _ string) error {
+	return nil
+}
+
+func (service *fakeAdministrationService) RemoveAllowedEmail(_ context.Context, _ auth.Session, _ string) error {
+	return nil
+}
+
 func TestAdministrationListsAndUpdatesUsers(t *testing.T) {
 	actorID, _ := auth.NewIdentifier()
 	targetID, _ := auth.NewIdentifier()
 	service := &fakeAdministrationService{
 		fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
-			ID: actorID, Login: "owner", Role: auth.RoleSuperadmin, Active: true,
+			ID: actorID, Email: "owner", Role: auth.RoleSuperadmin, Active: true,
 		}}},
 		users: []auth.ManagedUser{{User: auth.User{
-			ID: targetID, Login: "member", DisplayName: "Member", Role: auth.RoleMember, Active: true,
+			ID: targetID, Email: "member", DisplayName: "Member", Role: auth.RoleExternal, Active: true,
 		}, Version: 1}},
 		updated: auth.ManagedUser{User: auth.User{
-			ID: targetID, Login: "member", DisplayName: "Member", Role: auth.RoleAdmin, Active: true,
+			ID: targetID, Email: "member", DisplayName: "Member", Role: auth.RoleAdmin, Active: true,
 		}, Version: 2},
 	}
 	handler := New(authTestLogger(), nil, Options{Auth: service})

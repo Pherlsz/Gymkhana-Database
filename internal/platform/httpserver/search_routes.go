@@ -81,8 +81,8 @@ type searchPageResponse struct {
 	Page    searchPageMetaResponse `json:"page"`
 }
 
-func registerSearchRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service searchService) {
-	mux.HandleFunc("GET /api/v1/search/catalog", func(w http.ResponseWriter, r *http.Request) {
+func registerSearchRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service searchService) {
+	mux.HandleFunc("GET /api/v1/search/catalog", requireCapability(auth.CapSearch, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
 			writeProblem(w, r, *problem)
@@ -98,9 +98,9 @@ func registerSearchRoutes(mux *http.ServeMux, logger *slog.Logger, authenticatio
 			return
 		}
 		writeJSON(w, http.StatusOK, searchCatalogFromDomain(catalog))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/search", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/search", requireCapability(auth.CapSearch, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
 			writeProblem(w, r, *problem)
@@ -124,7 +124,7 @@ func registerSearchRoutes(mux *http.ServeMux, logger *slog.Logger, authenticatio
 			return
 		}
 		writeJSON(w, http.StatusOK, searchPageFromDomain(page))
-	})
+	}))
 }
 
 func searchCatalogFromDomain(catalog searchdomain.Catalog) searchCatalogResponse {

@@ -115,7 +115,7 @@ func (store *fakeServiceStore) RecordAuditEvent(_ context.Context, event AuditEv
 
 func billActor(role auth.Role) auth.Session {
 	id, _ := auth.NewIdentifier()
-	return auth.Session{User: auth.User{ID: id, Login: "user", Role: role, Active: true}}
+	return auth.Session{User: auth.User{ID: id, Email: "user", Role: role, Active: true}}
 }
 
 func TestServiceNormalizesBillAndTypeLists(t *testing.T) {
@@ -125,11 +125,11 @@ func TestServiceNormalizesBillAndTypeLists(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = service.ListTypes(context.Background(), billActor(auth.RoleMember), TypeListOptions{Limit: 250, SortField: TypeSortUpdatedAt, SortOrder: SortDescending, Filters: TypeFilters{Label: "  rg  "}})
+	_, err = service.ListTypes(context.Background(), billActor(auth.RoleExternal), TypeListOptions{Limit: 250, SortField: TypeSortUpdatedAt, SortOrder: SortDescending, Filters: TypeFilters{Label: "  rg  "}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = service.List(context.Background(), billActor(auth.RoleMember), ListOptions{Limit: 500, SortField: SortUpdatedAt, SortOrder: SortDescending, Filters: Filters{OwnerProfileID: &owner, Reference: "  REF-00AB  ", Competence: "2026-07", Status: StatusAvailable}})
+	_, err = service.List(context.Background(), billActor(auth.RoleExternal), ListOptions{Limit: 500, SortField: SortUpdatedAt, SortOrder: SortDescending, Filters: Filters{OwnerProfileID: &owner, Reference: "  REF-00AB  ", Competence: "2026-07", Status: StatusAvailable}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func TestServiceNormalizesBillAndTypeLists(t *testing.T) {
 func TestServiceProtectsTypeAdministrationAndPermanentDelete(t *testing.T) {
 	store := &fakeServiceStore{}
 	service, _ := NewService(store, ServiceOptions{})
-	_, err := service.CreateType(context.Background(), billActor(auth.RoleMember), TypeValues{TechnicalKey: "rg", Label: "RG", Active: true, SupportsCurrentUse: true}, "req-denied")
+	_, err := service.CreateType(context.Background(), billActor(auth.RoleExternal), TypeValues{TechnicalKey: "rg", Label: "RG", Active: true, SupportsCurrentUse: true}, "req-denied")
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("member create type error = %v", err)
 	}
@@ -153,7 +153,7 @@ func TestServiceProtectsTypeAdministrationAndPermanentDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := service.Delete(context.Background(), billActor(auth.RoleMember), created.ID, 1, DeleteConfirmation, "req-delete"); !errors.Is(err, ErrForbidden) {
+	if err := service.Delete(context.Background(), billActor(auth.RoleExternal), created.ID, 1, DeleteConfirmation, "req-delete"); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("member delete error = %v", err)
 	}
 	if err := service.DeleteType(context.Background(), admin, created.ID, 1, "confirmar", "req-invalid"); !errors.Is(err, ErrInvalidConfirmation) {
@@ -169,12 +169,12 @@ func TestServiceAuditsAssignAndReturnCurrentUse(t *testing.T) {
 	service, _ := NewService(store, ServiceOptions{})
 	holder, _ := profile.NewIdentifier()
 	billID, _ := NewIdentifier()
-	if _, err := service.AssignCurrentUse(context.Background(), billActor(auth.RoleMember), billID, holder, "req-assign"); err != nil {
+	if _, err := service.AssignCurrentUse(context.Background(), billActor(auth.RoleExternal), billID, holder, "req-assign"); err != nil {
 		t.Fatal(err)
 	}
 	use := store.currentUse
 	store.currentUseValue = &use
-	if err := service.ReturnCurrentUse(context.Background(), billActor(auth.RoleMember), billID, "req-return"); err != nil {
+	if err := service.ReturnCurrentUse(context.Background(), billActor(auth.RoleExternal), billID, "req-return"); err != nil {
 		t.Fatal(err)
 	}
 	if got := store.audits[len(store.audits)-1]; got.EventType != AuditEventUseReturned || got.Outcome != auth.AuditOutcomeSuccess || got.HolderProfileID == nil {

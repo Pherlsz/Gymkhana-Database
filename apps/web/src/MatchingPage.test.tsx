@@ -17,7 +17,7 @@ function jsonResponse(payload: unknown, status = 200): Response {
   });
 }
 
-function session(role: "MEMBER" | "ADMIN") {
+function session(role: "EXTERNAL" | "ADMIN") {
   return {
     authenticated: true,
     user: { login: "reviewer", display_name: "Revisor", role },
@@ -149,7 +149,7 @@ describe("MatchingPage", () => {
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/api/auth/session"))
-        return Promise.resolve(jsonResponse(session("MEMBER")));
+        return Promise.resolve(jsonResponse(session("EXTERNAL")));
       if (url.endsWith("/api/v1/matching/catalog"))
         return Promise.resolve(jsonResponse(catalog(false)));
       if (url.includes("/api/v1/matching/cases?") && (!init?.method || init.method === "GET")) {
@@ -232,7 +232,7 @@ describe("MatchingPage", () => {
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/api/auth/session"))
-        return Promise.resolve(jsonResponse(session("MEMBER")));
+        return Promise.resolve(jsonResponse(session("EXTERNAL")));
       if (url.endsWith("/api/v1/matching/catalog"))
         return Promise.resolve(jsonResponse(catalog(false)));
       if (url.includes("/api/v1/matching/cases?"))

@@ -376,12 +376,12 @@ A capacidade central do sistema é consultar qualquer dado permitido, em qualque
 
 ### 3.1 Autenticação
 
-- O login da aplicação usa GitHub OAuth com allowlist explícita.
+- O login da aplicação usa Google OAuth com allowlist de e-mails explícita.
 - Não existe senha local.
 - Cloudflare Access pode ser adicionado como camada externa complementar, sem substituir autenticação, sessão ou autorização da aplicação.
 - O primeiro login autorizado configurado como SUPERADMIN cria a conta privilegiada inicial.
-- Demais logins autorizados podem ser criados como MEMBER.
-- Um usuário inativo continua bloqueado mesmo que permaneça na allowlist do GitHub.
+- Demais logins autorizados podem ser criados como EXTERNAL.
+- Um usuário inativo continua bloqueado mesmo que permaneça na allowlist de e-mails.
 
 ### 3.2 Sessões
 
@@ -395,7 +395,7 @@ A capacidade central do sistema é consultar qualquer dado permitido, em qualque
 
 ### 3.3 Roles e permissões
 
-- Roles da aplicação: `MEMBER`, `ADMIN` e `SUPERADMIN`.
+- Roles da aplicação: `EXTERNAL`, `ADMIN` e `SUPERADMIN`.
 - Deve existir exatamente um SUPERADMIN ativo.
 - Autorizações são centralizadas por permissions/capabilities.
 - Handlers e componentes não devem replicar regras de role de forma independente.
@@ -404,6 +404,15 @@ A capacidade central do sistema é consultar qualquer dado permitido, em qualque
 - ADMIN não pode alterar o SUPERADMIN pela administração genérica.
 - Feature flags e capacidades são derivadas da role/permissão, sem `secure mode` paralelo.
 - Cada admin visualiza e administra apenas os próprios formulários/conexões do Google Forms, salvo permissão superior explicitamente definida.
+
+#### Sistema de capabilities
+
+- Usuários EXTERNAL requerem grants explícitos de capabilities para acessar funcionalidades específicas.
+- ADMIN e SUPERADMIN bypassam verificações de capability e têm acesso total.
+- Capabilities são gerenciadas via endpoints admin e armazenadas em `app_user_capabilities`.
+- Capabilities disponíveis: `search`, `profiles`, `data_tables`, `attachments`, `ocr`, `operations`, `google_forms`, `query`, `matching`, `chat`, `tasks`.
+- Middleware HTTP verifica capabilities em todas as rotas protegidas.
+- Grants e revogações são auditados.
 
 ### 3.4 Auditoria
 

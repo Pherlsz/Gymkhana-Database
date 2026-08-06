@@ -48,7 +48,7 @@ func TestPostgresOperationLifecycleIdempotencyOwnershipExportAndBulkDelete(t *te
 		githubID = 2
 	}
 	insertOperationActor(t, ctx, pool, actorID, githubID, key, auth.RoleAdmin)
-	insertOperationActor(t, ctx, pool, otherActorID, githubID+1, key+"_other", auth.RoleMember)
+	insertOperationActor(t, ctx, pool, otherActorID, githubID+1, key+"_other", auth.RoleExternal)
 	if _, err := pool.Exec(ctx, `INSERT INTO custom_field_definitions
 (id, target_kind, technical_key, label, field_kind, required, active)
 VALUES($1,'PROFILE','member_code','Código de associado','TEXT',false,true)`, databaseUUID(customFieldID)); err != nil {
@@ -76,7 +76,7 @@ VALUES($1,'PROFILE','member_code','Código de associado','TEXT',false,true)`, da
 		t.Fatalf("NewService() error = %v", err)
 	}
 	actor := auth.Session{User: auth.User{ID: actorID, Role: auth.RoleAdmin, Active: true}}
-	otherActor := auth.Session{User: auth.User{ID: otherActorID, Role: auth.RoleMember, Active: true}}
+	otherActor := auth.Session{User: auth.User{ID: otherActorID, Role: auth.RoleExternal, Active: true}}
 	catalog, err := service.Catalog(ctx, actor)
 	if err != nil || !catalogContainsField(catalog, ModuleProfiles, CustomFieldPrefix+"member_code") {
 		t.Fatalf("Catalog() did not expose the logical custom field: %#v, error=%v", catalog, err)
@@ -573,7 +573,7 @@ VALUES($1,'PROFILE','member_code','Código de associado','TEXT',false,true)`, da
 		t.Fatalf("insert bulk profiles: %v", err)
 	}
 	items := []BulkItem{{ID: bulkOne, Version: 1}, {ID: bulkTwo, Version: 2}}
-	if _, err := pool.Exec(ctx, `UPDATE app_users SET role='MEMBER' WHERE id=$1`, authDatabaseUUID(actorID)); err != nil {
+	if _, err := pool.Exec(ctx, `UPDATE app_users SET role='EXTERNAL' WHERE id=$1`, authDatabaseUUID(actorID)); err != nil {
 		t.Fatalf("revoke bulk delete actor: %v", err)
 	}
 	if _, err := service.BulkDelete(ctx, actor, ModuleProfiles, []BulkItem{{ID: bulkOne, Version: 1}}, BulkDeleteConfirmation, "integration-bulk-revoked"); !errors.Is(err, ErrForbidden) {

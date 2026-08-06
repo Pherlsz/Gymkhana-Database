@@ -110,8 +110,8 @@ type taskResultPageResponse struct {
 	Offset       int                      `json:"offset"`
 }
 
-func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service taskService) {
-	mux.HandleFunc("GET /api/v1/tasks/capability", func(w http.ResponseWriter, r *http.Request) {
+func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service taskService) {
+	mux.HandleFunc("GET /api/v1/tasks/capability", requireCapability(auth.CapTasks, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		if _, problem := authenticatedSession(r, authentication); problem != nil {
 			writeProblem(w, r, *problem)
 			return
@@ -121,8 +121,8 @@ func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			capability = service.Capability()
 		}
 		writeJSON(w, http.StatusOK, taskCapabilityFromDomain(capability))
-	})
-	mux.HandleFunc("POST /api/v1/tasks/interpret", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/tasks/interpret", requireCapability(auth.CapTasks, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredTaskActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -138,8 +138,8 @@ func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, value)
-	})
-	mux.HandleFunc("POST /api/v1/tasks/drafts", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/tasks/drafts", requireCapability(auth.CapTasks, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredTaskActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -155,8 +155,8 @@ func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusCreated, taskDraftFromDomain(value))
-	})
-	mux.HandleFunc("GET /api/v1/tasks/drafts/{draft_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/tasks/drafts/{draft_id}", requireCapability(auth.CapTasks, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredTaskActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -171,8 +171,8 @@ func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, taskDraftFromDomain(value))
-	})
-	mux.HandleFunc("PUT /api/v1/tasks/drafts/{draft_id}/review", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("PUT /api/v1/tasks/drafts/{draft_id}/review", requireCapability(auth.CapTasks, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredTaskActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -192,8 +192,8 @@ func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, taskDraftFromDomain(value))
-	})
-	mux.HandleFunc("GET /api/v1/tasks/jobs", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/tasks/jobs", requireCapability(auth.CapTasks, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredTaskActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -213,8 +213,8 @@ func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			response.Jobs = append(response.Jobs, taskJobFromDomain(job))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
-	mux.HandleFunc("POST /api/v1/tasks/jobs", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/tasks/jobs", requireCapability(auth.CapTasks, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredTaskActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -244,8 +244,8 @@ func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusAccepted, taskJobFromDomain(value))
-	})
-	mux.HandleFunc("GET /api/v1/tasks/jobs/{job_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/tasks/jobs/{job_id}", requireCapability(auth.CapTasks, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredTaskActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -260,8 +260,8 @@ func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, taskJobFromDomain(value))
-	})
-	mux.HandleFunc("POST /api/v1/tasks/jobs/{job_id}/cancel", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/tasks/jobs/{job_id}/cancel", requireCapability(auth.CapTasks, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredTaskActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -276,8 +276,8 @@ func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, taskJobFromDomain(value))
-	})
-	mux.HandleFunc("GET /api/v1/tasks/jobs/{job_id}/events", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/tasks/jobs/{job_id}/events", requireCapability(auth.CapTasks, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredTaskActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -292,8 +292,8 @@ func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		streamTaskEvents(w, r, logger, service, actor, id, after)
-	})
-	mux.HandleFunc("GET /api/v1/tasks/jobs/{job_id}/results", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/tasks/jobs/{job_id}/results", requireCapability(auth.CapTasks, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredTaskActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -313,7 +313,7 @@ func registerTaskRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, taskResultPageResponse{Job: taskJobFromDomain(page.Job), Compositions: page.Compositions, Total: page.Total, Limit: page.Limit, Offset: page.Offset})
-	})
+	}))
 }
 
 func configuredTaskActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service taskService) (auth.Session, bool) {

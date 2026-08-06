@@ -1,4 +1,4 @@
-import { Page, Stack } from "@pherlsz/gymkhana-ui";
+import { Page, Stack } from "./ui";
 import { useState } from "react";
 import "./customdata.css";
 import { useApplicationSession } from "./App";

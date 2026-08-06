@@ -62,17 +62,19 @@ func run() error {
 		if pool == nil {
 			return errors.New("authentication requires a database connection")
 		}
-		provider, err := auth.NewGitHubProvider(auth.GitHubProviderOptions{
-			ClientID:     cfg.Auth.GitHubClientID,
-			ClientSecret: cfg.Auth.GitHubClientSecret,
-			RedirectURL:  cfg.Auth.GitHubRedirectURL,
+		provider, err := auth.NewGoogleProvider(auth.GoogleProviderOptions{
+			ClientID:     cfg.Auth.GoogleClientID,
+			ClientSecret: cfg.Auth.GoogleClientSecret,
+			RedirectURL:  cfg.Auth.GoogleRedirectURL,
 		})
 		if err != nil {
-			return fmt.Errorf("configure GitHub OAuth: %w", err)
+			return fmt.Errorf("configure Google OAuth: %w", err)
 		}
-		authService, err = auth.NewService(provider, auth.NewPostgresStore(pool), auth.ServiceOptions{
-			AllowedLogins:   cfg.Auth.AllowedLogins,
-			SuperadminLogin: cfg.Auth.SuperadminLogin,
+		postgresStore := auth.NewPostgresStore(pool)
+		authService, err = auth.NewService(provider, postgresStore, auth.ServiceOptions{
+			AllowedEmails:   cfg.Auth.AllowedEmails,
+			SuperadminEmail: cfg.Auth.SuperadminEmail,
+			AllowlistStore:  postgresStore,
 			OnAuditFailure: func(_ context.Context, event auth.AuditEvent, auditErr error) {
 				logger.Error("authentication audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
 			},

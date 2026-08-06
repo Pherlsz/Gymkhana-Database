@@ -13,14 +13,15 @@ import (
 
 type PostgresStore struct {
 	queries *dbgen.Queries
+	pool    *pgxpool.Pool
 }
 
 func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
-	return &PostgresStore{queries: dbgen.New(pool)}
+	return &PostgresStore{queries: dbgen.New(pool), pool: pool}
 }
 
-func (store *PostgresStore) FindUserByGitHubID(ctx context.Context, githubUserID int64) (User, error) {
-	value, err := store.queries.GetAppUserByGitHubID(ctx, githubUserID)
+func (store *PostgresStore) FindUserByEmail(ctx context.Context, email string) (User, error) {
+	value, err := store.queries.GetAppUserByEmail(ctx, email)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrUserNotFound
 	}
@@ -56,13 +57,12 @@ func (store *PostgresStore) ListUsers(ctx context.Context, limit, offset int32) 
 func (store *PostgresStore) CreateUser(ctx context.Context, params CreateUserParams) (User, error) {
 	avatarURL := optionalString(params.Identity.AvatarURL)
 	value, err := store.queries.CreateAppUser(ctx, dbgen.CreateAppUserParams{
-		ID:           databaseUUID(params.ID),
-		GithubUserID: params.Identity.UserID,
-		GithubLogin:  params.Identity.Login,
-		DisplayName:  params.Identity.DisplayName,
-		AvatarUrl:    avatarURL,
-		Role:         string(params.Role),
-		Active:       true,
+		ID:          databaseUUID(params.ID),
+		Email:       params.Identity.Email,
+		DisplayName: params.Identity.DisplayName,
+		AvatarUrl:   avatarURL,
+		Role:        string(params.Role),
+		Active:      true,
 	})
 	if err != nil {
 		return User{}, err
@@ -70,10 +70,10 @@ func (store *PostgresStore) CreateUser(ctx context.Context, params CreateUserPar
 	return userFromDatabase(value), nil
 }
 
-func (store *PostgresStore) UpdateUserIdentity(ctx context.Context, userID Identifier, identity GitHubIdentity) (User, error) {
+func (store *PostgresStore) UpdateUserIdentity(ctx context.Context, userID Identifier, identity GoogleIdentity) (User, error) {
 	value, err := store.queries.UpdateAppUserIdentity(ctx, dbgen.UpdateAppUserIdentityParams{
 		ID:          databaseUUID(userID),
-		GithubLogin: identity.Login,
+		Email: identity.Email,
 		DisplayName: identity.DisplayName,
 		AvatarUrl:   optionalString(identity.AvatarURL),
 	})
@@ -127,13 +127,12 @@ func (store *PostgresStore) FindAuthenticatedSession(ctx context.Context, tokenH
 	return Session{
 		ID: identifierFromDatabase(value.SessionID),
 		User: User{
-			ID:           identifierFromDatabase(value.AppUserID),
-			GitHubUserID: value.GithubUserID,
-			Login:        value.GithubLogin,
-			DisplayName:  value.DisplayName,
-			AvatarURL:    stringValue(value.AvatarUrl),
-			Role:         Role(value.Role),
-			Active:       value.Active,
+			ID:          identifierFromDatabase(value.AppUserID),
+			Email:       value.Email,
+			DisplayName: value.DisplayName,
+			AvatarURL:   stringValue(value.AvatarUrl),
+			Role:        Role(value.Role),
+			Active:      value.Active,
 		},
 	}, nil
 }
@@ -148,6 +147,124 @@ func (store *PostgresStore) RevokeSessionByTokenHash(ctx context.Context, tokenH
 
 func (store *PostgresStore) RevokeAllSessionsForUser(ctx context.Context, userID Identifier) error {
 	return store.queries.RevokeAllAppSessionsForUser(ctx, databaseUUID(userID))
+}
+
+func (store *PostgresStore) GrantCapability(ctx context.Context, userID Identifier, cap Capability) error {
+	query := `
+		INSERT INTO app_user_capabilities (user_id, capability, created_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT (user_id, capability) DO NOTHING
+	`
+	result, err := store.pool.Exec(ctx, query, databaseUUID(userID), cap)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return ErrCapabilityAlreadyGranted
+	}
+	return nil
+}
+
+func (store *PostgresStore) RevokeCapability(ctx context.Context, userID Identifier, cap Capability) error {
+	query := `
+		DELETE FROM app_user_capabilities
+		WHERE user_id = $1 AND capability = $2
+	`
+	result, err := store.pool.Exec(ctx, query, databaseUUID(userID), cap)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return ErrCapabilityNotFound
+	}
+	return nil
+}
+
+func (store *PostgresStore) ListUserCapabilities(ctx context.Context, userID Identifier) ([]Capability, error) {
+	query := `
+		SELECT capability
+		FROM app_user_capabilities
+		WHERE user_id = $1
+		ORDER BY capability
+	`
+	rows, err := store.pool.Query(ctx, query, databaseUUID(userID))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var capabilities []Capability
+	for rows.Next() {
+		var cap Capability
+		if err := rows.Scan(&cap); err != nil {
+			return nil, err
+		}
+		capabilities = append(capabilities, cap)
+	}
+	return capabilities, rows.Err()
+}
+
+func (store *PostgresStore) UserHasCapability(ctx context.Context, userID Identifier, cap Capability) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM app_user_capabilities
+			WHERE user_id = $1 AND capability = $2
+		)
+	`
+	var hasCap bool
+	err := store.pool.QueryRow(ctx, query, databaseUUID(userID), cap).Scan(&hasCap)
+	return hasCap, err
+}
+
+func (store *PostgresStore) IsEmailAllowed(ctx context.Context, email string) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM allowed_emails WHERE email = $1)`
+	var allowed bool
+	err := store.pool.QueryRow(ctx, query, email).Scan(&allowed)
+	return allowed, err
+}
+
+func (store *PostgresStore) AddAllowedEmail(ctx context.Context, email string, addedBy *Identifier) error {
+	var addedByUUID pgtype.UUID
+	if addedBy != nil {
+		addedByUUID = databaseUUID(*addedBy)
+	} else {
+		addedByUUID = pgtype.UUID{Valid: false}
+	}
+	
+	query := `INSERT INTO allowed_emails (email, added_by, added_at) VALUES ($1, $2, NOW()) ON CONFLICT DO NOTHING`
+	_, err := store.pool.Exec(ctx, query, email, addedByUUID)
+	return err
+}
+
+func (store *PostgresStore) RemoveAllowedEmail(ctx context.Context, email string) error {
+	query := `DELETE FROM allowed_emails WHERE email = $1`
+	result, err := store.pool.Exec(ctx, query, email)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return errors.New("email not found in allowlist")
+	}
+	return nil
+}
+
+func (store *PostgresStore) ListAllowedEmails(ctx context.Context) ([]string, error) {
+	query := `SELECT email FROM allowed_emails ORDER BY email`
+	rows, err := store.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var emails []string
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			return nil, err
+		}
+		emails = append(emails, email)
+	}
+	return emails, rows.Err()
 }
 
 func (store *PostgresStore) RecordAuditEvent(ctx context.Context, event AuditEvent) error {
@@ -165,13 +282,12 @@ func (store *PostgresStore) RecordAuditEvent(ctx context.Context, event AuditEve
 
 func userFromDatabase(value dbgen.AppUser) User {
 	return User{
-		ID:           identifierFromDatabase(value.ID),
-		GitHubUserID: value.GithubUserID,
-		Login:        value.GithubLogin,
-		DisplayName:  value.DisplayName,
-		AvatarURL:    stringValue(value.AvatarUrl),
-		Role:         Role(value.Role),
-		Active:       value.Active,
+		ID:          identifierFromDatabase(value.ID),
+		Email:       value.Email,
+		DisplayName: value.DisplayName,
+		AvatarURL:   stringValue(value.AvatarUrl),
+		Role:        Role(value.Role),
+		Active:      value.Active,
 	}
 }
 

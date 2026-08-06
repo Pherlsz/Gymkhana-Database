@@ -48,7 +48,7 @@ func TestPostgresMatchingEvidenceNoMatchAndDeterministicBounds(t *testing.T) {
 		githubID = -githubID
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,github_user_id,github_login,display_name,role,active)
-VALUES($1,$2,$3,'Matching Vectors','MEMBER',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
+VALUES($1,$2,$3,'Matching Vectors','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
 		t.Fatalf("insert vector actor: %v", err)
 	}
 	defer cleanupMatchingCandidateVectors(t, pool, actorID, profileIDs)
@@ -116,7 +116,7 @@ func TestPostgresMatchingAnalysisConcurrencyIdempotencyAndRate(t *testing.T) {
 		githubID = -githubID
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,github_user_id,github_login,display_name,role,active)
-VALUES($1,$2,$3,'Matching Concurrency','MEMBER',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
+VALUES($1,$2,$3,'Matching Concurrency','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
 		t.Fatalf("insert concurrency actor: %v", err)
 	}
 	defer func() {
@@ -187,7 +187,7 @@ func TestPostgresMatchingAnalysisAndRiverJobCommitAtomically(t *testing.T) {
 		githubID = -githubID
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,github_user_id,github_login,display_name,role,active)
-VALUES($1,$2,$3,'Matching Transaction','MEMBER',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
+VALUES($1,$2,$3,'Matching Transaction','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
 		t.Fatalf("insert transactional actor: %v", err)
 	}
 	var riverJobID int64
@@ -264,7 +264,7 @@ func TestPostgresMatchingCancellationAndRetentionPreserveHumanDecision(t *testin
 		githubID = -githubID
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,github_user_id,github_login,display_name,role,active)
-VALUES($1,$2,$3,'Matching Retention','MEMBER',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
+VALUES($1,$2,$3,'Matching Retention','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
 		t.Fatalf("insert retention actor: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO profiles(id,full_name,email) VALUES

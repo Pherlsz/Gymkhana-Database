@@ -70,8 +70,8 @@ type queryResultPageResponse struct {
 	Offset    int                        `json:"offset"`
 }
 
-func registerQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service queryService) {
-	mux.HandleFunc("GET /api/v1/query/catalog", func(w http.ResponseWriter, r *http.Request) {
+func registerQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service queryService) {
+	mux.HandleFunc("GET /api/v1/query/catalog", requireCapability(auth.CapQuery, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := queryActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -82,9 +82,9 @@ func registerQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authentication
 			return
 		}
 		writeJSON(w, http.StatusOK, value)
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/query/validate", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/query/validate", requireCapability(auth.CapQuery, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := queryActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -100,9 +100,9 @@ func registerQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authentication
 			return
 		}
 		writeJSON(w, http.StatusOK, value)
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/query/executions", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/query/executions", requireCapability(auth.CapQuery, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := queryActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -118,9 +118,9 @@ func registerQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authentication
 			return
 		}
 		writeJSON(w, http.StatusOK, queryExecutionFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/query/executions/{execution_id}/result", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/query/executions/{execution_id}/result", requireCapability(auth.CapQuery, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := queryActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -141,7 +141,7 @@ func registerQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authentication
 			return
 		}
 		writeJSON(w, http.StatusOK, queryResultPageFromDomain(value))
-	})
+	}))
 }
 
 func queryActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service queryService) (auth.Session, bool) {

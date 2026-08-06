@@ -1,14 +1,15 @@
 package httpserver
 
 import (
+	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"log/slog"
 	"net/http"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/customdata"
 )
 
-func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service customDataService) {
-	mux.HandleFunc("GET /api/v1/custom-entity-types", func(w http.ResponseWriter, r *http.Request) {
+func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service customDataService) {
+	mux.HandleFunc("GET /api/v1/custom-entity-types", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -38,8 +39,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			response.Types = append(response.Types, customEntityTypeFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
-	mux.HandleFunc("POST /api/v1/custom-entity-types", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/custom-entity-types", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -55,8 +56,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			return
 		}
 		writeJSON(w, http.StatusCreated, customEntityTypeFromDomain(value))
-	})
-	mux.HandleFunc("GET /api/v1/custom-entity-types/{entity_type_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/custom-entity-types/{entity_type_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -72,8 +73,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			return
 		}
 		writeJSON(w, http.StatusOK, customEntityTypeFromDomain(value))
-	})
-	mux.HandleFunc("PUT /api/v1/custom-entity-types/{entity_type_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("PUT /api/v1/custom-entity-types/{entity_type_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -94,8 +95,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			return
 		}
 		writeJSON(w, http.StatusOK, customEntityTypeFromDomain(value))
-	})
-	mux.HandleFunc("DELETE /api/v1/custom-entity-types/{entity_type_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("DELETE /api/v1/custom-entity-types/{entity_type_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -115,9 +116,9 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/custom-fields", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/custom-fields", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -153,8 +154,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			response.Fields = append(response.Fields, customFieldFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
-	mux.HandleFunc("POST /api/v1/custom-fields", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/custom-fields", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -175,8 +176,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			return
 		}
 		writeJSON(w, http.StatusCreated, customFieldFromDomain(value))
-	})
-	mux.HandleFunc("GET /api/v1/custom-fields/{field_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/custom-fields/{field_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -192,8 +193,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			return
 		}
 		writeJSON(w, http.StatusOK, customFieldFromDomain(value))
-	})
-	mux.HandleFunc("PUT /api/v1/custom-fields/{field_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("PUT /api/v1/custom-fields/{field_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -219,8 +220,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			return
 		}
 		writeJSON(w, http.StatusOK, customFieldFromDomain(value))
-	})
-	mux.HandleFunc("DELETE /api/v1/custom-fields/{field_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("DELETE /api/v1/custom-fields/{field_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -240,8 +241,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
-	mux.HandleFunc("GET /api/v1/custom-fields/{field_id}/options", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/custom-fields/{field_id}/options", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -261,8 +262,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			response.Options = append(response.Options, customOptionFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
-	mux.HandleFunc("POST /api/v1/custom-fields/{field_id}/options", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/custom-fields/{field_id}/options", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -283,8 +284,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			return
 		}
 		writeJSON(w, http.StatusCreated, customOptionFromDomain(value))
-	})
-	mux.HandleFunc("PUT /api/v1/custom-fields/{field_id}/options/{option_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("PUT /api/v1/custom-fields/{field_id}/options/{option_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -310,8 +311,8 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			return
 		}
 		writeJSON(w, http.StatusOK, customOptionFromDomain(value))
-	})
-	mux.HandleFunc("DELETE /api/v1/custom-fields/{field_id}/options/{option_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("DELETE /api/v1/custom-fields/{field_id}/options/{option_id}", requireCapability(auth.CapCustomData, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := customActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -336,5 +337,5 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}))
 }

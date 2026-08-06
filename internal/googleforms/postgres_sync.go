@@ -169,7 +169,7 @@ func scanActor(row rowScanner) (auth.Session, error) {
 	var session auth.Session
 	var id pgtype.UUID
 	var avatar pgtype.Text
-	if err := row.Scan(&id, &session.User.GitHubUserID, &session.User.Login,
+	if err := row.Scan(&id, &session.User.Email,
 		&session.User.DisplayName, &avatar, &session.User.Role, &session.User.Active); err != nil {
 		return auth.Session{}, err
 	}

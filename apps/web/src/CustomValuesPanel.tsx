@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "@pherlsz/gymkhana-ui";
+import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "./ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { AttachmentsPanel } from "./AttachmentsPanel";
