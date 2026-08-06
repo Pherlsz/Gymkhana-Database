@@ -16,12 +16,12 @@ type advancedQueryService interface {
 	ResultV2(context.Context, auth.Session, querydomain.Identifier, int, int, string) (querydomain.ResultPage, error)
 }
 
-func registerAdvancedQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service queryService) {
+func registerAdvancedQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service queryService) {
 	advanced, ok := service.(advancedQueryService)
 	if !ok || advanced == nil {
 		return
 	}
-	mux.HandleFunc("GET /api/v1/query/v2/catalog", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/query/v2/catalog", requireCapability(auth.CapQuery, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := queryActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -32,8 +32,8 @@ func registerAdvancedQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authen
 			return
 		}
 		writeJSON(w, http.StatusOK, value)
-	})
-	mux.HandleFunc("POST /api/v1/query/v2/validate", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/query/v2/validate", requireCapability(auth.CapQuery, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := queryActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -49,8 +49,8 @@ func registerAdvancedQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authen
 			return
 		}
 		writeJSON(w, http.StatusOK, value)
-	})
-	mux.HandleFunc("POST /api/v1/query/v2/executions", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/query/v2/executions", requireCapability(auth.CapQuery, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := queryActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -66,8 +66,8 @@ func registerAdvancedQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authen
 			return
 		}
 		writeJSON(w, http.StatusOK, queryExecutionFromDomain(value))
-	})
-	mux.HandleFunc("GET /api/v1/query/v2/executions/{execution_id}/result", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/query/v2/executions/{execution_id}/result", requireCapability(auth.CapQuery, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := queryActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -88,5 +88,5 @@ func registerAdvancedQueryRoutes(mux *http.ServeMux, logger *slog.Logger, authen
 			return
 		}
 		writeJSON(w, http.StatusOK, queryResultPageFromDomain(value))
-	})
+	}))
 }

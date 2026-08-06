@@ -161,8 +161,8 @@ type chatSetActiveResultRequest struct {
 	ReferenceID json.RawMessage `json:"reference_id"`
 }
 
-func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service chatService, results chatResultReader, launcher chatRunLauncher) {
-	mux.HandleFunc("GET /api/v1/chat/capability", func(w http.ResponseWriter, r *http.Request) {
+func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service chatService, results chatResultReader, launcher chatRunLauncher) {
+	mux.HandleFunc("GET /api/v1/chat/capability", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		if _, problem := authenticatedSession(r, authentication); problem != nil {
 			writeProblem(w, r, *problem)
 			return
@@ -172,9 +172,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, chatCapabilityFromDomain(service.Capability()))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/chat/threads", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/chat/threads", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -190,9 +190,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, chatThreadPageFromDomain(page))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/chat/threads", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/chat/threads", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -208,9 +208,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusCreated, chatThreadFromDomain(thread))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/chat/threads/{thread_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/chat/threads/{thread_id}", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -225,9 +225,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, chatThreadFromDomain(thread))
-	})
+	}))
 
-	mux.HandleFunc("PATCH /api/v1/chat/threads/{thread_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PATCH /api/v1/chat/threads/{thread_id}", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -247,9 +247,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, chatThreadFromDomain(thread))
-	})
+	}))
 
-	mux.HandleFunc("DELETE /api/v1/chat/threads/{thread_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /api/v1/chat/threads/{thread_id}", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -263,9 +263,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/chat/threads/{thread_id}/messages", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/chat/threads/{thread_id}/messages", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -285,9 +285,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, chatMessagePageFromDomain(page))
-	})
+	}))
 
-	mux.HandleFunc("PUT /api/v1/chat/threads/{thread_id}/active-result", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/v1/chat/threads/{thread_id}/active-result", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -312,9 +312,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, chatThreadFromDomain(thread))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/chat/threads/{thread_id}/turns", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/chat/threads/{thread_id}/turns", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -351,9 +351,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			status = http.StatusCreated
 		}
 		writeJSON(w, status, chatRunCreationFromDomain(creation))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/chat/runs/{run_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/chat/runs/{run_id}", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -368,9 +368,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, chatRunFromDomain(run))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/chat/runs/{run_id}/cancel", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/chat/runs/{run_id}/cancel", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -386,9 +386,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 		}
 		launcher.Cancel(id)
 		writeJSON(w, http.StatusOK, chatRunFromDomain(run))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/chat/runs/{run_id}/events", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/chat/runs/{run_id}/events", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -403,9 +403,9 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		streamChatEvents(w, r, logger, service, actor, id, after)
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/chat/result-references/{reference_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/chat/result-references/{reference_id}", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
 		if !ok {
 			return
@@ -432,7 +432,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 		}
 		writeJSON(w, http.StatusOK, chatReferenceResultResponse{Reference: chatResultReferenceFromDomain(reference), Data: output.Payload,
 			RowCount: output.RowCount, FieldCount: output.FieldCount})
-	})
+	}))
 }
 
 func configuredChatActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service chatService, results chatResultReader, launcher chatRunLauncher) (auth.Session, bool) {

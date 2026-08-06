@@ -126,8 +126,8 @@ type billPageResponse struct {
 	Page  billPageMeta   `json:"page"`
 }
 
-func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service billService) {
-	mux.HandleFunc("GET /api/v1/bill-types", func(w http.ResponseWriter, r *http.Request) {
+func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service billService) {
+	mux.HandleFunc("GET /api/v1/bill-types", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -157,9 +157,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			response.Types = append(response.Types, billTypeFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/bill-types", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/bill-types", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -175,9 +175,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusCreated, billTypeFromDomain(created))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/bill-types/{bill_type_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/bill-types/{bill_type_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -193,9 +193,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, billTypeFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("PUT /api/v1/bill-types/{bill_type_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/v1/bill-types/{bill_type_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -216,9 +216,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, billTypeFromDomain(updated))
-	})
+	}))
 
-	mux.HandleFunc("DELETE /api/v1/bill-types/{bill_type_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /api/v1/bill-types/{bill_type_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -238,9 +238,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/bills", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/bills", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -260,9 +260,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			response.Bills = append(response.Bills, billFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/bills", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/bills", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -283,9 +283,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusCreated, billFromDomain(created))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/bills/{bill_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/bills/{bill_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -301,9 +301,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, billFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("PUT /api/v1/bills/{bill_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/v1/bills/{bill_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -329,9 +329,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, billFromDomain(updated))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/bills/{bill_id}/duplicate", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/bills/{bill_id}/duplicate", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -347,9 +347,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusCreated, billFromDomain(duplicated))
-	})
+	}))
 
-	mux.HandleFunc("DELETE /api/v1/bills/{bill_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /api/v1/bills/{bill_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -369,9 +369,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}))
 
-	mux.HandleFunc("PUT /api/v1/bills/{bill_id}/current-use", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/v1/bills/{bill_id}/current-use", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -397,9 +397,9 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		writeJSON(w, http.StatusOK, billCurrentUseResponse{HolderProfileID: currentUse.HolderProfileID.String(), AssignedAt: currentUse.AssignedAt})
-	})
+	}))
 
-	mux.HandleFunc("DELETE /api/v1/bills/{bill_id}/current-use", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /api/v1/bills/{bill_id}/current-use", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -414,5 +414,5 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}))
 }

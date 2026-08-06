@@ -126,8 +126,8 @@ type documentPageResponse struct {
 	Page      documentPageMeta   `json:"page"`
 }
 
-func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service documentService) {
-	mux.HandleFunc("GET /api/v1/document-types", func(w http.ResponseWriter, r *http.Request) {
+func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service documentService) {
+	mux.HandleFunc("GET /api/v1/document-types", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -157,9 +157,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			response.Types = append(response.Types, documentTypeFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/document-types", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/document-types", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -175,9 +175,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		writeJSON(w, http.StatusCreated, documentTypeFromDomain(created))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/document-types/{document_type_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/document-types/{document_type_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -193,9 +193,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		writeJSON(w, http.StatusOK, documentTypeFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("PUT /api/v1/document-types/{document_type_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/v1/document-types/{document_type_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -216,9 +216,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		writeJSON(w, http.StatusOK, documentTypeFromDomain(updated))
-	})
+	}))
 
-	mux.HandleFunc("DELETE /api/v1/document-types/{document_type_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /api/v1/document-types/{document_type_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -238,9 +238,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/documents", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/documents", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -260,9 +260,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			response.Documents = append(response.Documents, documentFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/documents", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/documents", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -283,9 +283,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		writeJSON(w, http.StatusCreated, documentFromDomain(created))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/documents/{document_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/documents/{document_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -301,9 +301,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		writeJSON(w, http.StatusOK, documentFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("PUT /api/v1/documents/{document_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/v1/documents/{document_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -329,9 +329,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		writeJSON(w, http.StatusOK, documentFromDomain(updated))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/documents/{document_id}/duplicate", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/documents/{document_id}/duplicate", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -347,9 +347,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		writeJSON(w, http.StatusCreated, documentFromDomain(duplicated))
-	})
+	}))
 
-	mux.HandleFunc("DELETE /api/v1/documents/{document_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /api/v1/documents/{document_id}", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -369,9 +369,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}))
 
-	mux.HandleFunc("PUT /api/v1/documents/{document_id}/current-use", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/v1/documents/{document_id}/current-use", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -397,9 +397,9 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		writeJSON(w, http.StatusOK, documentCurrentUseResponse{HolderProfileID: currentUse.HolderProfileID.String(), AssignedAt: currentUse.AssignedAt})
-	})
+	}))
 
-	mux.HandleFunc("DELETE /api/v1/documents/{document_id}/current-use", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /api/v1/documents/{document_id}/current-use", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -414,5 +414,5 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}))
 }

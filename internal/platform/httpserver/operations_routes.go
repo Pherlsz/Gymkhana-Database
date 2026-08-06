@@ -259,8 +259,8 @@ type operationBulkDeleteResponse struct {
 	Deleted int               `json:"deleted"`
 }
 
-func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service operationsService) {
-	mux.HandleFunc("GET /api/v1/operations/catalog", func(w http.ResponseWriter, r *http.Request) {
+func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service operationsService) {
+	mux.HandleFunc("GET /api/v1/operations/catalog", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := operationsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -271,9 +271,9 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			return
 		}
 		writeJSON(w, http.StatusOK, operationCatalogFromDomain(catalog))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/operations/imports", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/operations/imports", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := operationsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -295,9 +295,9 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			Import: operationImportFromDomain(grant.Import), UploadURL: grant.UploadURL,
 			Method: grant.Method, Headers: grant.Headers, ExpiresAt: grant.ExpiresAt,
 		})
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/operations/imports/{import_id}/confirm", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/operations/imports/{import_id}/confirm", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := operationImportActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -308,9 +308,9 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			return
 		}
 		writeJSON(w, http.StatusAccepted, operationImportFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/operations/imports", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/operations/imports", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := operationsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -330,9 +330,9 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			response.Imports = append(response.Imports, operationImportFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/operations/imports/{import_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/operations/imports/{import_id}", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := operationImportActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -343,9 +343,9 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			return
 		}
 		writeJSON(w, http.StatusOK, operationImportFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/operations/imports/{import_id}/report", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/operations/imports/{import_id}/report", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := operationImportActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -365,9 +365,9 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			Conflicted: value.Conflicted, Decisions: value.Decisions, Unresolved: value.Unresolved,
 			ValidationErrors: value.ValidationErrors, Rows: rows,
 		})
-	})
+	}))
 
-	mux.HandleFunc("PUT /api/v1/operations/imports/{import_id}/sheet", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/v1/operations/imports/{import_id}/sheet", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := operationImportActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -378,9 +378,9 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 		}
 		value, err := service.SelectSheet(r.Context(), actor, id, request.Version, request.SheetIndex, requestIDFromContext(r.Context()))
 		writeOperationImportResult(w, r, logger, "select operation import sheet", value, err)
-	})
+	}))
 
-	mux.HandleFunc("PUT /api/v1/operations/imports/{import_id}/mapping", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/v1/operations/imports/{import_id}/mapping", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := operationImportActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -391,9 +391,9 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 		}
 		value, err := service.SaveMapping(r.Context(), actor, id, request.Version, request.Mapping, requestIDFromContext(r.Context()))
 		writeOperationImportResult(w, r, logger, "save operation import mapping", value, err)
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/operations/imports/{import_id}/preview", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/operations/imports/{import_id}/preview", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := operationImportActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -404,9 +404,9 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 		}
 		value, err := service.Preview(r.Context(), actor, id, request.Version, requestIDFromContext(r.Context()))
 		writeOperationImportResult(w, r, logger, "preview operation import", value, err)
-	})
+	}))
 
-	mux.HandleFunc("PUT /api/v1/operations/imports/{import_id}/decisions", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/v1/operations/imports/{import_id}/decisions", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := operationImportActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -422,9 +422,9 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 		}
 		value, err := service.SaveDecisions(r.Context(), actor, id, request.Version, decisions, requestIDFromContext(r.Context()))
 		writeOperationImportResult(w, r, logger, "save operation import decisions", value, err)
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/operations/imports/{import_id}/execute", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/operations/imports/{import_id}/execute", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := operationImportActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -439,9 +439,9 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			return
 		}
 		writeJSON(w, http.StatusAccepted, operationImportFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/operations/imports/{import_id}/cancel", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/operations/imports/{import_id}/cancel", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := operationImportActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -452,13 +452,13 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 		}
 		value, err := service.CancelImport(r.Context(), actor, id, request.Version, requestIDFromContext(r.Context()))
 		writeOperationImportResult(w, r, logger, "cancel operation import", value, err)
-	})
+	}))
 
-	registerOperationExportRoutes(mux, logger, authentication, service)
+	registerOperationExportRoutes(mux, logger, authentication, checker, service)
 }
 
-func registerOperationExportRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service operationsService) {
-	mux.HandleFunc("POST /api/v1/operations/exports", func(w http.ResponseWriter, r *http.Request) {
+func registerOperationExportRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service operationsService) {
+	mux.HandleFunc("POST /api/v1/operations/exports", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := operationsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -473,9 +473,9 @@ func registerOperationExportRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		writeJSON(w, http.StatusAccepted, operationExportFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/operations/exports", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/operations/exports", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := operationsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -495,9 +495,9 @@ func registerOperationExportRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			response.Exports = append(response.Exports, operationExportFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/operations/exports/{export_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/operations/exports/{export_id}", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := operationExportActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -508,9 +508,9 @@ func registerOperationExportRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		writeJSON(w, http.StatusOK, operationExportFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/operations/exports/{export_id}/download", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/operations/exports/{export_id}/download", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := operationExportActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -521,9 +521,9 @@ func registerOperationExportRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		writeJSON(w, http.StatusOK, operationDownloadResponse{URL: grant.URL, Method: grant.Method, ExpiresAt: grant.ExpiresAt})
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/operations/bulk-delete", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/operations/bulk-delete", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := operationsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -543,7 +543,7 @@ func registerOperationExportRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		writeJSON(w, http.StatusOK, operationBulkDeleteResponse{Module: value.Module, Deleted: value.Deleted})
-	})
+	}))
 }
 
 func operationsActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service operationsService) (auth.Session, bool) {

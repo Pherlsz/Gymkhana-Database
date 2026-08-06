@@ -78,8 +78,8 @@ type attachmentListResponse struct {
 	Attachments []attachmentResponse `json:"attachments"`
 }
 
-func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service attachmentService) {
-	mux.HandleFunc("POST /api/v1/attachment-upload-intents", func(w http.ResponseWriter, r *http.Request) {
+func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service attachmentService) {
+	mux.HandleFunc("POST /api/v1/attachment-upload-intents", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := attachmentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -105,9 +105,9 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			IntentID: grant.Intent.ID.String(), ExpiresAt: grant.Intent.ExpiresAt,
 			Upload: signedRequestResponse{URL: grant.Upload.URL, Method: grant.Upload.Method, Headers: grant.Upload.Headers, ExpiresAt: grant.Upload.ExpiresAt},
 		})
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/attachment-upload-intents/{intent_id}/confirm", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/attachment-upload-intents/{intent_id}/confirm", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := attachmentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -123,9 +123,9 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			return
 		}
 		writeJSON(w, http.StatusCreated, attachmentFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/attachments", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/attachments", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := attachmentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -154,9 +154,9 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			response.Attachments = append(response.Attachments, attachmentFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/attachments/{attachment_id}/download", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/attachments/{attachment_id}/download", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := attachmentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -172,9 +172,9 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			return
 		}
 		writeJSON(w, http.StatusOK, signedRequestResponse{URL: signed.URL, Method: signed.Method, Headers: signed.Headers, ExpiresAt: signed.ExpiresAt})
-	})
+	}))
 
-	mux.HandleFunc("DELETE /api/v1/attachments/{attachment_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /api/v1/attachments/{attachment_id}", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := attachmentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -195,9 +195,9 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			return
 		}
 		writeJSON(w, http.StatusOK, attachmentFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/attachments/{attachment_id}/restore", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/attachments/{attachment_id}/restore", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := attachmentActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -218,7 +218,7 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 			return
 		}
 		writeJSON(w, http.StatusOK, attachmentFromDomain(value))
-	})
+	}))
 }
 
 func attachmentActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service attachmentService) (auth.Session, bool) {

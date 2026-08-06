@@ -146,8 +146,8 @@ type googleFormsSyncPageResponse struct {
 	Offset int                       `json:"offset"`
 }
 
-func registerGoogleFormsRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service googleFormsService, applicationURL string) {
-	mux.HandleFunc("GET /api/v1/google-forms/status", func(w http.ResponseWriter, r *http.Request) {
+func registerGoogleFormsRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service googleFormsService, applicationURL string) {
+	mux.HandleFunc("GET /api/v1/google-forms/status", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
 			writeProblem(w, r, *problem)
@@ -168,9 +168,9 @@ func registerGoogleFormsRoutes(mux *http.ServeMux, logger *slog.Logger, authenti
 		}
 		converted := googleFormsConnectionFromDomain(connection)
 		writeJSON(w, http.StatusOK, googleFormsStatusResponse{Enabled: true, Connected: connection.State == googleforms.ConnectionActive, Connection: &converted})
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/google-forms/oauth/start", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/google-forms/oauth/start", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := googleFormsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -186,9 +186,9 @@ func registerGoogleFormsRoutes(mux *http.ServeMux, logger *slog.Logger, authenti
 			return
 		}
 		writeJSON(w, http.StatusCreated, googleFormsOAuthResponse{AuthorizationURL: started.AuthorizationURL, ExpiresAt: started.ExpiresAt})
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/google-forms/oauth/callback", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/google-forms/oauth/callback", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := googleFormsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -209,9 +209,9 @@ func registerGoogleFormsRoutes(mux *http.ServeMux, logger *slog.Logger, authenti
 			return
 		}
 		http.Redirect(w, r, googleFormsRedirect(applicationURL, returnPath, "connected"), http.StatusFound)
-	})
+	}))
 
-	mux.HandleFunc("DELETE /api/v1/google-forms/connection", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /api/v1/google-forms/connection", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := googleFormsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -227,14 +227,14 @@ func registerGoogleFormsRoutes(mux *http.ServeMux, logger *slog.Logger, authenti
 			return
 		}
 		writeJSON(w, http.StatusOK, googleFormsConnectionFromDomain(connection))
-	})
+	}))
 
-	registerGoogleFormsSourceRoutes(mux, logger, authentication, service)
-	registerGoogleFormsSyncRoutes(mux, logger, authentication, service)
+	registerGoogleFormsSourceRoutes(mux, logger, authentication, checker, service)
+	registerGoogleFormsSyncRoutes(mux, logger, authentication, checker, service)
 }
 
-func registerGoogleFormsSourceRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service googleFormsService) {
-	mux.HandleFunc("POST /api/v1/google-forms/sources", func(w http.ResponseWriter, r *http.Request) {
+func registerGoogleFormsSourceRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service googleFormsService) {
+	mux.HandleFunc("POST /api/v1/google-forms/sources", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := googleFormsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -250,9 +250,9 @@ func registerGoogleFormsSourceRoutes(mux *http.ServeMux, logger *slog.Logger, au
 			return
 		}
 		writeJSON(w, http.StatusCreated, googleFormsSourceFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/google-forms/sources", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/google-forms/sources", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := googleFormsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -272,9 +272,9 @@ func registerGoogleFormsSourceRoutes(mux *http.ServeMux, logger *slog.Logger, au
 			response.Sources = append(response.Sources, googleFormsSourceFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/google-forms/sources/{source_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/google-forms/sources/{source_id}", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := googleFormsSourceActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -285,9 +285,9 @@ func registerGoogleFormsSourceRoutes(mux *http.ServeMux, logger *slog.Logger, au
 			return
 		}
 		writeJSON(w, http.StatusOK, googleFormsSourceFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("PUT /api/v1/google-forms/sources/{source_id}/mapping", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /api/v1/google-forms/sources/{source_id}/mapping", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := googleFormsSourceActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -303,9 +303,9 @@ func registerGoogleFormsSourceRoutes(mux *http.ServeMux, logger *slog.Logger, au
 			return
 		}
 		writeJSON(w, http.StatusOK, googleFormsSourceFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("PATCH /api/v1/google-forms/sources/{source_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PATCH /api/v1/google-forms/sources/{source_id}", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := googleFormsSourceActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -323,9 +323,9 @@ func registerGoogleFormsSourceRoutes(mux *http.ServeMux, logger *slog.Logger, au
 			return
 		}
 		writeJSON(w, http.StatusOK, googleFormsSourceFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/google-forms/sources/{source_id}/refresh", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/google-forms/sources/{source_id}/refresh", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := googleFormsSourceActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -339,11 +339,11 @@ func registerGoogleFormsSourceRoutes(mux *http.ServeMux, logger *slog.Logger, au
 			Source  googleFormsSourceResponse `json:"source"`
 			Drifted bool                      `json:"drifted"`
 		}{Source: googleFormsSourceFromDomain(value), Drifted: drifted})
-	})
+	}))
 }
 
-func registerGoogleFormsSyncRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service googleFormsService) {
-	mux.HandleFunc("POST /api/v1/google-forms/sources/{source_id}/syncs", func(w http.ResponseWriter, r *http.Request) {
+func registerGoogleFormsSyncRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service googleFormsService) {
+	mux.HandleFunc("POST /api/v1/google-forms/sources/{source_id}/syncs", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := googleFormsSourceActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -359,9 +359,9 @@ func registerGoogleFormsSyncRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		writeJSON(w, http.StatusAccepted, googleFormsSyncFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/google-forms/syncs", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/google-forms/syncs", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := googleFormsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -390,9 +390,9 @@ func registerGoogleFormsSyncRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			response.Runs = append(response.Runs, googleFormsSyncFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/google-forms/syncs/{sync_id}/cancel", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/google-forms/syncs/{sync_id}/cancel", requireCapability(auth.CapGoogleForms, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := googleFormsActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -413,7 +413,7 @@ func registerGoogleFormsSyncRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			return
 		}
 		writeJSON(w, http.StatusOK, googleFormsSyncFromDomain(value))
-	})
+	}))
 }
 
 func googleFormsActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service googleFormsService) (auth.Session, bool) {

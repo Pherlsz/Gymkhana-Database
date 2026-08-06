@@ -169,8 +169,8 @@ type ocrApplyRequest struct {
 	Selections     []ocrApplySelectionRequest `json:"selections"`
 }
 
-func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service ocrService) {
-	mux.HandleFunc("GET /api/v1/ocr/capability", func(w http.ResponseWriter, r *http.Request) {
+func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service ocrService) {
+	mux.HandleFunc("GET /api/v1/ocr/capability", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		if _, problem := authenticatedSession(r, authentication); problem != nil {
 			writeProblem(w, r, *problem)
 			return
@@ -180,9 +180,9 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 			return
 		}
 		writeJSON(w, http.StatusOK, ocrCapabilityFromDomain(service.Capability()))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/ocr/jobs", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/ocr/jobs", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredOCRActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -198,9 +198,9 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 			return
 		}
 		writeJSON(w, http.StatusOK, ocrJobPageFromDomain(page))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/ocr/jobs", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/ocr/jobs", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredOCRActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -230,9 +230,9 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 			return
 		}
 		writeJSON(w, http.StatusAccepted, ocrJobFromDomain(job))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/ocr/jobs/{job_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/ocr/jobs/{job_id}", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredOCRActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -247,9 +247,9 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 			return
 		}
 		writeJSON(w, http.StatusOK, ocrJobFromDomain(job))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/ocr/jobs/{job_id}/cancel", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/ocr/jobs/{job_id}/cancel", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredOCRActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -264,9 +264,9 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 			return
 		}
 		writeJSON(w, http.StatusOK, ocrJobFromDomain(job))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/ocr/jobs/{job_id}/events", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/ocr/jobs/{job_id}/events", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredOCRActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -281,9 +281,9 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 			return
 		}
 		streamOCREvents(w, r, logger, service, actor, id, after)
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/ocr/jobs/{job_id}/suggestions", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/ocr/jobs/{job_id}/suggestions", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredOCRActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -303,9 +303,9 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 			return
 		}
 		writeJSON(w, http.StatusOK, ocrSuggestionPageFromDomain(page))
-	})
+	}))
 
-	mux.HandleFunc("PATCH /api/v1/ocr/suggestions/{suggestion_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PATCH /api/v1/ocr/suggestions/{suggestion_id}", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredOCRActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -327,9 +327,9 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 			return
 		}
 		writeJSON(w, http.StatusOK, ocrSuggestionFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/ocr/jobs/{job_id}/apply", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/ocr/jobs/{job_id}/apply", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := configuredOCRActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -358,7 +358,7 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 			return
 		}
 		writeJSON(w, http.StatusOK, ocrApplyReceiptFromDomain(receipt))
-	})
+	}))
 }
 
 func configuredOCRActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service ocrService) (auth.Session, bool) {

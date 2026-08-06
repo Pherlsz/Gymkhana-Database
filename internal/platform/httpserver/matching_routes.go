@@ -185,8 +185,8 @@ type matchingMergeResultResponse struct {
 	MergedAt          time.Time                         `json:"merged_at"`
 }
 
-func registerMatchingRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service matchingService) {
-	mux.HandleFunc("GET /api/v1/matching/catalog", func(w http.ResponseWriter, r *http.Request) {
+func registerMatchingRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service matchingService) {
+	mux.HandleFunc("GET /api/v1/matching/catalog", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := matchingActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -205,9 +205,9 @@ func registerMatchingRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			MaximumPageSize: matching.MaximumCasePageSize, MaximumAnalysesPerWindow: matching.MaximumAnalysisRate,
 			AnalysisWindowSeconds: int(matching.AnalysisWindow.Seconds()),
 		})
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/matching/analyses", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/matching/analyses", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := matchingActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -223,9 +223,9 @@ func registerMatchingRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		writeJSON(w, http.StatusAccepted, matchingAnalysisFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/matching/analyses/{analysis_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/matching/analyses/{analysis_id}", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := matchingActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -241,9 +241,9 @@ func registerMatchingRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		writeJSON(w, http.StatusOK, matchingAnalysisFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/matching/analyses/{analysis_id}/cancel", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/matching/analyses/{analysis_id}/cancel", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := matchingActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -259,13 +259,13 @@ func registerMatchingRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		writeJSON(w, http.StatusOK, matchingAnalysisFromDomain(value))
-	})
+	}))
 
-	registerMatchingCaseRoutes(mux, logger, authentication, service)
+	registerMatchingCaseRoutes(mux, logger, authentication, checker, service)
 }
 
-func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service matchingService) {
-	mux.HandleFunc("GET /api/v1/matching/cases", func(w http.ResponseWriter, r *http.Request) {
+func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service matchingService) {
+	mux.HandleFunc("GET /api/v1/matching/cases", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := matchingActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -285,9 +285,9 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 			response.Cases = append(response.Cases, matchingCaseFromDomain(value, false))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
+	}))
 
-	mux.HandleFunc("GET /api/v1/matching/cases/{case_id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/v1/matching/cases/{case_id}", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := matchingCaseActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -298,9 +298,9 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 			return
 		}
 		writeJSON(w, http.StatusOK, matchingCaseFromDomain(value, true))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/dismiss", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/dismiss", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := matchingCaseActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -316,9 +316,9 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 			return
 		}
 		writeJSON(w, http.StatusOK, matchingCaseFromDomain(value, true))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/merge-preview", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/merge-preview", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := matchingCaseActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -339,9 +339,9 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 			return
 		}
 		writeJSON(w, http.StatusOK, matchingPreviewFromDomain(value))
-	})
+	}))
 
-	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/merge", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/merge", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, id, ok := matchingCaseActor(w, r, authentication, service)
 		if !ok {
 			return
@@ -376,7 +376,7 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 			CaseID: value.CaseID.String(), SurvivorProfileID: value.SurvivorProfileID.String(), SourceProfileID: value.SourceProfileID.String(),
 			SurvivorVersion: value.SurvivorVersion, MovedDependencies: matchingDependencyCounts(value.MovedDependencies), MergedAt: value.MergedAt,
 		})
-	})
+	}))
 }
 
 func matchingActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service matchingService) (auth.Session, bool) {

@@ -96,8 +96,8 @@ type profilePageMeta struct {
 	SortOrder string `json:"sort_order"`
 }
 
-func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, service profileService) {
-	mux.HandleFunc("GET /api/v1/profiles", func(w http.ResponseWriter, r *http.Request) {
+func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service profileService) {
+	mux.HandleFunc("GET /api/v1/profiles", requireCapability(auth.CapProfiles, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
 			writeProblem(w, r, *problem)
@@ -130,8 +130,8 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 			response.Profiles = append(response.Profiles, profileFromDomain(value))
 		}
 		writeJSON(w, http.StatusOK, response)
-	})
-	mux.HandleFunc("POST /api/v1/profiles", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/profiles", requireCapability(auth.CapProfiles, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
 			writeProblem(w, r, *problem)
@@ -152,8 +152,8 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 			return
 		}
 		writeJSON(w, http.StatusCreated, profileFromDomain(created))
-	})
-	mux.HandleFunc("GET /api/v1/profiles/{profile_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/v1/profiles/{profile_id}", requireCapability(auth.CapProfiles, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
 			writeProblem(w, r, *problem)
@@ -174,8 +174,8 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 			return
 		}
 		writeJSON(w, http.StatusOK, profileFromDomain(value))
-	})
-	mux.HandleFunc("PUT /api/v1/profiles/{profile_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("PUT /api/v1/profiles/{profile_id}", requireCapability(auth.CapProfiles, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
 			writeProblem(w, r, *problem)
@@ -201,8 +201,8 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 			return
 		}
 		writeJSON(w, http.StatusOK, profileFromDomain(updated))
-	})
-	mux.HandleFunc("POST /api/v1/profiles/{profile_id}/duplicate", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/v1/profiles/{profile_id}/duplicate", requireCapability(auth.CapProfiles, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
 			writeProblem(w, r, *problem)
@@ -223,8 +223,8 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 			return
 		}
 		writeJSON(w, http.StatusCreated, profileFromDomain(duplicated))
-	})
-	mux.HandleFunc("DELETE /api/v1/profiles/{profile_id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("DELETE /api/v1/profiles/{profile_id}", requireCapability(auth.CapProfiles, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
 			writeProblem(w, r, *problem)
@@ -249,7 +249,7 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
-	})
+	}))
 }
 
 func (request profileValuesRequest) domainValues() profile.Values {

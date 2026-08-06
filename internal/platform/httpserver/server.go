@@ -88,16 +88,16 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	})
 	registerAuthRoutes(mux, logger, settings.Auth, settings.SecureCookies, settings.ApplicationURL)
 	registerAdministrationRoutes(mux, logger, settings.Auth)
-	registerProfileRoutes(mux, logger, settings.Auth, settings.Profile)
-	registerDocumentRoutes(mux, logger, settings.Auth, settings.Document)
-	registerBillRoutes(mux, logger, settings.Auth, settings.Bill)
-	registerCustomDataRoutes(mux, logger, settings.Auth, settings.CustomData)
-	registerAttachmentRoutes(mux, logger, settings.Auth, settings.Attachment)
+	registerProfileRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Profile)
+	registerDocumentRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Document)
+	registerBillRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Bill)
+	registerCustomDataRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.CustomData)
+	registerAttachmentRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Attachment)
 	registerSearchRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Search)
-	registerOperationsRoutes(mux, logger, settings.Auth, settings.Operations)
-	registerGoogleFormsRoutes(mux, logger, settings.Auth, settings.GoogleForms, settings.ApplicationURL)
-	registerQueryRoutes(mux, logger, settings.Auth, settings.Query)
-	registerAdvancedQueryRoutes(mux, logger, settings.Auth, settings.Query)
+	registerOperationsRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Operations)
+	registerGoogleFormsRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.GoogleForms, settings.ApplicationURL)
+	registerQueryRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Query)
+	registerAdvancedQueryRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Query)
 	var tasks taskService
 	if pool != nil && settings.Query != nil {
 		if gateway, ok := settings.Query.(taskdomain.QueryGateway); ok {
@@ -113,10 +113,10 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 			}
 		}
 	}
-	registerTaskRoutes(mux, logger, settings.Auth, tasks)
-	registerMatchingRoutes(mux, logger, settings.Auth, settings.Matching)
-	registerChatRoutes(mux, logger, settings.Auth, settings.Chat, settings.ChatResults, settings.ChatLauncher)
-	registerOCRRoutes(mux, logger, settings.Auth, settings.OCR)
+	registerTaskRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, tasks)
+	registerMatchingRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Matching)
+	registerChatRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Chat, settings.ChatResults, settings.ChatLauncher)
+	registerOCRRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.OCR)
 	mux.HandleFunc("/", fallbackHandler)
 	applicationOrigin := absoluteOrigin(settings.ApplicationURL)
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, browserOriginMiddleware(applicationOrigin, mux)))))
