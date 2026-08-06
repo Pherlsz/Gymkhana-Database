@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { AttachmentsPanel } from "./AttachmentsPanel";
@@ -81,39 +81,43 @@ export function CustomValuesPanel(props: Props) {
   }
   if (fields.isError || values.isError) {
     return (
-      <Alert title="Não foi possível carregar dados personalizados" tone="danger">
-        {customDataError(fields.error ?? values.error)}
-      </Alert>
+      <Alert
+        message="Não foi possível carregar dados personalizados"
+        type="error"
+        description={<>{customDataError(fields.error ?? values.error)}</>}
+      />
     );
   }
   if (activeFields.length === 0) {
     return (
-      <Surface className="custom-values" tone="raised">
+      <Card className="custom-values" style={{ padding: "1rem" }}>
         <span className="custom-values__empty">
           Nenhum campo personalizado ativo para este registro.
         </span>
-      </Surface>
+      </Card>
     );
   }
 
   return (
-    <Stack gap="4">
+    <Flex vertical gap="1rem">
       {scalarFields.length > 0 ? (
-        <Surface className="custom-values" tone="raised">
-          <Stack gap="4">
-            <Inline align="center" className="custom-values__header">
+        <Card className="custom-values" style={{ padding: "1rem" }}>
+          <Flex vertical gap="1rem">
+            <Flex align="center" className="custom-values__header">
               <div>
                 <strong>Dados personalizados</strong>
                 <p>Campos tipados definidos pela administração.</p>
               </div>
-              <StatusBadge tone={editing ? "info" : "neutral"}>
+              <Tag color={editing ? "info" : "neutral"}>
                 {editing ? "Editando" : "Somente leitura"}
-              </StatusBadge>
-            </Inline>
+              </Tag>
+            </Flex>
             {save.isError ? (
-              <Alert title="Não foi possível salvar" tone="danger">
-                {customDataError(save.error)}
-              </Alert>
+              <Alert
+                message="Não foi possível salvar"
+                type="error"
+                description={<>{customDataError(save.error)}</>}
+              />
             ) : null}
             <CustomFieldInputGrid
               disabled={!editing || save.isPending}
@@ -121,7 +125,7 @@ export function CustomValuesPanel(props: Props) {
               fields={scalarFields}
               onChange={setDraft}
             />
-            <Inline>
+            <Flex>
               {editing ? (
                 <>
                   <Button disabled={save.isPending} onClick={() => save.mutate()}>
@@ -140,9 +144,9 @@ export function CustomValuesPanel(props: Props) {
               ) : (
                 <Button onClick={() => setEditing(true)}>Editar dados personalizados</Button>
               )}
-            </Inline>
-          </Stack>
-        </Surface>
+            </Flex>
+          </Flex>
+        </Card>
       ) : null}
       {attachmentFields.map((field) => (
         <AttachmentsPanel
@@ -157,7 +161,7 @@ export function CustomValuesPanel(props: Props) {
           title={field.label}
         />
       ))}
-    </Stack>
+    </Flex>
   );
 }
 

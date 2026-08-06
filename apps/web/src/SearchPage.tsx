@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Page, Stack, StatusBadge, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
@@ -158,19 +158,21 @@ export function SearchPage() {
   };
 
   return (
-    <Page.Root maxWidth="lg">
-      <Page.Header>
-        <Page.Eyebrow>M7 · Busca global</Page.Eyebrow>
-        <Page.Title>Buscar dados autorizados</Page.Title>
-        <Page.Description>
+    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">M7 · Busca global</div>
+        <Typography.Title level={1} className="page-title">
+          Buscar dados autorizados
+        </Typography.Title>
+        <Typography.Paragraph className="page-description">
           Consulte campos lógicos de pessoas, documentos, contas, dados personalizados e metadados
           seguros de anexos. O conteúdo dos arquivos não faz parte desta busca.
-        </Page.Description>
-      </Page.Header>
-      <Page.Content>
-        <Stack gap="5">
-          <Surface className="search-controls" tone="raised">
-            <Stack gap="4">
+        </Typography.Paragraph>
+      </header>
+      <div className="page-content">
+        <Flex vertical gap="1.25rem">
+          <Card className="search-controls" style={{ padding: "1rem" }}>
+            <Flex vertical gap="1rem">
               <label className="search-controls__terms">
                 Termos — um por linha
                 <textarea
@@ -186,9 +188,11 @@ export function SearchPage() {
                 esquerda, letras, números e pontuação são preservados.
               </span>
               {catalog.isError ? (
-                <Alert title="Não foi possível carregar o catálogo" tone="danger">
-                  {searchErrorMessage(catalog.error)}
-                </Alert>
+                <Alert
+                  message="Não foi possível carregar o catálogo"
+                  type="error"
+                  description={<>{searchErrorMessage(catalog.error)}</>}
+                />
               ) : null}
               {catalog.data ? (
                 <fieldset className="search-modules">
@@ -270,7 +274,7 @@ export function SearchPage() {
                   </select>
                 </label>
               </div>
-              <Inline>
+              <Flex>
                 <Button disabled={draft.trim().length === 0 || !catalog.isSuccess} onClick={submit}>
                   Buscar
                 </Button>
@@ -282,20 +286,24 @@ export function SearchPage() {
                 >
                   Limpar
                 </Button>
-              </Inline>
-            </Stack>
-          </Surface>
+              </Flex>
+            </Flex>
+          </Card>
 
           {results.isError ? (
-            <Alert title="Não foi possível executar a busca" tone="danger">
-              {searchErrorMessage(results.error)}
-            </Alert>
+            <Alert
+              message="Não foi possível executar a busca"
+              type="error"
+              description={<>{searchErrorMessage(results.error)}</>}
+            />
           ) : null}
           {terms.length === 0 ? (
-            <Alert title="Informe o que deseja encontrar" tone="info">
-              Use uma linha para cada parâmetro. Termos diferentes podem corresponder a campos e
-              relações diferentes da mesma pessoa.
-            </Alert>
+            <Alert
+              message="Informe o que deseja encontrar"
+              type="info"
+              description="Use uma linha para cada parâmetro. Termos diferentes podem corresponder a campos e
+              relações diferentes da mesma pessoa."
+            />
           ) : null}
           <DataGrid
             caption="Resultados da busca global"
@@ -323,9 +331,9 @@ export function SearchPage() {
               totalPages={totalPages}
             />
           ) : null}
-        </Stack>
-      </Page.Content>
-    </Page.Root>
+        </Flex>
+      </div>
+    </Layout>
   );
 }
 
@@ -336,17 +344,15 @@ function createSearchColumns(moduleLabels: Map<string, string>) {
     resultColumn.accessor("field_label", {
       header: "Correspondência",
       cell: ({ row }) => (
-        <Stack gap="1">
+        <Flex vertical gap="0.25rem">
           <strong>{row.original.field_label}</strong>
           <span className="search-result__preview">{row.original.preview}</span>
-        </Stack>
+        </Flex>
       ),
     }),
     resultColumn.accessor("module", {
       header: "Módulo",
-      cell: ({ getValue }) => (
-        <StatusBadge tone="info">{moduleLabels.get(getValue()) ?? getValue()}</StatusBadge>
-      ),
+      cell: ({ getValue }) => <Tag color="info">{moduleLabels.get(getValue()) ?? getValue()}</Tag>,
     }),
     resultColumn.accessor("updated_at", {
       header: "Atualizado",
@@ -362,18 +368,18 @@ function createSearchColumns(moduleLabels: Map<string, string>) {
 
 function SearchResultCard({ result, moduleLabel }: { result: SearchResult; moduleLabel: string }) {
   return (
-    <Surface className="search-result-card" tone="raised">
-      <Stack gap="2">
-        <Inline align="center">
-          <StatusBadge tone="info">{moduleLabel}</StatusBadge>
+    <Card className="search-result-card" style={{ padding: "1rem" }}>
+      <Flex vertical gap="0.5rem">
+        <Flex align="center">
+          <Tag color="info">{moduleLabel}</Tag>
           <span>Relevância {result.score}</span>
-        </Inline>
+        </Flex>
         <strong>{result.entity_label}</strong>
         <span>{result.field_label}</span>
         <span className="search-result__preview">{result.preview}</span>
         <SearchTargetLink result={result} />
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 

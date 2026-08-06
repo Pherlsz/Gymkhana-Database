@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useState } from "react";
@@ -135,7 +135,7 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
   }
 
   return (
-    <Stack gap="4">
+    <Flex vertical gap="1rem">
       <SectionHeader
         title="Documentos"
         description="Identificadores preservam zeros à esquerda e caracteres alfanuméricos."
@@ -211,7 +211,7 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
           description="Arquivos privados vinculados exclusivamente a este documento."
         />
       ) : null}
-    </Stack>
+    </Flex>
   );
 }
 
@@ -288,7 +288,7 @@ function BillsSection({ profile, role, search, onSearch, onNotice }: Props) {
   }
 
   return (
-    <Stack gap="4">
+    <Flex vertical gap="1rem">
       <SectionHeader
         title="Contas e comprovantes"
         description="Os dados impressos permanecem independentes do cadastro atual da pessoa."
@@ -361,7 +361,7 @@ function BillsSection({ profile, role, search, onSearch, onNotice }: Props) {
           description="Arquivos privados vinculados exclusivamente a este registro."
         />
       ) : null}
-    </Stack>
+    </Flex>
   );
 }
 
@@ -377,10 +377,10 @@ function SectionHeader(props: {
         <h3>{props.title}</h3>
         <p>{props.description}</p>
       </div>
-      <Inline>
+      <Flex>
         {props.onTypes ? <Button onClick={props.onTypes}>Administrar tipos</Button> : null}
         <Button onClick={props.onCreate}>Novo registro</Button>
-      </Inline>
+      </Flex>
     </div>
   );
 }
@@ -395,7 +395,7 @@ function DocumentFilters({
   onSearch: (patch: Partial<ProfileListSearch>) => void;
 }) {
   return (
-    <Surface className="record-filters" tone="raised">
+    <Card className="record-filters" style={{ padding: "1rem" }}>
       <label>
         Identificador
         <input
@@ -472,7 +472,7 @@ function DocumentFilters({
           <option value="type_label:asc">Tipo A–Z</option>
         </select>
       </label>
-    </Surface>
+    </Card>
   );
 }
 
@@ -486,7 +486,7 @@ function BillFilters({
   onSearch: (patch: Partial<ProfileListSearch>) => void;
 }) {
   return (
-    <Surface className="record-filters" tone="raised">
+    <Card className="record-filters" style={{ padding: "1rem" }}>
       <label>
         Referência
         <input
@@ -570,7 +570,7 @@ function BillFilters({
           <option value="type_label:asc">Tipo A–Z</option>
         </select>
       </label>
-    </Surface>
+    </Card>
   );
 }
 
@@ -619,7 +619,7 @@ function DocumentEditor(props: {
   };
   if (props.mode !== "create" && !props.record) return <MissingRecord onClose={props.onClose} />;
   return (
-    <Surface className="record-editor" tone="raised">
+    <Card className="record-editor" style={{ padding: "1rem" }}>
       <EditorHeader
         title={
           props.record
@@ -629,9 +629,7 @@ function DocumentEditor(props: {
         onClose={props.onClose}
       />
       {error ? (
-        <Alert title="Não foi possível salvar" tone="danger">
-          {error}
-        </Alert>
+        <Alert message="Não foi possível salvar" type="error" description={<>{error}</>} />
       ) : null}
       <div className="record-form">
         <label>
@@ -723,7 +721,7 @@ function DocumentEditor(props: {
           onDelete={() => props.onDelete(props.record!, confirmation)}
         />
       ) : null}
-    </Surface>
+    </Card>
   );
 }
 
@@ -779,7 +777,7 @@ function BillEditor(props: {
   };
   if (props.mode !== "create" && !props.record) return <MissingRecord onClose={props.onClose} />;
   return (
-    <Surface className="record-editor" tone="raised">
+    <Card className="record-editor" style={{ padding: "1rem" }}>
       <EditorHeader
         title={
           props.record
@@ -789,9 +787,7 @@ function BillEditor(props: {
         onClose={props.onClose}
       />
       {error ? (
-        <Alert title="Não foi possível salvar" tone="danger">
-          {error}
-        </Alert>
+        <Alert message="Não foi possível salvar" type="error" description={<>{error}</>} />
       ) : null}
       <div className="record-form">
         <label>
@@ -919,7 +915,7 @@ function BillEditor(props: {
           onDelete={() => props.onDelete(props.record!, confirmation)}
         />
       ) : null}
-    </Surface>
+    </Card>
   );
 }
 
@@ -955,13 +951,11 @@ function CurrentUseControls(
     onError: (caught) => setError(errorMessage(caught)),
   });
   return (
-    <Surface className="current-use" tone="raised">
-      <Stack gap="3">
+    <Card className="current-use" style={{ padding: "1rem" }}>
+      <Flex vertical gap="0.75rem">
         <strong>Uso atual</strong>
         {error ? (
-          <Alert title="Não foi possível alterar o uso" tone="danger">
-            {error}
-          </Alert>
+          <Alert message="Não foi possível alterar o uso" type="error" description={<>{error}</>} />
         ) : null}
         <label>
           Pessoa em uso
@@ -975,7 +969,7 @@ function CurrentUseControls(
             ))}
           </select>
         </label>
-        <Inline>
+        <Flex>
           <Button disabled={!holder || assign.isPending} onClick={() => assign.mutate()}>
             {props.record.status === "IN_USE" ? "Substituir pessoa" : "Atribuir uso"}
           </Button>
@@ -984,9 +978,9 @@ function CurrentUseControls(
               Devolver
             </Button>
           ) : null}
-        </Inline>
-      </Stack>
-    </Surface>
+        </Flex>
+      </Flex>
+    </Card>
   );
 }
 
@@ -1124,7 +1118,7 @@ function DocumentTypesAdmin({
             />
             Ativo
           </label>
-          <Inline>
+          <Flex>
             <Button disabled={save.isPending} onClick={() => save.mutate()}>
               Salvar tipo
             </Button>
@@ -1143,7 +1137,7 @@ function DocumentTypesAdmin({
             >
               Novo
             </Button>
-          </Inline>
+          </Flex>
           {selected ? (
             <DeleteType
               confirmation={confirmation}
@@ -1260,7 +1254,7 @@ function BillTypesAdmin({
             />
             Ativo
           </label>
-          <Inline>
+          <Flex>
             <Button disabled={save.isPending} onClick={() => save.mutate()}>
               Salvar tipo
             </Button>
@@ -1277,7 +1271,7 @@ function BillTypesAdmin({
             >
               Novo
             </Button>
-          </Inline>
+          </Flex>
           {selected ? (
             <DeleteType
               confirmation={confirmation}
@@ -1302,12 +1296,14 @@ function TypesAdminShell(props: {
 }) {
   if (!props.canAdminister)
     return (
-      <Alert title="Acesso restrito" tone="danger">
-        Somente administradores podem alterar tipos.
-      </Alert>
+      <Alert
+        message="Acesso restrito"
+        type="error"
+        description="Somente administradores podem alterar tipos."
+      />
     );
   return (
-    <Stack gap="4">
+    <Flex vertical gap="1rem">
       <div className="records-section-header">
         <h3>{props.title}</h3>
         <Button onClick={props.onBack}>Voltar</Button>
@@ -1316,14 +1312,14 @@ function TypesAdminShell(props: {
         <RecordsError title="Não foi possível alterar tipos" error={props.error} />
       ) : null}
       <div className="types-admin">
-        <Surface className="type-list" tone="raised">
+        <Card className="type-list" style={{ padding: "1rem" }}>
           {props.list}
-        </Surface>
-        <Surface className="type-form" tone="raised">
+        </Card>
+        <Card className="type-form" style={{ padding: "1rem" }}>
           {props.form}
-        </Surface>
+        </Card>
       </div>
-    </Stack>
+    </Flex>
   );
 }
 
@@ -1367,7 +1363,7 @@ function EditorActions<T extends DocumentRecord | BillRecord>(props: {
   onDuplicate: (value: T) => void;
 }) {
   return (
-    <Inline className="record-editor__actions">
+    <Flex className="record-editor__actions">
       {props.editable ? (
         <Button disabled={props.saving} onClick={props.onSave}>
           {props.saving ? "Salvando" : "Salvar"}
@@ -1378,7 +1374,7 @@ function EditorActions<T extends DocumentRecord | BillRecord>(props: {
       {props.record ? (
         <Button onClick={() => props.onDuplicate(props.record!)}>Duplicar</Button>
       ) : null}
-    </Inline>
+    </Flex>
   );
 }
 function DeleteBox(props: {
@@ -1389,8 +1385,8 @@ function DeleteBox(props: {
   onDelete: () => void;
 }) {
   return (
-    <Surface className="record-delete" tone="raised">
-      <Stack gap="3">
+    <Card className="record-delete" style={{ padding: "1rem" }}>
+      <Flex vertical gap="0.75rem">
         <strong>Exclusão permanente</strong>
         <span>Digite Confirmar para excluir este {props.label}.</span>
         <input
@@ -1403,32 +1399,34 @@ function DeleteBox(props: {
         >
           Excluir permanentemente
         </Button>
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 function MissingRecord({ onClose }: { onClose: () => void }) {
   return (
-    <Alert title="Registro não encontrado" tone="danger">
-      <Stack gap="3">
-        <span>Atualize a lista e tente novamente.</span>
-        <Button onClick={onClose}>Fechar</Button>
-      </Stack>
-    </Alert>
+    <Alert
+      message="Registro não encontrado"
+      type="error"
+      description={
+        <>
+          <Flex vertical gap="0.75rem">
+            <span>Atualize a lista e tente novamente.</span>
+            <Button onClick={onClose}>Fechar</Button>
+          </Flex>
+        </>
+      }
+    />
   );
 }
 function RecordsError({ title, error }: { title: string; error: unknown }) {
-  return (
-    <Alert title={title} tone="danger">
-      {errorMessage(error)}
-    </Alert>
-  );
+  return <Alert title={title} type="error" description={<>{errorMessage(error)}</>} />;
 }
 function RecordStatus({ value }: { value: "AVAILABLE" | "IN_USE" }) {
   return (
-    <StatusBadge tone={value === "IN_USE" ? "info" : "success"}>
+    <Tag color={value === "IN_USE" ? "info" : "success"}>
       {value === "IN_USE" ? "Em uso" : "Disponível"}
-    </StatusBadge>
+    </Tag>
   );
 }
 
@@ -1534,16 +1532,16 @@ function RecordCard(props: {
   onOpen: () => void;
 }) {
   return (
-    <Surface className="record-card" tone="raised">
-      <Stack gap="2">
+    <Card className="record-card" style={{ padding: "1rem" }}>
+      <Flex vertical gap="0.5rem">
         <strong>{props.title}</strong>
         {props.lines.map((line) => (
           <span key={line}>{line}</span>
         ))}
         <RecordStatus value={props.status} />
         <Button onClick={props.onOpen}>Abrir</Button>
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 

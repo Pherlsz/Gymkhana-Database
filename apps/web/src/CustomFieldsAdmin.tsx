@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
@@ -117,17 +117,19 @@ export function CustomFieldsAdmin() {
           : [];
 
   return (
-    <Stack gap="4">
+    <Flex vertical gap="1rem">
       <SectionTitle
         title="Campos personalizados"
         description="Campos pertencem a um contexto e preservam o tipo depois que recebem valores."
       />
       {save.isError || remove.isError || fields.isError ? (
-        <Alert title="Não foi possível concluir a operação" tone="danger">
-          {customDataError(save.error ?? remove.error ?? fields.error)}
-        </Alert>
+        <Alert
+          message="Não foi possível concluir a operação"
+          type="error"
+          description={<>{customDataError(save.error ?? remove.error ?? fields.error)}</>}
+        />
       ) : null}
-      <Surface className="custom-admin-form" tone="raised">
+      <Card className="custom-admin-form" style={{ padding: "1rem" }}>
         <div className="custom-admin-grid">
           <label>
             Contexto
@@ -240,7 +242,7 @@ export function CustomFieldsAdmin() {
             Ativo
           </label>
         </div>
-        <Inline>
+        <Flex>
           <Button
             disabled={
               save.isPending ||
@@ -262,24 +264,24 @@ export function CustomFieldsAdmin() {
               Cancelar
             </Button>
           ) : null}
-        </Inline>
-      </Surface>
+        </Flex>
+      </Card>
       <div className="custom-admin-list">
         {fields.data?.fields.map((value) => (
-          <Surface key={value.id} className="custom-admin-card" tone="raised">
-            <Stack gap="3">
-              <Inline align="center" className="custom-admin-card__header">
+          <Card key={value.id} className="custom-admin-card" style={{ padding: "1rem" }}>
+            <Flex vertical gap="0.75rem">
+              <Flex align="center" className="custom-admin-card__header">
                 <div>
                   <strong>{value.label}</strong>
                   <p>
                     {value.technical_key} · {fieldKindLabel(value.field_kind)}
                   </p>
                 </div>
-                <StatusBadge tone={value.active ? "success" : "neutral"}>
+                <Tag color={value.active ? "success" : "neutral"}>
                   {value.active ? "Ativo" : "Inativo"}
-                </StatusBadge>
-              </Inline>
-              <Inline>
+                </Tag>
+              </Flex>
+              <Flex>
                 <Button
                   onClick={() => {
                     setEditing(value);
@@ -294,12 +296,12 @@ export function CustomFieldsAdmin() {
                 <Button disabled={remove.isPending} onClick={() => remove.mutate(value)}>
                   Excluir
                 </Button>
-              </Inline>
-            </Stack>
-          </Surface>
+              </Flex>
+            </Flex>
+          </Card>
         ))}
       </div>
       {selected ? <CustomOptionsAdmin field={selected} onClose={() => setSelected(null)} /> : null}
-    </Stack>
+    </Flex>
   );
 }

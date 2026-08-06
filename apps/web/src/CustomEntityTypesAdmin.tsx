@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { customDataError } from "./CustomValuesPanel";
@@ -38,17 +38,19 @@ export function CustomEntityTypesAdmin() {
   });
   const error = save.error ?? remove.error ?? query.error;
   return (
-    <Stack gap="4">
+    <Flex vertical gap="1rem">
       <SectionTitle
         title="Tipos de entidade"
         description="Controle a cardinalidade por pessoa e mantenha chaves técnicas estáveis."
       />
       {error ? (
-        <Alert title="Não foi possível concluir a operação" tone="danger">
-          {customDataError(error)}
-        </Alert>
+        <Alert
+          message="Não foi possível concluir a operação"
+          type="error"
+          description={<>{customDataError(error)}</>}
+        />
       ) : null}
-      <Surface className="custom-admin-form" tone="raised">
+      <Card className="custom-admin-form" style={{ padding: "1rem" }}>
         <div className="custom-admin-grid">
           <label>
             Chave técnica
@@ -92,7 +94,7 @@ export function CustomEntityTypesAdmin() {
             Ativo
           </label>
         </div>
-        <Inline>
+        <Flex>
           <Button
             disabled={!draft.technical_key || !draft.label || save.isPending}
             onClick={() => save.mutate()}
@@ -109,27 +111,27 @@ export function CustomEntityTypesAdmin() {
               Cancelar
             </Button>
           ) : null}
-        </Inline>
-      </Surface>
+        </Flex>
+      </Card>
       <div className="custom-admin-list">
         {query.data?.types.map((value) => (
-          <Surface className="custom-admin-card" key={value.id} tone="raised">
-            <Stack gap="3">
-              <Inline className="custom-admin-card__header">
+          <Card className="custom-admin-card" key={value.id} style={{ padding: "1rem" }}>
+            <Flex vertical gap="0.75rem">
+              <Flex className="custom-admin-card__header">
                 <div>
                   <strong>{value.label}</strong>
                   <p>{value.technical_key}</p>
                 </div>
-                <StatusBadge tone={value.active ? "success" : "neutral"}>
+                <Tag color={value.active ? "success" : "neutral"}>
                   {value.active ? "Ativo" : "Inativo"}
-                </StatusBadge>
-              </Inline>
+                </Tag>
+              </Flex>
               <span>
                 {value.profile_cardinality === "ONE_PER_PROFILE"
                   ? "Uma por pessoa"
                   : "Várias por pessoa"}
               </span>
-              <Inline>
+              <Flex>
                 <Button
                   onClick={() => {
                     setEditing(value);
@@ -146,11 +148,11 @@ export function CustomEntityTypesAdmin() {
                 <Button disabled={remove.isPending} onClick={() => remove.mutate(value)}>
                   Excluir
                 </Button>
-              </Inline>
-            </Stack>
-          </Surface>
+              </Flex>
+            </Flex>
+          </Card>
         ))}
       </div>
-    </Stack>
+    </Flex>
   );
 }
