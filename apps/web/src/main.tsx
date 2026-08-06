@@ -1,4 +1,3 @@
-import "@ant-design/v5-patch-for-react-19";
 import "./ui/tokens.css";
 import "./ui/styles.css";
 import { ConfigProvider } from "antd";

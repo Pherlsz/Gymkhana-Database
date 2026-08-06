@@ -19,6 +19,7 @@ import {
 } from "@tanstack/react-router";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { AdminUsersPanel } from "./AdminUsersPanel";
+import { LoginScreen } from "./LoginScreen";
 import { ChatPage, normalizeChatSearch } from "./ChatPage";
 import { CustomDataPage } from "./CustomDataPage";
 import { GoogleFormsPage } from "./GoogleFormsPage";
@@ -197,6 +198,10 @@ export function App() {
       setSigningOut(false);
     }
   }, []);
+
+  if (authentication.kind === "unauthenticated") {
+    return <LoginScreen onLogin={() => window.location.assign(apiURL("/auth/login"))} />;
+  }
 
   if (authentication.kind !== "authenticated") {
     return (
