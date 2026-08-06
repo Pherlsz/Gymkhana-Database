@@ -1,6 +1,26 @@
-import { Button, Card, Flex } from "antd";
-import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
-import { useEffect, useRef, type ReactNode } from "react";
+import {
+  Button,
+  Card,
+  Checkbox,
+  Flex,
+  Table,
+  type TablePaginationConfig,
+  type TableProps,
+} from "antd";
+import type { ColumnDef } from "@tanstack/react-table";
+import { useMemo, type ReactNode } from "react";
+
+type GridColumn<TData> = ColumnDef<TData, any>;
+
+// Structural view of the ColumnDef fields this adapter reads; avoids fighting
+// TanStack's discriminated union narrowing.
+type LooseColumn<TData> = {
+  id?: string;
+  accessorKey?: string;
+  accessorFn?: (row: TData, index: number) => unknown;
+  header?: unknown;
+  cell?: (context: { row: { original: TData }; getValue: () => unknown }) => ReactNode;
+};
 
 export function DataGrid<TData>({
   data,
@@ -19,7 +39,7 @@ export function DataGrid<TData>({
   selection,
 }: {
   data: TData[];
-  columns: ColumnDef<TData, any>[];
+  columns: GridColumn<TData>[];
   getRowId: (row: TData) => string;
   caption: string;
   loading: boolean;
@@ -39,31 +59,58 @@ export function DataGrid<TData>({
       }
     | undefined;
 }) {
-  const table = useReactTable({ data, columns, getCoreRowModel: getCoreRowModel(), getRowId });
   const surfaceClassName = ["data-grid", className].filter(Boolean).join(" ");
-  const wrapClassName = ["data-grid__table-wrap", tableWrapClassName].filter(Boolean).join(" ");
-  const tableClasses = ["data-grid__table", tableClassName].filter(Boolean).join(" ");
+  const shellClassName = ["data-grid__table-shell", tableWrapClassName].filter(Boolean).join(" ");
   const cardsClasses = ["data-grid__cards", cardsClassName].filter(Boolean).join(" ");
-  const pageIDs = data.map(getRowId);
-  const selectedOnPage = pageIDs.filter((id) => selection?.selectedIds.has(id)).length;
-  const allSelected = pageIDs.length > 0 && selectedOnPage === pageIDs.length;
-  const partlySelected = selectedOnPage > 0 && !allSelected;
-  const togglePage = (checked: boolean) => {
-    if (!selection) return;
-    const next = new Set(selection.selectedIds);
-    for (const id of pageIDs) {
-      if (checked) next.add(id);
-      else next.delete(id);
-    }
-    selection.onChange(next);
-  };
-  const toggleRow = (id: string, checked: boolean) => {
-    if (!selection) return;
-    const next = new Set(selection.selectedIds);
-    if (checked) next.add(id);
-    else next.delete(id);
-    selection.onChange(next);
-  };
+
+  const antdColumns = useMemo(
+    () =>
+      columns.map((columnDef, index): NonNullable<TableProps<TData>["columns"]>[number] => {
+        const column = columnDef as LooseColumn<TData>;
+        const id =
+          column.id ??
+          (typeof column.accessorKey === "string" ? column.accessorKey : `col-${index}`);
+        const read = (row: TData): unknown => {
+          if (typeof column.accessorFn === "function") return column.accessorFn(row, index);
+          if (typeof column.accessorKey === "string") {
+            return (row as Record<string, unknown>)[column.accessorKey];
+          }
+          return undefined;
+        };
+        const header =
+          typeof column.header === "string"
+            ? column.header
+            : column.header
+              ? String(column.header)
+              : "";
+        const cell = typeof column.cell === "function" ? column.cell : undefined;
+        const hasValue =
+          typeof column.accessorFn === "function" || typeof column.accessorKey === "string";
+        // ponytail: sort only — the list pages already own URL-backed filters
+        // (ProfileFilters, search terms, module/state selects); adding antd
+        // column filters would duplicate them with uncontrolled state.
+        return {
+          key: id,
+          title: header,
+          render: (_: unknown, row: TData) =>
+            cell
+              ? cell({
+                  row: { original: row },
+                  getValue: () => read(row),
+                } as any)
+              : renderText(read(row)),
+          ...(hasValue
+            ? {
+                sorter: (a: TData, b: TData) => compareValues(read(a), read(b)),
+              }
+            : {}),
+        };
+      }),
+    [columns, data],
+  );
+
+  const pagination: TablePaginationConfig | false =
+    data.length > 10 ? { defaultPageSize: 10, showSizeChanger: true } : false;
 
   return (
     <Card aria-busy={loading} className={surfaceClassName} style={{ padding: "1rem" }}>
@@ -75,57 +122,39 @@ export function DataGrid<TData>({
       {!loading && data.length === 0 ? <p className="data-grid__status">{emptyLabel}</p> : null}
       {!loading && data.length > 0 ? (
         <>
-          <div className={wrapClassName}>
-            <table className={tableClasses}>
-              <caption className="visually-hidden">{caption}</caption>
-              <thead>
-                {table.getHeaderGroups().map((group) => (
-                  <tr key={group.id}>
-                    {selection ? (
-                      <th className="data-grid__selection" scope="col">
-                        <SelectionCheckbox
-                          checked={allSelected}
-                          indeterminate={partlySelected}
-                          label={`Selecionar todas as linhas de ${caption}`}
-                          onChange={togglePage}
-                        />
-                      </th>
-                    ) : null}
-                    {group.headers.map((header) => (
-                      <th key={header.id} scope="col">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <tr
-                    aria-selected={row.id === selectedRowId || selection?.selectedIds.has(row.id)}
-                    key={row.id}
-                  >
-                    {selection ? (
-                      <td className="data-grid__selection">
-                        <SelectionCheckbox
-                          checked={selection.selectedIds.has(row.id)}
-                          indeterminate={false}
-                          label={`Selecionar ${selection.rowLabel(row.original)}`}
-                          onChange={(checked) => toggleRow(row.id, checked)}
-                        />
-                      </td>
-                    ) : null}
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className={shellClassName}>
+            <Table<TData>
+              {...(tableClassName ? { className: tableClassName } : {})}
+              columns={antdColumns}
+              dataSource={data}
+              locale={{ emptyText: emptyLabel }}
+              pagination={pagination}
+              rowKey={getRowId}
+              {...(selection
+                ? {
+                    rowSelection: {
+                      selectedRowKeys: [...selection.selectedIds],
+                      onChange: (keys) =>
+                        selection.onChange(new Set(keys.map((key) => String(key)))),
+                      columnTitle: (
+                        <span className="visually-hidden">
+                          Selecionar todas as linhas de {caption}
+                        </span>
+                      ),
+                      getCheckboxProps: (row: TData) => ({
+                        "aria-label": `Selecionar ${selection.rowLabel(row)}`,
+                      }),
+                    },
+                  }
+                : {})}
+              onRow={(row) => ({
+                "aria-selected":
+                  getRowId(row) === selectedRowId || selection?.selectedIds.has(getRowId(row)),
+              })}
+              scroll={{ x: "max-content" }}
+              size="middle"
+              caption={<span className="visually-hidden">{caption}</span>}
+            />
           </div>
           {renderCard ? (
             <div className={cardsClasses}>
@@ -135,11 +164,15 @@ export function DataGrid<TData>({
                   <div className="data-grid__card-shell" key={id}>
                     {selection ? (
                       <div className="data-grid__card-selection">
-                        <SelectionCheckbox
+                        <Checkbox
+                          aria-label={`Selecionar ${selection.rowLabel(row)} no cartão`}
                           checked={selection.selectedIds.has(id)}
-                          indeterminate={false}
-                          label={`Selecionar ${selection.rowLabel(row)} no cartão`}
-                          onChange={(checked) => toggleRow(id, checked)}
+                          onChange={(event) => {
+                            const next = new Set(selection.selectedIds);
+                            if (event.target.checked) next.add(id);
+                            else next.delete(id);
+                            selection.onChange(next);
+                          }}
                         />
                       </div>
                     ) : null}
@@ -155,30 +188,21 @@ export function DataGrid<TData>({
   );
 }
 
-function SelectionCheckbox({
-  checked,
-  indeterminate,
-  label,
-  onChange,
-}: {
-  checked: boolean;
-  indeterminate: boolean;
-  label: string;
-  onChange: (checked: boolean) => void;
-}) {
-  const reference = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (reference.current) reference.current.indeterminate = indeterminate;
-  }, [indeterminate]);
-  return (
-    <input
-      aria-label={label}
-      checked={checked}
-      ref={reference}
-      type="checkbox"
-      onChange={(event) => onChange(event.currentTarget.checked)}
-    />
-  );
+function renderText(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return "";
+}
+
+function compareValues(a: unknown, b: unknown): number {
+  const rank = (value: unknown) => (value === null || value === undefined ? 1 : 0);
+  const order = rank(a) - rank(b);
+  if (order !== 0) return order;
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  if (typeof a === "boolean" && typeof b === "boolean") return Number(a) - Number(b);
+  return String(a ?? "").localeCompare(String(b ?? ""), "pt-BR");
 }
 
 export function DataGridPagination({

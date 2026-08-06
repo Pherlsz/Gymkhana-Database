@@ -59,7 +59,7 @@
   min-block-size: 12rem;
 }
 
-.search-results .data-grid__table {
+.search-results .ant-table table {
   min-inline-size: 60rem;
 }
 

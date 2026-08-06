@@ -185,7 +185,7 @@
   gap: var(--gym-space-1);
 }
 
-.chat-result .data-grid__table {
+.chat-result .ant-table table {
   min-inline-size: 34rem;
 }
 

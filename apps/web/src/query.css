@@ -155,7 +155,7 @@
   border-radius: var(--gym-radius-md);
 }
 
-.query-results__grid .data-grid__table td {
+.query-results__grid .ant-table td {
   max-inline-size: 24rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;

@@ -134,7 +134,9 @@ describe("ProfileRecordsPanel", () => {
     const { onSearch } = renderPanel();
     expect(await screen.findAllByText("RG")).not.toHaveLength(0);
     expect(screen.getByDisplayValue("00123")).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Identificador"), { target: { value: "001" } });
+    fireEvent.change(screen.getByLabelText("Identificador", { selector: "input" }), {
+      target: { value: "001" },
+    });
     expect(onSearch).toHaveBeenCalledWith({ document_identifier: "001", document_page: 1 });
     const inline = screen.getByLabelText("Identificador de RG");
     fireEvent.change(inline, { target: { value: "00099" } });
