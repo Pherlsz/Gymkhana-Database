@@ -25,25 +25,26 @@ const (
 )
 
 type Options struct {
-	MaxBodyBytes   int64
-	Auth           authenticationService
-	Profile        profileService
-	Document       documentService
-	Bill           billService
-	CustomData     customDataService
-	Attachment     attachmentService
-	Search         searchService
-	Operations     operationsService
-	GoogleForms    googleFormsService
-	Query          queryService
-	Matching       matchingService
-	Chat           chatService
-	ChatResults    chatResultReader
-	ChatLauncher   chatRunLauncher
-	OCR            ocrService
-	SecureCookies  bool
-	ApplicationURL string
-	Release        releaseinfo.Info
+	MaxBodyBytes     int64
+	Auth             authenticationService
+	CapabilityCheck  capabilityChecker
+	Profile          profileService
+	Document         documentService
+	Bill             billService
+	CustomData       customDataService
+	Attachment       attachmentService
+	Search           searchService
+	Operations       operationsService
+	GoogleForms      googleFormsService
+	Query            queryService
+	Matching         matchingService
+	Chat             chatService
+	ChatResults      chatResultReader
+	ChatLauncher     chatRunLauncher
+	OCR              ocrService
+	SecureCookies    bool
+	ApplicationURL   string
+	Release          releaseinfo.Info
 }
 
 type healthResponse struct {
@@ -92,7 +93,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerBillRoutes(mux, logger, settings.Auth, settings.Bill)
 	registerCustomDataRoutes(mux, logger, settings.Auth, settings.CustomData)
 	registerAttachmentRoutes(mux, logger, settings.Auth, settings.Attachment)
-	registerSearchRoutes(mux, logger, settings.Auth, settings.Search)
+	registerSearchRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Search)
 	registerOperationsRoutes(mux, logger, settings.Auth, settings.Operations)
 	registerGoogleFormsRoutes(mux, logger, settings.Auth, settings.GoogleForms, settings.ApplicationURL)
 	registerQueryRoutes(mux, logger, settings.Auth, settings.Query)
