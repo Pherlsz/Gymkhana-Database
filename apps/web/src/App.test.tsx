@@ -70,10 +70,10 @@ describe("App", () => {
     expect(screen.getByText("v0.2.1")).toBeInTheDocument();
     expect(screen.getByText("v0.3.0")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Sair" }));
-    expect(await screen.findByText("Autenticação necessária")).toBeInTheDocument();
+    expect(await screen.findByText("Faça login para continuar")).toBeInTheDocument();
   });
 
-  it("shows GitHub login when the protected session returns unauthorized", async () => {
+  it("shows Google login when the protected session returns unauthorized", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation((input: RequestInfo | URL) => {
@@ -88,8 +88,8 @@ describe("App", () => {
       }),
     );
     render(<App />);
-    expect(await screen.findByText("Autenticação necessária")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Entrar com GitHub" })).toBeInTheDocument();
+    expect(await screen.findByText("Faça login para continuar")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Entrar com Google/ })).toBeInTheDocument();
   });
 
   it("navigates to Profiles, keeps list state in the URL, and saves an inline edit", async () => {

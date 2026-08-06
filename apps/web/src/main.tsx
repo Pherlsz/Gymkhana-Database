@@ -1,6 +1,5 @@
-// CSS tokens removidos - usando shims locais
-// CSS styles removidos - usando shims locais
-import { ThemeProvider } from "./ui";
+import { ConfigProvider } from "antd";
+import ptBR from "antd/locale/pt_BR";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
@@ -23,8 +22,17 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <ThemeProvider density="comfortable" theme="system">
+    <ConfigProvider
+      locale={ptBR}
+      theme={{
+        token: {
+          colorPrimary: "#7c3aed",
+          borderRadius: 8,
+          fontSize: 14,
+        },
+      }}
+    >
       <App />
-    </ThemeProvider>
+    </ConfigProvider>
   </StrictMode>,
 );

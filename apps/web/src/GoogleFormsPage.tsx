@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Page, Stack, StatusBadge, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -80,50 +80,64 @@ export function GoogleFormsPage() {
 
   if (!canManage) {
     return (
-      <Page.Root maxWidth="lg">
-        <Page.Header>
-          <Page.Eyebrow>M9 · Integrações</Page.Eyebrow>
-          <Page.Title>Google Forms</Page.Title>
-        </Page.Header>
-        <Page.Content>
-          <Alert title="Acesso administrativo necessário" tone="warning">
-            Somente administradores podem conectar contas e configurar fontes do Google Forms.
-          </Alert>
-        </Page.Content>
-      </Page.Root>
+      <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+        <header className="page-header">
+          <div className="page-eyebrow">M9 · Integrações</div>
+          <Typography.Title level={1} className="page-title">
+            Google Forms
+          </Typography.Title>
+        </header>
+        <div className="page-content">
+          <Alert
+            message="Acesso administrativo necessário"
+            type="warning"
+            description="Somente administradores podem conectar contas e configurar fontes do Google Forms."
+          />
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <Page.Root maxWidth="lg">
-      <Page.Header>
-        <Page.Eyebrow>M9 · Integrações</Page.Eyebrow>
-        <Page.Title>Google Forms</Page.Title>
-        <Page.Description>
+    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">M9 · Integrações</div>
+        <Typography.Title level={1} className="page-title">
+          Google Forms
+        </Typography.Title>
+        <Typography.Paragraph className="page-description">
           Conecte somente leitura, mapeie perguntas para campos lógicos e revise cada lote no fluxo
           de Operações antes de gravá-lo.
-        </Page.Description>
-      </Page.Header>
-      <Page.Content>
-        <Stack gap="6">
+        </Typography.Paragraph>
+      </header>
+      <div className="page-content">
+        <Flex vertical gap="1.5rem">
           {oauthResult === "connected" ? (
-            <Alert title="Google Forms conectado" tone="success">
-              A autorização foi armazenada de forma criptografada.
-            </Alert>
+            <Alert
+              message="Google Forms conectado"
+              type="success"
+              description="A autorização foi armazenada de forma criptografada."
+            />
           ) : oauthResult === "denied" ? (
-            <Alert title="Autorização não concedida" tone="warning">
-              Nenhuma conexão foi criada. Você pode tentar novamente quando quiser.
-            </Alert>
+            <Alert
+              message="Autorização não concedida"
+              type="warning"
+              description="Nenhuma conexão foi criada. Você pode tentar novamente quando quiser."
+            />
           ) : null}
           {status.isError ? (
-            <Alert title="Não foi possível consultar a integração" tone="danger">
-              {googleFormsError(status.error)}
-            </Alert>
+            <Alert
+              message="Não foi possível consultar a integração"
+              type="error"
+              description={<>{googleFormsError(status.error)}</>}
+            />
           ) : null}
           {status.data && !status.data.enabled ? (
-            <Alert title="Integração desativada" tone="info">
-              As credenciais e a chave de criptografia ainda não foram habilitadas neste ambiente.
-            </Alert>
+            <Alert
+              message="Integração desativada"
+              type="info"
+              description="As credenciais e a chave de criptografia ainda não foram habilitadas neste ambiente."
+            />
           ) : null}
           {status.data?.enabled && !status.data.connected ? (
             <ConnectionSetup onConnected={() => void refresh()} />
@@ -135,7 +149,7 @@ export function GoogleFormsPage() {
             />
           ) : null}
           {status.data?.connected ? (
-            <Inline aria-label="Seções do Google Forms" role="tablist">
+            <Flex aria-label="Seções do Google Forms" role="tablist">
               <Button
                 aria-selected={tab === "sources"}
                 onClick={() => navigate("sources")}
@@ -150,7 +164,7 @@ export function GoogleFormsPage() {
               >
                 Histórico
               </Button>
-            </Inline>
+            </Flex>
           ) : null}
           {status.data?.connected && tab === "sources" && catalog.data ? (
             <SourceCreator
@@ -159,14 +173,18 @@ export function GoogleFormsPage() {
             />
           ) : null}
           {status.data?.connected && tab === "sources" ? (
-            <Page.Section
-              description="Cada fonte pertence ao administrador conectado; alterações de tipo ou obrigatoriedade pausam a sincronização."
-              title="Fontes configuradas"
-            >
+            <section className="page-section">
+              <Typography.Title level={2}>Fontes configuradas</Typography.Title>
+              <Typography.Paragraph>
+                Cada fonte pertence ao administrador conectado; alterações de tipo ou
+                obrigatoriedade pausam a sincronização.
+              </Typography.Paragraph>
               {sources.isError ? (
-                <Alert title="Não foi possível carregar as fontes" tone="danger">
-                  {googleFormsError(sources.error)}
-                </Alert>
+                <Alert
+                  message="Não foi possível carregar as fontes"
+                  type="error"
+                  description={<>{googleFormsError(sources.error)}</>}
+                />
               ) : null}
               {(sources.data?.sources.length ?? 0) > 1 ? (
                 <label>
@@ -186,11 +204,13 @@ export function GoogleFormsPage() {
                 </label>
               ) : null}
               {selectedSourceID && sources.data && !selectedSource ? (
-                <Alert title="Fonte não encontrada" tone="warning">
-                  A fonte informada na URL não pertence a esta conexão ou não está mais disponível.
-                </Alert>
+                <Alert
+                  message="Fonte não encontrada"
+                  type="warning"
+                  description="A fonte informada na URL não pertence a esta conexão ou não está mais disponível."
+                />
               ) : null}
-              <Stack gap="4">
+              <Flex vertical gap="1rem">
                 {visibleSources.map((source) => (
                   <SourceCard
                     catalog={catalog.data?.modules.find((value) => value.id === source.module)}
@@ -200,12 +220,14 @@ export function GoogleFormsPage() {
                   />
                 ))}
                 {!sources.isLoading && sources.data?.sources.length === 0 ? (
-                  <Alert title="Nenhuma fonte configurada">
-                    Informe um formulário para carregar o esquema de perguntas.
-                  </Alert>
+                  <Alert
+                    message="Nenhuma fonte configurada"
+                    type="info"
+                    description="Informe um formulário para carregar o esquema de perguntas."
+                  />
                 ) : null}
-              </Stack>
-            </Page.Section>
+              </Flex>
+            </section>
           ) : null}
           {status.data?.connected && tab === "history" ? (
             <SyncHistory
@@ -216,9 +238,9 @@ export function GoogleFormsPage() {
               values={syncs.data?.runs ?? []}
             />
           ) : null}
-        </Stack>
-      </Page.Content>
-    </Page.Root>
+        </Flex>
+      </div>
+    </Layout>
   );
 }
 
@@ -228,8 +250,8 @@ function ConnectionSetup({ onConnected }: { onConnected: () => void }) {
     onSuccess: onConnected,
   });
   return (
-    <Surface className="google-forms-panel" tone="raised">
-      <Stack gap="4">
+    <Card className="google-forms-panel" style={{ padding: "1rem" }}>
+      <Flex vertical gap="1rem">
         <div>
           <h2>Conectar conta Google</h2>
           <p className="google-forms-muted">
@@ -238,17 +260,19 @@ function ConnectionSetup({ onConnected }: { onConnected: () => void }) {
           </p>
         </div>
         {mutation.isError ? (
-          <Alert title="Não foi possível iniciar a autorização" tone="danger">
-            {googleFormsError(mutation.error)}
-          </Alert>
+          <Alert
+            message="Não foi possível iniciar a autorização"
+            type="error"
+            description={<>{googleFormsError(mutation.error)}</>}
+          />
         ) : null}
-        <Inline>
+        <Flex>
           <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
             {mutation.isPending ? "Preparando…" : "Conectar com Google"}
           </Button>
-        </Inline>
-      </Stack>
-    </Surface>
+        </Flex>
+      </Flex>
+    </Card>
   );
 }
 
@@ -264,15 +288,15 @@ function ConnectionSummary({
     onSuccess: onDisconnected,
   });
   return (
-    <Surface className="google-forms-panel" tone="raised">
-      <Inline align="center" className="google-forms-heading">
+    <Card className="google-forms-panel" style={{ padding: "1rem" }}>
+      <Flex align="center" className="google-forms-heading">
         <div>
           <h2>Conexão Google</h2>
           <p className="google-forms-muted">
             Atualizada em {formatDate(connection.updated_at)} · somente leitura
           </p>
         </div>
-        <Inline>
+        <Flex>
           <FormsStatus value={connection.state} />
           <Button
             disabled={mutation.isPending}
@@ -282,14 +306,16 @@ function ConnectionSummary({
           >
             {mutation.isPending ? "Revogando…" : "Desconectar"}
           </Button>
-        </Inline>
-      </Inline>
+        </Flex>
+      </Flex>
       {mutation.isError ? (
-        <Alert title="Não foi possível revogar a conexão" tone="danger">
-          {googleFormsError(mutation.error)}
-        </Alert>
+        <Alert
+          message="Não foi possível revogar a conexão"
+          type="error"
+          description={<>{googleFormsError(mutation.error)}</>}
+        />
       ) : null}
-    </Surface>
+    </Card>
   );
 }
 
@@ -310,14 +336,14 @@ function SourceCreator({
     },
   });
   return (
-    <Surface className="google-forms-panel" tone="raised">
+    <Card className="google-forms-panel" style={{ padding: "1rem" }}>
       <form
         onSubmit={(event: FormEvent) => {
           event.preventDefault();
           mutation.mutate();
         }}
       >
-        <Stack gap="4">
+        <Flex vertical gap="1rem">
           <div>
             <h2>Adicionar formulário</h2>
             <p className="google-forms-muted">
@@ -349,18 +375,20 @@ function SourceCreator({
             </label>
           </div>
           {mutation.isError ? (
-            <Alert title="Não foi possível adicionar o formulário" tone="danger">
-              {googleFormsError(mutation.error)}
-            </Alert>
+            <Alert
+              message="Não foi possível adicionar o formulário"
+              type="error"
+              description={<>{googleFormsError(mutation.error)}</>}
+            />
           ) : null}
-          <Inline>
-            <Button disabled={!reference.trim() || mutation.isPending} type="submit">
+          <Flex>
+            <Button disabled={!reference.trim() || mutation.isPending} htmlType="submit">
               {mutation.isPending ? "Carregando esquema…" : "Adicionar formulário"}
             </Button>
-          </Inline>
-        </Stack>
+          </Flex>
+        </Flex>
       </form>
-    </Surface>
+    </Card>
   );
 }
 
@@ -421,9 +449,9 @@ function SourceCard({
   const busy =
     saveMapping.isPending || updateState.isPending || refresh.isPending || sync.isPending;
   return (
-    <Surface className="google-forms-source" tone="raised">
-      <Stack gap="4">
-        <Inline align="center" className="google-forms-heading">
+    <Card className="google-forms-source" style={{ padding: "1rem" }}>
+      <Flex vertical gap="1rem">
+        <Flex align="center" className="google-forms-heading">
           <div>
             <h3>{source.title}</h3>
             <p className="google-forms-muted">
@@ -431,16 +459,20 @@ function SourceCard({
             </p>
           </div>
           <FormsStatus value={source.state} />
-        </Inline>
+        </Flex>
         {source.state === "SCHEMA_DRIFT" ? (
-          <Alert title="O esquema do formulário mudou" tone="warning">
-            Revise as perguntas e salve novamente o mapeamento antes de reativar.
-          </Alert>
+          <Alert
+            message="O esquema do formulário mudou"
+            type="warning"
+            description="Revise as perguntas e salve novamente o mapeamento antes de reativar."
+          />
         ) : null}
         {source.state === "NEEDS_REAUTH" ? (
-          <Alert title="A conexão precisa ser refeita" tone="warning">
-            Reconecte a conta Google e reative esta fonte.
-          </Alert>
+          <Alert
+            message="A conexão precisa ser refeita"
+            type="warning"
+            description="Reconecte a conta Google e reative esta fonte."
+          />
         ) : null}
         <div className="google-forms-mapping">
           {source.questions.map((question) => (
@@ -508,11 +540,13 @@ function SourceCard({
           </label>
         </div>
         {mutationError ? (
-          <Alert title="Não foi possível atualizar a fonte" tone="danger">
-            {googleFormsError(mutationError)}
-          </Alert>
+          <Alert
+            message="Não foi possível atualizar a fonte"
+            type="error"
+            description={<>{googleFormsError(mutationError)}</>}
+          />
         ) : null}
-        <Inline>
+        <Flex>
           <Button disabled={busy} onClick={() => saveMapping.mutate()}>
             Salvar mapeamento
           </Button>
@@ -536,14 +570,14 @@ function SourceCard({
               Ativar
             </Button>
           )}
-        </Inline>
+        </Flex>
         <p className="google-forms-muted">
           Última sincronização:{" "}
           {source.last_synced_at ? formatDate(source.last_synced_at) : "nunca"}
           {source.pagination_pending ? " · há mais páginas agendadas" : ""}
         </p>
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 
@@ -562,17 +596,23 @@ function SyncHistory({
 }) {
   const names = new Map(sources.map((value) => [value.id, value.title]));
   return (
-    <Page.Section
-      description="A sincronização apenas prepara uma importação; a execução final continua no módulo Operações."
-      title="Histórico de sincronizações"
-    >
+    <section className="page-section">
+      <Typography.Title level={2}>Histórico de sincronizações</Typography.Title>
+      <Typography.Paragraph>
+        A sincronização apenas prepara uma importação; a execução final continua no módulo
+        Operações.
+      </Typography.Paragraph>
       {error ? (
-        <Alert title="Não foi possível carregar o histórico" tone="danger">
-          {googleFormsError(error)}
-        </Alert>
+        <Alert
+          message="Não foi possível carregar o histórico"
+          type="error"
+          description={<>{googleFormsError(error)}</>}
+        />
       ) : null}
-      {loading ? <Alert title="Carregando sincronizações">Aguarde…</Alert> : null}
-      <Stack gap="3">
+      {loading ? (
+        <Alert message="Carregando sincronizações" type="info" description="Aguarde…" />
+      ) : null}
+      <Flex vertical gap="0.75rem">
         {values.map((value) => (
           <SyncRow
             key={value.id}
@@ -582,10 +622,14 @@ function SyncHistory({
           />
         ))}
         {!loading && values.length === 0 ? (
-          <Alert title="Nenhuma sincronização solicitada">Ative uma fonte para começar.</Alert>
+          <Alert
+            message="Nenhuma sincronização solicitada"
+            type="info"
+            description="Ative uma fonte para começar."
+          />
         ) : null}
-      </Stack>
-    </Page.Section>
+      </Flex>
+    </section>
   );
 }
 
@@ -603,8 +647,8 @@ function SyncRow({
     onSuccess: onUpdated,
   });
   return (
-    <Surface className="google-forms-sync" tone="raised">
-      <Inline align="center" className="google-forms-heading">
+    <Card className="google-forms-sync" style={{ padding: "1rem" }}>
+      <Flex align="center" className="google-forms-heading">
         <div>
           <strong>{name}</strong>
           <p className="google-forms-muted">
@@ -612,7 +656,7 @@ function SyncRow({
             recebidas
           </p>
         </div>
-        <Inline>
+        <Flex>
           <FormsStatus value={value.state} />
           {value.operation_import_id ? (
             <Link
@@ -628,12 +672,12 @@ function SyncRow({
               Cancelar
             </Button>
           ) : null}
-        </Inline>
-      </Inline>
+        </Flex>
+      </Flex>
       {value.error_code ? (
         <span className="google-forms-muted">Código: {value.error_code}</span>
       ) : null}
-    </Surface>
+    </Card>
   );
 }
 
@@ -646,7 +690,7 @@ function FormsStatus({ value }: { value: string }) {
         : value === "SCHEMA_DRIFT" || value === "PAUSED" || value === "CANCELLED"
           ? "warning"
           : "info";
-  return <StatusBadge tone={tone}>{stateLabel(value)}</StatusBadge>;
+  return <Tag color={tone}>{stateLabel(value)}</Tag>;
 }
 
 function stateLabel(value: string) {

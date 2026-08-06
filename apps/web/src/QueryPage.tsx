@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Page, Stack, StatusBadge, Surface } from "./ui";
+import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
@@ -248,43 +248,57 @@ export function QueryPage() {
   };
 
   return (
-    <Page.Root maxWidth="lg">
-      <Page.Header>
-        <Page.Eyebrow>M10 · Query Engine</Page.Eyebrow>
-        <Page.Title>Construtor visual de consultas</Page.Title>
-        <Page.Description>
+    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+      <header className="page-header">
+        <div className="page-eyebrow">M10 · Query Engine</div>
+        <Typography.Title level={1} className="page-title">
+          Construtor visual de consultas
+        </Typography.Title>
+        <Typography.Paragraph className="page-description">
           Combine campos e relações do catálogo autorizado. O servidor valida o plano lógico,
           parametriza os valores e executa somente leitura com limites estritos.
-        </Page.Description>
-      </Page.Header>
-      <Page.Content>
-        <Stack gap="5">
+        </Typography.Paragraph>
+      </header>
+      <div className="page-content">
+        <Flex vertical gap="1.25rem">
           {catalog.isError ? (
-            <Alert title="Não foi possível carregar o catálogo" tone="danger">
-              {queryErrorMessage(catalog.error)}
-            </Alert>
+            <Alert
+              message="Não foi possível carregar o catálogo"
+              type="error"
+              description={<>{queryErrorMessage(catalog.error)}</>}
+            />
           ) : null}
-          {catalog.isPending ? <Alert title="Carregando catálogo" tone="info" /> : null}
+          {catalog.isPending ? <Alert title="Carregando catálogo" type="info" /> : null}
           {invalidURLPlan ? (
-            <Alert title="Plano da URL ignorado" tone="warning">
-              O estado recebido excede os limites ou contém uma estrutura desconhecida. Um plano
-              seguro foi iniciado.
-            </Alert>
+            <Alert
+              message="Plano da URL ignorado"
+              type="warning"
+              description="O estado recebido excede os limites ou contém uma estrutura desconhecida. Um plano
+              seguro foi iniciado."
+            />
           ) : null}
           {recoveryIssues.length > 0 ? (
-            <Alert title="Plano recuperado com o catálogo atual" tone="warning">
-              Os itens ainda permitidos foram preservados. Revise: {recoveryIssues.join(", ")}.
-            </Alert>
+            <Alert
+              message="Plano recuperado com o catálogo atual"
+              type="warning"
+              description={
+                <>
+                  Os itens ainda permitidos foram preservados. Revise: {recoveryIssues.join(", ")}.
+                </>
+              }
+            />
           ) : null}
           {urlPlan && !encodedURLPlan ? (
-            <Alert title="O plano excede o limite da URL" tone="warning">
-              Reduza a quantidade ou o tamanho dos valores antes de validar e executar.
-            </Alert>
+            <Alert
+              message="O plano excede o limite da URL"
+              type="warning"
+              description="Reduza a quantidade ou o tamanho dos valores antes de validar e executar."
+            />
           ) : null}
           {catalog.data ? (
             <>
-              <Surface className="query-builder" tone="raised">
-                <Stack gap="5">
+              <Card className="query-builder" style={{ padding: "1rem" }}>
+                <Flex vertical gap="1.25rem">
                   <div className="query-builder__heading">
                     <div>
                       <h2>1. Origem e colunas</h2>
@@ -293,9 +307,7 @@ export function QueryPage() {
                         colunas.
                       </p>
                     </div>
-                    <StatusBadge tone="info">
-                      Catálogo {catalog.data.version.slice(0, 8)}
-                    </StatusBadge>
+                    <Tag color="info">Catálogo {catalog.data.version.slice(0, 8)}</Tag>
                   </div>
                   <label className="query-control">
                     Entidade raiz
@@ -338,11 +350,11 @@ export function QueryPage() {
                       ))}
                     </div>
                   </fieldset>
-                </Stack>
-              </Surface>
+                </Flex>
+              </Card>
 
-              <Surface className="query-builder" tone="raised">
-                <Stack gap="4">
+              <Card className="query-builder" style={{ padding: "1rem" }}>
+                <Flex vertical gap="1rem">
                   <div className="query-builder__heading">
                     <div>
                       <h2>2. Filtros</h2>
@@ -351,7 +363,7 @@ export function QueryPage() {
                         catálogo.
                       </p>
                     </div>
-                    <StatusBadge tone="neutral">AND / OR / NOT</StatusBadge>
+                    <Tag color="neutral">AND / OR / NOT</Tag>
                   </div>
                   <FilterGroupEditor
                     catalog={catalog.data}
@@ -364,11 +376,11 @@ export function QueryPage() {
                       changePlan();
                     }}
                   />
-                </Stack>
-              </Surface>
+                </Flex>
+              </Card>
 
-              <Surface className="query-builder" tone="raised">
-                <Stack gap="4">
+              <Card className="query-builder" style={{ padding: "1rem" }}>
+                <Flex vertical gap="1rem">
                   <div className="query-builder__heading">
                     <div>
                       <h2>3. Ordenação e limite</h2>
@@ -406,7 +418,7 @@ export function QueryPage() {
                       }}
                     />
                   </label>
-                  <Inline align="center">
+                  <Flex align="center">
                     <Button
                       disabled={!plan || !encodedURLPlan || validation.isPending}
                       onClick={() => plan && validation.mutate(plan)}
@@ -419,23 +431,27 @@ export function QueryPage() {
                     >
                       {execution.isPending ? "Executando" : "Executar consulta"}
                     </Button>
-                  </Inline>
+                  </Flex>
                   {projections.length === 0 ? (
-                    <Alert title="Selecione ao menos uma coluna" tone="warning" />
+                    <Alert title="Selecione ao menos uma coluna" type="warning" />
                   ) : null}
                   {validation.data ? <PlanEstimatePanel estimate={validation.data} /> : null}
                   {validation.isError ? (
-                    <Alert title="O plano precisa ser revisado" tone="danger">
-                      {queryErrorMessage(validation.error)}
-                    </Alert>
+                    <Alert
+                      message="O plano precisa ser revisado"
+                      type="error"
+                      description={<>{queryErrorMessage(validation.error)}</>}
+                    />
                   ) : null}
                   {execution.isError ? (
-                    <Alert title="Não foi possível executar a consulta" tone="danger">
-                      {queryErrorMessage(execution.error)}
-                    </Alert>
+                    <Alert
+                      message="Não foi possível executar a consulta"
+                      type="error"
+                      description={<>{queryErrorMessage(execution.error)}</>}
+                    />
                   ) : null}
-                </Stack>
-              </Surface>
+                </Flex>
+              </Card>
             </>
           ) : null}
 
@@ -450,9 +466,9 @@ export function QueryPage() {
               onPage={setResultPage}
             />
           ) : null}
-        </Stack>
-      </Page.Content>
-    </Page.Root>
+        </Flex>
+      </div>
+    </Layout>
   );
 }
 
@@ -525,7 +541,7 @@ function FilterGroupEditor(props: {
           />
         ))}
       </div>
-      <Inline align="center">
+      <Flex align="center">
         <Button
           disabled={!canAdd || filterable.length === 0}
           onClick={() => append(newPredicate(filterable))}
@@ -547,7 +563,7 @@ function FilterGroupEditor(props: {
         >
           Adicionar negação
         </Button>
-      </Inline>
+      </Flex>
     </div>
   );
 }
@@ -577,7 +593,7 @@ function FilterNodeEditor(props: {
     return (
       <div className="query-filter-special">
         <div className="query-filter-special__label">
-          <StatusBadge tone="warning">NOT</StatusBadge>
+          <Tag color="warning">NOT</Tag>
           <Button onClick={props.onRemove}>Remover negação</Button>
         </div>
         <FilterGroupEditor
@@ -885,10 +901,16 @@ function SortEditor(props: {
 
 function PlanEstimatePanel({ estimate }: { estimate: PlanEstimate }) {
   return (
-    <Alert title="Plano válido" tone="success">
-      Custo estimado: {estimate.cost}. {estimate.columns.length} coluna(s). Impressão digital{" "}
-      {estimate.fingerprint.slice(0, 12)}.
-    </Alert>
+    <Alert
+      message="Plano válido"
+      type="success"
+      description={
+        <>
+          Custo estimado: {estimate.cost}. {estimate.columns.length} coluna(s). Impressão digital{" "}
+          {estimate.fingerprint.slice(0, 12)}.
+        </>
+      }
+    />
   );
 }
 
@@ -910,8 +932,8 @@ function QueryResults(props: {
   const currentExecution = props.page?.execution ?? props.execution;
   const totalPages = Math.max(1, Math.ceil(currentExecution.row_count / props.pageSize));
   return (
-    <Surface className="query-results" tone="raised">
-      <Stack gap="4">
+    <Card className="query-results" style={{ padding: "1rem" }}>
+      <Flex vertical gap="1rem">
         <div className="query-builder__heading">
           <div>
             <h2>Resultado tipado</h2>
@@ -920,15 +942,17 @@ function QueryResults(props: {
               {formatTimestamp(currentExecution.expires_at)}.
             </p>
           </div>
-          <StatusBadge tone={currentExecution.state === "COMPLETED" ? "success" : "warning"}>
+          <Tag color={currentExecution.state === "COMPLETED" ? "success" : "warning"}>
             {executionStateLabel(currentExecution.state)}
-          </StatusBadge>
+          </Tag>
         </div>
-        {props.pending ? <Alert title="Carregando resultado" tone="info" /> : null}
+        {props.pending ? <Alert title="Carregando resultado" type="info" /> : null}
         {props.error ? (
-          <Alert title="Não foi possível carregar o resultado" tone="danger">
-            {queryErrorMessage(props.error)}
-          </Alert>
+          <Alert
+            message="Não foi possível carregar o resultado"
+            type="error"
+            description={<>{queryErrorMessage(props.error)}</>}
+          />
         ) : null}
         {props.page ? <QueryResultGrid page={props.page} /> : null}
         {totalPages > 1 ? (
@@ -940,8 +964,8 @@ function QueryResults(props: {
             totalPages={totalPages}
           />
         ) : null}
-      </Stack>
-    </Surface>
+      </Flex>
+    </Card>
   );
 }
 

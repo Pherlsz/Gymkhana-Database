@@ -1,4 +1,4 @@
-import { Button, Inline, Surface } from "./ui";
+import { Button, Card, Flex } from "antd";
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { useEffect, useRef, type ReactNode } from "react";
 
@@ -66,7 +66,7 @@ export function DataGrid<TData>({
   };
 
   return (
-    <Surface aria-busy={loading} className={surfaceClassName} tone="raised">
+    <Card aria-busy={loading} className={surfaceClassName} style={{ padding: "1rem" }}>
       {loading ? (
         <p className="data-grid__status" role="status">
           {loadingLabel}
@@ -151,7 +151,7 @@ export function DataGrid<TData>({
           ) : null}
         </>
       ) : null}
-    </Surface>
+    </Card>
   );
 }
 
@@ -195,7 +195,7 @@ export function DataGridPagination({
   onPage: (page: number) => void;
 }) {
   return (
-    <Inline align="center" className="data-grid__pagination">
+    <Flex align="center" className="data-grid__pagination">
       <Button disabled={page <= 1} onClick={() => onPage(page - 1)}>
         Anterior
       </Button>
@@ -205,6 +205,6 @@ export function DataGridPagination({
       <Button disabled={page >= totalPages} onClick={() => onPage(page + 1)}>
         Próxima
       </Button>
-    </Inline>
+    </Flex>
   );
 }
