@@ -20,8 +20,8 @@ func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 	return &PostgresStore{queries: dbgen.New(pool), pool: pool}
 }
 
-func (store *PostgresStore) FindUserByGitHubID(ctx context.Context, githubUserID int64) (User, error) {
-	value, err := store.queries.GetAppUserByGitHubID(ctx, githubUserID)
+func (store *PostgresStore) FindUserByEmail(ctx context.Context, email string) (User, error) {
+	value, err := store.queries.GetAppUserByEmail(ctx, email)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrUserNotFound
 	}
@@ -57,13 +57,12 @@ func (store *PostgresStore) ListUsers(ctx context.Context, limit, offset int32) 
 func (store *PostgresStore) CreateUser(ctx context.Context, params CreateUserParams) (User, error) {
 	avatarURL := optionalString(params.Identity.AvatarURL)
 	value, err := store.queries.CreateAppUser(ctx, dbgen.CreateAppUserParams{
-		ID:           databaseUUID(params.ID),
-		GithubUserID: params.Identity.UserID,
-		GithubLogin:  params.Identity.Login,
-		DisplayName:  params.Identity.DisplayName,
-		AvatarUrl:    avatarURL,
-		Role:         string(params.Role),
-		Active:       true,
+		ID:          databaseUUID(params.ID),
+		Email:       params.Identity.Email,
+		DisplayName: params.Identity.DisplayName,
+		AvatarUrl:   avatarURL,
+		Role:        string(params.Role),
+		Active:      true,
 	})
 	if err != nil {
 		return User{}, err
@@ -71,10 +70,10 @@ func (store *PostgresStore) CreateUser(ctx context.Context, params CreateUserPar
 	return userFromDatabase(value), nil
 }
 
-func (store *PostgresStore) UpdateUserIdentity(ctx context.Context, userID Identifier, identity GitHubIdentity) (User, error) {
+func (store *PostgresStore) UpdateUserIdentity(ctx context.Context, userID Identifier, identity GoogleIdentity) (User, error) {
 	value, err := store.queries.UpdateAppUserIdentity(ctx, dbgen.UpdateAppUserIdentityParams{
 		ID:          databaseUUID(userID),
-		GithubLogin: identity.Login,
+		Email: identity.Email,
 		DisplayName: identity.DisplayName,
 		AvatarUrl:   optionalString(identity.AvatarURL),
 	})
@@ -128,13 +127,12 @@ func (store *PostgresStore) FindAuthenticatedSession(ctx context.Context, tokenH
 	return Session{
 		ID: identifierFromDatabase(value.SessionID),
 		User: User{
-			ID:           identifierFromDatabase(value.AppUserID),
-			GitHubUserID: value.GithubUserID,
-			Login:        value.GithubLogin,
-			DisplayName:  value.DisplayName,
-			AvatarURL:    stringValue(value.AvatarUrl),
-			Role:         Role(value.Role),
-			Active:       value.Active,
+			ID:          identifierFromDatabase(value.AppUserID),
+			Email:       value.Email,
+			DisplayName: value.DisplayName,
+			AvatarURL:   stringValue(value.AvatarUrl),
+			Role:        Role(value.Role),
+			Active:      value.Active,
 		},
 	}, nil
 }
@@ -233,13 +231,12 @@ func (store *PostgresStore) RecordAuditEvent(ctx context.Context, event AuditEve
 
 func userFromDatabase(value dbgen.AppUser) User {
 	return User{
-		ID:           identifierFromDatabase(value.ID),
-		GitHubUserID: value.GithubUserID,
-		Login:        value.GithubLogin,
-		DisplayName:  value.DisplayName,
-		AvatarURL:    stringValue(value.AvatarUrl),
-		Role:         Role(value.Role),
-		Active:       value.Active,
+		ID:          identifierFromDatabase(value.ID),
+		Email:       value.Email,
+		DisplayName: value.DisplayName,
+		AvatarURL:   stringValue(value.AvatarUrl),
+		Role:        Role(value.Role),
+		Active:      value.Active,
 	}
 }
 

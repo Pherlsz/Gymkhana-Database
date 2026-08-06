@@ -24,7 +24,7 @@ type adminUsersResponse struct {
 
 type adminUserResponse struct {
 	ID          string    `json:"id"`
-	Login       string    `json:"login"`
+	Email       string    `json:"email"`
 	DisplayName string    `json:"display_name"`
 	AvatarURL   string    `json:"avatar_url,omitempty"`
 	Role        auth.Role `json:"role"`
@@ -272,7 +272,7 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 func adminUser(user auth.ManagedUser) adminUserResponse {
 	return adminUserResponse{
 		ID:          user.User.ID.String(),
-		Login:       user.User.Login,
+		Email:       user.User.Email,
 		DisplayName: user.User.DisplayName,
 		AvatarURL:   user.User.AvatarURL,
 		Role:        user.User.Role,

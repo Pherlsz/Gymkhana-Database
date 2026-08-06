@@ -68,15 +68,15 @@ type CapabilityGrant struct {
 
 func (service *Service) GrantCapability(ctx context.Context, actor Session, params CapabilityGrant, requestID string) error {
 	if !actor.User.Role.CanManageUsers() || !actor.User.Active {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeDenied, requestID, actor.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeDenied, requestID, actor.User.Email)
 		return ErrForbidden
 	}
 	if !params.Capability.Valid() {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeDenied, requestID, actor.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeDenied, requestID, actor.User.Email)
 		return ErrCapabilityConflict
 	}
 	if actor.User.ID == params.UserID {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeDenied, requestID, actor.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeDenied, requestID, actor.User.Email)
 		return ErrSelfAccessChange
 	}
 
@@ -85,53 +85,53 @@ func (service *Service) GrantCapability(ctx context.Context, actor Session, para
 		UserAdministrationStore
 	})
 	if !ok {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeFailure, requestID, actor.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeFailure, requestID, actor.User.Email)
 		return fmt.Errorf("%w: capability store is unavailable", ErrInvalidServiceSetup)
 	}
 
 	target, err := store.FindUserByID(ctx, params.UserID)
 	if err != nil {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeFailure, requestID, actor.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeFailure, requestID, actor.User.Email)
 		return err
 	}
 	if target.User.Role != RoleExternal {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeDenied, requestID, target.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeDenied, requestID, target.User.Email)
 		return fmt.Errorf("%w: can only grant capabilities to EXTERNAL users", ErrCapabilityConflict)
 	}
 
 	if err := store.GrantCapability(ctx, params.UserID, params.Capability); err != nil {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeFailure, requestID, target.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeFailure, requestID, target.User.Email)
 		return err
 	}
-	service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeSuccess, requestID, target.User.Login)
+	service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityGranted, AuditOutcomeSuccess, requestID, target.User.Email)
 	return nil
 }
 
 func (service *Service) RevokeCapability(ctx context.Context, actor Session, params CapabilityGrant, requestID string) error {
 	if !actor.User.Role.CanManageUsers() || !actor.User.Active {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeDenied, requestID, actor.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeDenied, requestID, actor.User.Email)
 		return ErrForbidden
 	}
 	if !params.Capability.Valid() {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeDenied, requestID, actor.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeDenied, requestID, actor.User.Email)
 		return ErrCapabilityConflict
 	}
 	if actor.User.ID == params.UserID {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeDenied, requestID, actor.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeDenied, requestID, actor.User.Email)
 		return ErrSelfAccessChange
 	}
 
 	store, ok := service.store.(CapabilityStore)
 	if !ok {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeFailure, requestID, actor.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeFailure, requestID, actor.User.Email)
 		return fmt.Errorf("%w: capability store is unavailable", ErrInvalidServiceSetup)
 	}
 
 	if err := store.RevokeCapability(ctx, params.UserID, params.Capability); err != nil {
-		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeFailure, requestID, actor.User.Login)
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeFailure, requestID, actor.User.Email)
 		return err
 	}
-	service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeSuccess, requestID, actor.User.Login)
+	service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeSuccess, requestID, actor.User.Email)
 	return nil
 }
 

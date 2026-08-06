@@ -14,12 +14,12 @@ import (
 )
 
 const (
-	defaultGitHubAuthorizeURL = "https://github.com/login/oauth/authorize"
-	defaultGitHubTokenURL     = "https://github.com/login/oauth/access_token"
-	defaultGitHubUserURL      = "https://api.github.com/user"
+	defaultGoogleAuthorizeURL = "https://accounts.google.com/o/oauth2/v2/auth"
+	defaultGoogleTokenURL     = "https://oauth2.googleapis.com/token"
+	defaultGoogleUserURL      = "https://www.googleapis.com/oauth2/v2/userinfo"
 )
 
-type GitHubProviderOptions struct {
+type GoogleProviderOptions struct {
 	ClientID     string
 	ClientSecret string
 	RedirectURL  string
@@ -29,7 +29,7 @@ type GitHubProviderOptions struct {
 	UserURL      string
 }
 
-type GitHubProvider struct {
+type GoogleProvider struct {
 	clientID     string
 	clientSecret string
 	redirectURL  string
@@ -39,64 +39,67 @@ type GitHubProvider struct {
 	userURL      string
 }
 
-func NewGitHubProvider(options GitHubProviderOptions) (*GitHubProvider, error) {
+func NewGoogleProvider(options GoogleProviderOptions) (*GoogleProvider, error) {
 	if strings.TrimSpace(options.ClientID) == "" || strings.TrimSpace(options.ClientSecret) == "" || strings.TrimSpace(options.RedirectURL) == "" {
-		return nil, errors.New("github oauth client id, secret, and redirect url are required")
+		return nil, errors.New("google oauth client id, secret, and redirect url are required")
 	}
 	if _, err := url.ParseRequestURI(options.RedirectURL); err != nil {
-		return nil, fmt.Errorf("parse github oauth redirect url: %w", err)
+		return nil, fmt.Errorf("parse google oauth redirect url: %w", err)
 	}
 
 	httpClient := options.HTTPClient
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 10 * time.Second}
 	}
-	return &GitHubProvider{
+	return &GoogleProvider{
 		clientID:     strings.TrimSpace(options.ClientID),
 		clientSecret: strings.TrimSpace(options.ClientSecret),
 		redirectURL:  strings.TrimSpace(options.RedirectURL),
 		httpClient:   httpClient,
-		authorizeURL: valueOrDefault(options.AuthorizeURL, defaultGitHubAuthorizeURL),
-		tokenURL:     valueOrDefault(options.TokenURL, defaultGitHubTokenURL),
-		userURL:      valueOrDefault(options.UserURL, defaultGitHubUserURL),
+		authorizeURL: valueOrDefault(options.AuthorizeURL, defaultGoogleAuthorizeURL),
+		tokenURL:     valueOrDefault(options.TokenURL, defaultGoogleTokenURL),
+		userURL:      valueOrDefault(options.UserURL, defaultGoogleUserURL),
 	}, nil
 }
 
-func (provider *GitHubProvider) AuthorizationURL(state string) string {
+func (provider *GoogleProvider) AuthorizationURL(state string) string {
 	query := url.Values{
-		"client_id":    {provider.clientID},
-		"redirect_uri": {provider.redirectURL},
-		"scope":        {"read:user"},
-		"state":        {state},
+		"client_id":     {provider.clientID},
+		"redirect_uri":  {provider.redirectURL},
+		"response_type": {"code"},
+		"scope":         {"email profile"},
+		"state":         {state},
+		"access_type":   {"offline"},
 	}
 	return provider.authorizeURL + "?" + query.Encode()
 }
 
-func (provider *GitHubProvider) Exchange(ctx context.Context, code string) (GitHubIdentity, error) {
+func (provider *GoogleProvider) Exchange(ctx context.Context, code string) (GoogleIdentity, error) {
 	requestBody, err := json.Marshal(map[string]string{
 		"client_id":     provider.clientID,
 		"client_secret": provider.clientSecret,
 		"code":          code,
 		"redirect_uri":  provider.redirectURL,
+		"grant_type":    "authorization_code",
 	})
 	if err != nil {
-		return GitHubIdentity{}, err
+		return GoogleIdentity{}, err
 	}
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, provider.tokenURL, bytes.NewReader(requestBody))
 	if err != nil {
-		return GitHubIdentity{}, err
+		return GoogleIdentity{}, err
 	}
 	request.Header.Set("Accept", "application/json")
 	request.Header.Set("Content-Type", "application/json")
 
 	response, err := provider.httpClient.Do(request)
 	if err != nil {
-		return GitHubIdentity{}, err
+		return GoogleIdentity{}, err
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return GitHubIdentity{}, fmt.Errorf("github token exchange returned status %d", response.StatusCode)
+		return GoogleIdentity{}, fmt.Errorf("google token exchange returned status %d", response.StatusCode)
 	}
 
 	var tokenPayload struct {
@@ -104,43 +107,42 @@ func (provider *GitHubProvider) Exchange(ctx context.Context, code string) (GitH
 		Error       string `json:"error"`
 	}
 	if err := decodeLimitedJSON(response.Body, &tokenPayload); err != nil {
-		return GitHubIdentity{}, fmt.Errorf("decode github token response: %w", err)
+		return GoogleIdentity{}, fmt.Errorf("decode google token response: %w", err)
 	}
 	if tokenPayload.Error != "" || tokenPayload.AccessToken == "" {
-		return GitHubIdentity{}, fmt.Errorf("github token exchange failed: %s", valueOrDefault(tokenPayload.Error, "missing access token"))
+		return GoogleIdentity{}, fmt.Errorf("google token exchange failed: %s", valueOrDefault(tokenPayload.Error, "missing access token"))
 	}
 
 	userRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, provider.userURL, nil)
 	if err != nil {
-		return GitHubIdentity{}, err
+		return GoogleIdentity{}, err
 	}
-	userRequest.Header.Set("Accept", "application/vnd.github+json")
+	userRequest.Header.Set("Accept", "application/json")
 	userRequest.Header.Set("Authorization", "Bearer "+tokenPayload.AccessToken)
-	userRequest.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
 	userResponse, err := provider.httpClient.Do(userRequest)
 	if err != nil {
-		return GitHubIdentity{}, err
+		return GoogleIdentity{}, err
 	}
 	defer userResponse.Body.Close()
 	if userResponse.StatusCode != http.StatusOK {
-		return GitHubIdentity{}, fmt.Errorf("github user request returned status %d", userResponse.StatusCode)
+		return GoogleIdentity{}, fmt.Errorf("google user request returned status %d", userResponse.StatusCode)
 	}
 
 	var userPayload struct {
-		ID        int64  `json:"id"`
-		Login     string `json:"login"`
-		Name      string `json:"name"`
-		AvatarURL string `json:"avatar_url"`
+		ID      string `json:"id"`
+		Email   string `json:"email"`
+		Name    string `json:"name"`
+		Picture string `json:"picture"`
 	}
 	if err := decodeLimitedJSON(userResponse.Body, &userPayload); err != nil {
-		return GitHubIdentity{}, fmt.Errorf("decode github user response: %w", err)
+		return GoogleIdentity{}, fmt.Errorf("decode google user response: %w", err)
 	}
-	return GitHubIdentity{
-		UserID:      userPayload.ID,
-		Login:       userPayload.Login,
+	return GoogleIdentity{
+		Subject:     userPayload.ID,
+		Email:       userPayload.Email,
 		DisplayName: userPayload.Name,
-		AvatarURL:   userPayload.AvatarURL,
+		AvatarURL:   userPayload.Picture,
 	}, nil
 }
 

@@ -26,16 +26,16 @@ type AppSession struct {
 }
 
 type AppUser struct {
-	ID           pgtype.UUID        `json:"id"`
-	GithubUserID int64              `json:"github_user_id"`
-	GithubLogin  string             `json:"github_login"`
-	DisplayName  string             `json:"display_name"`
-	AvatarUrl    *string            `json:"avatar_url"`
-	Role         string             `json:"role"`
-	Active       bool               `json:"active"`
-	Version      int64              `json:"version"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	ID          pgtype.UUID        `json:"id"`
+	Email       string             `json:"email"`
+	Subject     string             `json:"subject"`
+	DisplayName string             `json:"display_name"`
+	AvatarUrl   *string            `json:"avatar_url"`
+	Role        string             `json:"role"`
+	Active      bool               `json:"active"`
+	Version     int64              `json:"version"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type AuthAuditEvent struct {

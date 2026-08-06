@@ -62,7 +62,7 @@ func (store *fakeServiceStore) RecordAuditEvent(_ context.Context, event AuditEv
 
 func profileActor(role auth.Role) auth.Session {
 	id, _ := auth.NewIdentifier()
-	return auth.Session{User: auth.User{ID: id, Login: "user", Role: role, Active: true}}
+	return auth.Session{User: auth.User{ID: id, Email: "user", Role: role, Active: true}}
 }
 
 func TestServiceListsWithNormalizedOptions(t *testing.T) {

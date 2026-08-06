@@ -102,7 +102,7 @@ func operationsHTTPFixture(t *testing.T, service *fakeOperationsService) http.Ha
 		t.Fatal(err)
 	}
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{
-		session: auth.Session{User: auth.User{ID: actorID, Login: "admin", Role: auth.RoleAdmin, Active: true}},
+		session: auth.Session{User: auth.User{ID: actorID, Email: "admin", Role: auth.RoleAdmin, Active: true}},
 	}}
 	return New(authTestLogger(), nil, Options{Auth: authentication, Operations: service})
 }

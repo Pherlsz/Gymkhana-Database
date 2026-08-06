@@ -50,7 +50,7 @@ func attachmentHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeAttac
 	intentID, _ := attachment.NewIdentifier()
 	now := time.Now().UTC()
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
-		ID: actorID, Login: "member", Role: auth.RoleExternal, Active: true,
+		ID: actorID, Email: "member", Role: auth.RoleExternal, Active: true,
 	}}}}
 	service := &fakeAttachmentService{grant: attachment.UploadGrant{
 		Intent: attachment.UploadIntent{ID: intentID, ExpiresAt: now.Add(10 * time.Minute)},

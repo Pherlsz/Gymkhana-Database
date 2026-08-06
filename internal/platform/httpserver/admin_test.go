@@ -51,13 +51,13 @@ func TestAdministrationListsAndUpdatesUsers(t *testing.T) {
 	targetID, _ := auth.NewIdentifier()
 	service := &fakeAdministrationService{
 		fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
-			ID: actorID, Login: "owner", Role: auth.RoleSuperadmin, Active: true,
+			ID: actorID, Email: "owner", Role: auth.RoleSuperadmin, Active: true,
 		}}},
 		users: []auth.ManagedUser{{User: auth.User{
-			ID: targetID, Login: "member", DisplayName: "Member", Role: auth.RoleExternal, Active: true,
+			ID: targetID, Email: "member", DisplayName: "Member", Role: auth.RoleExternal, Active: true,
 		}, Version: 1}},
 		updated: auth.ManagedUser{User: auth.User{
-			ID: targetID, Login: "member", DisplayName: "Member", Role: auth.RoleAdmin, Active: true,
+			ID: targetID, Email: "member", DisplayName: "Member", Role: auth.RoleAdmin, Active: true,
 		}, Version: 2},
 	}
 	handler := New(authTestLogger(), nil, Options{Auth: service})

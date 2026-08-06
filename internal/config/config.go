@@ -34,12 +34,12 @@ const defaultHTTPMaxBodyBytes int64 = 1 << 20
 
 type AuthConfig struct {
 	Enabled            bool
-	GitHubClientID     string
-	GitHubClientSecret string
-	GitHubRedirectURL  string
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURL  string
 	ApplicationURL     string
-	AllowedLogins      []string
-	SuperadminLogin    string
+	AllowedEmails      []string
+	SuperadminEmail    string
 	SecureCookies      bool
 }
 
@@ -167,12 +167,12 @@ func Load() (Config, error) {
 		ShutdownTimeout:  shutdownTimeout,
 		Auth: AuthConfig{
 			Enabled:            authEnabled,
-			GitHubClientID:     strings.TrimSpace(os.Getenv("GITHUB_OAUTH_CLIENT_ID")),
-			GitHubClientSecret: strings.TrimSpace(os.Getenv("GITHUB_OAUTH_CLIENT_SECRET")),
-			GitHubRedirectURL:  strings.TrimSpace(os.Getenv("GITHUB_OAUTH_REDIRECT_URL")),
+			GoogleClientID:     strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_CLIENT_ID")),
+			GoogleClientSecret: strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_CLIENT_SECRET")),
+			GoogleRedirectURL:  strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_REDIRECT_URL")),
 			ApplicationURL:     strings.TrimSpace(os.Getenv("AUTH_APPLICATION_URL")),
-			AllowedLogins:      commaSeparatedValues(os.Getenv("AUTH_ALLOWED_GITHUB_LOGINS")),
-			SuperadminLogin:    strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_SUPERADMIN_GITHUB_LOGIN"))),
+			AllowedEmails:      commaSeparatedValues(os.Getenv("AUTH_ALLOWED_EMAILS")),
+			SuperadminEmail:    strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_SUPERADMIN_EMAIL"))),
 			SecureCookies:      environment == EnvironmentStaging || environment == EnvironmentProduction,
 		},
 		GoogleForms: GoogleFormsConfig{
@@ -274,24 +274,24 @@ func (cfg Config) validate() error {
 	if cfg.DatabaseURL == "" {
 		return errors.New("DATABASE_URL is required when authentication is enabled")
 	}
-	if cfg.Auth.GitHubClientID == "" || cfg.Auth.GitHubClientSecret == "" {
-		return errors.New("GitHub OAuth client credentials are required when authentication is enabled")
+	if cfg.Auth.GoogleClientID == "" || cfg.Auth.GoogleClientSecret == "" {
+		return errors.New("Google OAuth client credentials are required when authentication is enabled")
 	}
-	if cfg.Auth.GitHubRedirectURL == "" {
-		return errors.New("GITHUB_OAUTH_REDIRECT_URL is required when authentication is enabled")
+	if cfg.Auth.GoogleRedirectURL == "" {
+		return errors.New("GOOGLE_OAUTH_REDIRECT_URL is required when authentication is enabled")
 	}
 	if cfg.Auth.ApplicationURL == "" {
 		return errors.New("AUTH_APPLICATION_URL is required when authentication is enabled")
 	}
-	redirectURL, err := url.Parse(cfg.Auth.GitHubRedirectURL)
+	redirectURL, err := url.Parse(cfg.Auth.GoogleRedirectURL)
 	if err != nil || !validHTTPURL(redirectURL) {
-		return errors.New("GITHUB_OAUTH_REDIRECT_URL must be an absolute HTTP(S) URL")
+		return errors.New("GOOGLE_OAUTH_REDIRECT_URL must be an absolute HTTP(S) URL")
 	}
 	if redirectURL.User != nil || redirectURL.RawQuery != "" || redirectURL.Fragment != "" || redirectURL.Path != "/auth/callback" {
-		return errors.New("GITHUB_OAUTH_REDIRECT_URL must contain only the /auth/callback path")
+		return errors.New("GOOGLE_OAUTH_REDIRECT_URL must contain only the /auth/callback path")
 	}
 	if outsideDevelopment && redirectURL.Scheme != "https" {
-		return errors.New("GITHUB_OAUTH_REDIRECT_URL must use HTTPS outside local and test environments")
+		return errors.New("GOOGLE_OAUTH_REDIRECT_URL must use HTTPS outside local and test environments")
 	}
 	applicationURL, err := url.Parse(cfg.Auth.ApplicationURL)
 	if err != nil || !validHTTPURL(applicationURL) {
@@ -303,21 +303,21 @@ func (cfg Config) validate() error {
 	if outsideDevelopment && applicationURL.Scheme != "https" {
 		return errors.New("AUTH_APPLICATION_URL must use HTTPS outside local and test environments")
 	}
-	if len(cfg.Auth.AllowedLogins) == 0 {
-		return errors.New("AUTH_ALLOWED_GITHUB_LOGINS must contain at least one login")
+	if len(cfg.Auth.AllowedEmails) == 0 {
+		return errors.New("AUTH_ALLOWED_EMAILS must contain at least one email")
 	}
-	if cfg.Auth.SuperadminLogin == "" {
-		return errors.New("AUTH_SUPERADMIN_GITHUB_LOGIN is required when authentication is enabled")
+	if cfg.Auth.SuperadminEmail == "" {
+		return errors.New("AUTH_SUPERADMIN_EMAIL is required when authentication is enabled")
 	}
 	allowed := false
-	for _, login := range cfg.Auth.AllowedLogins {
-		if login == cfg.Auth.SuperadminLogin {
+	for _, email := range cfg.Auth.AllowedEmails {
+		if email == cfg.Auth.SuperadminEmail {
 			allowed = true
 			break
 		}
 	}
 	if !allowed {
-		return errors.New("AUTH_SUPERADMIN_GITHUB_LOGIN must be included in AUTH_ALLOWED_GITHUB_LOGINS")
+		return errors.New("AUTH_SUPERADMIN_EMAIL must be included in AUTH_ALLOWED_EMAILS")
 	}
 	if cfg.AIChat.Enabled {
 		if cfg.AIChat.Provider == "" || cfg.AIChat.Model == "" || cfg.AIChat.Retention == 0 {

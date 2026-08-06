@@ -1,8 +1,8 @@
 -- name: CreateAppUser :one
 INSERT INTO app_users (
   id,
-  github_user_id,
-  github_login,
+  email,
+  subject,
   display_name,
   avatar_url,
   role,
@@ -16,20 +16,20 @@ SELECT *
 FROM app_users
 WHERE id = $1;
 
--- name: GetAppUserByGitHubID :one
+-- name: GetAppUserByEmail :one
 SELECT *
 FROM app_users
-WHERE github_user_id = $1;
+WHERE email = $1;
 
 -- name: ListAppUsers :many
 SELECT *
 FROM app_users
-ORDER BY lower(github_login), id
+ORDER BY lower(email), id
 LIMIT $1 OFFSET $2;
 
 -- name: UpdateAppUserIdentity :one
 UPDATE app_users
-SET github_login = $2,
+SET email = $2,
     display_name = $3,
     avatar_url = $4,
     updated_at = now(),
@@ -71,8 +71,7 @@ WHERE token_hash = $1;
 SELECT
   app_sessions.id AS session_id,
   app_users.id AS app_user_id,
-  app_users.github_user_id,
-  app_users.github_login,
+  app_users.email,
   app_users.display_name,
   app_users.avatar_url,
   app_users.role,

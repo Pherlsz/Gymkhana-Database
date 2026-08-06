@@ -30,7 +30,7 @@ type authSessionResponse struct {
 }
 
 type authUserResponse struct {
-	Login       string    `json:"login"`
+	Email       string    `json:"email"`
 	DisplayName string    `json:"display_name"`
 	AvatarURL   string    `json:"avatar_url,omitempty"`
 	Role        auth.Role `json:"role"`
@@ -75,12 +75,12 @@ func registerAuthRoutes(
 		if err != nil {
 			switch {
 			case errors.Is(err, auth.ErrAccessDenied):
-				writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "This GitHub account is not allowed"})
+				writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "This Google account is not allowed"})
 			case errors.Is(err, auth.ErrInvalidOAuthCode):
 				writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Authentication code is missing"})
 			default:
 				logger.Error("complete authentication", "request_id", requestIDFromContext(r.Context()), "error", err)
-				writeProblem(w, r, Problem{Status: http.StatusBadGateway, Code: ErrorCodeAuthProvider, Message: "GitHub authentication failed"})
+				writeProblem(w, r, Problem{Status: http.StatusBadGateway, Code: ErrorCodeAuthProvider, Message: "Google authentication failed"})
 			}
 			return
 		}
@@ -139,7 +139,7 @@ func authenticatedSession(r *http.Request, service authenticationService) (auth.
 
 func authUser(user auth.User) *authUserResponse {
 	return &authUserResponse{
-		Login:       user.Login,
+		Email:       user.Email,
 		DisplayName: user.DisplayName,
 		AvatarURL:   user.AvatarURL,
 		Role:        user.Role,

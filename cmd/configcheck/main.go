@@ -26,7 +26,7 @@ func main() {
 		cfg.Environment,
 		cfg.Auth.Enabled,
 		cfg.Auth.SecureCookies,
-		len(cfg.Auth.AllowedLogins),
+		len(cfg.Auth.AllowedEmails),
 		storage.Enabled,
 		build.Version,
 		build.Revision,

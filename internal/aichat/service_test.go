@@ -273,6 +273,6 @@ func chatTestActor(t *testing.T, login string) (auth.Session, auth.User) {
 	if err != nil {
 		t.Fatalf("auth.NewIdentifier() error = %v", err)
 	}
-	user := auth.User{ID: id, Login: login, DisplayName: login, Role: auth.RoleExternal, Active: true}
+	user := auth.User{ID: id, Email: login, DisplayName: login, Role: auth.RoleExternal, Active: true}
 	return auth.Session{User: user}, user
 }

@@ -96,7 +96,7 @@ func documentHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeDocumen
 	holderID, _ := profile.NewIdentifier()
 	now := time.Now().UTC()
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
-		ID: actorID, Login: "member", Role: auth.RoleExternal, Active: true,
+		ID: actorID, Email: "member", Role: auth.RoleExternal, Active: true,
 	}}}}
 	typeValue := document.TypeDefinition{ID: typeID, Values: document.TypeValues{TechnicalKey: "rg", Label: "RG", Active: true, UniquenessPolicy: document.UniquenessPerProfile}, Version: 1, CreatedAt: now, UpdatedAt: now}
 	currentUse := document.CurrentUse{HolderProfileID: holderID, AssignedAt: now}

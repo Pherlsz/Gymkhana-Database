@@ -199,7 +199,7 @@ type ocrServiceFixture struct {
 func newOCRServiceFixture(t *testing.T, extractor *FakeExtractor) *ocrServiceFixture {
 	t.Helper()
 	now := time.Date(2026, time.July, 18, 12, 0, 0, 0, time.UTC)
-	user := auth.User{ID: auth.Identifier{1}, Login: "member", Role: auth.RoleExternal, Active: true}
+	user := auth.User{ID: auth.Identifier{1}, Email: "member", Role: auth.RoleExternal, Active: true}
 	payload := ocrTestPNG(t, 2, 2)
 	source := attachment.Attachment{
 		ID: attachment.Identifier{2}, Owner: attachment.OwnerReference{Kind: attachment.OwnerBill, ID: attachment.Identifier{3}},
