@@ -1,7 +1,8 @@
-import { Alert, Button, Card, Flex, Layout, Typography } from "antd";
+import { Alert, Button, Card, Flex, Form, Input, Layout, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
+import * as v from "valibot";
 import { DataGrid, DataGridPagination } from "./DataGrid";
 import { ProfileRecordsPanel } from "./ProfileRecordsPanel";
 import { profilesRoute, useApplicationSession } from "./App";
@@ -37,6 +38,25 @@ const emptyValues: ProfileValuesRequest = {
   },
   notes: "",
 };
+
+const profileFormSchema = v.object({
+  full_name: v.pipe(v.string(), v.trim(), v.minLength(1, "Nome completo é obrigatório.")),
+  social_name: v.string(),
+  cpf: v.string(),
+  email: v.union([v.literal(""), v.pipe(v.string(), v.email("E-mail inválido."))]),
+  mobile_phone: v.string(),
+  landline_phone: v.string(),
+  address: v.object({
+    street: v.string(),
+    number: v.string(),
+    complement: v.string(),
+    neighborhood: v.string(),
+    city: v.string(),
+    state: v.string(),
+    postal_code: v.string(),
+  }),
+  notes: v.string(),
+});
 
 function positiveInteger(value: unknown, fallback: number) {
   const parsed = Number(value);
@@ -550,28 +570,26 @@ function ProfilePanel(props: {
   onDuplicate: (value: Profile) => void;
   onDelete: (value: Profile, confirmation: string) => void;
 }) {
-  const [values, setValues] = useState<ProfileValuesRequest>(
-    props.profile ? profileValues(props.profile) : emptyValues,
-  );
+  const [form] = Form.useForm<ProfileValuesRequest>();
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const editable = props.mode === "create" || props.mode === "edit";
-  const set = (field: keyof ProfileValuesRequest, value: string) =>
-    setValues((current) => ({ ...current, [field]: value }));
-  const setAddress = (field: keyof ProfileValuesRequest["address"], value: string) =>
-    setValues((current) => ({ ...current, address: { ...current.address, [field]: value } }));
-  const submit = async () => {
-    if (!values.full_name.trim()) {
-      setError("Nome completo é obrigatório.");
+  const submit = async (values: ProfileValuesRequest) => {
+    const parsed = v.safeParse(profileFormSchema, values);
+    if (!parsed.success) {
+      setError(parsed.issues.map((issue) => issue.message).join(" "));
       return;
     }
     setSaving(true);
     setError(null);
     try {
       const saved = props.profile
-        ? await updateProfile(props.profile.id, { ...values, version: props.profile.version })
-        : await createProfile(values);
+        ? await updateProfile(props.profile.id, {
+            ...parsed.output,
+            version: props.profile.version,
+          })
+        : await createProfile(parsed.output);
       await props.onSaved(saved, props.profile ? "Pessoa atualizada." : "Pessoa criada.");
     } catch (caught) {
       setError(errorMessage(caught));
@@ -637,129 +655,64 @@ function ProfilePanel(props: {
           {error ? (
             <Alert message="Não foi possível salvar" type="error" description={<>{error}</>} />
           ) : null}
-          <div className="profile-form">
-            <label>
-              Nome completo
-              <input
-                disabled={!editable}
-                required
-                value={values.full_name}
-                onChange={(event) => set("full_name", event.target.value)}
-              />
-            </label>
-            <label>
-              Nome social
-              <input
-                disabled={!editable}
-                value={values.social_name}
-                onChange={(event) => set("social_name", event.target.value)}
-              />
-            </label>
-            <label>
-              CPF
-              <input
-                disabled={!editable}
-                inputMode="numeric"
-                value={values.cpf}
-                onChange={(event) => set("cpf", event.target.value)}
-              />
-            </label>
-            <label>
-              E-mail
-              <input
-                disabled={!editable}
-                type="email"
-                value={values.email}
-                onChange={(event) => set("email", event.target.value)}
-              />
-            </label>
-            <label>
-              Celular
-              <input
-                disabled={!editable}
-                value={values.mobile_phone}
-                onChange={(event) => set("mobile_phone", event.target.value)}
-              />
-            </label>
-            <label>
-              Telefone fixo/outro
-              <input
-                disabled={!editable}
-                value={values.landline_phone}
-                onChange={(event) => set("landline_phone", event.target.value)}
-              />
-            </label>
-            <label>
-              Logradouro
-              <input
-                disabled={!editable}
-                value={values.address.street}
-                onChange={(event) => setAddress("street", event.target.value)}
-              />
-            </label>
-            <label>
-              Número
-              <input
-                disabled={!editable}
-                value={values.address.number}
-                onChange={(event) => setAddress("number", event.target.value)}
-              />
-            </label>
-            <label>
-              Complemento
-              <input
-                disabled={!editable}
-                value={values.address.complement}
-                onChange={(event) => setAddress("complement", event.target.value)}
-              />
-            </label>
-            <label>
-              Bairro
-              <input
-                disabled={!editable}
-                value={values.address.neighborhood}
-                onChange={(event) => setAddress("neighborhood", event.target.value)}
-              />
-            </label>
-            <label>
-              Cidade
-              <input
-                disabled={!editable}
-                value={values.address.city}
-                onChange={(event) => setAddress("city", event.target.value)}
-              />
-            </label>
-            <label>
-              UF
-              <input
-                disabled={!editable}
-                maxLength={2}
-                value={values.address.state}
-                onChange={(event) => setAddress("state", event.target.value.toUpperCase())}
-              />
-            </label>
-            <label>
-              CEP
-              <input
-                disabled={!editable}
-                inputMode="numeric"
-                value={values.address.postal_code}
-                onChange={(event) => setAddress("postal_code", event.target.value)}
-              />
-            </label>
-            <label className="profile-form__wide">
-              Observações
-              <textarea
-                disabled={!editable}
-                rows={4}
-                value={values.notes}
-                onChange={(event) => set("notes", event.target.value)}
-              />
-            </label>
-          </div>
+          <Form
+            className="profile-form"
+            disabled={!editable}
+            form={form}
+            initialValues={props.profile ? profileValues(props.profile) : emptyValues}
+            layout="vertical"
+            onFinish={(values) => void submit(values)}
+          >
+            <Form.Item label="Nome completo" name="full_name">
+              <Input />
+            </Form.Item>
+            <Form.Item label="Nome social" name="social_name">
+              <Input />
+            </Form.Item>
+            <Form.Item label="CPF" name="cpf">
+              <Input inputMode="numeric" />
+            </Form.Item>
+            <Form.Item label="E-mail" name="email">
+              <Input type="email" />
+            </Form.Item>
+            <Form.Item label="Celular" name="mobile_phone">
+              <Input />
+            </Form.Item>
+            <Form.Item label="Telefone fixo/outro" name="landline_phone">
+              <Input />
+            </Form.Item>
+            <Form.Item label="Logradouro" name={["address", "street"]}>
+              <Input />
+            </Form.Item>
+            <Form.Item label="Número" name={["address", "number"]}>
+              <Input />
+            </Form.Item>
+            <Form.Item label="Complemento" name={["address", "complement"]}>
+              <Input />
+            </Form.Item>
+            <Form.Item label="Bairro" name={["address", "neighborhood"]}>
+              <Input />
+            </Form.Item>
+            <Form.Item label="Cidade" name={["address", "city"]}>
+              <Input />
+            </Form.Item>
+            <Form.Item
+              label="UF"
+              name={["address", "state"]}
+              normalize={(value) => String(value).toUpperCase()}
+            >
+              <Input maxLength={2} />
+            </Form.Item>
+            <Form.Item label="CEP" name={["address", "postal_code"]}>
+              <Input inputMode="numeric" />
+            </Form.Item>
+            <Form.Item className="profile-form__wide" label="Observações" name="notes">
+              <Input.TextArea rows={4} />
+            </Form.Item>
+          </Form>
           <Flex className="profile-panel__actions">
             {editable ? (
-              <Button disabled={saving} onClick={() => void submit()}>
+              <Button disabled={saving} onClick={() => form.submit()}>
                 {saving ? "Salvando" : "Salvar"}
               </Button>
             ) : (

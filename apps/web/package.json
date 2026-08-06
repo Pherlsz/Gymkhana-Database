@@ -16,7 +16,8 @@
     "antd": "^6.5.0",
     "dayjs": "^1.11.21",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "valibot": "1.4.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "6.9.1",
