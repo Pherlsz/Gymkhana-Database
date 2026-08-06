@@ -9,9 +9,4 @@ CREATE TABLE allowed_emails (
     added_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Seed with current superadmin if exists (best-effort)
-INSERT INTO allowed_emails (email)
-SELECT DISTINCT email FROM app_users WHERE role = 'SUPERADMIN'
-ON CONFLICT DO NOTHING;
-
 COMMIT;
