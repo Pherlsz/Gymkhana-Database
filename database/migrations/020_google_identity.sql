@@ -3,19 +3,19 @@
 
 BEGIN;
 
--- Drop the github_user_id column and login column
-ALTER TABLE app_users DROP COLUMN IF EXISTS github_user_id;
-ALTER TABLE app_users DROP COLUMN IF EXISTS login;
-
 -- Add email and subject columns for Google OAuth
 ALTER TABLE app_users ADD COLUMN email TEXT;
 ALTER TABLE app_users ADD COLUMN subject TEXT;
 
--- Best-effort migration: set email to login for existing users
-UPDATE app_users SET email = login WHERE email IS NULL;
+-- Best-effort migration: set email to github_login for existing users
+UPDATE app_users SET email = github_login WHERE email IS NULL;
 
 -- Make email NOT NULL after backfill
 ALTER TABLE app_users ALTER COLUMN email SET NOT NULL;
+
+-- Drop the github_user_id column and github_login column
+ALTER TABLE app_users DROP COLUMN IF EXISTS github_user_id;
+ALTER TABLE app_users DROP COLUMN IF EXISTS github_login;
 
 -- Add unique index on email (case-insensitive)
 CREATE UNIQUE INDEX idx_app_users_email ON app_users(lower(email));
