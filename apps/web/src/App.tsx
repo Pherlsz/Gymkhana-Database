@@ -7,7 +7,7 @@ import {
   Stack,
   StatusBadge,
   Surface,
-} from "@pherlsz/gymkhana-ui";
+} from "./ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Link,

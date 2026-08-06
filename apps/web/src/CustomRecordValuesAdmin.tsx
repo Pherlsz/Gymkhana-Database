@@ -1,4 +1,4 @@
-import { Alert, Stack, Surface } from "@pherlsz/gymkhana-ui";
+import { Alert, Stack, Surface } from "./ui";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { SectionTitle } from "./CustomDataShared";

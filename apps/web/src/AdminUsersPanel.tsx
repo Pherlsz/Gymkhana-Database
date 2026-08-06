@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "@pherlsz/gymkhana-ui";
+import { Alert, Button, Inline, Stack, StatusBadge, Surface } from "./ui";
 import { useCallback, useEffect, useState } from "react";
 import {
   APIRequestError,

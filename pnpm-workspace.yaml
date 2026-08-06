@@ -1,5 +1,2 @@
 packages:
   - apps/*
-
-minimumReleaseAgeExclude:
-  - "@pherlsz/gymkhana-ui@0.3.0"
