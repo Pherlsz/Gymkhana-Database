@@ -4,7 +4,7 @@
 > **Inclui:** regras de negócio, domínio, arquitetura, stack escolhida, responsabilidades técnicas, alternativas rejeitadas e os motivos das decisões.  
 > **Não inclui:** progresso de desenvolvimento, milestone atual, próxima ação, branches, PRs, versões publicadas, releases ou checklists de execução.  
 > **Acompanhamento operacional único:** [issue mestre #31](https://github.com/Pherlsz/Gymkhana-Database/issues/31).  
-> **Repositórios relacionados:** `Pherlsz/Gymkhana-UI` e `Pherlsz/Gymkhana-Core`.
+> **Repositórios relacionados:** `Pherlsz/Gymkhana-Core`.
 
 Este arquivo é a fonte permanente das regras de produto e das invariantes arquiteturais. Ele só deve mudar quando uma decisão aprovada de negócio, domínio, segurança, experiência, stack ou arquitetura for alterada.
 
@@ -74,7 +74,7 @@ As versões abaixo representam a baseline arquitetural definida para o rebuild. 
 - TanStack Form;
 - Valibot;
 - openapi-typescript e openapi-fetch;
-- Gymkhana-UI como pacote privado;
+- Ant Design como biblioteca de componentes;
 - Lucide para ícones.
 
 #### Infraestrutura
@@ -225,20 +225,20 @@ Valibot foi escolhido para validação frontend porque:
 - integra bem com TanStack Form;
 - serve para validar a borda da UI sem tentar substituir as validações autoritativas do backend.
 
-### Por que uma UI própria e Gymkhana-UI
+### Por que Ant Design (decisão revisada)
 
-Ant Design, Material UI e shadcn não são a base visual do produto. A UI própria foi escolhida porque:
+> Decisão anterior substituída: a UI própria (`@pherlsz/gymkhana-ui`) deixou de ser mantida; a interface do produto passa a usar Ant Design.
 
-- a identidade visual deve permanecer controlada pelo projeto;
-- os componentes precisam funcionar em grids densos, formulários e ferramentas internas específicas;
-- reduz dependência de APIs e estilos de terceiros;
-- permite reutilizar primitives nos demais projetos Gymkhana;
-- evita carregar dezenas de componentes ou padrões que não serão usados;
-- mantém temas, densidade e acessibilidade sob controle do projeto.
+Ant Design foi escolhido como base visual porque:
 
-Essas bibliotecas podem ser usadas como referência de comportamento, não como dependência principal. Lucide foi escolhido por oferecer ícones consistentes, amplos e reutilizáveis sem acoplar o design a uma biblioteca de componentes.
+- cobre com componentes maduros tudo que o produto usa: tabelas densas, formulários, feedback, overlays e layout;
+- elimina o custo de manter um design system privado para um produto interno;
+- tema e densidade permanecem sob controle do projeto via design tokens (`ConfigProvider`) e CSS próprio;
+- documentação ampla e estável, com suporte consolidado de acessibilidade.
 
-Gymkhana-UI recebe apenas componentes com contrato ou reutilização comprovada. Componentes específicos permanecem no Database até justificar extração.
+Ícones usam Lucide por serem consistentes e reutilizáveis sem acoplar o design a uma biblioteca de componentes.
+
+Componentes específicos do produto permanecem no Database; não há mais extração para pacote privado de UI.
 
 ### Por que Gymkhana-Core separado
 
@@ -278,7 +278,7 @@ Railway foi rejeitado porque adicionaria outra plataforma/custo sem necessidade,
 
 Cloudflare Access pode filtrar acesso antes da aplicação, mas não substitui:
 
-- GitHub OAuth;
+- Google OAuth;
 - sessão da aplicação;
 - roles e permissions;
 - auditoria;
@@ -376,12 +376,14 @@ A capacidade central do sistema é consultar qualquer dado permitido, em qualque
 
 ### 3.1 Autenticação
 
-- O login da aplicação usa GitHub OAuth com allowlist explícita.
+> Decisão revisada: o login volta a ser Google OAuth com allowlist de e-mails, como na versão legada. A integração GitHub OAuth implementada em M2 será substituída.
+
+- O login da aplicação usa Google OAuth com allowlist explícita de e-mails.
 - Não existe senha local.
 - Cloudflare Access pode ser adicionado como camada externa complementar, sem substituir autenticação, sessão ou autorização da aplicação.
 - O primeiro login autorizado configurado como SUPERADMIN cria a conta privilegiada inicial.
-- Demais logins autorizados podem ser criados como MEMBER.
-- Um usuário inativo continua bloqueado mesmo que permaneça na allowlist do GitHub.
+- Demais logins autorizados são criados como `EXTERNAL`, sem nenhuma capacidade até concessão explícita.
+- Um usuário inativo continua bloqueado mesmo que permaneça na allowlist do Google.
 
 ### 3.2 Sessões
 
@@ -395,20 +397,27 @@ A capacidade central do sistema é consultar qualquer dado permitido, em qualque
 
 ### 3.3 Roles e permissões
 
-- Roles da aplicação: `MEMBER`, `ADMIN` e `SUPERADMIN`.
+> Decisão revisada: o role `MEMBER` foi substituído por `EXTERNAL` com capacidades concedidas por administrador.
+
+- Roles da aplicação: `EXTERNAL`, `ADMIN` e `SUPERADMIN`.
+- `EXTERNAL` é o usuário de acesso mínimo: por padrão não recebe nenhuma permissão; cada acesso é uma capacidade concedida explicitamente por ADMIN ou SUPERADMIN.
+- Capacidades aprovadas: `SENSITIVE_DATA`, `PROFILES`, `DATA_TABLES`, `OCR`, `AI`, `ATTACHMENTS`, `SEARCH`, `EXPORT`, `OPERATIONS`, `MATCHING`, `QUERY`, `GOOGLE_FORMS`. O catálogo pode crescer por decisão aprovada.
+- ADMIN e SUPERADMIN mantêm acesso pleno derivado do role; concessões explícitas aplicam-se apenas a `EXTERNAL`.
+- A concessão/revogação de capacidades é feita pela administração de usuários.
+- ADMIN não pode conceder capacidades a si mesmo, a outro ADMIN ou ao SUPERADMIN.
+- `SENSITIVE_DATA` controla a visibilidade de dados pessoais sensíveis (ex.: CPF sem máscara); sem ela, as respostas apresentam dados mascarados.
+- Feature flags e capacidades são derivadas do role e das capacidades concedidas, sem `secure mode` paralelo.
 - Deve existir exatamente um SUPERADMIN ativo.
-- Autorizações são centralizadas por permissions/capabilities.
-- Handlers e componentes não devem replicar regras de role de forma independente.
+- Autorizações são centralizadas por permissions/capabilities; handlers e componentes não devem replicar regras de role de forma independente.
 - SUPERADMIN não ignora constraints de domínio, privacidade ou integridade.
 - ADMIN não pode alterar o próprio role ou estado de acesso pela administração genérica.
 - ADMIN não pode alterar o SUPERADMIN pela administração genérica.
-- Feature flags e capacidades são derivadas da role/permissão, sem `secure mode` paralelo.
 - Cada admin visualiza e administra apenas os próprios formulários/conexões do Google Forms, salvo permissão superior explicitamente definida.
 
 ### 3.4 Auditoria
 
 - Auditoria é simples, essencial e separada dos logs técnicos.
-- Devem ser auditados, quando aplicável: login, logout, falhas de acesso, administração de usuários, mudança de role/estado, revogação de sessão, criação, edição, duplicação, exclusão, importação, merge e operações destrutivas.
+- Devem ser auditados, quando aplicável: login, logout, falhas de acesso, administração de usuários, mudança de role/estado/capacidades, revogação de sessão, criação, edição, duplicação, exclusão, importação, merge e operações destrutivas.
 - Eventos são correlacionados com `request_id` e ator quando disponível.
 - Falhas de persistência da auditoria devem ficar observáveis.
 - Auditoria não armazena secrets, tokens, URLs assinadas, SQL, stack traces ou payloads sensíveis de providers.
@@ -585,11 +594,11 @@ Regras:
 
 ### 12.3 Biblioteca visual
 
-- Componentes reutilizáveis pertencem ao Gymkhana-UI somente após reutilização ou contrato comprovado.
-- O produto não adota Ant Design, Material UI ou shadcn como dependência visual principal.
-- Essas bibliotecas podem servir apenas como referência de comportamento/design.
+- Ant Design é a biblioteca de componentes do produto (substitui o pacote privado Gymkhana-UI, descontinuado).
+- Material UI e shadcn não são adotados.
+- Tema e densidade são controlados via design tokens do Ant Design (`ConfigProvider`) e CSS próprio do produto.
 - Ícones usam Lucide.
-- Componentes de página devem compor as primitives próprias, incluindo `Page`, `AppShell`, feedback e overlays.
+- Componentes de página devem compor layout, superfícies e feedback do Ant Design (`Layout`, `Card`, `Flex`, `message`/`notification`).
 
 ## 13. Search
 
@@ -852,22 +861,17 @@ Responsável por:
 - rotas e composição da aplicação;
 - módulos de negócio.
 
-### Gymkhana-UI
-
-Responsável por componentes e primitives visuais comprovadamente reutilizáveis.
-
 ### Gymkhana-Core
 
 Responsável por lógica Go reutilizável e independente de infraestrutura, como normalização, datas civis, canonicalização, fingerprints e algoritmos puros comprovadamente compartilhados.
 
 ### Regras de dependência
 
-- Database pode depender de UI e Core.
-- UI e Core não dependem do Database.
-- UI e Core não dependem um do outro.
+- Database pode depender do Core.
+- Core não depende do Database.
 - Database consome versões exatas publicadas.
 - Não existem dependências permanentes por branch, commit, `replace`, subtree, submodule ou cópia manual.
-- Extração para UI/Core ocorre somente após contrato ou reutilização comprovada.
+- Extração para o Core ocorre somente após contrato ou reutilização comprovada.
 
 ## 26. Decisões deliberadamente fora do escopo
 

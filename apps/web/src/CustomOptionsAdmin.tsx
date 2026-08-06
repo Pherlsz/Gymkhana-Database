@@ -1,4 +1,4 @@
-import { Alert, Button, Inline, Stack, Surface } from "@pherlsz/gymkhana-ui";
+import { Alert, Button, Inline, Stack, Surface } from "./ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { customDataError } from "./CustomValuesPanel";

@@ -1,5 +1,7 @@
 # Authentication Operations Runbook
 
+> ⚠️ **Migração aprovada:** o login será alterado de GitHub OAuth para Google OAuth + allowlist de e-mails (decisão em `ORCHESTRATION.md` §3.1). Este runbook descreve a implementação GitHub OAuth ainda em vigor; será reescrito junto com a migração.
+
 This runbook covers the M2 GitHub OAuth, application-session, authorization, audit, and recovery procedures for Gymkhana Database.
 
 ## Security guarantees

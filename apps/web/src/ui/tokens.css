@@ -1,0 +1,7 @@
+/* Legacy design tokens - to be replaced by antd ConfigProvider theme */
+:root {
+  --color-bg: #ffffff;
+  --color-fg: #1a1a1a;
+  --color-primary: #6E56CF;
+  --color-border: #e5e5e5;
+}

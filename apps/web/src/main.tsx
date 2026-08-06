@@ -1,6 +1,6 @@
-import "@pherlsz/gymkhana-ui/tokens.css";
-import "@pherlsz/gymkhana-ui/styles.css";
-import { ThemeProvider } from "@pherlsz/gymkhana-ui";
+import "./ui/tokens.css";
+import "./ui/styles.css";
+import { ThemeProvider } from "./ui";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";

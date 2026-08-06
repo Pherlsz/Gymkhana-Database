@@ -58,7 +58,7 @@ Add a due date only for an active planning window. A due date is a forecast, not
 The application consumes:
 
 - `github.com/Pherlsz/Gymkhana-Core v0.2.1` for deterministic normalization and civil-time values;
-- `@pherlsz/gymkhana-ui 0.3.0` for semantic themes, layouts, controls, feedback, overlays, AppShell, and Page composition;
+- `antd` (Ant Design) for layouts, controls, feedback, and overlays — replacing the former private `@pherlsz/gymkhana-ui` package (discontinued);
 - `openapi-typescript 7.13.0` for deterministic generated TypeScript contracts.
 
 ## Requirements
@@ -69,7 +69,6 @@ The application consumes:
 - Docker with Compose
 - GNU Make or a compatible environment such as WSL/Git Bash on Windows
 - Git credentials that can read the private Gymkhana Core repository
-- GitHub Packages credentials that can read `@pherlsz/gymkhana-ui`
 
 ## Private dependency access
 
@@ -224,11 +223,11 @@ docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN -f Dockerfil
 - stable JSON error envelopes with request IDs and safe public messages;
 - generated Go and TypeScript API contracts;
 - deterministic sqlc persistence adapters;
-- released Core and UI dependencies consumed only through exact versions.
+- released Core dependencies consumed only through exact versions.
 
 ## Repository boundaries
 
-Gymkhana Database owns the product, persistence, HTTP API, workers, provider integrations, authorization, and application routes. Reusable presentation belongs in Gymkhana UI and reusable infrastructure-independent Go logic belongs in Gymkhana Core.
+Gymkhana Database owns the product, persistence, HTTP API, workers, provider integrations, authorization, and application routes. Reusable infrastructure-independent Go logic belongs in Gymkhana Core.
 
 Private UI/Core versions are pinned only after their releases are published. Permanent branch, commit, `replace`, subtree, submodule, or copied-source dependencies are not allowed.
 

@@ -1,4 +1,4 @@
-import { Button, Inline, Surface } from "@pherlsz/gymkhana-ui";
+import { Button, Inline, Surface } from "./ui";
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { useEffect, useRef, type ReactNode } from "react";
 
