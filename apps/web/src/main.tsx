@@ -1,6 +1,8 @@
 import "@ant-design/v5-patch-for-react-19";
 import "./ui/tokens.css";
 import "./ui/styles.css";
+import { ConfigProvider } from "antd";
+import ptBR from "antd/locale/pt_BR";
 import { ThemeProvider } from "./ui";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -24,8 +26,19 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <ThemeProvider density="comfortable" theme="system">
-      <App />
-    </ThemeProvider>
+    <ConfigProvider
+      locale={ptBR}
+      theme={{
+        token: {
+          colorPrimary: "#7c3aed",
+          borderRadius: 8,
+          fontSize: 14,
+        },
+      }}
+    >
+      <ThemeProvider theme="light">
+        <App />
+      </ThemeProvider>
+    </ConfigProvider>
   </StrictMode>
 );
