@@ -16,6 +16,9 @@ type administrationService interface {
 	GrantCapability(context.Context, auth.Session, auth.CapabilityGrant, string) error
 	RevokeCapability(context.Context, auth.Session, auth.CapabilityGrant, string) error
 	ListCapabilities(context.Context, auth.Session, auth.Identifier, string) ([]auth.Capability, error)
+	ListAllowedEmails(context.Context, auth.Session) ([]string, error)
+	AddAllowedEmail(context.Context, auth.Session, string) error
+	RemoveAllowedEmail(context.Context, auth.Session, string) error
 }
 
 type adminUsersResponse struct {
@@ -265,6 +268,89 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 		writeJSON(w, http.StatusOK, map[string]any{
 			"user_id":      userID.String(),
 			"capabilities": capabilities,
+		})
+	})
+
+	mux.HandleFunc("GET /api/admin/allowed-emails", func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if administration == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "User administration is not configured"})
+			return
+		}
+
+		emails, err := administration.ListAllowedEmails(r.Context(), actor)
+		if err != nil {
+			logger.Error("list allowed emails", "request_id", requestIDFromContext(r.Context()), "error", err)
+			writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Failed to list allowed emails"})
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"emails": emails,
+		})
+	})
+
+	mux.HandleFunc("POST /api/admin/allowed-emails", func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if administration == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "User administration is not configured"})
+			return
+		}
+
+		var request struct {
+			Email string `json:"email"`
+		}
+		if problem := DecodeJSON(w, r, &request); problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+
+		if err := administration.AddAllowedEmail(r.Context(), actor, request.Email); err != nil {
+			logger.Error("add allowed email", "request_id", requestIDFromContext(r.Context()), "error", err)
+			writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Failed to add email to allowlist"})
+			return
+		}
+
+		writeJSON(w, http.StatusCreated, map[string]any{
+			"message": "Email added to allowlist",
+			"email":   request.Email,
+		})
+	})
+
+	mux.HandleFunc("DELETE /api/admin/allowed-emails/{email}", func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if administration == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "User administration is not configured"})
+			return
+		}
+
+		email := r.PathValue("email")
+		if email == "" {
+			writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Email is required"})
+			return
+		}
+
+		if err := administration.RemoveAllowedEmail(r.Context(), actor, email); err != nil {
+			logger.Error("remove allowed email", "request_id", requestIDFromContext(r.Context()), "error", err)
+			writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Failed to remove email from allowlist"})
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"message": "Email removed from allowlist",
+			"email":   email,
 		})
 	})
 }

@@ -78,11 +78,19 @@ type Store interface {
 	FindUserByEmail(context.Context, string) (User, error)
 	CreateUser(context.Context, CreateUserParams) (User, error)
 	UpdateUserIdentity(context.Context, Identifier, GoogleIdentity) (User, error)
+	IsEmailAllowed(context.Context, string) (bool, error)
 	CreateSession(context.Context, CreateSessionParams) error
 	FindAuthenticatedSession(context.Context, []byte, time.Time) (Session, error)
 	TouchSession(context.Context, Identifier) error
 	RevokeSessionByTokenHash(context.Context, []byte) error
 	RecordAuditEvent(context.Context, AuditEvent) error
+}
+
+type AllowlistStore interface {
+	IsEmailAllowed(context.Context, string) (bool, error)
+	AddAllowedEmail(context.Context, string, *Identifier) error
+	RemoveAllowedEmail(context.Context, string) error
+	ListAllowedEmails(context.Context) ([]string, error)
 }
 
 type OAuthProvider interface {
@@ -93,19 +101,21 @@ type OAuthProvider interface {
 type AuditFailureHandler func(context.Context, AuditEvent, error)
 
 type ServiceOptions struct {
-	AllowedEmails   []string
-	SuperadminEmail string
-	Now             func() time.Time
-	OnAuditFailure  AuditFailureHandler
+	AllowedEmails    []string
+	SuperadminEmail  string
+	AllowlistStore   AllowlistStore
+	Now              func() time.Time
+	OnAuditFailure   AuditFailureHandler
 }
 
 type Service struct {
-	provider        OAuthProvider
-	store           Store
-	allowedEmails   map[string]struct{}
-	superadminEmail string
-	now             func() time.Time
-	onAuditFailure  AuditFailureHandler
+	provider         OAuthProvider
+	store            Store
+	allowlistStore   AllowlistStore
+	allowedEmails    map[string]struct{}
+	superadminEmail  string
+	now              func() time.Time
+	onAuditFailure   AuditFailureHandler
 }
 
 type LoginResult struct {
@@ -141,12 +151,13 @@ func NewService(provider OAuthProvider, store Store, options ServiceOptions) (*S
 	}
 
 	return &Service{
-		provider:        provider,
-		store:           store,
-		allowedEmails:   allowedEmails,
-		superadminEmail: superadminEmail,
-		now:             now,
-		onAuditFailure:  options.OnAuditFailure,
+		provider:         provider,
+		store:            store,
+		allowlistStore:   options.AllowlistStore,
+		allowedEmails:    allowedEmails,
+		superadminEmail:  superadminEmail,
+		now:              now,
+		onAuditFailure:   options.OnAuditFailure,
 	}, nil
 }
 
@@ -174,7 +185,21 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
 		return LoginResult{}, errors.New("oauth provider returned an invalid identity")
 	}
-	if _, allowed := service.allowedEmails[identity.Email]; !allowed {
+	
+	// Check DB allowlist first if configured, fall back to in-memory map
+	allowed := false
+	if service.allowlistStore != nil {
+		dbAllowed, err := service.allowlistStore.IsEmailAllowed(ctx, identity.Email)
+		if err != nil {
+			service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
+			return LoginResult{}, fmt.Errorf("check email allowlist: %w", err)
+		}
+		allowed = dbAllowed
+	} else {
+		_, allowed = service.allowedEmails[identity.Email]
+	}
+	
+	if !allowed {
 		service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
 		return LoginResult{}, ErrAccessDenied
 	}
@@ -272,6 +297,44 @@ func (service *Service) SignOut(ctx context.Context, sessionValue, requestID str
 	}
 	service.recordAudit(ctx, actor, actor, AuditEventSignOut, AuditOutcomeSuccess, requestID, "")
 	return nil
+}
+
+func (service *Service) ListAllowedEmails(ctx context.Context, actor Session) ([]string, error) {
+	if !actor.User.Role.CanManageUsers() {
+		return nil, errors.New("only admins can manage the email allowlist")
+	}
+	if service.allowlistStore == nil {
+		return nil, errors.New("allowlist store not configured")
+	}
+	return service.allowlistStore.ListAllowedEmails(ctx)
+}
+
+func (service *Service) AddAllowedEmail(ctx context.Context, actor Session, email string) error {
+	if !actor.User.Role.CanManageUsers() {
+		return errors.New("only admins can manage the email allowlist")
+	}
+	if service.allowlistStore == nil {
+		return errors.New("allowlist store not configured")
+	}
+	email = normalizeEmail(email)
+	if email == "" {
+		return errors.New("email cannot be empty")
+	}
+	return service.allowlistStore.AddAllowedEmail(ctx, email, &actor.User.ID)
+}
+
+func (service *Service) RemoveAllowedEmail(ctx context.Context, actor Session, email string) error {
+	if !actor.User.Role.CanManageUsers() {
+		return errors.New("only admins can manage the email allowlist")
+	}
+	if service.allowlistStore == nil {
+		return errors.New("allowlist store not configured")
+	}
+	email = normalizeEmail(email)
+	if email == "" {
+		return errors.New("email cannot be empty")
+	}
+	return service.allowlistStore.RemoveAllowedEmail(ctx, email)
 }
 
 func (service *Service) recordAudit(

@@ -216,6 +216,57 @@ func (store *PostgresStore) UserHasCapability(ctx context.Context, userID Identi
 	return hasCap, err
 }
 
+func (store *PostgresStore) IsEmailAllowed(ctx context.Context, email string) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM allowed_emails WHERE email = $1)`
+	var allowed bool
+	err := store.pool.QueryRow(ctx, query, email).Scan(&allowed)
+	return allowed, err
+}
+
+func (store *PostgresStore) AddAllowedEmail(ctx context.Context, email string, addedBy *Identifier) error {
+	var addedByUUID pgtype.UUID
+	if addedBy != nil {
+		addedByUUID = databaseUUID(*addedBy)
+	} else {
+		addedByUUID = pgtype.UUID{Valid: false}
+	}
+	
+	query := `INSERT INTO allowed_emails (email, added_by, added_at) VALUES ($1, $2, NOW()) ON CONFLICT DO NOTHING`
+	_, err := store.pool.Exec(ctx, query, email, addedByUUID)
+	return err
+}
+
+func (store *PostgresStore) RemoveAllowedEmail(ctx context.Context, email string) error {
+	query := `DELETE FROM allowed_emails WHERE email = $1`
+	result, err := store.pool.Exec(ctx, query, email)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return errors.New("email not found in allowlist")
+	}
+	return nil
+}
+
+func (store *PostgresStore) ListAllowedEmails(ctx context.Context) ([]string, error) {
+	query := `SELECT email FROM allowed_emails ORDER BY email`
+	rows, err := store.pool.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var emails []string
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			return nil, err
+		}
+		emails = append(emails, email)
+	}
+	return emails, rows.Err()
+}
+
 func (store *PostgresStore) RecordAuditEvent(ctx context.Context, event AuditEvent) error {
 	_, err := store.queries.CreateAuthAuditEvent(ctx, dbgen.CreateAuthAuditEventParams{
 		ID:            databaseUUID(event.ID),

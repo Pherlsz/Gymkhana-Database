@@ -46,6 +46,18 @@ func (service *fakeAdministrationService) ListCapabilities(_ context.Context, _ 
 	return nil, nil
 }
 
+func (service *fakeAdministrationService) ListAllowedEmails(_ context.Context, _ auth.Session) ([]string, error) {
+	return nil, nil
+}
+
+func (service *fakeAdministrationService) AddAllowedEmail(_ context.Context, _ auth.Session, _ string) error {
+	return nil
+}
+
+func (service *fakeAdministrationService) RemoveAllowedEmail(_ context.Context, _ auth.Session, _ string) error {
+	return nil
+}
+
 func TestAdministrationListsAndUpdatesUsers(t *testing.T) {
 	actorID, _ := auth.NewIdentifier()
 	targetID, _ := auth.NewIdentifier()

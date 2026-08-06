@@ -31,6 +31,7 @@ type fakeStore struct {
 	revokeError      error
 	audits           []AuditEvent
 	auditError       error
+	allowedEmails    map[string]struct{}
 }
 
 func (store *fakeStore) FindUserByEmail(context.Context, string) (User, error) {
@@ -67,6 +68,13 @@ func (store *fakeStore) FindAuthenticatedSession(context.Context, []byte, time.T
 }
 
 func (store *fakeStore) TouchSession(context.Context, Identifier) error { return nil }
+
+func (store *fakeStore) IsEmailAllowed(_ context.Context, email string) (bool, error) {
+	if _, ok := store.allowedEmails[email]; ok {
+		return true, nil
+	}
+	return false, nil
+}
 
 func (store *fakeStore) RevokeSessionByTokenHash(_ context.Context, hash []byte) error {
 	store.revokedHash = append([]byte(nil), hash...)

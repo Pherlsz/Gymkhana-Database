@@ -112,6 +112,11 @@ func (store *m2Store) FindAuthenticatedSession(_ context.Context, tokenHash []by
 
 func (store *m2Store) TouchSession(context.Context, auth.Identifier) error { return nil }
 
+func (store *m2Store) IsEmailAllowed(_ context.Context, email string) (bool, error) {
+	_, exists := store.usersByEmail[email]
+	return exists, nil
+}
+
 func (store *m2Store) RevokeSessionByTokenHash(_ context.Context, tokenHash []byte) error {
 	key := string(tokenHash)
 	record, exists := store.sessions[key]
