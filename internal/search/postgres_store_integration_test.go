@@ -40,17 +40,10 @@ func TestPostgresSearchAcrossRelationsDynamicFieldsAttachmentsAndRateLimit(t *te
 	valueID, _ := auth.NewIdentifier()
 	attachmentID, _ := auth.NewIdentifier()
 	key := "search_" + strings.ReplaceAll(profileID.String(), "-", "")[:20]
-	githubID := time.Now().UnixNano()
-	if githubID < 0 {
-		githubID = -githubID
-	}
-	if githubID == 0 {
-		githubID = 1
-	}
 
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
-(id, github_user_id, github_login, display_name, role, active)
-VALUES($1,$2,$3,$4,'EXTERNAL',true)`, actorID.String(), githubID, key, "Search test actor"); err != nil {
+(id, subject, email, display_name, role, active)
+VALUES($1,$2,$3,$4,'EXTERNAL',true)`, actorID.String(), key, key+"@example.test", "Search test actor"); err != nil {
 		t.Fatalf("insert app user: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO profiles
