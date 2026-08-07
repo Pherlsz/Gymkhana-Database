@@ -32,7 +32,7 @@ export function HomePage() {
             <Flex vertical gap="0.75rem">
               <strong>{session.user.display_name}</strong>
               <span className="authentication-panel__description">
-                {session.user.email} · {roleLabel}
+                @{session.user.login} · {roleLabel}
               </span>
               <Tag color="success">{copy.sessionActive}</Tag>
             </Flex>
@@ -41,7 +41,7 @@ export function HomePage() {
             <section className="page-section">
               <Typography.Title level={2}>{copy.userAdministrationTitle}</Typography.Title>
               <Typography.Paragraph>{copy.userAdministrationDescription}</Typography.Paragraph>
-              <AdminUsersPanel currentLogin={session.user.email} />
+              <AdminUsersPanel currentLogin={session.user.login} />
             </section>
           ) : null}
           <section className="page-section">
