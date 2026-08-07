@@ -76,8 +76,10 @@ func TestDevelopmentLoginRouteIsAbsentWithSecureCookies(t *testing.T) {
 
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/auth/dev-login", nil))
 
-	if response.Code != http.StatusNotFound {
-		t.Fatalf("production development login status = %d, want %d", response.Code, http.StatusNotFound)
+	// The development route is not registered. Unknown /api paths are handled by
+	// the server's generic API fallback, whose established contract is 405.
+	if response.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("production development login status = %d, want %d", response.Code, http.StatusMethodNotAllowed)
 	}
 	if service.developmentLoginCalls != 0 {
 		t.Fatalf("production development login calls = %d", service.developmentLoginCalls)
