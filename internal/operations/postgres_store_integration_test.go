@@ -663,11 +663,11 @@ func queueProfileCreateImport(t *testing.T, ctx context.Context, service *Servic
 	return value
 }
 
-func insertOperationActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, githubID int64, login string, role auth.Role) {
+func insertOperationActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, subjectID int64, login string, role auth.Role) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
-(id, github_user_id, github_login, display_name, role, active)
-VALUES($1,$2,$3,$4,$5,true)`, authDatabaseUUID(id), githubID, login, "Operations test actor", role); err != nil {
+(id, subject, email, display_name, role, active)
+VALUES($1,$2::text,lower($3) || '@example.test',$4,$5,true)`, authDatabaseUUID(id), subjectID, login, "Operations test actor", role); err != nil {
 		t.Fatalf("insert operation actor: %v", err)
 	}
 }
