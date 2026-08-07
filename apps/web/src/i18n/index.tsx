@@ -28,7 +28,7 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 const antdLocales = {
   "pt-BR": ptBR,
-} satisfies Record<AppLocale, typeof ptBR>;
+};
 
 export function resolveAppLocale(language?: string): AppLocale {
   const normalized = (language ?? "").trim().toLowerCase();
