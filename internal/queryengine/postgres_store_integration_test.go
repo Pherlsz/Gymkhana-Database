@@ -248,11 +248,11 @@ func TestPostgresQueryExecutionRateConcurrencyAndRollback(t *testing.T) {
 	}
 }
 
-func insertQueryActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, githubID int64, login string) {
+func insertQueryActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, subjectID int64, login string) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
-(id, github_user_id, github_login, display_name, role, active)
-VALUES($1,$2,$3,'Query integration actor','EXTERNAL',true)`, id.String(), githubID, login); err != nil {
+(id, subject, email, display_name, role, active)
+VALUES($1,$2::text,lower($3) || '@example.test','Query integration actor','EXTERNAL',true)`, id.String(), subjectID, login); err != nil {
 		t.Fatalf("insert query actor: %v", err)
 	}
 }
