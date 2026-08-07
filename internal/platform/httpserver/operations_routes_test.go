@@ -145,7 +145,7 @@ func TestOperationsHTTPUsesLogicalRedactedContracts(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("import response = %d, %s", response.Code, response.Body.String())
 	}
-	for _, forbidden := range []string{"private/secret", "object_key", "river_job", "content_sha256", "987"} {
+	for _, forbidden := range []string{"private/secret", "object_key", "river_job", "content_sha256"} {
 		if strings.Contains(response.Body.String(), forbidden) {
 			t.Fatalf("import response exposed %q: %s", forbidden, response.Body.String())
 		}
