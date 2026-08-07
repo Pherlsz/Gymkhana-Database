@@ -47,8 +47,8 @@ func TestPostgresMatchingEvidenceNoMatchAndDeterministicBounds(t *testing.T) {
 	if githubID < 0 {
 		githubID = -githubID
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,github_user_id,github_login,display_name,role,active)
-VALUES($1,$2,$3,'Matching Vectors','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,subject,email,display_name,role,active)
+VALUES($1,$2::text,lower($3) || '@example.test','Matching Vectors','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
 		t.Fatalf("insert vector actor: %v", err)
 	}
 	defer cleanupMatchingCandidateVectors(t, pool, actorID, profileIDs)
@@ -115,8 +115,8 @@ func TestPostgresMatchingAnalysisConcurrencyIdempotencyAndRate(t *testing.T) {
 	if githubID < 0 {
 		githubID = -githubID
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,github_user_id,github_login,display_name,role,active)
-VALUES($1,$2,$3,'Matching Concurrency','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,subject,email,display_name,role,active)
+VALUES($1,$2::text,lower($3) || '@example.test','Matching Concurrency','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
 		t.Fatalf("insert concurrency actor: %v", err)
 	}
 	defer func() {
@@ -186,8 +186,8 @@ func TestPostgresMatchingAnalysisAndRiverJobCommitAtomically(t *testing.T) {
 	if githubID < 0 {
 		githubID = -githubID
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,github_user_id,github_login,display_name,role,active)
-VALUES($1,$2,$3,'Matching Transaction','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,subject,email,display_name,role,active)
+VALUES($1,$2::text,lower($3) || '@example.test','Matching Transaction','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
 		t.Fatalf("insert transactional actor: %v", err)
 	}
 	var riverJobID int64
@@ -263,8 +263,8 @@ func TestPostgresMatchingCancellationAndRetentionPreserveHumanDecision(t *testin
 	if githubID < 0 {
 		githubID = -githubID
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,github_user_id,github_login,display_name,role,active)
-VALUES($1,$2,$3,'Matching Retention','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,subject,email,display_name,role,active)
+VALUES($1,$2::text,lower($3) || '@example.test','Matching Retention','EXTERNAL',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
 		t.Fatalf("insert retention actor: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO profiles(id,full_name,email) VALUES
@@ -362,8 +362,8 @@ func TestPostgresMatchingCandidateReviewAndTransactionalMerge(t *testing.T) {
 	if githubID < 0 {
 		githubID = -githubID
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,github_user_id,github_login,display_name,role,active)
-VALUES($1,$2,$3,'Matching Admin','ADMIN',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,subject,email,display_name,role,active)
+VALUES($1,$2::text,lower($3) || '@example.test','Matching Admin','ADMIN',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
 		t.Fatalf("insert matching actor: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO profiles
@@ -542,8 +542,8 @@ func TestPostgresMatchingMergeBlocksDependencyCollisionWithoutMutation(t *testin
 	entityTypeID, firstEntityID, secondEntityID := newTestIdentifier(), newTestIdentifier(), newTestIdentifier()
 	key := "matching_conflict_" + firstID.String()[0:8]
 	githubID := now.UnixNano() + 97
-	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,github_user_id,github_login,display_name,role,active)
-VALUES($1,$2,$3,'Matching Conflict','ADMIN',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,subject,email,display_name,role,active)
+VALUES($1,$2::text,lower($3) || '@example.test','Matching Conflict','ADMIN',true)`, matchingAuthUUID(actorID), githubID, key); err != nil {
 		t.Fatalf("insert conflict actor: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO profiles(id,full_name,email) VALUES
