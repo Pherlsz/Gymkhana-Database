@@ -16,18 +16,11 @@ func (service *Service) DevelopmentLogin(ctx context.Context, requestID string) 
 		Subject:     "development",
 	})
 
-	allowed := false
-	if service.allowlistStore != nil {
-		dbAllowed, err := service.allowlistStore.IsEmailAllowed(ctx, identity.Email)
-		if err != nil {
-			service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
-			return LoginResult{}, fmt.Errorf("check development email allowlist: %w", err)
-		}
-		allowed = dbAllowed
-	} else {
-		_, allowed = service.allowedEmails[identity.Email]
-	}
-	if !allowed {
+	// NewService already requires the configured superadmin to be present in
+	// AUTH_ALLOWED_EMAILS. Development login deliberately uses that local
+	// configuration instead of the database-managed OAuth allowlist so a fresh
+	// development database can be entered before any admin setup has occurred.
+	if _, allowed := service.allowedEmails[identity.Email]; !allowed {
 		service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
 		return LoginResult{}, ErrAccessDenied
 	}
