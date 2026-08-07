@@ -7,6 +7,7 @@
 -- current sqlc/runtime contract.
 
 ALTER TABLE app_users RENAME COLUMN google_subject TO subject;
+ALTER TABLE app_users ALTER COLUMN subject SET NOT NULL;
 ALTER TABLE auth_audit_events RENAME COLUMN provider_email TO provider_login;
 
 ALTER TABLE app_users DROP CONSTRAINT app_users_role_check;
@@ -91,4 +92,5 @@ ALTER TABLE app_users
   CHECK (role IN ('MEMBER', 'ADMIN', 'SUPERADMIN'));
 
 ALTER TABLE auth_audit_events RENAME COLUMN provider_login TO provider_email;
+ALTER TABLE app_users ALTER COLUMN subject DROP NOT NULL;
 ALTER TABLE app_users RENAME COLUMN subject TO google_subject;
