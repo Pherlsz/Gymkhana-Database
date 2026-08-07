@@ -25,26 +25,26 @@ const (
 )
 
 type Options struct {
-	MaxBodyBytes     int64
-	Auth             authenticationService
-	CapabilityCheck  capabilityChecker
-	Profile          profileService
-	Document         documentService
-	Bill             billService
-	CustomData       customDataService
-	Attachment       attachmentService
-	Search           searchService
-	Operations       operationsService
-	GoogleForms      googleFormsService
-	Query            queryService
-	Matching         matchingService
-	Chat             chatService
-	ChatResults      chatResultReader
-	ChatLauncher     chatRunLauncher
-	OCR              ocrService
-	SecureCookies    bool
-	ApplicationURL   string
-	Release          releaseinfo.Info
+	MaxBodyBytes    int64
+	Auth            authenticationService
+	CapabilityCheck capabilityChecker
+	Profile         profileService
+	Document        documentService
+	Bill            billService
+	CustomData      customDataService
+	Attachment      attachmentService
+	Search          searchService
+	Operations      operationsService
+	GoogleForms     googleFormsService
+	Query           queryService
+	Matching        matchingService
+	Chat            chatService
+	ChatResults     chatResultReader
+	ChatLauncher    chatRunLauncher
+	OCR             ocrService
+	SecureCookies   bool
+	ApplicationURL  string
+	Release         releaseinfo.Info
 }
 
 type healthResponse struct {
