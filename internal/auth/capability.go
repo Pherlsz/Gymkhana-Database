@@ -9,26 +9,26 @@ import (
 )
 
 var (
-	ErrCapabilityNotFound     = errors.New("capability not granted")
-	ErrCapabilityConflict     = errors.New("capability conflict")
+	ErrCapabilityNotFound       = errors.New("capability not granted")
+	ErrCapabilityConflict       = errors.New("capability conflict")
 	ErrCapabilityAlreadyGranted = errors.New("capability already granted")
 )
 
 type Capability string
 
 const (
-	CapProfiles     Capability = "PROFILES"
-	CapDataTables   Capability = "DATA_TABLES"
-	CapSearch       Capability = "SEARCH"
-	CapOCR          Capability = "OCR"
-	CapOperations   Capability = "OPERATIONS"
-	CapMatching     Capability = "MATCHING"
-	CapGoogleForms  Capability = "GOOGLE_FORMS"
-	CapAttachments  Capability = "ATTACHMENTS"
-	CapChat         Capability = "CHAT"
-	CapQuery        Capability = "QUERY"
-	CapTasks        Capability = "TASKS"
-	CapCustomData   Capability = "CUSTOM_DATA"
+	CapProfiles    Capability = "PROFILES"
+	CapDataTables  Capability = "DATA_TABLES"
+	CapSearch      Capability = "SEARCH"
+	CapOCR         Capability = "OCR"
+	CapOperations  Capability = "OPERATIONS"
+	CapMatching    Capability = "MATCHING"
+	CapGoogleForms Capability = "GOOGLE_FORMS"
+	CapAttachments Capability = "ATTACHMENTS"
+	CapChat        Capability = "CHAT"
+	CapQuery       Capability = "QUERY"
+	CapTasks       Capability = "TASKS"
+	CapCustomData  Capability = "CUSTOM_DATA"
 )
 
 var allCapabilities = []Capability{
