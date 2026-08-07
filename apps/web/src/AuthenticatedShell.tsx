@@ -67,7 +67,7 @@ export function AuthenticatedShell() {
           </nav>
         </Flex>
         <Flex align="center" gap="0.5rem">
-          <span className="current-user">{session.user.email}</span>
+          <span className="current-user">@{session.user.login}</span>
           <Tag color="success">{roleLabel}</Tag>
           <Button disabled={signingOut} onClick={signOut}>
             {signingOut ? copy.signingOut : copy.signOut}
