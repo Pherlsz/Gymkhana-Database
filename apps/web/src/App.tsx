@@ -1,26 +1,8 @@
 import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  Link,
-  Outlet,
-  RouterProvider,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from "@tanstack/react-router";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { AdminUsersPanel } from "./AdminUsersPanel";
+import { RouterProvider } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
 import { LoginScreen } from "./LoginScreen";
-import { ChatPage, normalizeChatSearch } from "./ChatPage";
-import { CustomDataPage } from "./CustomDataPage";
-import { GoogleFormsPage } from "./GoogleFormsPage";
-import { MatchingPage, normalizeMatchingSearch } from "./MatchingPage";
-import { ProfilesPage, normalizeProfileSearch } from "./ProfilesPage";
-import { OperationsPage, normalizeOperationsSearch } from "./OperationsPage";
-import { OCRPage, normalizeOCRSearch } from "./OCRPage";
-import { QueryPage } from "./QueryPage";
-import { SearchPage, normalizeGlobalSearch } from "./SearchPage";
-import { TaskPage, normalizeTaskSearch } from "./TaskPage";
 import {
   APIRequestError,
   apiURL,
@@ -29,7 +11,8 @@ import {
   type AuthSessionResponse,
 } from "./lib/api/client";
 import { checkLiveHealth } from "./lib/api/health";
-import { normalizeQuerySearch } from "./lib/queryState";
+import { router } from "./router";
+import { SessionContext } from "./session";
 
 type HealthState = "checking" | "available" | "unavailable";
 type AuthState =
@@ -38,98 +21,6 @@ type AuthState =
   | { kind: "unauthenticated" }
   | { kind: "disabled" }
   | { kind: "unavailable" };
-
-type ApplicationContextValue = {
-  session: AuthSessionResponse;
-  signingOut: boolean;
-  signOut: () => void;
-};
-const SessionContext = createContext<ApplicationContextValue | null>(null);
-export function useApplicationSession(): AuthSessionResponse {
-  const value = useContext(SessionContext);
-  if (!value) throw new Error("Application session is unavailable");
-  return value.session;
-}
-
-const rootRoute = createRootRoute({ component: AuthenticatedShell });
-const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: HomePage });
-export const profilesRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/profiles",
-  validateSearch: normalizeProfileSearch,
-  component: ProfilesPage,
-});
-const customDataRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/custom-data",
-  component: CustomDataPage,
-});
-export const searchRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/search",
-  validateSearch: normalizeGlobalSearch,
-  component: SearchPage,
-});
-export const operationsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/operations",
-  validateSearch: normalizeOperationsSearch,
-  component: OperationsPage,
-});
-export const googleFormsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/google-forms",
-  component: GoogleFormsPage,
-});
-export const queryRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/query",
-  validateSearch: normalizeQuerySearch,
-  component: QueryPage,
-});
-export const taskRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/tasks",
-  validateSearch: normalizeTaskSearch,
-  component: TaskPage,
-});
-export const matchingRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/matching",
-  validateSearch: normalizeMatchingSearch,
-  component: MatchingPage,
-});
-export const chatRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/chat",
-  validateSearch: normalizeChatSearch,
-  component: ChatPage,
-});
-export const ocrRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/ocr",
-  validateSearch: normalizeOCRSearch,
-  component: OCRPage,
-});
-const routeTree = rootRoute.addChildren([
-  homeRoute,
-  profilesRoute,
-  searchRoute,
-  customDataRoute,
-  operationsRoute,
-  googleFormsRoute,
-  queryRoute,
-  taskRoute,
-  matchingRoute,
-  chatRoute,
-  ocrRoute,
-]);
-const router = createRouter({ routeTree });
-declare module "@tanstack/react-router" {
-  interface Register {
-    router: typeof router;
-  }
-}
 
 export function App() {
   const [queryClient] = useState(
@@ -188,7 +79,7 @@ export function App() {
     } finally {
       setSigningOut(false);
     }
-  }, []);
+  }, [queryClient]);
 
   if (authentication.kind === "unauthenticated") {
     return <LoginScreen onLogin={() => window.location.assign(apiURL("/auth/login"))} />;
@@ -219,170 +110,6 @@ export function App() {
   );
 }
 
-function AuthenticatedShell() {
-  const context = useContext(SessionContext);
-  if (!context) throw new Error("Application session is unavailable");
-  const { session, signingOut, signOut } = context;
-  return (
-    <Layout>
-      <Layout.Header className="app-header">
-        <Flex align="center" gap="1rem">
-          <strong>Gymkhana Database</strong>
-          <nav aria-label="Navegação principal" className="app-nav">
-            <Link
-              activeProps={{ className: "app-nav__link app-nav__link--active" }}
-              className="app-nav__link"
-              to="/"
-            >
-              Início
-            </Link>
-            <Link
-              activeProps={{ className: "app-nav__link app-nav__link--active" }}
-              className="app-nav__link"
-              to="/profiles"
-              search={normalizeProfileSearch({})}
-            >
-              Pessoas
-            </Link>
-            <Link
-              activeProps={{ className: "app-nav__link app-nav__link--active" }}
-              className="app-nav__link"
-              search={normalizeGlobalSearch({})}
-              to="/search"
-            >
-              Buscar
-            </Link>
-            <Link
-              activeProps={{ className: "app-nav__link app-nav__link--active" }}
-              className="app-nav__link"
-              search={normalizeQuerySearch({})}
-              to="/query"
-            >
-              Consultar
-            </Link>
-            <Link
-              activeProps={{ className: "app-nav__link app-nav__link--active" }}
-              className="app-nav__link"
-              search={normalizeTaskSearch({})}
-              to="/tasks"
-            >
-              Tarefas
-            </Link>
-            <Link
-              activeProps={{ className: "app-nav__link app-nav__link--active" }}
-              className="app-nav__link"
-              search={normalizeMatchingSearch({})}
-              to="/matching"
-            >
-              Duplicidades
-            </Link>
-            <Link
-              activeProps={{ className: "app-nav__link app-nav__link--active" }}
-              className="app-nav__link"
-              search={normalizeChatSearch({})}
-              to="/chat"
-            >
-              Chat
-            </Link>
-            <Link
-              activeProps={{ className: "app-nav__link app-nav__link--active" }}
-              className="app-nav__link"
-              search={normalizeOCRSearch({})}
-              to="/ocr"
-            >
-              OCR
-            </Link>
-            <Link
-              activeProps={{ className: "app-nav__link app-nav__link--active" }}
-              className="app-nav__link"
-              to="/custom-data"
-            >
-              Dados personalizados
-            </Link>
-            <Link
-              activeProps={{ className: "app-nav__link app-nav__link--active" }}
-              className="app-nav__link"
-              search={normalizeOperationsSearch({})}
-              to="/operations"
-            >
-              Operações
-            </Link>
-            {canManageUsers(session.user.role) ? (
-              <Link
-                activeProps={{ className: "app-nav__link app-nav__link--active" }}
-                className="app-nav__link"
-                to="/google-forms"
-              >
-                Google Forms
-              </Link>
-            ) : null}
-          </nav>
-        </Flex>
-        <Flex align="center" gap="0.5rem">
-          <span className="current-user">@{session.user.login}</span>
-          <Tag color="success">{roleLabel(session.user.role)}</Tag>
-          <Button disabled={signingOut} onClick={signOut}>
-            {signingOut ? "Saindo" : "Sair"}
-          </Button>
-        </Flex>
-      </Layout.Header>
-      <Layout.Content>
-        <Outlet />
-      </Layout.Content>
-    </Layout>
-  );
-}
-
-function HomePage() {
-  const session = useApplicationSession();
-  return (
-    <Layout style={{ maxWidth: "64rem", margin: "0 auto" }}>
-      <header className="page-header">
-        <div className="page-eyebrow">Aplicação privada</div>
-        <Typography.Title level={1} className="page-title">
-          Gymkhana Database
-        </Typography.Title>
-        <Typography.Paragraph className="page-description">
-          Gerencie pessoas e permissões com sessões privadas e dados normalizados.
-        </Typography.Paragraph>
-      </header>
-      <div className="page-content">
-        <Flex vertical gap="1.5rem">
-          <Card className="authentication-panel" style={{ padding: "1rem" }}>
-            <Flex vertical gap="0.75rem">
-              <strong>{session.user.display_name}</strong>
-              <span className="authentication-panel__description">
-                @{session.user.login} · {roleLabel(session.user.role)}
-              </span>
-              <Tag color="success">Sessão ativa</Tag>
-            </Flex>
-          </Card>
-          {canManageUsers(session.user.role) ? (
-            <section className="page-section">
-              <Typography.Title level={2}>Administração de usuários</Typography.Title>
-              <Typography.Paragraph>
-                Funções, acesso ativo e revogação de sessões são controlados pela aplicação.
-              </Typography.Paragraph>
-              <AdminUsersPanel currentLogin={session.user.login} />
-            </section>
-          ) : null}
-          <section className="page-section">
-            <Typography.Title level={2}>Foundation status</Typography.Title>
-            <Typography.Paragraph>
-              A infraestrutura compartilhada continua consumida somente por versões exatas.
-            </Typography.Paragraph>
-            <Flex gap="0.5rem" align="stretch">
-              <FoundationCard label="Frontend" value="React + TypeScript" />
-              <FoundationCard label="Core" value="v0.2.1" />
-              <FoundationCard label="UI" value="v0.3.0" />
-            </Flex>
-          </section>
-        </Flex>
-      </div>
-    </Layout>
-  );
-}
-
 function PublicShell(props: {
   health: HealthState;
   authentication: AuthState;
@@ -406,7 +133,7 @@ function PublicShell(props: {
               Gymkhana Database
             </Typography.Title>
             <Typography.Paragraph className="page-description">
-              Acesso privado com GitHub, sessões revogáveis de 24 horas e permissões da aplicação.
+              Acesso privado com Google, sessões revogáveis de 24 horas e permissões da aplicação.
             </Typography.Paragraph>
             <div className="page-actions">
               <Button disabled={props.health === "checking"} onClick={props.onRefreshHealth}>
@@ -467,11 +194,11 @@ function AuthenticationPanel({
             <div>
               <strong>Autenticação necessária</strong>
               <p className="authentication-panel__description">
-                Entre com uma conta GitHub previamente autorizada.
+                Entre com uma conta Google previamente autorizada.
               </p>
             </div>
             <Flex gap="0.5rem">
-              <Button onClick={onLogin}>Entrar com GitHub</Button>
+              <Button onClick={onLogin}>Entrar com Google</Button>
             </Flex>
           </Flex>
         </Card>
@@ -490,14 +217,12 @@ function AuthenticationPanel({
           message="Não foi possível verificar a sessão"
           type="error"
           description={
-            <>
-              <Flex vertical gap="0.75rem">
-                <span>Tente novamente sem recarregar a página.</span>
-                <Flex gap="0.5rem">
-                  <Button onClick={onRetry}>Tentar novamente</Button>
-                </Flex>
+            <Flex vertical gap="0.75rem">
+              <span>Tente novamente sem recarregar a página.</span>
+              <Flex gap="0.5rem">
+                <Button onClick={onRetry}>Tentar novamente</Button>
               </Flex>
-            </>
+            </Flex>
           }
         />
       );
@@ -517,22 +242,7 @@ function AuthenticationPanel({
       );
   }
 }
-function FoundationCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Card className="foundation-card" style={{ padding: "1rem" }}>
-      <Flex vertical gap="0.5rem">
-        <span className="foundation-card__label">{label}</span>
-        <strong>{value}</strong>
-      </Flex>
-    </Card>
-  );
-}
-function canManageUsers(role: "EXTERNAL" | "ADMIN" | "SUPERADMIN") {
-  return role === "ADMIN" || role === "SUPERADMIN";
-}
-function roleLabel(role: "EXTERNAL" | "ADMIN" | "SUPERADMIN") {
-  return role === "SUPERADMIN" ? "Superadmin" : role === "ADMIN" ? "Admin" : "Membro";
-}
+
 function authenticationTone(authentication: AuthState): "neutral" | "success" | "danger" | "info" {
   return authentication.kind === "authenticated"
     ? "success"
