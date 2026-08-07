@@ -37,17 +37,10 @@ func TestPostgresStoreUploadLimitsCleanupLeaseAndDeleteConflicts(t *testing.T) {
 	intentID, _ := NewIdentifier()
 	attachmentID, _ := NewIdentifier()
 	technicalKey := "attachment_test_" + strings.ReplaceAll(typeID.String(), "-", "")[:20]
-	githubID := time.Now().UnixNano()
-	if githubID < 0 {
-		githubID = -githubID
-	}
-	if githubID == 0 {
-		githubID = 1
-	}
 
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
-(id, github_user_id, github_login, display_name, role, active)
-VALUES($1,$2,$3,$4,'EXTERNAL',true)`, databaseUUID(actorID), githubID, technicalKey, "Attachment test actor"); err != nil {
+(id, subject, email, display_name, role, active)
+VALUES($1,$2,$3,$4,'EXTERNAL',true)`, databaseUUID(actorID), technicalKey, technicalKey+"@example.test", "Attachment test actor"); err != nil {
 		t.Fatalf("insert app user: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO profiles(id, full_name) VALUES($1,$2)`, databaseUUID(profileID), "Attachment Test Profile"); err != nil {
