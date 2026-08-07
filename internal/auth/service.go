@@ -101,21 +101,21 @@ type OAuthProvider interface {
 type AuditFailureHandler func(context.Context, AuditEvent, error)
 
 type ServiceOptions struct {
-	AllowedEmails    []string
-	SuperadminEmail  string
-	AllowlistStore   AllowlistStore
-	Now              func() time.Time
-	OnAuditFailure   AuditFailureHandler
+	AllowedEmails   []string
+	SuperadminEmail string
+	AllowlistStore  AllowlistStore
+	Now             func() time.Time
+	OnAuditFailure  AuditFailureHandler
 }
 
 type Service struct {
-	provider         OAuthProvider
-	store            Store
-	allowlistStore   AllowlistStore
-	allowedEmails    map[string]struct{}
-	superadminEmail  string
-	now              func() time.Time
-	onAuditFailure   AuditFailureHandler
+	provider        OAuthProvider
+	store           Store
+	allowlistStore  AllowlistStore
+	allowedEmails   map[string]struct{}
+	superadminEmail string
+	now             func() time.Time
+	onAuditFailure  AuditFailureHandler
 }
 
 type LoginResult struct {
@@ -151,13 +151,13 @@ func NewService(provider OAuthProvider, store Store, options ServiceOptions) (*S
 	}
 
 	return &Service{
-		provider:         provider,
-		store:            store,
-		allowlistStore:   options.AllowlistStore,
-		allowedEmails:    allowedEmails,
-		superadminEmail:  superadminEmail,
-		now:              now,
-		onAuditFailure:   options.OnAuditFailure,
+		provider:        provider,
+		store:           store,
+		allowlistStore:  options.AllowlistStore,
+		allowedEmails:   allowedEmails,
+		superadminEmail: superadminEmail,
+		now:             now,
+		onAuditFailure:  options.OnAuditFailure,
 	}, nil
 }
 
@@ -185,7 +185,7 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
 		return LoginResult{}, errors.New("oauth provider returned an invalid identity")
 	}
-	
+
 	// Check DB allowlist first if configured, fall back to in-memory map
 	allowed := false
 	if service.allowlistStore != nil {
@@ -198,7 +198,7 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 	} else {
 		_, allowed = service.allowedEmails[identity.Email]
 	}
-	
+
 	if !allowed {
 		service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
 		return LoginResult{}, ErrAccessDenied
