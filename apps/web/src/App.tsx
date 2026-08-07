@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { LoginScreen } from "./LoginScreen";
+import { useI18n } from "./i18n";
 import {
   APIRequestError,
   apiURL,
@@ -119,25 +120,28 @@ function PublicShell(props: {
   onSignOut: () => void;
   onRefreshHealth: () => void;
 }) {
+  const { messages } = useI18n();
+  const copy = messages.auth.public;
+
   return (
     <Layout>
       <Layout.Header className="app-header">
-        <strong>Gymkhana Database</strong>
-        <Tag color={authenticationTone(props.authentication)}>Acesso privado</Tag>
+        <strong>{messages.shell.productName}</strong>
+        <Tag color={authenticationTone(props.authentication)}>{copy.privateAccess}</Tag>
       </Layout.Header>
       <Layout.Content>
         <Layout style={{ maxWidth: "64rem", margin: "0 auto" }}>
           <header className="page-header">
-            <div className="page-eyebrow">Private application access</div>
+            <div className="page-eyebrow">{copy.eyebrow}</div>
             <Typography.Title level={1} className="page-title">
-              Gymkhana Database
+              {messages.shell.productName}
             </Typography.Title>
             <Typography.Paragraph className="page-description">
-              Acesso privado com Google, sessões revogáveis de 24 horas e permissões da aplicação.
+              {copy.description}
             </Typography.Paragraph>
             <div className="page-actions">
               <Button disabled={props.health === "checking"} onClick={props.onRefreshHealth}>
-                Verificar API
+                {copy.verifyApi}
               </Button>
             </div>
           </header>
@@ -145,9 +149,9 @@ function PublicShell(props: {
             <Flex vertical gap="1.5rem">
               {props.health === "unavailable" ? (
                 <Alert
-                  message="API indisponível"
+                  message={copy.apiUnavailable}
                   type="error"
-                  description="Verifique se o serviço está em execução e tente novamente."
+                  description={copy.apiUnavailableDescription}
                 />
               ) : null}
               <AuthenticationPanel
@@ -178,12 +182,15 @@ function AuthenticationPanel({
   onRetry: () => void;
   onSignOut: () => void;
 }) {
+  const { messages } = useI18n();
+  const copy = messages.auth.public;
+
   switch (authentication.kind) {
     case "checking":
       return (
         <Alert
-          message="Verificando acesso"
-          description="Validando a sessão da aplicação."
+          message={copy.checkingAccess}
+          description={copy.checkingAccessDescription}
           type="info"
         />
       );
@@ -192,13 +199,13 @@ function AuthenticationPanel({
         <Card className="authentication-panel" style={{ padding: "1rem" }}>
           <Flex vertical gap="1rem">
             <div>
-              <strong>Autenticação necessária</strong>
+              <strong>{copy.authenticationRequired}</strong>
               <p className="authentication-panel__description">
-                Entre com uma conta Google previamente autorizada.
+                {copy.authenticationRequiredDescription}
               </p>
             </div>
             <Flex gap="0.5rem">
-              <Button onClick={onLogin}>Entrar com Google</Button>
+              <Button onClick={onLogin}>{copy.googleButton}</Button>
             </Flex>
           </Flex>
         </Card>
@@ -206,21 +213,21 @@ function AuthenticationPanel({
     case "disabled":
       return (
         <Alert
-          message="Autenticação desativada neste ambiente"
-          description="Configure as variáveis OAuth para testar o acesso privado localmente."
+          message={copy.authenticationDisabled}
+          description={copy.authenticationDisabledDescription}
           type="info"
         />
       );
     case "unavailable":
       return (
         <Alert
-          message="Não foi possível verificar a sessão"
+          message={copy.sessionUnavailable}
           type="error"
           description={
             <Flex vertical gap="0.75rem">
-              <span>Tente novamente sem recarregar a página.</span>
+              <span>{copy.sessionUnavailableDescription}</span>
               <Flex gap="0.5rem">
-                <Button onClick={onRetry}>Tentar novamente</Button>
+                <Button onClick={onRetry}>{copy.retry}</Button>
               </Flex>
             </Flex>
           }
@@ -232,9 +239,9 @@ function AuthenticationPanel({
           <Flex vertical gap="1rem">
             <strong>{authentication.session.user.display_name}</strong>
             <Flex gap="0.5rem">
-              <Tag color="success">Sessão ativa</Tag>
+              <Tag color="success">{copy.sessionActive}</Tag>
               <Button disabled={signingOut} onClick={onSignOut}>
-                {signingOut ? "Saindo" : "Sair"}
+                {signingOut ? messages.shell.signingOut : messages.shell.signOut}
               </Button>
             </Flex>
           </Flex>
