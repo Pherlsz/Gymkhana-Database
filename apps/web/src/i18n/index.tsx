@@ -18,7 +18,17 @@ type I18nContextValue = {
   messages: AppMessages;
 };
 
+const defaultContextValue: I18nContextValue = {
+  version: I18N_CATALOG_VERSION,
+  locale: DEFAULT_LOCALE,
+  messages: catalogs[DEFAULT_LOCALE],
+};
+
 const I18nContext = createContext<I18nContextValue | null>(null);
+
+const antdLocales = {
+  "pt-BR": ptBR,
+} satisfies Record<AppLocale, typeof ptBR>;
 
 export function resolveAppLocale(language?: string): AppLocale {
   const normalized = (language ?? "").trim().toLowerCase();
@@ -27,10 +37,7 @@ export function resolveAppLocale(language?: string): AppLocale {
 }
 
 export function getAntdLocale(locale: AppLocale) {
-  switch (locale) {
-    case "pt-BR":
-      return ptBR;
-  }
+  return antdLocales[locale];
 }
 
 export function I18nProvider({
@@ -47,7 +54,5 @@ export function I18nProvider({
 }
 
 export function useI18n(): I18nContextValue {
-  const value = useContext(I18nContext);
-  if (!value) throw new Error("I18nProvider is unavailable");
-  return value;
+  return useContext(I18nContext) ?? defaultContextValue;
 }
