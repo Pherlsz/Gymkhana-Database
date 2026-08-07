@@ -1,36 +1,21 @@
--- SQLC overlay for the final authentication schema after migrations 019 and 023.
--- The historical schema.sql intentionally remains the original rebuild baseline;
--- this file applies the auth evolution that query generation must see while
--- preserving the final app_users column order used by the checked-in dbgen model.
+-- SQLC-only projection of the final authentication model after migrations 019 and 023.
+-- The historical schema.sql remains the rebuild baseline. For code generation we
+-- replace only its legacy app_users definition with the stable v1 logical shape.
+-- Runtime migrations remain the source of truth for physical database evolution.
 
-DROP INDEX app_users_github_login_ci_unique;
-ALTER TABLE app_users DROP CONSTRAINT app_users_github_user_id_key;
-ALTER TABLE app_users DROP CONSTRAINT app_users_github_user_id_check;
-ALTER TABLE app_users DROP CONSTRAINT app_users_github_login_check;
+ALTER TABLE app_users RENAME TO app_users_legacy;
 
-ALTER TABLE app_users RENAME COLUMN github_user_id TO email;
-ALTER TABLE app_users ALTER COLUMN email TYPE TEXT USING email::text;
-ALTER TABLE app_users RENAME COLUMN github_login TO subject;
+CREATE TABLE app_users (
+  id UUID PRIMARY KEY,
+  email TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  avatar_url TEXT,
+  role TEXT NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  version BIGINT NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
-ALTER TABLE app_users DROP CONSTRAINT app_users_role_check;
-ALTER TABLE app_users
-  ADD CONSTRAINT app_users_role_check
-  CHECK (role IN ('EXTERNAL', 'ADMIN', 'SUPERADMIN'));
-
-ALTER TABLE app_users
-  ADD CONSTRAINT app_users_email_check
-  CHECK (
-    email = lower(btrim(email))
-    AND email <> ''
-    AND char_length(email) <= 320
-  );
-ALTER TABLE app_users
-  ADD CONSTRAINT app_users_subject_check
-  CHECK (
-    subject = btrim(subject)
-    AND subject <> ''
-    AND char_length(subject) <= 255
-  );
-
-CREATE UNIQUE INDEX app_users_email_ci_unique ON app_users (lower(email));
-CREATE UNIQUE INDEX app_users_subject_unique ON app_users (subject);
+DROP TABLE app_users_legacy CASCADE;
