@@ -3,6 +3,7 @@ sql:
   - engine: postgresql
     schema:
       - schema.sql
+      - schema_authentication.sql
       - schema_document_audit.sql
       - schema_bill_audit.sql
     queries: queries
