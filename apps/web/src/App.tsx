@@ -1,6 +1,6 @@
 import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RouterProvider } from "@tanstack/react-router";
+import { getRouteApi, RouterProvider } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { LoginScreen } from "./LoginScreen";
 import { useI18n } from "./i18n";
@@ -13,7 +13,21 @@ import {
 } from "./lib/api/client";
 import { checkLiveHealth } from "./lib/api/health";
 import { router } from "./router";
-import { SessionContext } from "./session";
+import { SessionContext, useApplicationSession } from "./session";
+
+// Transitional compatibility for pages that previously imported the manual route
+// objects from App.tsx. These are typed APIs for the file routes, not a second
+// route tree. New page code should import getRouteApi/useApplicationSession from
+// their dedicated modules instead of adding more App.tsx dependencies.
+export const profilesRoute = getRouteApi("/profiles");
+export const searchRoute = getRouteApi("/search");
+export const queryRoute = getRouteApi("/query");
+export const taskRoute = getRouteApi("/tasks");
+export const matchingRoute = getRouteApi("/matching");
+export const chatRoute = getRouteApi("/chat");
+export const ocrRoute = getRouteApi("/ocr");
+export const operationsRoute = getRouteApi("/operations");
+export { useApplicationSession };
 
 type HealthState = "checking" | "available" | "unavailable";
 type AuthState =
