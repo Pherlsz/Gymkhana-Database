@@ -157,11 +157,11 @@ VALUES($1,'DOCUMENT',$2,$3,'application/pdf','application/pdf',128,$4,$5,'ACTIVE
 		t.Fatal("over-limit Search() unexpectedly succeeded")
 	}
 
-	firstPage, err := service.Search(ctx, actor, Query{Terms: []string{"Ana"}, Limit: 1})
+	firstPage, err := service.Search(ctx, actor, Query{Terms: []string{"Ana"}, Modules: []Module{ModuleProfiles}, Limit: 1})
 	if err != nil {
 		t.Fatalf("first deterministic Search() error = %v", err)
 	}
-	repeatedPage, err := service.Search(ctx, actor, Query{Terms: []string{"Ana"}, Limit: 1})
+	repeatedPage, err := service.Search(ctx, actor, Query{Terms: []string{"Ana"}, Modules: []Module{ModuleProfiles}, Limit: 1})
 	if err != nil || firstPage.Results[0] != repeatedPage.Results[0] {
 		t.Fatalf("pagination is not deterministic: first=%#v repeated=%#v error=%v", firstPage, repeatedPage, err)
 	}
