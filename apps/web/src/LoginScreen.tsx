@@ -1,77 +1,111 @@
-import { Button, Card, Typography } from "antd";
-import { GoogleOutlined } from "@ant-design/icons";
 import { useState } from "react";
+import { requestNoContent } from "./lib/api/client";
+import "./login.css";
 
-const { Title, Text } = Typography;
+type LoginAction = "google" | "development" | null;
 
 export function LoginScreen({ onLogin }: { onLogin: () => void }) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<LoginAction>(null);
+  const [error, setError] = useState("");
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
+  const handleGoogleSignIn = () => {
+    setLoading("google");
+    setError("");
     try {
       onLogin();
     } catch {
-      setLoading(false);
+      setError("Não foi possível iniciar o login com Google.");
+      setLoading(null);
+    }
+  };
+
+  const handleDevelopmentSignIn = async () => {
+    setLoading("development");
+    setError("");
+    try {
+      await requestNoContent("/api/auth/dev-login", { method: "POST" });
+      window.location.reload();
+    } catch {
+      setError("Não foi possível iniciar a sessão de desenvolvimento.");
+      setLoading(null);
     }
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        padding: "24px",
-      }}
-    >
-      <Card
-        style={{
-          maxWidth: 400,
-          width: "100%",
-          borderRadius: 12,
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
-        }}
-      >
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <img
-            src="/Gampa.png"
-            alt="Gymkhana Database"
-            style={{
-              width: 120,
-              height: 120,
-              marginBottom: 16,
-              objectFit: "contain",
-            }}
-          />
-          <Title level={2} style={{ marginBottom: 8 }}>
-            Gymkhana Database
-          </Title>
-          <Text>Faça login para continuar</Text>
-        </div>
+    <main className="login-page">
+      <div aria-hidden className="login-page__background" />
+      <div className="login-card-shell">
+        <div aria-hidden className="login-card-shell__glow" />
+        <section className="login-card" aria-labelledby="login-title">
+          <header className="login-card__header">
+            <img className="login-card__logo" src="/Gampa.png" alt="Gymkhana" />
+            <div className="login-card__heading">
+              <h1 className="login-card__title" id="login-title">
+                Gymkhana Database
+              </h1>
+              <p className="login-card__subtitle">Faça login para continuar</p>
+            </div>
+          </header>
 
-        <Button
-          type="primary"
-          size="large"
-          icon={<GoogleOutlined />}
-          loading={loading}
-          onClick={handleGoogleSignIn}
-          block
-          style={{
-            height: 48,
-            fontSize: 16,
-            fontWeight: 500,
-          }}
-        >
-          {loading ? "Entrando..." : "Entrar com Google"}
-        </Button>
+          <div className="login-card__separator" />
 
-        <div style={{ marginTop: 24, textAlign: "center" }}>
-          <Text style={{ fontSize: 12 }}>Apenas usuários autorizados podem acessar</Text>
-        </div>
-      </Card>
-    </div>
+          <div className="login-card__body">
+            {error ? (
+              <div className="login-alert" role="alert">
+                {error}
+              </div>
+            ) : null}
+
+            <button
+              className="login-button"
+              type="button"
+              disabled={loading !== null}
+              onClick={handleGoogleSignIn}
+            >
+              {loading === "google" ? (
+                <span className="login-button__spinner" aria-label="Entrando" />
+              ) : (
+                <>
+                  <svg className="login-button__google-icon" viewBox="0 0 24 24" aria-hidden>
+                    <path
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      fill="#4285F4"
+                    />
+                    <path
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      fill="#34A853"
+                    />
+                    <path
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                      fill="#FBBC05"
+                    />
+                    <path
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      fill="#EA4335"
+                    />
+                  </svg>
+                  Entrar com Google
+                </>
+              )}
+            </button>
+
+            {import.meta.env.DEV ? (
+              <button
+                className="login-button login-button--dev"
+                type="button"
+                disabled={loading !== null}
+                onClick={() => void handleDevelopmentSignIn()}
+              >
+                {loading === "development" ? (
+                  <span className="login-button__spinner" aria-label="Entrando" />
+                ) : (
+                  "Dev Login"
+                )}
+              </button>
+            ) : null}
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
