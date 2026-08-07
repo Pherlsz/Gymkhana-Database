@@ -51,8 +51,8 @@ func TestPostgresAIChatOwnershipIdempotencyConcurrencyCancellationReferencesAndR
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
-	actor := auth.Session{User: auth.User{ID: actorID, Login: key, Role: auth.RoleExternal, Active: true}}
-	other := auth.Session{User: auth.User{ID: otherID, Login: key + "_other", Role: auth.RoleExternal, Active: true}}
+	actor := auth.Session{User: auth.User{ID: actorID, Email: key + "@example.test", Role: auth.RoleExternal, Active: true}}
+	other := auth.Session{User: auth.User{ID: otherID, Email: key + "_other@example.test", Role: auth.RoleExternal, Active: true}}
 	thread, err := service.CreateThread(ctx, actor, "Integração privada", "integration-create")
 	if err != nil {
 		t.Fatalf("CreateThread() error = %v", err)
@@ -270,10 +270,10 @@ func TestPostgresAIChatOwnershipIdempotencyConcurrencyCancellationReferencesAndR
 	}
 }
 
-func insertChatActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, githubID int64, login string) {
+func insertChatActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, subjectID int64, login string) {
 	t.Helper()
-	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,github_user_id,github_login,display_name,role,active)
-VALUES($1,$2,$3,'AI Chat integration','EXTERNAL',true)`, id.String(), githubID, login); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,subject,email,display_name,role,active)
+VALUES($1,$2::text,lower($3) || '@example.test','AI Chat integration','EXTERNAL',true)`, id.String(), subjectID, login); err != nil {
 		t.Fatalf("insert AI Chat actor: %v", err)
 	}
 }
