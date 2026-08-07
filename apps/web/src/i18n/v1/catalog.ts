@@ -9,6 +9,25 @@ export type CatalogV1 = {
       googleStartError: string;
       developmentStartError: string;
     };
+    public: {
+      privateAccess: string;
+      eyebrow: string;
+      description: string;
+      verifyApi: string;
+      apiUnavailable: string;
+      apiUnavailableDescription: string;
+      checkingAccess: string;
+      checkingAccessDescription: string;
+      authenticationRequired: string;
+      authenticationRequiredDescription: string;
+      googleButton: string;
+      authenticationDisabled: string;
+      authenticationDisabledDescription: string;
+      sessionUnavailable: string;
+      sessionUnavailableDescription: string;
+      retry: string;
+      sessionActive: string;
+    };
   };
   shell: {
     productName: string;
