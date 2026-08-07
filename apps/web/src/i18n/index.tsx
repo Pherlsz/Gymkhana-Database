@@ -40,10 +40,7 @@ export function getAntdLocale(locale: AppLocale) {
   return antdLocales[locale];
 }
 
-export function I18nProvider({
-  locale,
-  children,
-}: PropsWithChildren<{ locale: AppLocale }>) {
+export function I18nProvider({ locale, children }: PropsWithChildren<{ locale: AppLocale }>) {
   return (
     <I18nContext.Provider
       value={{ version: I18N_CATALOG_VERSION, locale, messages: catalogs[locale] }}
