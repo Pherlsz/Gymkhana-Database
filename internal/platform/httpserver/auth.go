@@ -20,6 +20,7 @@ const (
 type authenticationService interface {
 	BeginLogin() (string, string, error)
 	CompleteLogin(context.Context, string, string) (auth.LoginResult, error)
+	DevLogin(context.Context, string, string) (auth.LoginResult, error)
 	CurrentSession(context.Context, string) (auth.Session, error)
 	SignOut(context.Context, string, string) error
 }
@@ -42,6 +43,7 @@ func registerAuthRoutes(
 	service authenticationService,
 	secureCookies bool,
 	applicationURL string,
+	devLoginEnabled bool,
 ) {
 	mux.HandleFunc("GET /auth/login", func(w http.ResponseWriter, r *http.Request) {
 		if service == nil {
@@ -88,6 +90,37 @@ func registerAuthRoutes(
 		setSessionCookie(w, result.SessionValue, result.ExpiresAt, secureCookies)
 		http.Redirect(w, r, applicationURL, http.StatusFound)
 	})
+
+	if devLoginEnabled {
+		mux.HandleFunc("POST /auth/dev-login", func(w http.ResponseWriter, r *http.Request) {
+			if service == nil {
+				writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "Authentication is not configured"})
+				return
+			}
+			var request struct {
+				Email string `json:"email"`
+			}
+			if problem := DecodeJSON(w, r, &request); problem != nil {
+				writeProblem(w, r, *problem)
+				return
+			}
+			result, err := service.DevLogin(r.Context(), request.Email, requestIDFromContext(r.Context()))
+			if err != nil {
+				switch {
+				case errors.Is(err, auth.ErrAccessDenied):
+					writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "This account is not allowed"})
+				case errors.Is(err, auth.ErrInvalidOAuthCode):
+					writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Email is required"})
+				default:
+					logger.Error("complete development authentication", "request_id", requestIDFromContext(r.Context()), "error", err)
+					writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Development authentication failed"})
+				}
+				return
+			}
+			setSessionCookie(w, result.SessionValue, result.ExpiresAt, secureCookies)
+			writeJSON(w, http.StatusOK, authSessionResponse{Authenticated: true, User: authUser(result.User)})
+		})
+	}
 
 	mux.HandleFunc("GET /api/auth/session", func(w http.ResponseWriter, r *http.Request) {
 		session, problem := authenticatedSession(r, service)

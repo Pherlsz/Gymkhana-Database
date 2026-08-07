@@ -180,12 +180,27 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, "")
 		return LoginResult{}, fmt.Errorf("exchange oauth code: %w", err)
 	}
+	return service.finishLogin(ctx, identity, requestID)
+}
+
+// DevLogin signs in an allowlisted email without an OAuth exchange. The HTTP
+// layer is responsible for refusing to expose it outside development.
+func (service *Service) DevLogin(ctx context.Context, email, requestID string) (LoginResult, error) {
+	identity := normalizeIdentity(GoogleIdentity{Email: email})
+	if identity.Email == "" {
+		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, "")
+		return LoginResult{}, ErrInvalidOAuthCode
+	}
+	return service.finishLogin(ctx, identity, requestID)
+}
+
+func (service *Service) finishLogin(ctx context.Context, identity GoogleIdentity, requestID string) (LoginResult, error) {
 	identity = normalizeIdentity(identity)
 	if identity.Email == "" {
 		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
 		return LoginResult{}, errors.New("oauth provider returned an invalid identity")
 	}
-	
+
 	// Check DB allowlist first if configured, fall back to in-memory map
 	allowed := false
 	if service.allowlistStore != nil {
@@ -198,7 +213,7 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 	} else {
 		_, allowed = service.allowedEmails[identity.Email]
 	}
-	
+
 	if !allowed {
 		service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
 		return LoginResult{}, ErrAccessDenied

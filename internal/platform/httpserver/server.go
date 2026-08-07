@@ -44,6 +44,7 @@ type Options struct {
 	OCR              ocrService
 	SecureCookies    bool
 	ApplicationURL   string
+	DevLoginEnabled  bool
 	Release          releaseinfo.Info
 }
 
@@ -86,7 +87,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 		}
 		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context()), Release: publicRelease, Database: "ok"})
 	})
-	registerAuthRoutes(mux, logger, settings.Auth, settings.SecureCookies, settings.ApplicationURL)
+	registerAuthRoutes(mux, logger, settings.Auth, settings.SecureCookies, settings.ApplicationURL, settings.DevLoginEnabled)
 	registerAdministrationRoutes(mux, logger, settings.Auth)
 	registerProfileRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Profile)
 	registerDocumentRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Document)
