@@ -41,7 +41,11 @@ export function LoginScreen({ onLogin }: { onLogin: () => void }) {
       <div aria-hidden className="login-page__background" />
       <div className="login-card-shell">
         <div aria-hidden className="login-card-shell__glow" />
-        <Card className="login-card" styles={{ body: { padding: 0 } }} aria-labelledby="login-title">
+        <Card
+          className="login-card"
+          styles={{ body: { padding: 0 } }}
+          aria-labelledby="login-title"
+        >
           <Flex className="login-card__header" vertical align="center" gap="small">
             <Image
               className="login-card__logo"
