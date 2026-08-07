@@ -702,11 +702,11 @@ func createActiveQuotaSource(t *testing.T, ctx context.Context, service *Service
 	return source
 }
 
-func insertGoogleFormsActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, githubID int64, login string, role auth.Role) {
+func insertGoogleFormsActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, subjectID int64, login string, role auth.Role) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
-(id, github_user_id, github_login, display_name, role, active)
-VALUES($1,$2,$3,$4,$5,true)`, id.String(), githubID, login, "Google Forms integration actor", role); err != nil {
+(id, subject, email, display_name, role, active)
+VALUES($1,$2::text,lower($3) || '@example.test',$4,$5,true)`, id.String(), subjectID, login, "Google Forms integration actor", role); err != nil {
 		t.Fatalf("insert Google Forms actor: %v", err)
 	}
 }
