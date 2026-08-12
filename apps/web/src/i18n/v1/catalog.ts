@@ -9,5 +9,57 @@ export type CatalogV1 = {
       googleStartError: string;
       developmentStartError: string;
     };
+    public: {
+      privateAccess: string;
+      eyebrow: string;
+      description: string;
+      verifyApi: string;
+      apiUnavailable: string;
+      apiUnavailableDescription: string;
+      checkingAccess: string;
+      checkingAccessDescription: string;
+      authenticationRequired: string;
+      authenticationRequiredDescription: string;
+      googleButton: string;
+      authenticationDisabled: string;
+      authenticationDisabledDescription: string;
+      sessionUnavailable: string;
+      sessionUnavailableDescription: string;
+      retry: string;
+      sessionActive: string;
+    };
+  };
+  shell: {
+    productName: string;
+    navigationLabel: string;
+    navigation: {
+      home: string;
+      profiles: string;
+      search: string;
+      query: string;
+      tasks: string;
+      matching: string;
+      chat: string;
+      ocr: string;
+      customData: string;
+      operations: string;
+      googleForms: string;
+    };
+    roles: {
+      external: string;
+      admin: string;
+      superadmin: string;
+    };
+    signOut: string;
+    signingOut: string;
+  };
+  home: {
+    eyebrow: string;
+    description: string;
+    sessionActive: string;
+    userAdministrationTitle: string;
+    userAdministrationDescription: string;
+    foundationTitle: string;
+    foundationDescription: string;
   };
 };

@@ -67,8 +67,8 @@ describe("App", () => {
     expect(await screen.findByText("Member Name")).toBeInTheDocument();
     expect(screen.getByText("@member · Membro")).toBeInTheDocument();
     expect(screen.getByText("Sessão ativa")).toBeInTheDocument();
-    expect(screen.getByText("v0.2.1")).toBeInTheDocument();
-    expect(screen.getByText("v0.3.0")).toBeInTheDocument();
+    expect(screen.getByText("v0.2.2")).toBeInTheDocument();
+    expect(screen.getByText("Ant Design")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Sair" }));
     expect(await screen.findByText("Faça login para continuar")).toBeInTheDocument();
   });

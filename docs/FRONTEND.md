@@ -17,6 +17,30 @@ Custom React markup and CSS remain appropriate when they provide one of these re
 
 Do not recreate an Ant Design control with raw HTML/CSS only to change its appearance. Prefer Ant Design props, theme tokens, component tokens, and a small class override around the Ant Design component.
 
+## File-based routing
+
+TanStack Router file-based routing is the frontend routing standard. Route declarations live under `apps/web/src/routes/`; `App.tsx` owns application bootstrap and authentication gating, not route registration.
+
+The Vite TanStack Router plugin must remain before the React plugin in `apps/web/vite.config.ts`. It reads `src/routes` and regenerates `src/routeTree.gen.ts`. The generated route tree is committed because the repository runs TypeScript validation before the Vite build on a fresh checkout. Never hand-edit the generated file as normal feature work; change route files and regenerate it through the router plugin.
+
+Keep route modules thin. A route file should normally declare its URL, search validation, and page component. Reusable page or shell implementations belong outside `src/routes` when that avoids coupling or circular imports.
+
+In particular, route modules must not import `App.tsx`. The dependency direction is:
+
+```text
+App -> router -> routeTree.gen -> routes -> page/shell components
+```
+
+Shared authenticated session state lives in `src/session.ts`. Shared role predicates live in `src/lib/roles.ts`. Do not duplicate either inside route modules.
+
+When adding or changing routes:
+
+1. add or update the corresponding file under `src/routes`;
+2. preserve URL-backed search normalization when the page has query state;
+3. regenerate `src/routeTree.gen.ts` through Vite/TanStack Router tooling;
+4. run frontend typechecking/tests and verify direct navigation to the changed route;
+5. do not recreate a parallel manual `createRoute` tree in `App.tsx`.
+
 ## Internationalization contract
 
 User-facing application copy must not be hardcoded inside React components. Copy belongs in the versioned catalog under `apps/web/src/i18n/` and is consumed through `useI18n()`.
