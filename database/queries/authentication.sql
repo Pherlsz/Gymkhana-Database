@@ -9,20 +9,20 @@ INSERT INTO app_users (
   active
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING *;
+RETURNING id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at;
 
 -- name: GetAppUserByID :one
-SELECT *
+SELECT id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at
 FROM app_users
 WHERE id = $1;
 
 -- name: GetAppUserByEmail :one
-SELECT *
+SELECT id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at
 FROM app_users
-WHERE email = $1;
+WHERE lower(email) = lower(sqlc.arg(email));
 
 -- name: ListAppUsers :many
-SELECT *
+SELECT id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at
 FROM app_users
 ORDER BY lower(email), id
 LIMIT $1 OFFSET $2;
@@ -35,7 +35,7 @@ SET email = $2,
     updated_at = now(),
     version = version + 1
 WHERE id = $1
-RETURNING *;
+RETURNING id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at;
 
 -- name: UpdateAppUserAccess :one
 UPDATE app_users
@@ -45,7 +45,7 @@ SET role = $2,
     version = version + 1
 WHERE id = $1
   AND version = $4
-RETURNING *;
+RETURNING id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at;
 
 -- name: CountActiveSuperadmins :one
 SELECT count(*)
@@ -72,6 +72,7 @@ SELECT
   app_sessions.id AS session_id,
   app_users.id AS app_user_id,
   app_users.email,
+  app_users.subject,
   app_users.display_name,
   app_users.avatar_url,
   app_users.role,

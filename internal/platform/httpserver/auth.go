@@ -24,6 +24,10 @@ type authenticationService interface {
 	SignOut(context.Context, string, string) error
 }
 
+type developmentAuthenticationService interface {
+	DevelopmentLogin(context.Context, string) (auth.LoginResult, error)
+}
+
 type authSessionResponse struct {
 	Authenticated bool              `json:"authenticated"`
 	User          *authUserResponse `json:"user,omitempty"`
@@ -88,6 +92,35 @@ func registerAuthRoutes(
 		setSessionCookie(w, result.SessionValue, result.ExpiresAt, secureCookies)
 		http.Redirect(w, r, applicationURL, http.StatusFound)
 	})
+
+	// Secure cookies are mandatory in staging and production. Keeping this
+	// route unregistered there makes the development bypass fail closed even
+	// if a client tries to call it directly.
+	if !secureCookies {
+		mux.HandleFunc("POST /api/auth/dev-login", func(w http.ResponseWriter, r *http.Request) {
+			if service == nil {
+				writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "Authentication is not configured"})
+				return
+			}
+			developmentService, ok := service.(developmentAuthenticationService)
+			if !ok {
+				writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "Development authentication is unavailable"})
+				return
+			}
+			result, err := developmentService.DevelopmentLogin(r.Context(), requestIDFromContext(r.Context()))
+			if err != nil {
+				if errors.Is(err, auth.ErrAccessDenied) {
+					writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "Development account is not allowed"})
+					return
+				}
+				logger.Error("complete development authentication", "request_id", requestIDFromContext(r.Context()), "error", err)
+				writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Development authentication failed"})
+				return
+			}
+			setSessionCookie(w, result.SessionValue, result.ExpiresAt, false)
+			w.WriteHeader(http.StatusNoContent)
+		})
+	}
 
 	mux.HandleFunc("GET /api/auth/session", func(w http.ResponseWriter, r *http.Request) {
 		session, problem := authenticatedSession(r, service)

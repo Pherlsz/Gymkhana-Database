@@ -40,15 +40,8 @@ func TestPostgresQueryEngineLifecycleRelationsTypingOwnershipAndLimits(t *testin
 	fieldID, _ := auth.NewIdentifier()
 	valueID, _ := auth.NewIdentifier()
 	key := "query_" + strings.ReplaceAll(actorID.String(), "-", "")[:20]
-	githubID := time.Now().UnixNano()
-	if githubID < 0 {
-		githubID = -githubID
-	}
-	if githubID < 2 {
-		githubID = 2
-	}
-	insertQueryActor(t, ctx, pool, actorID, githubID, key)
-	insertQueryActor(t, ctx, pool, otherActorID, githubID+1, key+"_other")
+	insertQueryActor(t, ctx, pool, actorID, key, key)
+	insertQueryActor(t, ctx, pool, otherActorID, key+"_other", key+"_other")
 	if _, err := pool.Exec(ctx, `UPDATE app_users SET role='SUPERADMIN' WHERE id=$1`, otherActorID.String()); err != nil {
 		t.Fatalf("promote other query actor: %v", err)
 	}
@@ -197,12 +190,8 @@ func TestPostgresQueryExecutionRateConcurrencyAndRollback(t *testing.T) {
 	defer pool.Close()
 	actorID, _ := auth.NewIdentifier()
 	now := time.Now().UTC()
-	githubID := now.UnixNano()
-	if githubID < 0 {
-		githubID = -githubID
-	}
 	login := "query_limits_" + strings.ReplaceAll(actorID.String(), "-", "")[:16]
-	insertQueryActor(t, ctx, pool, actorID, githubID, login)
+	insertQueryActor(t, ctx, pool, actorID, login, login)
 	defer func() {
 		cleanup := context.Background()
 		_, _ = pool.Exec(cleanup, `DELETE FROM query_executions WHERE owner_user_id=$1`, actorID.String())
@@ -248,11 +237,11 @@ func TestPostgresQueryExecutionRateConcurrencyAndRollback(t *testing.T) {
 	}
 }
 
-func insertQueryActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, githubID int64, login string) {
+func insertQueryActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, subject, login string) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
-(id, github_user_id, github_login, display_name, role, active)
-VALUES($1,$2,$3,'Query integration actor','EXTERNAL',true)`, id.String(), githubID, login); err != nil {
+(id, subject, email, display_name, role, active)
+VALUES($1,$2,lower($3) || '@example.test','Query integration actor','EXTERNAL',true)`, id.String(), subject, login); err != nil {
 		t.Fatalf("insert query actor: %v", err)
 	}
 }

@@ -40,17 +40,10 @@ func TestPostgresSearchAcrossRelationsDynamicFieldsAttachmentsAndRateLimit(t *te
 	valueID, _ := auth.NewIdentifier()
 	attachmentID, _ := auth.NewIdentifier()
 	key := "search_" + strings.ReplaceAll(profileID.String(), "-", "")[:20]
-	githubID := time.Now().UnixNano()
-	if githubID < 0 {
-		githubID = -githubID
-	}
-	if githubID == 0 {
-		githubID = 1
-	}
 
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
-(id, github_user_id, github_login, display_name, role, active)
-VALUES($1,$2,$3,$4,'EXTERNAL',true)`, actorID.String(), githubID, key, "Search test actor"); err != nil {
+(id, subject, email, display_name, role, active)
+VALUES($1,$2,$3,$4,'EXTERNAL',true)`, actorID.String(), key, key+"@example.test", "Search test actor"); err != nil {
 		t.Fatalf("insert app user: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO profiles
@@ -164,11 +157,11 @@ VALUES($1,'DOCUMENT',$2,$3,'application/pdf','application/pdf',128,$4,$5,'ACTIVE
 		t.Fatal("over-limit Search() unexpectedly succeeded")
 	}
 
-	firstPage, err := service.Search(ctx, actor, Query{Terms: []string{"Ana"}, Limit: 1})
+	firstPage, err := service.Search(ctx, actor, Query{Terms: []string{"Ana"}, Modules: []Module{ModuleProfiles}, Limit: 1})
 	if err != nil {
 		t.Fatalf("first deterministic Search() error = %v", err)
 	}
-	repeatedPage, err := service.Search(ctx, actor, Query{Terms: []string{"Ana"}, Limit: 1})
+	repeatedPage, err := service.Search(ctx, actor, Query{Terms: []string{"Ana"}, Modules: []Module{ModuleProfiles}, Limit: 1})
 	if err != nil || firstPage.Results[0] != repeatedPage.Results[0] {
 		t.Fatalf("pagination is not deterministic: first=%#v repeated=%#v error=%v", firstPage, repeatedPage, err)
 	}

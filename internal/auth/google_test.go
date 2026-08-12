@@ -67,8 +67,8 @@ func TestGoogleProvider_Exchange(t *testing.T) {
 
 func TestGoogleProvider_AuthorizationURL(t *testing.T) {
 	provider := &GoogleProvider{
-		clientID:    "test-client-id",
-		redirectURL: "http://localhost/callback",
+		clientID:     "test-client-id",
+		redirectURL:  "http://localhost/callback",
 		authorizeURL: "https://accounts.google.com/o/oauth2/v2/auth",
 	}
 

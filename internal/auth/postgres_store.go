@@ -59,6 +59,7 @@ func (store *PostgresStore) CreateUser(ctx context.Context, params CreateUserPar
 	value, err := store.queries.CreateAppUser(ctx, dbgen.CreateAppUserParams{
 		ID:          databaseUUID(params.ID),
 		Email:       params.Identity.Email,
+		Subject:     params.Identity.Subject,
 		DisplayName: params.Identity.DisplayName,
 		AvatarUrl:   avatarURL,
 		Role:        string(params.Role),
@@ -73,7 +74,7 @@ func (store *PostgresStore) CreateUser(ctx context.Context, params CreateUserPar
 func (store *PostgresStore) UpdateUserIdentity(ctx context.Context, userID Identifier, identity GoogleIdentity) (User, error) {
 	value, err := store.queries.UpdateAppUserIdentity(ctx, dbgen.UpdateAppUserIdentityParams{
 		ID:          databaseUUID(userID),
-		Email: identity.Email,
+		Email:       identity.Email,
 		DisplayName: identity.DisplayName,
 		AvatarUrl:   optionalString(identity.AvatarURL),
 	})
@@ -151,8 +152,8 @@ func (store *PostgresStore) RevokeAllSessionsForUser(ctx context.Context, userID
 
 func (store *PostgresStore) GrantCapability(ctx context.Context, userID Identifier, cap Capability) error {
 	query := `
-		INSERT INTO app_user_capabilities (user_id, capability, created_at)
-		VALUES ($1, $2, NOW())
+		INSERT INTO app_user_capabilities (user_id, capability)
+		VALUES ($1, $2)
 		ON CONFLICT (user_id, capability) DO NOTHING
 	`
 	result, err := store.pool.Exec(ctx, query, databaseUUID(userID), cap)
@@ -230,7 +231,7 @@ func (store *PostgresStore) AddAllowedEmail(ctx context.Context, email string, a
 	} else {
 		addedByUUID = pgtype.UUID{Valid: false}
 	}
-	
+
 	query := `INSERT INTO allowed_emails (email, added_by, added_at) VALUES ($1, $2, NOW()) ON CONFLICT DO NOTHING`
 	_, err := store.pool.Exec(ctx, query, email, addedByUUID)
 	return err

@@ -45,16 +45,9 @@ func TestPostgresGoogleFormsOAuthPaginationDriftStagingAndOwnership(t *testing.T
 	otherUserSessionID, _ := auth.NewIdentifier()
 	memberSessionID, _ := auth.NewIdentifier()
 	key := "google_forms_" + strings.ReplaceAll(actorID.String(), "-", "")[:16]
-	githubID := time.Now().UnixNano()
-	if githubID < 0 {
-		githubID = -githubID
-	}
-	if githubID < 10 {
-		githubID = 10
-	}
-	insertGoogleFormsActor(t, ctx, pool, actorID, githubID, key+"_owner", auth.RoleAdmin)
-	insertGoogleFormsActor(t, ctx, pool, otherID, githubID+1, key+"_other", auth.RoleAdmin)
-	insertGoogleFormsActor(t, ctx, pool, memberID, githubID+2, key+"_member", auth.RoleExternal)
+	insertGoogleFormsActor(t, ctx, pool, actorID, key+"_owner", key+"_owner", auth.RoleAdmin)
+	insertGoogleFormsActor(t, ctx, pool, otherID, key+"_other", key+"_other", auth.RoleAdmin)
+	insertGoogleFormsActor(t, ctx, pool, memberID, key+"_member", key+"_member", auth.RoleExternal)
 	insertGoogleFormsSession(t, ctx, pool, sessionID, actorID, 1)
 	insertGoogleFormsSession(t, ctx, pool, otherSessionID, actorID, 2)
 	insertGoogleFormsSession(t, ctx, pool, otherUserSessionID, otherID, 3)
@@ -702,11 +695,11 @@ func createActiveQuotaSource(t *testing.T, ctx context.Context, service *Service
 	return source
 }
 
-func insertGoogleFormsActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, githubID int64, login string, role auth.Role) {
+func insertGoogleFormsActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, subject, login string, role auth.Role) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
-(id, github_user_id, github_login, display_name, role, active)
-VALUES($1,$2,$3,$4,$5,true)`, id.String(), githubID, login, "Google Forms integration actor", role); err != nil {
+(id, subject, email, display_name, role, active)
+VALUES($1,$2,lower($3) || '@example.test',$4,$5,true)`, id.String(), subject, login, "Google Forms integration actor", role); err != nil {
 		t.Fatalf("insert Google Forms actor: %v", err)
 	}
 }

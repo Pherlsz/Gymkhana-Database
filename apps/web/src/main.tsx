@@ -1,8 +1,8 @@
 import { ConfigProvider } from "antd";
-import ptBR from "antd/locale/pt_BR";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { getAntdLocale, I18nProvider, resolveAppLocale } from "./i18n";
 import "./styles.css";
 import "./attachments.css";
 import "./search.css";
@@ -20,19 +20,24 @@ if (!root) {
   throw new Error("Root element was not found");
 }
 
+const locale = resolveAppLocale(navigator.language);
+document.documentElement.lang = locale;
+
 createRoot(root).render(
   <StrictMode>
-    <ConfigProvider
-      locale={ptBR}
-      theme={{
-        token: {
-          colorPrimary: "#7c3aed",
-          borderRadius: 8,
-          fontSize: 14,
-        },
-      }}
-    >
-      <App />
-    </ConfigProvider>
+    <I18nProvider locale={locale}>
+      <ConfigProvider
+        locale={getAntdLocale(locale)}
+        theme={{
+          token: {
+            colorPrimary: "#7c3aed",
+            borderRadius: 8,
+            fontSize: 14,
+          },
+        }}
+      >
+        <App />
+      </ConfigProvider>
+    </I18nProvider>
   </StrictMode>,
 );

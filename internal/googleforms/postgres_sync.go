@@ -148,7 +148,7 @@ RETURNING id, source_id, owner_user_id, actor_user_id, trigger_kind,
 	if run.ActorUserID != nil {
 		actorID = *run.ActorUserID
 	}
-	actor, err := scanActor(tx.QueryRow(ctx, `SELECT id, github_user_id, github_login, display_name,
+	actor, err := scanActor(tx.QueryRow(ctx, `SELECT id, email, display_name,
        avatar_url, role, active FROM app_users WHERE id=$1`, authDatabaseUUID(actorID)))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return SyncRun{}, Source{}, Connection{}, auth.Session{}, ErrForbidden
@@ -566,7 +566,7 @@ func (store *PostgresStore) ListSyncRuns(ctx context.Context, ownerID auth.Ident
 }
 
 func (store *PostgresStore) GetActor(ctx context.Context, id auth.Identifier) (auth.Session, error) {
-	value, err := scanActor(store.pool.QueryRow(ctx, `SELECT id, github_user_id, github_login, display_name,
+	value, err := scanActor(store.pool.QueryRow(ctx, `SELECT id, email, display_name,
        avatar_url, role, active FROM app_users WHERE id=$1`, authDatabaseUUID(id)))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return auth.Session{}, ErrNotFound
