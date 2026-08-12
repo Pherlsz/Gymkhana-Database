@@ -38,13 +38,9 @@ func TestPostgresOCRIdempotencyConcurrencyReviewApplyRecoveryAndAttachmentLifecy
 	documentID, _ := attachment.NewIdentifier()
 	attachmentID, _ := attachment.NewIdentifier()
 	key := "ocr_" + strings.ReplaceAll(typeID.String(), "-", "")[:20]
-	githubID := now.UnixNano()
-	if githubID < 1 {
-		githubID = -githubID + 1
-	}
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
 (id,subject,email,display_name,role,active)
-VALUES($1,$2::text,lower($3) || '@example.test','OCR integration actor','EXTERNAL',true)`, authDatabaseUUID(actorID), githubID, key); err != nil {
+VALUES($1,$2,lower($3) || '@example.test','OCR integration actor','EXTERNAL',true)`, authDatabaseUUID(actorID), key, key); err != nil {
 		t.Fatalf("insert actor: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO profiles(id,full_name) VALUES($1,'OCR Integration Profile')`, profileID.String()); err != nil {

@@ -40,15 +40,8 @@ func TestPostgresOperationLifecycleIdempotencyOwnershipExportAndBulkDelete(t *te
 	bulkTwo, _ := NewIdentifier()
 	customFieldID, _ := NewIdentifier()
 	key := "operations_" + strings.ReplaceAll(actorID.String(), "-", "")[:18]
-	githubID := time.Now().UnixNano()
-	if githubID < 0 {
-		githubID = -githubID
-	}
-	if githubID < 2 {
-		githubID = 2
-	}
-	insertOperationActor(t, ctx, pool, actorID, githubID, key, auth.RoleAdmin)
-	insertOperationActor(t, ctx, pool, otherActorID, githubID+1, key+"_other", auth.RoleExternal)
+	insertOperationActor(t, ctx, pool, actorID, key, key, auth.RoleAdmin)
+	insertOperationActor(t, ctx, pool, otherActorID, key+"_other", key+"_other", auth.RoleExternal)
 	if _, err := pool.Exec(ctx, `INSERT INTO custom_field_definitions
 (id, target_kind, technical_key, label, field_kind, required, active)
 VALUES($1,'PROFILE','member_code','Código de associado','TEXT',false,true)`, databaseUUID(customFieldID)); err != nil {
@@ -663,11 +656,11 @@ func queueProfileCreateImport(t *testing.T, ctx context.Context, service *Servic
 	return value
 }
 
-func insertOperationActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, subjectID int64, login string, role auth.Role) {
+func insertOperationActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, subject, login string, role auth.Role) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users
 (id, subject, email, display_name, role, active)
-VALUES($1,$2::text,lower($3) || '@example.test',$4,$5,true)`, authDatabaseUUID(id), subjectID, login, "Operations test actor", role); err != nil {
+VALUES($1,$2,lower($3) || '@example.test',$4,$5,true)`, authDatabaseUUID(id), subject, login, "Operations test actor", role); err != nil {
 		t.Fatalf("insert operation actor: %v", err)
 	}
 }

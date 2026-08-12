@@ -19,7 +19,7 @@ WHERE id = $1;
 -- name: GetAppUserByEmail :one
 SELECT id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at
 FROM app_users
-WHERE lower(email) = lower($1);
+WHERE lower(email) = lower(sqlc.arg(email));
 
 -- name: ListAppUsers :many
 SELECT id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at

@@ -46,3 +46,23 @@ func TestAdminWireContractKeepsLoginField(t *testing.T) {
 		t.Fatalf("admin wire contract exposed unversioned email field: %s", body)
 	}
 }
+
+func TestAuthWireContractDecodesLoginField(t *testing.T) {
+	var user authUserResponse
+	if err := json.Unmarshal([]byte(`{"login":"member@example.test","display_name":"Member","avatar_url":"https://example.test/avatar","role":"EXTERNAL"}`), &user); err != nil {
+		t.Fatalf("unmarshal auth user: %v", err)
+	}
+	if user.Email != "member@example.test" || user.DisplayName != "Member" || user.AvatarURL != "https://example.test/avatar" || user.Role != auth.RoleExternal {
+		t.Fatalf("auth user = %#v", user)
+	}
+}
+
+func TestAdminWireContractDecodesLoginField(t *testing.T) {
+	var user adminUserResponse
+	if err := json.Unmarshal([]byte(`{"id":"user-id","login":"admin@example.test","display_name":"Admin","avatar_url":"https://example.test/avatar","role":"ADMIN","active":true,"version":2}`), &user); err != nil {
+		t.Fatalf("unmarshal admin user: %v", err)
+	}
+	if user.ID != "user-id" || user.Email != "admin@example.test" || user.DisplayName != "Admin" || user.AvatarURL != "https://example.test/avatar" || user.Role != auth.RoleAdmin || !user.Active || user.Version != 2 {
+		t.Fatalf("admin user = %#v", user)
+	}
+}

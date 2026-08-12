@@ -33,12 +33,8 @@ func TestPostgresAIChatOwnershipIdempotencyConcurrencyCancellationReferencesAndR
 	actorID, _ := auth.NewIdentifier()
 	otherID, _ := auth.NewIdentifier()
 	key := "chat_" + strings.ReplaceAll(actorID.String(), "-", "")[:16]
-	githubID := now.UnixNano()
-	if githubID < 10 {
-		githubID = -githubID + 10
-	}
-	insertChatActor(t, ctx, pool, actorID, githubID, key)
-	insertChatActor(t, ctx, pool, otherID, githubID+1, key+"_other")
+	insertChatActor(t, ctx, pool, actorID, key, key)
+	insertChatActor(t, ctx, pool, otherID, key+"_other", key+"_other")
 	defer func() {
 		cleanup := context.Background()
 		_, _ = pool.Exec(cleanup, `DELETE FROM ai_chat_audit_events WHERE actor_user_id IN ($1,$2) OR (event_type IN ('RETENTION_CLEANUP','RUN_RECOVERED') AND created_at >= $3)`, actorID.String(), otherID.String(), now)
@@ -270,10 +266,10 @@ func TestPostgresAIChatOwnershipIdempotencyConcurrencyCancellationReferencesAndR
 	}
 }
 
-func insertChatActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, subjectID int64, login string) {
+func insertChatActor(t *testing.T, ctx context.Context, pool *pgxpool.Pool, id auth.Identifier, subject, login string) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `INSERT INTO app_users(id,subject,email,display_name,role,active)
-VALUES($1,$2::text,lower($3) || '@example.test','AI Chat integration','EXTERNAL',true)`, id.String(), subjectID, login); err != nil {
+VALUES($1,$2,lower($3) || '@example.test','AI Chat integration','EXTERNAL',true)`, id.String(), subject, login); err != nil {
 		t.Fatalf("insert AI Chat actor: %v", err)
 	}
 }

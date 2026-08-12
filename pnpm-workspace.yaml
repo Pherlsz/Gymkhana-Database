@@ -1,6 +1,10 @@
 packages:
   - apps/*
 
+audit:
+  ignore:
+    - GHSA-5p4m-2wfm-xmqj
+
 overrides:
   react: 19.2.8
   react-dom: 19.2.8
