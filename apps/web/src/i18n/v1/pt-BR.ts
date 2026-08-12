@@ -14,7 +14,8 @@ export const ptBRV1 = {
     public: {
       privateAccess: "Acesso privado",
       eyebrow: "Acesso à aplicação privada",
-      description: "Acesso privado com Google, sessões revogáveis de 24 horas e permissões da aplicação.",
+      description:
+        "Acesso privado com Google, sessões revogáveis de 24 horas e permissões da aplicação.",
       verifyApi: "Verificar API",
       apiUnavailable: "API indisponível",
       apiUnavailableDescription: "Verifique se o serviço está em execução e tente novamente.",
@@ -24,7 +25,8 @@ export const ptBRV1 = {
       authenticationRequiredDescription: "Entre com uma conta Google previamente autorizada.",
       googleButton: "Entrar com Google",
       authenticationDisabled: "Autenticação desativada neste ambiente",
-      authenticationDisabledDescription: "Configure as variáveis OAuth para testar o acesso privado localmente.",
+      authenticationDisabledDescription:
+        "Configure as variáveis OAuth para testar o acesso privado localmente.",
       sessionUnavailable: "Não foi possível verificar a sessão",
       sessionUnavailableDescription: "Tente novamente sem recarregar a página.",
       retry: "Tentar novamente",

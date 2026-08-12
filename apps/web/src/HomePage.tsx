@@ -22,9 +22,7 @@ export function HomePage() {
         <Typography.Title level={1} className="page-title">
           {messages.shell.productName}
         </Typography.Title>
-        <Typography.Paragraph className="page-description">
-          {copy.description}
-        </Typography.Paragraph>
+        <Typography.Paragraph className="page-description">{copy.description}</Typography.Paragraph>
       </header>
       <div className="page-content">
         <Flex vertical gap="1.5rem">

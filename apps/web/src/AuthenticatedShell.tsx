@@ -29,38 +29,90 @@ export function AuthenticatedShell() {
         <Flex align="center" gap="1rem">
           <strong>{copy.productName}</strong>
           <nav aria-label={copy.navigationLabel} className="app-nav">
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" to="/">
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              to="/"
+            >
               {copy.navigation.home}
             </Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" to="/profiles" search={normalizeProfileSearch({})}>
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              to="/profiles"
+              search={normalizeProfileSearch({})}
+            >
               {copy.navigation.profiles}
             </Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeGlobalSearch({})} to="/search">
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeGlobalSearch({})}
+              to="/search"
+            >
               {copy.navigation.search}
             </Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeQuerySearch({})} to="/query">
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeQuerySearch({})}
+              to="/query"
+            >
               {copy.navigation.query}
             </Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeTaskSearch({})} to="/tasks">
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeTaskSearch({})}
+              to="/tasks"
+            >
               {copy.navigation.tasks}
             </Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeMatchingSearch({})} to="/matching">
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeMatchingSearch({})}
+              to="/matching"
+            >
               {copy.navigation.matching}
             </Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeChatSearch({})} to="/chat">
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeChatSearch({})}
+              to="/chat"
+            >
               {copy.navigation.chat}
             </Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeOCRSearch({})} to="/ocr">
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeOCRSearch({})}
+              to="/ocr"
+            >
               {copy.navigation.ocr}
             </Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" to="/custom-data">
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              to="/custom-data"
+            >
               {copy.navigation.customData}
             </Link>
-            <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" search={normalizeOperationsSearch({})} to="/operations">
+            <Link
+              activeProps={{ className: "app-nav__link app-nav__link--active" }}
+              className="app-nav__link"
+              search={normalizeOperationsSearch({})}
+              to="/operations"
+            >
               {copy.navigation.operations}
             </Link>
             {canManageUsers(session.user.role) ? (
-              <Link activeProps={{ className: "app-nav__link app-nav__link--active" }} className="app-nav__link" to="/google-forms">
+              <Link
+                activeProps={{ className: "app-nav__link app-nav__link--active" }}
+                className="app-nav__link"
+                to="/google-forms"
+              >
                 {copy.navigation.googleForms}
               </Link>
             ) : null}

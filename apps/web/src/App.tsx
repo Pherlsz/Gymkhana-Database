@@ -12,7 +12,7 @@ import {
   type AuthSessionResponse,
 } from "./lib/api/client";
 import { checkLiveHealth } from "./lib/api/health";
-import { router } from "./router";
+import { createAppRouter } from "./router";
 import { SessionContext, useApplicationSession } from "./session";
 
 // Transitional compatibility for pages that previously imported the manual route
@@ -44,6 +44,7 @@ export function App() {
         defaultOptions: { queries: { staleTime: 15_000, retry: 1 } },
       }),
   );
+  const [router] = useState(() => createAppRouter());
   const [health, setHealth] = useState<HealthState>("checking");
   const [authentication, setAuthentication] = useState<AuthState>({ kind: "checking" });
   const [signingOut, setSigningOut] = useState(false);
