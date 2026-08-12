@@ -40,7 +40,7 @@ func (service *fakeDevelopmentAuthenticationService) SignOut(context.Context, st
 
 func TestDevelopmentLoginCreatesSessionWhenCookiesAreNotSecure(t *testing.T) {
 	service := &fakeDevelopmentAuthenticationService{}
-	handler := New(authTestLogger(), nil, Options{Auth: service, SecureCookies: false})
+	handler := New(authTestLogger(), nil, Options{Auth: service, Development: true, SecureCookies: false})
 	response := httptest.NewRecorder()
 
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/auth/dev-login", nil))
@@ -69,9 +69,9 @@ func TestDevelopmentLoginCreatesSessionWhenCookiesAreNotSecure(t *testing.T) {
 	}
 }
 
-func TestDevelopmentLoginRouteIsAbsentWithSecureCookies(t *testing.T) {
+func TestDevelopmentLoginRouteIsAbsentOutsideDevelopment(t *testing.T) {
 	service := &fakeDevelopmentAuthenticationService{}
-	handler := New(authTestLogger(), nil, Options{Auth: service, SecureCookies: true})
+	handler := New(authTestLogger(), nil, Options{Auth: service, Development: false, SecureCookies: false})
 	response := httptest.NewRecorder()
 
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/auth/dev-login", nil))

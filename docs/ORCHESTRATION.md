@@ -278,7 +278,7 @@ Railway foi rejeitado porque adicionaria outra plataforma/custo sem necessidade,
 
 Cloudflare Access pode filtrar acesso antes da aplicação, mas não substitui:
 
-- GitHub OAuth;
+- Google OAuth;
 - sessão da aplicação;
 - roles e permissions;
 - auditoria;
@@ -410,7 +410,7 @@ A capacidade central do sistema é consultar qualquer dado permitido, em qualque
 - Usuários EXTERNAL requerem grants explícitos de capabilities para acessar funcionalidades específicas.
 - ADMIN e SUPERADMIN bypassam verificações de capability e têm acesso total.
 - Capabilities são gerenciadas via endpoints admin e armazenadas em `app_user_capabilities`.
-- Capabilities disponíveis: `search`, `profiles`, `data_tables`, `attachments`, `ocr`, `operations`, `google_forms`, `query`, `matching`, `chat`, `tasks`.
+- Capabilities disponíveis: `PROFILES`, `DATA_TABLES`, `SEARCH`, `OCR`, `OPERATIONS`, `MATCHING`, `GOOGLE_FORMS`, `ATTACHMENTS`, `CHAT`, `QUERY`, `TASKS` e `CUSTOM_DATA`.
 - Middleware HTTP verifica capabilities em todas as rotas protegidas.
 - Grants e revogações são auditados.
 
