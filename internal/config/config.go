@@ -275,7 +275,7 @@ func (cfg Config) validate() error {
 		return errors.New("DATABASE_URL is required when authentication is enabled")
 	}
 	if cfg.Auth.GoogleClientID == "" || cfg.Auth.GoogleClientSecret == "" {
-		return errors.New("Google OAuth client credentials are required when authentication is enabled")
+		return errors.New("google OAuth client credentials are required when authentication is enabled")
 	}
 	if cfg.Auth.GoogleRedirectURL == "" {
 		return errors.New("GOOGLE_OAUTH_REDIRECT_URL is required when authentication is enabled")
