@@ -25,26 +25,28 @@ const (
 )
 
 type Options struct {
-	MaxBodyBytes    int64
-	Auth            authenticationService
-	CapabilityCheck capabilityChecker
-	Profile         profileService
-	Document        documentService
-	Bill            billService
-	CustomData      customDataService
-	Attachment      attachmentService
-	Search          searchService
-	Operations      operationsService
-	GoogleForms     googleFormsService
-	Query           queryService
-	Matching        matchingService
-	Chat            chatService
-	ChatResults     chatResultReader
-	ChatLauncher    chatRunLauncher
-	OCR             ocrService
-	SecureCookies   bool
-	ApplicationURL  string
-	Release         releaseinfo.Info
+	MaxBodyBytes           int64
+	Auth                   authenticationService
+	CapabilityCheck        capabilityChecker
+	RequireCapabilityCheck bool
+	Development            bool
+	Profile                profileService
+	Document               documentService
+	Bill                   billService
+	CustomData             customDataService
+	Attachment             attachmentService
+	Search                 searchService
+	Operations             operationsService
+	GoogleForms            googleFormsService
+	Query                  queryService
+	Matching               matchingService
+	Chat                   chatService
+	ChatResults            chatResultReader
+	ChatLauncher           chatRunLauncher
+	OCR                    ocrService
+	SecureCookies          bool
+	ApplicationURL         string
+	Release                releaseinfo.Info
 }
 
 type healthResponse struct {
@@ -68,6 +70,9 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 			settings.Release = releaseinfo.Current()
 		}
 	}
+	if settings.RequireCapabilityCheck && settings.Auth != nil && settings.CapabilityCheck == nil {
+		settings.CapabilityCheck = unavailableCapabilityChecker{}
+	}
 	publicRelease := settings.Release.Public()
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health/live", func(w http.ResponseWriter, r *http.Request) {
@@ -86,7 +91,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 		}
 		writeJSON(w, http.StatusOK, healthResponse{Status: "ok", RequestID: requestIDFromContext(r.Context()), Release: publicRelease, Database: "ok"})
 	})
-	registerAuthRoutes(mux, logger, settings.Auth, settings.SecureCookies, settings.ApplicationURL)
+	registerAuthRoutes(mux, logger, settings.Auth, settings.Development, settings.SecureCookies, settings.ApplicationURL)
 	registerAdministrationRoutes(mux, logger, settings.Auth)
 	registerProfileRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Profile)
 	registerDocumentRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Document)

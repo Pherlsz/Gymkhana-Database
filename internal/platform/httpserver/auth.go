@@ -44,6 +44,7 @@ func registerAuthRoutes(
 	mux *http.ServeMux,
 	logger *slog.Logger,
 	service authenticationService,
+	development bool,
 	secureCookies bool,
 	applicationURL string,
 ) {
@@ -93,10 +94,10 @@ func registerAuthRoutes(
 		http.Redirect(w, r, applicationURL, http.StatusFound)
 	})
 
-	// Secure cookies are mandatory in staging and production. Keeping this
-	// route unregistered there makes the development bypass fail closed even
-	// if a client tries to call it directly.
-	if !secureCookies {
+	// The bypass is registered only when the application was composed for a
+	// local/test environment. Cookie transport settings are deliberately not
+	// used as an environment proxy.
+	if development {
 		mux.HandleFunc("POST /api/auth/dev-login", func(w http.ResponseWriter, r *http.Request) {
 			if service == nil {
 				writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "Authentication is not configured"})

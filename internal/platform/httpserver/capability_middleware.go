@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
@@ -12,12 +13,18 @@ type capabilityChecker interface {
 	UserHasCapability(ctx context.Context, userID auth.Identifier, cap auth.Capability) (bool, error)
 }
 
+var errCapabilityCheckerUnavailable = errors.New("capability checker unavailable")
+
+type unavailableCapabilityChecker struct{}
+
+func (unavailableCapabilityChecker) UserHasCapability(context.Context, auth.Identifier, auth.Capability) (bool, error) {
+	return false, errCapabilityCheckerUnavailable
+}
+
 // requireCapability wraps an http.HandlerFunc with a capability gate.
 // ADMIN/SUPERADMIN bypass. EXTERNAL users need an explicit grant.
-// When checker is nil, the gate is disabled (routes work as before).
 func requireCapability(cap auth.Capability, checker capabilityChecker, authService authenticationService, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// No checker configured — pass through (backward compat / tests)
 		if checker == nil {
 			next(w, r)
 			return
@@ -34,6 +41,10 @@ func requireCapability(cap auth.Capability, checker capabilityChecker, authServi
 		if session.User.Role == auth.RoleExternal {
 			has, err := checker.UserHasCapability(r.Context(), session.User.ID, cap)
 			if err != nil {
+				if errors.Is(err, errCapabilityCheckerUnavailable) {
+					writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "Capability authorization is unavailable"})
+					return
+				}
 				writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Failed to check capabilities"})
 				return
 			}
