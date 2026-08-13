@@ -1,4 +1,3 @@
-import { ConfigProvider } from "antd";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "./i18n";
@@ -7,25 +6,27 @@ import { LoginScreen } from "./LoginScreen";
 function renderLogin(onLogin = () => undefined) {
   return render(
     <I18nProvider locale="pt-BR">
-      <ConfigProvider>
-        <LoginScreen onLogin={onLogin} />
-      </ConfigProvider>
+      <LoginScreen onLogin={onLogin} />
     </I18nProvider>,
   );
 }
 
 describe("LoginScreen", () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    localStorage.removeItem("gymkhana-theme");
+    document.documentElement.classList.remove("dark");
+  });
 
-  it("renders the legacy layout with Ant Design components and starts Google login", () => {
+  it("renders the GPT-Staging login layout and starts Google login", () => {
     const onLogin = vi.fn();
     const { container } = renderLogin(onLogin);
 
     expect(screen.getByRole("heading", { name: "Gymkhana Database" })).toBeInTheDocument();
-    expect(screen.getByText("Faça login para continuar")).toBeInTheDocument();
-    expect(container.querySelector(".login-card-shell__glow")).toBeInTheDocument();
-    expect(container.querySelector(".ant-card")).toBeInTheDocument();
-    expect(container.querySelector(".ant-divider")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ativar tema escuro" })).toBeInTheDocument();
+    expect(container.querySelector(".login-mascot-img")).toHaveAttribute("src", "/Gampa.png");
+    expect(container.querySelectorAll(".login-orb")).toHaveLength(5);
+    expect(container.querySelector(".ant-card")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Entrar com Google/ }));
     expect(onLogin).toHaveBeenCalledTimes(1);

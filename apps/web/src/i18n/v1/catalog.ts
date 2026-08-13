@@ -8,6 +8,8 @@ export type CatalogV1 = {
       developmentButton: string;
       googleStartError: string;
       developmentStartError: string;
+      accessDenied: string;
+      oauthError: string;
     };
     public: {
       privateAccess: string;
@@ -61,5 +63,11 @@ export type CatalogV1 = {
     userAdministrationDescription: string;
     foundationTitle: string;
     foundationDescription: string;
+  };
+  theme: {
+    activateLight: string;
+    activateDark: string;
+    light: string;
+    dark: string;
   };
 };

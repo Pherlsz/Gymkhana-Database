@@ -4,12 +4,14 @@ export const ptBRV1 = {
   auth: {
     login: {
       title: "Gymkhana Database",
-      subtitle: "Faça login para continuar",
+      subtitle: "Acesse sua conta para continuar",
       logoAlt: "Gymkhana",
       googleButton: "Entrar com Google",
       developmentButton: "Dev Login",
-      googleStartError: "Não foi possível iniciar o login com Google.",
+      googleStartError: "Erro ao iniciar login com Google.",
       developmentStartError: "Não foi possível iniciar a sessão de desenvolvimento.",
+      accessDenied: "Seu e-mail não está autorizado. Contate o administrador.",
+      oauthError: "Erro de autenticação. Tente novamente.",
     },
     public: {
       privateAccess: "Acesso privado",
@@ -67,5 +69,11 @@ export const ptBRV1 = {
     foundationTitle: "Foundation status",
     foundationDescription:
       "A infraestrutura compartilhada continua consumida somente por versões exatas.",
+  },
+  theme: {
+    activateLight: "Ativar tema claro",
+    activateDark: "Ativar tema escuro",
+    light: "Tema claro",
+    dark: "Tema escuro",
   },
 } satisfies CatalogV1;
