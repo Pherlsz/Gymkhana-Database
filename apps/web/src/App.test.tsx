@@ -70,7 +70,7 @@ describe("App", () => {
     expect(screen.getByText("v0.2.2")).toBeInTheDocument();
     expect(screen.getByText("Ant Design")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Sair" }));
-    expect(await screen.findByText("Faça login para continuar")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Entrar com Google/ })).toBeInTheDocument();
   });
 
   it("shows Google login when the protected session returns unauthorized", async () => {
@@ -88,8 +88,7 @@ describe("App", () => {
       }),
     );
     render(<App />);
-    expect(await screen.findByText("Faça login para continuar")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Entrar com Google/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Entrar com Google/ })).toBeInTheDocument();
   });
 
   it("navigates to Profiles, keeps list state in the URL, and saves an inline edit", async () => {

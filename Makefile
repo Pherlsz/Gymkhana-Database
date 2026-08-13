@@ -9,8 +9,9 @@ SQLC_VERSION := v1.31.1
 TERN_VERSION := v2.4.1
 STATICCHECK_VERSION := v0.7.0
 GOVULNCHECK_VERSION := v1.6.0
+OSV_SCANNER_VERSION := v2.4.0
 
-.PHONY: setup dev dev-api dev-web build build-backend build-frontend generate generate-go generate-ts generate-sql format format-check lint lint-backend lint-frontend test test-backend test-frontend test-race vuln check check-backend check-frontend check-config services-up services-down migrate migrate-down-one migrate-status reset-db clean
+.PHONY: setup dev dev-api dev-web build build-backend build-frontend generate generate-go generate-ts generate-sql format format-check lint lint-backend lint-frontend test test-backend test-frontend test-race vuln scan check check-backend check-frontend check-config services-up services-down migrate migrate-down-one migrate-status reset-db clean
 
 setup:
 	@corepack enable
@@ -124,7 +125,11 @@ test-race:
 vuln:
 	@$(GO) run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
 
-check-backend: format-check lint-backend test-backend test-race build-backend vuln
+scan: vuln
+	@$(GO) run github.com/google/osv-scanner/v2/cmd/osv-scanner@$(OSV_SCANNER_VERSION) scan source --recursive .
+	@$(PNPM) audit --audit-level high
+
+check-backend: format-check lint-backend test-backend test-race build-backend scan
 
 check-frontend:
 	@$(PNPM) check:web

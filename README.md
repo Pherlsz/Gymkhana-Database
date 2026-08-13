@@ -158,7 +158,7 @@ make migrate
 make reset-db
 ```
 
-Use targeted commands such as `make check-backend` or `make check-frontend` while developing. Before a PR becomes ready for review, run `make check` plus every relevant migration or generated-contract verification.
+Use targeted commands such as `make check-backend` or `make check-frontend` while developing. Before a PR becomes ready for review, run `make check` plus every relevant migration or generated-contract verification. Dependency and lockfile changes must always be validated locally with `make scan` (govulncheck, OSV-Scanner, `pnpm audit`) before pushing, so the Security workflow never acts as the first place a vulnerability is discovered.
 
 ## CI and GitHub Actions budget policy
 
