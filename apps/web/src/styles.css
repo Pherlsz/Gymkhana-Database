@@ -4,8 +4,20 @@
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  /* dvh, not vh: mobile browser chrome collapses and vh does not follow it. */
+  min-height: 100dvh;
   background: var(--gym-color-canvas);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Kills the 300ms tap delay without disabling pinch zoom the way
+   `touch-action: none` would. */
+button,
+a,
+[role="button"],
+summary,
+label {
+  touch-action: manipulation;
 }
 button,
 input,
@@ -15,37 +27,6 @@ select {
 }
 p {
   margin-block: 0;
-}
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gym-space-4);
-  padding: var(--gym-space-4) var(--gym-space-6);
-  border-block-end: 1px solid var(--gym-color-border);
-  background: var(--gym-color-surface);
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 20;
-}
-.app-nav {
-  display: flex;
-  align-items: center;
-  gap: var(--gym-space-2);
-}
-.app-nav__link {
-  padding: var(--gym-space-2) var(--gym-space-3);
-  border-radius: var(--gym-radius-md);
-  color: var(--gym-color-text-muted);
-  text-decoration: none;
-}
-.app-nav__link--active {
-  background: var(--gym-color-surface-raised);
-  color: var(--gym-color-text);
-}
-.current-user {
-  color: var(--gym-color-text-muted);
-  font-size: var(--gym-font-size-sm);
 }
 .authentication-panel {
   max-inline-size: 42rem;
@@ -66,18 +47,6 @@ p {
   color: var(--gym-color-text-muted);
   font-size: var(--gym-font-size-sm);
 }
-.managed-user__field select,
-.profile-filters input,
-.profile-filters select,
-.profile-delete input,
-.inline-editor {
-  min-block-size: 2.5rem;
-  padding: var(--gym-space-2) var(--gym-space-3);
-  border: 1px solid var(--gym-color-border);
-  border-radius: var(--gym-radius-md);
-  background: var(--gym-color-surface);
-  color: var(--gym-color-text);
-}
 .managed-user__toggle {
   display: inline-flex;
   align-items: center;
@@ -91,45 +60,6 @@ p {
 .foundation-card__label {
   color: var(--gym-color-text-muted);
   font-size: var(--gym-font-size-sm);
-}
-.profile-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--gym-space-3);
-  padding: var(--gym-space-4);
-}
-.profile-filters label {
-  display: grid;
-  gap: var(--gym-space-2);
-  color: var(--gym-color-text-muted);
-  font-size: var(--gym-font-size-sm);
-}
-.profiles-grid {
-  overflow: hidden;
-}
-
-.profiles-bulk-delete {
-  display: grid;
-  gap: var(--gym-space-3);
-  padding: var(--gym-space-4);
-  border-color: var(--gym-color-danger, var(--gym-color-border));
-}
-
-.profiles-bulk-delete label {
-  display: grid;
-  gap: var(--gym-space-2);
-  max-inline-size: 24rem;
-  color: var(--gym-color-text-muted);
-  font-size: var(--gym-font-size-sm);
-}
-
-.profiles-bulk-delete input {
-  min-block-size: 2.5rem;
-  padding: var(--gym-space-2) var(--gym-space-3);
-  border: 1px solid var(--gym-color-border);
-  border-radius: var(--gym-radius-md);
-  background: var(--gym-color-surface);
-  color: var(--gym-color-text);
 }
 
 .data-grid {
@@ -151,7 +81,9 @@ p {
 }
 
 .data-grid__cards {
-  display: none;
+  display: grid;
+  gap: var(--gym-space-3);
+  padding: var(--gym-space-3);
 }
 
 .data-grid__card-shell {
@@ -178,6 +110,8 @@ p {
 }
 
 .data-grid__pagination {
+  align-items: stretch;
+  flex-direction: column;
   justify-content: space-between;
 }
 
@@ -192,55 +126,6 @@ p {
   white-space: nowrap;
   border: 0;
 }
-.profiles-table-wrap {
-  overflow: auto;
-  max-block-size: 65vh;
-}
-.profiles-table {
-  inline-size: 100%;
-  border-collapse: collapse;
-  min-inline-size: 60rem;
-}
-.profiles-table th,
-.profiles-table td {
-  padding: var(--gym-space-3);
-  border-block-end: 1px solid var(--gym-color-border);
-  text-align: start;
-  vertical-align: middle;
-}
-.profiles-table th {
-  position: sticky;
-  inset-block-start: 0;
-  background: var(--gym-color-surface);
-  color: var(--gym-color-text-muted);
-  font-size: var(--gym-font-size-sm);
-  z-index: 1;
-}
-.inline-editor {
-  inline-size: 100%;
-  border-color: transparent;
-  background: transparent;
-}
-.inline-editor:focus {
-  border-color: var(--gym-color-border);
-  background: var(--gym-color-surface);
-}
-.profiles-empty {
-  padding: var(--gym-space-6);
-  color: var(--gym-color-text-muted);
-}
-.profiles-cards {
-  display: none;
-}
-.profiles-pagination {
-  justify-content: space-between;
-}
-.profiles-workspace {
-  display: flex;
-  align-items: stretch;
-  gap: 0.85rem;
-  min-width: 0;
-}
 .profiles-workspace .page-content {
   flex: 1;
   min-width: 0;
@@ -250,10 +135,10 @@ p {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  flex: 0 0 30rem;
-  width: 30rem;
+  flex: 0 1 auto;
+  width: 100%;
   max-width: 100%;
-  max-height: max(16rem, calc(100dvh - 12rem));
+  max-height: min(70dvh, 36rem);
   overflow: hidden;
   border: 1px solid var(--gym-color-border);
   border-radius: var(--gym-radius-md, 12px);
@@ -294,6 +179,8 @@ p {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  /* Stops a flick at the end of the inspector from scrolling the grid behind it. */
+  overscroll-behavior: contain;
   padding: 1.25rem 1.25rem 1.15rem;
 }
 .profile-panel__footer {
@@ -427,7 +314,7 @@ p {
 }
 .profile-form__pair {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 4.75rem;
+  grid-template-columns: 1fr;
   column-gap: 0.85rem;
   margin: 0;
 }
@@ -502,47 +389,6 @@ p {
   padding: var(--gym-space-4);
   border: 1px solid var(--gym-color-danger, var(--gym-color-border));
 }
-.profile-card {
-  padding: var(--gym-space-4);
-}
-@media (max-width: 768px) {
-  .app-header {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: var(--gym-space-3);
-  }
-  .app-header > * {
-    inline-size: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
-  }
-  .profiles-table-wrap {
-    display: none;
-  }
-  .profiles-cards {
-    display: grid;
-    gap: var(--gym-space-3);
-    padding: var(--gym-space-3);
-  }
-  .profiles-workspace {
-    flex-direction: column;
-  }
-  .profile-panel {
-    flex-basis: auto;
-    width: 100%;
-    max-height: min(70dvh, 36rem);
-  }
-  .profile-form__pair {
-    grid-template-columns: 1fr;
-  }
-  .profile-view__pair {
-    display: contents;
-  }
-  .profiles-pagination {
-    align-items: stretch;
-    flex-direction: column;
-  }
-}
 
 @media (min-width: 600px) {
   .profile-view__grid {
@@ -585,7 +431,8 @@ p {
 .records-section-header,
 .record-editor__header {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: space-between;
   gap: var(--gym-space-4);
 }
@@ -601,7 +448,7 @@ p {
 .record-form,
 .type-form {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--gym-space-3);
   padding: var(--gym-space-4);
 }
@@ -638,6 +485,7 @@ p {
   overflow: hidden;
 }
 .records-table-wrap {
+  display: none;
   overflow: auto;
   max-block-size: 48vh;
 }
@@ -662,10 +510,9 @@ p {
   font-size: var(--gym-font-size-sm);
 }
 .records-cards {
-  display: none;
-}
-.records-pagination {
-  justify-content: space-between;
+  display: grid;
+  gap: var(--gym-space-3);
+  padding: var(--gym-space-3);
 }
 .record-card,
 .record-editor,
@@ -689,7 +536,7 @@ p {
 }
 .types-admin {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) minmax(18rem, 2fr);
+  grid-template-columns: 1fr;
   gap: var(--gym-space-4);
 }
 .type-list {
@@ -719,38 +566,52 @@ p {
   grid-column: 1 / -1;
   padding: var(--gym-space-3);
 }
-@media (max-width: 768px) {
+
+/*
+ * The wide rung. Everything above is the narrow case, so a small screen needs
+ * no override at all; this block restores the side-by-side layouts once there
+ * is room. 840 is the same rung the row inspector uses, which is why the record
+ * table can appear here: below it the cards are the only readable form.
+ */
+@media (min-width: 840px) {
+  .profile-form__pair {
+    grid-template-columns: minmax(0, 1fr) 4.75rem;
+  }
+
+  .profile-panel {
+    flex: 0 0 30rem;
+    width: 30rem;
+    max-height: max(16rem, calc(100dvh - 12rem));
+  }
+
+  .data-grid__cards,
+  .records-cards {
+    display: none;
+  }
+
+  .data-grid__table-shell,
+  .records-table-wrap {
+    display: block;
+  }
+
+  .data-grid__pagination {
+    align-items: center;
+    flex-direction: row;
+  }
+
   .record-filters,
   .record-form,
-  .type-form,
+  .type-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .types-admin {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(12rem, 1fr) minmax(18rem, 2fr);
   }
-  .record-form__wide,
-  .type-delete {
-    grid-column: auto;
-  }
-  .records-table-wrap {
-    display: none;
-  }
-  .data-grid__table-shell {
-    display: none;
-  }
-  .records-cards {
-    display: grid;
-    gap: var(--gym-space-3);
-    padding: var(--gym-space-3);
-  }
-  .data-grid__cards {
-    display: grid;
-    gap: var(--gym-space-3);
-    padding: var(--gym-space-3);
-  }
-  .records-pagination,
-  .data-grid__pagination,
+
   .records-section-header,
   .record-editor__header {
-    align-items: stretch;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: flex-start;
   }
 }

@@ -3,7 +3,7 @@
   --ring: var(--md-primary-text);
   position: relative;
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
   flex-direction: column;
   align-items: center;
   justify-content: center;
