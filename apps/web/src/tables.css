@@ -794,20 +794,23 @@
 }
 
 /*
- * Ant Select 6 sizes the value with `--ant-select-height` and `align-items:
- * flex-start`. Raising only `.ant-select-selector` left the label hugging the
- * top once a value was chosen.
+ * Ant Select 6 uses `align-items: flex-start` and, once a value is chosen,
+ * `.ant-select-content-has-value { display: block }`. Extra min-height then
+ * leaves the label hugging the top of the field.
  */
 .toolbar-surface__body .ant-select {
   --ant-select-height: 2.75rem;
   align-items: center;
   min-height: 2.75rem;
+  padding-block: 0;
   font-size: 1rem;
 }
 
-.toolbar-surface__body .ant-select-content,
-.toolbar-surface__body .ant-select-selection-item,
-.toolbar-surface__body .ant-select-selection-placeholder {
+.toolbar-surface__body .ant-select-single .ant-select-content,
+.toolbar-surface__body
+  .ant-select.ant-select-single
+  .ant-select-content.ant-select-content-has-value,
+.toolbar-surface__body .ant-select-placeholder {
   display: flex;
   align-items: center;
   align-self: center;
@@ -844,6 +847,10 @@
   justify-content: flex-end;
   gap: 0;
   min-width: 0;
+}
+
+.tables-page .ant-select {
+  align-items: center;
 }
 
 .spreadsheet-table__page-size {
