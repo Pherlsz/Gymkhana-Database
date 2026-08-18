@@ -73,6 +73,21 @@ function headerTexts() {
   );
 }
 
+async function chooseSelectOption(combobox: HTMLElement, label: string) {
+  fireEvent.mouseDown(combobox);
+  const options = await screen.findAllByTitle(label);
+  fireEvent.click(options[options.length - 1] as HTMLElement);
+}
+
+async function addFilterField(label: string) {
+  const add = screen.queryByRole("button", { name: "Adicionar filtro" });
+  if (add && !add.hasAttribute("disabled") && add.getAttribute("aria-disabled") !== "true") {
+    fireEvent.click(add);
+  }
+  const pickers = screen.getAllByRole("combobox", { name: "Campo" });
+  await chooseSelectOption(pickers[pickers.length - 1] as HTMLElement, label);
+}
+
 function cnhType() {
   return {
     id: "type-cnh",
@@ -404,7 +419,7 @@ describe("TablesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
     const city = await screen.findByRole("textbox", { name: "Cidade" });
     expect(city).toHaveValue("Porto Alegre");
-    expect(document.querySelector(".filter-surface__field.is-applied")).toBeTruthy();
+    expect(document.querySelector(".filter-surface__row.is-applied")).toBeTruthy();
 
     const chipClose = document.querySelector<HTMLElement>(
       ".tables-toolbar__chip .ant-tag-close-icon",
@@ -424,6 +439,7 @@ describe("TablesPage", () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Filtros" }));
+    await addFilterField("Cidade");
     const city = screen.getByRole("textbox", { name: "Cidade" });
     const initialProfileCalls = fetchMock.mock.calls.filter((call) =>
       String(call[0]).includes("/api/v1/profiles?"),
@@ -551,8 +567,8 @@ describe("TablesPage", () => {
     expect(headerTexts()).toContain("Nome");
   });
 
-  it("filters by column from one searchable list, with Tipo promoted first", async () => {
-    window.history.replaceState(null, "", "/tables/documents");
+  it("builds filters one field at a time without listing every column", async () => {
+    window.history.replaceState(null, "", "/tables/documents?document_status=IN_USE");
     vi.stubGlobal(
       "fetch",
       vi
@@ -569,20 +585,22 @@ describe("TablesPage", () => {
     expect(
       screen.queryByRole("button", { name: "Soma (A=1…Z=26 / dígitos)" }),
     ).not.toBeInTheDocument();
-    // Closed, the surface contributes nothing to the bar; the grid keeps its height.
-    expect(screen.queryByRole("textbox", { name: "Buscar campo…" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Campo" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
-    // One list, no quick/advanced split and no "Adicionar filtro" step.
-    expect(screen.getByRole("textbox", { name: "Buscar campo…" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Adicionar filtro" })).not.toBeInTheDocument();
-    const fields = [...document.querySelectorAll(".filter-surface__name")].map(
-      (node) => node.textContent,
-    );
-    expect(fields[0]).toBe("Tipo");
+    expect(screen.queryByRole("textbox", { name: "Buscar campo…" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Adicionar filtro" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Suporte" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Tipo" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Suporte" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar filtro" }));
+    const lastRow = [...document.querySelectorAll(".filter-surface__row")].at(-1) as HTMLElement;
+    await chooseSelectOption(within(lastRow).getByRole("combobox", { name: "Campo" }), "Tipo");
+    await chooseSelectOption(await screen.findByRole("combobox", { name: "Tipo" }), "RG");
+    await waitFor(() => expect(window.location.search).toContain("document_type=type-rg"));
+    expect(window.location.search).toContain("document_status=IN_USE");
+    expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Tipo" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Adicionar filtro" })).not.toBeInTheDocument();
   });
 
   it("sends the document type filter from the URL and lists mixed types without tabs", async () => {
@@ -716,11 +734,12 @@ describe("TablesPage", () => {
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Contas" })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Buscar em todos os campos…")).toBeInTheDocument();
-    // Tipo is no longer a Select pinned to the bills bar; it is the promoted
-    // first column filter, identical to documents.
+    // Tipo is no longer a Select pinned to the bills bar; add it as a condition.
     expect(screen.queryByRole("combobox", { name: "Tipo" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Nova conta" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
+    expect(screen.queryByRole("combobox", { name: "Tipo" })).not.toBeInTheDocument();
+    await addFilterField("Tipo");
     expect(screen.getByRole("combobox", { name: "Tipo" })).toBeInTheDocument();
     expect(await screen.findByText("UC-100")).toBeInTheDocument();
     expect(headerTexts().includes("Soma referência")).toBe(false);

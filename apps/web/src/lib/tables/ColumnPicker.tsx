@@ -1,7 +1,8 @@
-import { Button, Checkbox, Empty, Input } from "antd";
-import { LockKeyhole, Search } from "lucide-react";
+import { Button, Checkbox, Empty } from "antd";
+import { LockKeyhole } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ICON, ICON_STROKE } from "../../components/icons";
+import { SheetSearch } from "./SheetSearch";
 
 export type ColumnPickerItem = {
   key: string;
@@ -59,14 +60,11 @@ export function ColumnPicker({
 
   return (
     <div className="column-picker">
-      <Input
-        allowClear
-        aria-label={searchLabel}
-        className="column-picker__search"
+      <SheetSearch
+        label={searchLabel}
         placeholder={searchLabel}
-        prefix={<Search aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />}
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={setQuery}
       />
 
       <p className="column-picker__count">{visibleCountLabel(visibleCount, items.length)}</p>

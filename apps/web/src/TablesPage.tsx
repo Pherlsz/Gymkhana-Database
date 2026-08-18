@@ -765,7 +765,10 @@ export function TablesPage() {
           } as Partial<ProfileListSearch>);
         }}
         fieldFiltersLabel={copy.filters.byField}
-        searchFieldsLabel={copy.filters.searchFields}
+        addFilterLabel={copy.filters.addFilter}
+        chooseFieldLabel={copy.filters.chooseField}
+        chooseValueLabel={copy.filters.chooseValue}
+        removeFilterLabel={copy.filters.removeFilter}
         appliedFiltersLabel={copy.filters.appliedFilters}
         noFieldsLabel={copy.filters.noFields}
         moreChipsLabel={(count) => copy.filters.moreChips.replace("{count}", String(count))}

@@ -320,6 +320,10 @@ export type CatalogV1 = {
       allMedia: string;
       all: string;
       searchFields: string;
+      addFilter: string;
+      chooseField: string;
+      chooseValue: string;
+      removeFilter: string;
       appliedFilters: string;
       moreChips: string;
       noFields: string;

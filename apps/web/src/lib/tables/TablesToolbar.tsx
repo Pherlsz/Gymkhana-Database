@@ -1,8 +1,9 @@
-import { Button, Input, Tag } from "antd";
+import { Button, Tag } from "antd";
 import { Columns3, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import { ColumnPicker, type ColumnPickerItem } from "./ColumnPicker";
 import { FilterSurface } from "./FilterSurface";
+import { SheetSearch } from "./SheetSearch";
 import { ToolbarSurface } from "./ToolbarSurface";
 import type { ToolbarFilterField } from "./FilterControl";
 import { ICON, ICON_STROKE } from "../../components/icons";
@@ -27,7 +28,10 @@ export function TablesToolbar({
   onSearchChange,
   onSearchSubmit,
   fieldFiltersLabel,
-  searchFieldsLabel,
+  addFilterLabel,
+  chooseFieldLabel,
+  chooseValueLabel,
+  removeFilterLabel,
   appliedFiltersLabel,
   noFieldsLabel,
   moreChipsLabel,
@@ -44,7 +48,10 @@ export function TablesToolbar({
   onSearchChange: (value: string) => void;
   onSearchSubmit: (value: string) => void;
   fieldFiltersLabel: string;
-  searchFieldsLabel: string;
+  addFilterLabel: string;
+  chooseFieldLabel: string;
+  chooseValueLabel: string;
+  removeFilterLabel: string;
   appliedFiltersLabel: string;
   noFieldsLabel: string;
   moreChipsLabel: (count: number) => string;
@@ -80,20 +87,12 @@ export function TablesToolbar({
   return (
     <div className="tables-toolbar">
       <div className="tables-toolbar__row">
-        <Input.Search
-          allowClear
-          aria-label={searchLabel}
+        <SheetSearch
+          label={searchLabel}
           placeholder={searchPlaceholder}
           value={searchValue}
-          onBlur={(event) => {
-            const search = event.currentTarget.closest(".ant-input-search");
-            if (event.relatedTarget instanceof Node && search?.contains(event.relatedTarget)) {
-              return;
-            }
-            onSearchSubmit(searchValue);
-          }}
-          onChange={(event) => onSearchChange(event.target.value)}
-          onSearch={onSearchSubmit}
+          onChange={onSearchChange}
+          onSubmit={onSearchSubmit}
         />
         {columnPicker ? (
           <ToolbarSurface
@@ -130,12 +129,15 @@ export function TablesToolbar({
             onOpenChange={(open) => setOpenSurface(open ? "filters" : null)}
           >
             <FilterSurface
+              addFilterLabel={addFilterLabel}
               appliedLabel={appliedFiltersLabel}
+              chooseFieldLabel={chooseFieldLabel}
+              chooseValueLabel={chooseValueLabel}
               clearLabel={clearLabel}
               fields={filters}
               localHint={localHint}
               noFieldsLabel={noFieldsLabel}
-              searchFieldsLabel={searchFieldsLabel}
+              removeFilterLabel={removeFilterLabel}
             />
           </ToolbarSurface>
         ) : null}
