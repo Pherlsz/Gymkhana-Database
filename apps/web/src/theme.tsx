@@ -122,6 +122,7 @@ function gymkhanaAntdTheme(mode: Theme) {
         itemActiveColor: "var(--md-primary-text)",
       },
       Pagination: {
+        colorPrimary: "var(--md-on-surface)",
         itemActiveColor: "var(--md-on-surface)",
         itemActiveColorHover: "var(--md-on-surface)",
       },
