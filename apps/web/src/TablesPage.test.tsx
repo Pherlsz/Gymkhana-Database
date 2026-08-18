@@ -138,6 +138,17 @@ function cnhRecord() {
   };
 }
 
+function inUseDocumentRecord() {
+  return {
+    ...documentRecord(),
+    id: "doc-in-use",
+    identifier_value: "9988776655",
+    status: "IN_USE",
+    owner_full_name: "Bruno Carvalho",
+    idle_custody: "OWNER",
+  };
+}
+
 function billRecord() {
   return {
     id: "bill-1",
@@ -177,8 +188,47 @@ function emptyCustomFields() {
 }
 
 function apiResponse(url: string): Response | undefined {
+  const params = new URL(url, "http://tables.test").searchParams;
   if (url.endsWith("/api/auth/session")) return jsonResponse(session());
-  if (url.includes("/api/v1/profiles?")) return jsonResponse(profilePage());
+  if (url.includes("/api/v1/profiles?")) {
+    let profiles = [anaProfile()];
+    const city = params.get("city");
+    const cpf = params.get("cpf");
+    const email = params.get("email");
+    const fullName = params.get("full_name");
+    const state = params.get("state");
+    if (city) {
+      profiles = profiles.filter((profile) =>
+        profile.address.city.toLowerCase().includes(city.toLowerCase()),
+      );
+    }
+    if (cpf) {
+      profiles = profiles.filter((profile) => profile.cpf.includes(cpf));
+    }
+    if (email) {
+      profiles = profiles.filter((profile) =>
+        profile.email.toLowerCase().includes(email.toLowerCase()),
+      );
+    }
+    if (fullName) {
+      profiles = profiles.filter((profile) =>
+        profile.full_name.toLowerCase().includes(fullName.toLowerCase()),
+      );
+    }
+    if (state) {
+      profiles = profiles.filter((profile) => profile.address.state === state);
+    }
+    return jsonResponse({
+      profiles,
+      page: {
+        total: profiles.length,
+        limit: 100,
+        offset: 0,
+        sort_field: "full_name",
+        sort_order: "asc",
+      },
+    });
+  }
   if (url.includes("/api/v1/profiles/")) return jsonResponse(profilePage().profiles[0]);
   if (url.includes("/api/v1/document-types")) {
     return jsonResponse({
@@ -216,18 +266,49 @@ function apiResponse(url: string): Response | undefined {
     return jsonResponse(emptyCustomFields());
   }
   if (url.includes("/api/v1/documents?")) {
-    const documents = url.includes("document_type_id=type-cnh")
-      ? [cnhRecord()]
-      : [documentRecord()];
+    let documents = [documentRecord(), inUseDocumentRecord(), cnhRecord()];
+    const typeId = params.get("document_type_id");
+    const status = params.get("status");
+    const medium = params.get("medium");
+    const identifier = params.get("identifier");
+    if (typeId) documents = documents.filter((document) => document.document_type_id === typeId);
+    if (status) documents = documents.filter((document) => document.status === status);
+    if (medium) documents = documents.filter((document) => document.medium === medium);
+    if (identifier) {
+      documents = documents.filter((document) => document.identifier_value.includes(identifier));
+    }
     return jsonResponse({
       documents,
-      page: { total: 1, limit: 100, offset: 0, sort_field: "identifier_value", sort_order: "asc" },
+      page: {
+        total: documents.length,
+        limit: 100,
+        offset: 0,
+        sort_field: "identifier_value",
+        sort_order: "asc",
+      },
     });
   }
   if (url.includes("/api/v1/bills?")) {
+    let bills = [billRecord()];
+    const typeId = params.get("bill_type_id");
+    const status = params.get("status");
+    const medium = params.get("medium");
+    const reference = params.get("reference");
+    const competence = params.get("competence");
+    if (typeId) bills = bills.filter((bill) => bill.bill_type_id === typeId);
+    if (status) bills = bills.filter((bill) => bill.status === status);
+    if (medium) bills = bills.filter((bill) => bill.medium === medium);
+    if (reference) bills = bills.filter((bill) => bill.reference_value.includes(reference));
+    if (competence) bills = bills.filter((bill) => bill.competence.includes(competence));
     return jsonResponse({
-      bills: [billRecord()],
-      page: { total: 1, limit: 100, offset: 0, sort_field: "reference_value", sort_order: "asc" },
+      bills,
+      page: {
+        total: bills.length,
+        limit: 100,
+        offset: 0,
+        sort_field: "reference_value",
+        sort_order: "asc",
+      },
     });
   }
   if (url.includes("/api/v1/custom-entity-types")) {
@@ -321,8 +402,9 @@ describe("TablesPage", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
-    const city = await screen.findByRole("button", { name: /^Cidade/ });
-    expect(city).toHaveAttribute("aria-pressed", "true");
+    const city = await screen.findByRole("textbox", { name: "Cidade" });
+    expect(city).toHaveValue("Porto Alegre");
+    expect(document.querySelector(".filter-surface__field.is-applied")).toBeTruthy();
 
     const chipClose = document.querySelector<HTMLElement>(
       ".tables-toolbar__chip .ant-tag-close-icon",
@@ -342,8 +424,6 @@ describe("TablesPage", () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Filtros" }));
-    // Filtering is column-first now: choose the column, then narrow it.
-    fireEvent.click(screen.getByRole("button", { name: "Cidade" }));
     const city = screen.getByRole("textbox", { name: "Cidade" });
     const initialProfileCalls = fetchMock.mock.calls.filter((call) =>
       String(call[0]).includes("/api/v1/profiles?"),
@@ -359,8 +439,11 @@ describe("TablesPage", () => {
     await waitFor(() => expect(window.location.search).toContain("city=Porto+Alegre"));
     await waitFor(() =>
       expect(
-        fetchMock.mock.calls.filter((call) => String(call[0]).includes("/api/v1/profiles?")),
-      ).toHaveLength(initialProfileCalls + 1),
+        fetchMock.mock.calls
+          .map((call) => String(call[0]))
+          .filter((url) => url.includes("/api/v1/profiles?"))
+          .some((url) => url.includes("city=Porto+Alegre")),
+      ).toBe(true),
     );
   });
 
@@ -496,11 +579,10 @@ describe("TablesPage", () => {
       (node) => node.textContent,
     );
     expect(fields[0]).toBe("Tipo");
-    expect(screen.getByRole("button", { name: "Status" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Suporte" })).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Categoria")).not.toBeInTheDocument();
-    fireEvent.click(await screen.findByRole("button", { name: "Categoria" }));
-    expect(document.querySelector(".filter-surface__control .ant-select")).not.toBeNull();
+    expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Suporte" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Tipo" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Adicionar filtro" })).not.toBeInTheDocument();
   });
 
   it("sends the document type filter from the URL and lists mixed types without tabs", async () => {
@@ -530,6 +612,26 @@ describe("TablesPage", () => {
       .filter((url) => url.includes("/api/v1/documents?"));
     expect(documentCalls.some((url) => url.includes("document_type_id=type-rg"))).toBe(true);
     expect(documentCalls.every((url) => !url.includes("owner_profile_id="))).toBe(true);
+  });
+
+  it("sends the in-use status filter and hides other statuses", async () => {
+    window.history.replaceState(null, "", "/tables/documents?document_status=IN_USE");
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((input: RequestInfo | URL) =>
+        Promise.resolve(apiResponse(String(input))),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    expect(await screen.findByText("9988776655")).toBeInTheDocument();
+    expect(screen.getAllByText("Em uso").length).toBeGreaterThan(0);
+    expect(screen.queryByText("1234567890")).not.toBeInTheDocument();
+    expect(screen.queryByText("Disponível")).not.toBeInTheDocument();
+    const documentCalls = fetchMock.mock.calls
+      .map((call) => String(call[0]))
+      .filter((url) => url.includes("/api/v1/documents?"));
+    expect(documentCalls.some((url) => url.includes("status=IN_USE"))).toBe(true);
+    expect(documentCalls.every((url) => !url.includes("status=AVAILABLE"))).toBe(true);
   });
 
   it("shows the CNH category column when that type is filtered", async () => {
@@ -619,7 +721,6 @@ describe("TablesPage", () => {
     expect(screen.queryByRole("combobox", { name: "Tipo" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Nova conta" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
-    fireEvent.click(screen.getByRole("button", { name: "Tipo" }));
     expect(screen.getByRole("combobox", { name: "Tipo" })).toBeInTheDocument();
     expect(await screen.findByText("UC-100")).toBeInTheDocument();
     expect(headerTexts().includes("Soma referência")).toBe(false);

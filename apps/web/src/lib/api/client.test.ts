@@ -103,6 +103,36 @@ describe("generated API client helpers", () => {
     expect(url).not.toContain("owner_profile_id=");
   });
 
+  it("sends the document status filter as status", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        documents: [],
+        page: {
+          total: 0,
+          limit: 100,
+          offset: 0,
+          sort_field: "identifier_value",
+          sort_order: "asc",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await listDocuments(undefined, {
+      document_page: 1,
+      document_limit: 100,
+      document_sort: "identifier_value",
+      document_order: "asc",
+      document_identifier: "",
+      document_status: "IN_USE",
+      document_medium: "PHYSICAL",
+      document_type: "",
+    });
+    const url = String(fetchMock.mock.calls[0]?.[0]);
+    expect(url).toContain("status=IN_USE");
+    expect(url).toContain("medium=PHYSICAL");
+    expect(url).not.toContain("document_status=");
+  });
+
   it("lists bills without requiring an owner", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
