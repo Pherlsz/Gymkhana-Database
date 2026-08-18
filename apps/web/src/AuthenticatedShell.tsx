@@ -23,7 +23,8 @@ import { canManageUsers } from "./lib/roles";
 import { TABLE_SEARCH_DEFAULTS } from "./lib/tables/tableRoutes";
 import { GLOBAL_SEARCH_DEFAULTS } from "./SearchPage";
 import { useApplicationContext } from "./session";
-import { ThemeToggle, useTheme } from "./theme";
+import { useTheme } from "./theme";
+import { ICON, ICON_STROKE } from "./components/icons";
 
 const NAV_COLLAPSED_KEY = "gymkhana-nav-collapsed";
 const SHELL_COMPACT_QUERY = "(width < 600px)";
@@ -99,18 +100,14 @@ function AuthenticatedShellLayout() {
           type="button"
         >
           {navOpen ? (
-            <PanelLeftClose aria-hidden size={18} strokeWidth={1.75} />
+            <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
           ) : (
-            <PanelLeftOpen aria-hidden size={18} strokeWidth={1.75} />
+            <PanelLeftOpen aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
           )}
         </button>
+        {/* Theme lives in the account menu alone. The topbar carried a second
+            control that was reachable at the same time on mobile. */}
         <ShellSearch compact />
-        <ThemeToggle
-          activateDark={messages.theme.activateDark}
-          activateLight={messages.theme.activateLight}
-          darkLabel={messages.theme.dark}
-          lightLabel={messages.theme.light}
-        />
       </header>
       <button
         aria-label={copy.navigation.closeNavigation}
@@ -131,7 +128,7 @@ function AuthenticatedShellLayout() {
               onClick={() => setNavOpen(false)}
               type="button"
             >
-              <PanelLeftClose aria-hidden size={18} strokeWidth={1.75} />
+              <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
             </button>
           ) : (
             <button
@@ -142,9 +139,9 @@ function AuthenticatedShellLayout() {
               type="button"
             >
               {rail ? (
-                <PanelLeftOpen aria-hidden size={18} strokeWidth={1.75} />
+                <PanelLeftOpen aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
               ) : (
-                <PanelLeftClose aria-hidden size={18} strokeWidth={1.75} />
+                <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
               )}
             </button>
           )}
@@ -158,7 +155,7 @@ function AuthenticatedShellLayout() {
             title={copy.navigation.home}
             to="/"
           >
-            <Home aria-hidden size={18} strokeWidth={1.75} />
+            <Home aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
             <span className="nav-item__label">{copy.navigation.home}</span>
           </Link>
           <hr className="nav-divider" />
@@ -169,9 +166,14 @@ function AuthenticatedShellLayout() {
             onClick={toggleTables}
             type="button"
           >
-            <Folder aria-hidden size={18} strokeWidth={1.75} />
+            <Folder aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
             <span className="nav-item__label">{copy.navigation.tables}</span>
-            <ChevronDown aria-hidden className="nav-item__chev" size={16} strokeWidth={1.75} />
+            <ChevronDown
+              aria-hidden
+              className="nav-item__chev"
+              size={ICON.md}
+              strokeWidth={ICON_STROKE}
+            />
           </button>
           <div
             aria-hidden={!tablesOpen || rail}
@@ -181,19 +183,19 @@ function AuthenticatedShellLayout() {
             <div className="nav-sub" id="shell-tables">
               <TableLink
                 active={activeTable === "people"}
-                icon={<User aria-hidden size={17} strokeWidth={1.75} />}
+                icon={<User aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
                 label={copy.navigation.profiles}
                 table="people"
               />
               <TableLink
                 active={activeTable === "documents"}
-                icon={<FileText aria-hidden size={17} strokeWidth={1.75} />}
+                icon={<FileText aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
                 label={copy.navigation.documents}
                 table="documents"
               />
               <TableLink
                 active={activeTable === "bills"}
-                icon={<Receipt aria-hidden size={17} strokeWidth={1.75} />}
+                icon={<Receipt aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
                 label={copy.navigation.bills}
                 table="bills"
               />
@@ -209,7 +211,7 @@ function AuthenticatedShellLayout() {
                 title={copy.navigation.forms}
                 to="/forms"
               >
-                <ClipboardList aria-hidden size={18} strokeWidth={1.75} />
+                <ClipboardList aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
                 <span className="nav-item__label">{copy.navigation.forms}</span>
               </Link>
               <Link
@@ -219,7 +221,7 @@ function AuthenticatedShellLayout() {
                 title={copy.navigation.admin}
                 to="/admin"
               >
-                <SlidersHorizontal aria-hidden size={18} strokeWidth={1.75} />
+                <SlidersHorizontal aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
                 <span className="nav-item__label">{copy.navigation.admin}</span>
               </Link>
             </>
@@ -263,7 +265,7 @@ function ShellSearch({ compact = false }: { compact?: boolean }) {
 
   return (
     <form className="shell-search" onSubmit={onSubmit} role="search">
-      <Search aria-hidden size={16} strokeWidth={1.75} />
+      <Search aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
       <input
         aria-label={messages.shell.navigation.searchPlaceholder}
         autoComplete="off"
@@ -329,15 +331,15 @@ function UserAccountCard({ rail }: { rail: boolean }) {
             items: [
               {
                 key: "settings",
-                icon: <Settings aria-hidden size={16} strokeWidth={1.75} />,
+                icon: <Settings aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
                 label: copy.account.settings,
               },
               {
                 key: "appearance",
                 icon: isDark ? (
-                  <Sun aria-hidden size={16} strokeWidth={1.75} />
+                  <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
                 ) : (
-                  <Moon aria-hidden size={16} strokeWidth={1.75} />
+                  <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
                 ),
                 label: (
                   <Flex align="center" gap={12} justify="space-between">
@@ -355,7 +357,7 @@ function UserAccountCard({ rail }: { rail: boolean }) {
               {
                 key: "logout",
                 disabled: signingOut,
-                icon: <LogOut aria-hidden size={16} strokeWidth={1.75} />,
+                icon: <LogOut aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
                 label: signingOut ? copy.signingOut : copy.signOut,
               },
             ],
@@ -424,8 +426,8 @@ function UserAccountCard({ rail }: { rail: boolean }) {
             <ChevronDown
               aria-hidden
               className="sidebar-account__chev"
-              size={16}
-              strokeWidth={1.75}
+              size={ICON.md}
+              strokeWidth={ICON_STROKE}
             />
           </button>
         </Dropdown>

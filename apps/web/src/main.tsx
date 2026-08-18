@@ -5,6 +5,7 @@ import { App } from "./App";
 import { getAntdLocale, I18nProvider, resolveAppLocale } from "./i18n";
 import "./styles.css";
 import "./shell.css";
+import "./components/components.css";
 import "./attachments.css";
 import "./search.css";
 import "./operations.css";

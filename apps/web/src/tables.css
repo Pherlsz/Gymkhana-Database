@@ -62,20 +62,20 @@
   }
 }
 
-.tables-page__header,
+.tables-page > .page-header,
 .tables-toolbar,
 .tables-page > .ant-alert,
 .tables-page > .ant-typography {
   flex: none;
 }
 
-.tables-page__header h1 {
+.tables-page .page-header__title.ant-typography {
   margin: 0;
   font-size: 1.5rem;
   letter-spacing: -0.03em;
 }
 
-.tables-page__header p {
+.tables-page .page-header__description.ant-typography {
   margin: 0.25rem 0 0;
   color: var(--md-on-surface-variant);
   max-width: 42rem;
@@ -805,11 +805,11 @@
   gap: 0.5rem;
 }
 
-.tables-page__header h1 {
+.tables-page .page-header__title.ant-typography {
   font-size: 1.25rem;
 }
 
-.tables-page__header p {
+.tables-page .page-header__description.ant-typography {
   display: none;
 }
 
@@ -904,11 +904,11 @@
     gap: 0.75rem;
   }
 
-  .tables-page__header h1 {
+  .tables-page .page-header__title.ant-typography {
     font-size: 1.5rem;
   }
 
-  .tables-page__header p {
+  .tables-page .page-header__description.ant-typography {
     display: block;
   }
 

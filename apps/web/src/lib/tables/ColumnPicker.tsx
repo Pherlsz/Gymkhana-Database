@@ -1,6 +1,7 @@
 import { Button, Checkbox, Empty, Input } from "antd";
 import { LockKeyhole, Search } from "lucide-react";
 import { useMemo, useState } from "react";
+import { ICON, ICON_STROKE } from "../../components/icons";
 
 export type ColumnPickerItem = {
   key: string;
@@ -63,7 +64,7 @@ export function ColumnPicker({
         aria-label={searchLabel}
         className="column-picker__search"
         placeholder={searchLabel}
-        prefix={<Search aria-hidden size={15} strokeWidth={1.75} />}
+        prefix={<Search aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
@@ -94,8 +95,8 @@ export function ColumnPicker({
                         <LockKeyhole
                           aria-hidden
                           className="column-picker__locked"
-                          size={13}
-                          strokeWidth={1.75}
+                          size={ICON.sm}
+                          strokeWidth={ICON_STROKE}
                         />
                       ) : null}
                     </Checkbox>

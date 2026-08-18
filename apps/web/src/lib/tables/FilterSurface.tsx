@@ -2,6 +2,7 @@ import { Button, Empty, Input } from "antd";
 import { ChevronDown, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { FilterControl, filterValuePreview, type ToolbarFilterField } from "./FilterControl";
+import { ICON, ICON_STROKE } from "../../components/icons";
 
 /**
  * Column-first filtering, the shape a spreadsheet user expects: pick the column,
@@ -50,7 +51,7 @@ export function FilterSurface({
         aria-label={searchFieldsLabel}
         className="filter-surface__search"
         placeholder={searchFieldsLabel}
-        prefix={<Search aria-hidden size={15} strokeWidth={1.75} />}
+        prefix={<Search aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
@@ -83,8 +84,8 @@ export function FilterSurface({
                     className={
                       expanded ? "filter-surface__chevron is-open" : "filter-surface__chevron"
                     }
-                    size={14}
-                    strokeWidth={1.75}
+                    size={ICON.sm}
+                    strokeWidth={ICON_STROKE}
                   />
                 </button>
                 {expanded ? (

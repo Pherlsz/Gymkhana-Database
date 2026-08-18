@@ -1,4 +1,4 @@
-import { Alert, Drawer, Modal, Typography } from "antd";
+import { Alert, Drawer, Modal } from "antd";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { memo, startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import { getRouteApi } from "@tanstack/react-router";
@@ -27,6 +27,8 @@ import {
   type ProfileListSearch,
 } from "./lib/api/client";
 import { useI18n } from "./i18n";
+import { PageHeader } from "./components/PageHeader";
+import { StateBlock } from "./components/StateBlock";
 import { SpreadsheetTable } from "./lib/tables/SpreadsheetTable";
 import { TablesToolbar } from "./lib/tables/TablesToolbar";
 import { cellKeyForFilter, distinctValues } from "./lib/tables/tableFilters";
@@ -655,14 +657,11 @@ export function TablesPage() {
 
   return (
     <div className="tables-page">
-      <header className="tables-page__header">
-        <Typography.Title level={1}>{sectionCopy.title}</Typography.Title>
-        <Typography.Paragraph>{sectionCopy.description}</Typography.Paragraph>
-      </header>
+      <PageHeader description={sectionCopy.description} title={sectionCopy.title} />
 
       {notice ? <Alert showIcon type="success" title={notice} /> : null}
       {errorDescription ? (
-        <Alert showIcon type="error" title={copy.error} description={errorDescription} />
+        <StateBlock description={errorDescription} kind="error" title={copy.error} />
       ) : null}
 
       <TablesToolbar

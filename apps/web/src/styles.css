@@ -468,16 +468,12 @@ p {
   gap: 0.35rem 0.5rem;
   align-items: center;
 }
-.document-presence__row select,
-.document-presence__row input {
+/* Ant now owns these controls, so they inherit the app-wide field height and
+   theming instead of the 2rem native pair this row used to hand-roll. */
+.document-presence__row .ant-select,
+.document-presence__row .ant-input {
   width: 100%;
   min-width: 0;
-  height: 2rem;
-  padding: 0 0.5rem;
-  border: 1px solid var(--gym-color-border);
-  border-radius: var(--gym-radius-sm);
-  background: var(--gym-color-surface);
-  color: var(--gym-color-text);
 }
 .document-presence__type {
   font-size: 0.75rem;
@@ -489,7 +485,7 @@ p {
   color: var(--gym-color-text-muted);
   font-size: var(--gym-font-size-sm);
 }
-.document-presence__row input {
+.document-presence__row .ant-input {
   grid-column: 2;
 }
 .profile-panel__actions {
@@ -664,10 +660,6 @@ p {
   background: var(--gym-color-surface);
   color: var(--gym-color-text-muted);
   font-size: var(--gym-font-size-sm);
-}
-.records-empty {
-  padding: var(--gym-space-6);
-  color: var(--gym-color-text-muted);
 }
 .records-cards {
   display: none;

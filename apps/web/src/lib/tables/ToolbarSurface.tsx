@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, type KeyboardEvent, type ReactNo
 import { atLeast } from "../breakpoints";
 import { useMediaQuery } from "../useMediaQuery";
 import { SHEET_INSPECTOR_SHEET_SIZE } from "./sheetDefaults";
+import { ICON, ICON_STROKE } from "../../components/icons";
 
 /**
  * One surface per toolbar subject, so opening Colunas or Filtros never pushes
@@ -97,8 +98,8 @@ export function ToolbarSurface({
       <ChevronDown
         aria-hidden
         className={open ? "toolbar-surface__chevron is-open" : "toolbar-surface__chevron"}
-        size={14}
-        strokeWidth={1.75}
+        size={ICON.sm}
+        strokeWidth={ICON_STROKE}
       />
     </Button>
   );

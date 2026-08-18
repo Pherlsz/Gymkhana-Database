@@ -107,8 +107,14 @@ describe("DocumentPresenceSection", () => {
         <DocumentPresenceSection copy={copy} editable profile={profile} />
       </QueryClientProvider>,
     );
-    const select = await screen.findByLabelText("RG");
-    fireEvent.change(select, { target: { value: "indication" } });
+    // The claim control is an Ant Select now, so the value changes by opening
+    // the listbox rather than by setting a native select's value.
+    // The claim control is an Ant Select now, so the value changes by opening
+    // the listbox and choosing, not by setting a native select's value.
+    const select = await screen.findByRole("combobox", { name: "RG" });
+    fireEvent.mouseDown(select);
+    const option = await screen.findByTitle(copy.indication);
+    fireEvent.click(option);
     await waitFor(() => {
       const call = fetchMock.mock.calls.find((entry) =>
         String(entry[0]).includes("/api/v1/document-presences"),

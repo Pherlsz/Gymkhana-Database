@@ -41,6 +41,7 @@ import { useHomeOverview } from "./lib/home/useHomeOverview";
 import { canManageUsers } from "./lib/roles";
 import { tableLinkProps } from "./lib/tables/tableRoutes";
 import { useApplicationSession } from "./session";
+import { ICON, ICON_STROKE } from "./components/icons";
 
 type HomeCopy = ReturnType<typeof useI18n>["messages"]["home"];
 
@@ -115,7 +116,7 @@ export function HomePage() {
                 items: [
                   {
                     key: "document",
-                    icon: <FileText aria-hidden size={16} strokeWidth={1.75} />,
+                    icon: <FileText aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
                     label: copy.quickActions.documents,
                     onClick: () =>
                       void navigate(
@@ -126,7 +127,7 @@ export function HomePage() {
                   },
                   {
                     key: "bill",
-                    icon: <Receipt aria-hidden size={16} strokeWidth={1.75} />,
+                    icon: <Receipt aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
                     label: copy.quickActions.newBill,
                     onClick: () =>
                       void navigate(
@@ -143,7 +144,9 @@ export function HomePage() {
                           children: [
                             {
                               key: "batch",
-                              icon: <Download aria-hidden size={16} strokeWidth={1.75} />,
+                              icon: (
+                                <Download aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                              ),
                               label: copy.quickActions.batch,
                               onClick: () => void navigate({ to: "/admin" }),
                             },
@@ -158,7 +161,7 @@ export function HomePage() {
               <Button
                 aria-label={copy.quickActions.newRecord}
                 className="quick-action quick-action--primary"
-                icon={<Plus aria-hidden size={18} strokeWidth={1.75} />}
+                icon={<Plus aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
                 type="primary"
               >
                 <span className="quick-action__copy">
@@ -174,7 +177,7 @@ export function HomePage() {
                 <Button
                   aria-label={copy.quickActions.googleForm}
                   className="quick-action"
-                  icon={<ClipboardList aria-hidden size={18} strokeWidth={1.75} />}
+                  icon={<ClipboardList aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
                   onClick={() => void navigate({ to: "/forms" })}
                 >
                   <span className="quick-action__copy">
@@ -248,7 +251,7 @@ export function HomePage() {
             {...tableLinkProps(normalizeProfileSearch({}))}
           >
             <span className="home-hero__icon">
-              <User aria-hidden size={24} strokeWidth={1.75} />
+              <User aria-hidden size={ICON.lg} strokeWidth={ICON_STROKE} />
             </span>
             <span className="home-hero__copy">
               <span className="home-hero__label">{copy.hero.people}</span>
@@ -264,7 +267,7 @@ export function HomePage() {
               )}
             </span>
             <span aria-hidden className="home-hero__open">
-              <ChevronRight aria-hidden size={16} strokeWidth={1.75} />
+              <ChevronRight aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
             </span>
           </Link>
         </div>
@@ -279,9 +282,9 @@ export function HomePage() {
               aria-label={allGroupsOpen ? copy.tables.collapseAll : copy.tables.expandAll}
               icon={
                 allGroupsOpen ? (
-                  <ChevronUp aria-hidden size={16} strokeWidth={1.75} />
+                  <ChevronUp aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
                 ) : (
-                  <ChevronRight aria-hidden size={16} strokeWidth={1.75} />
+                  <ChevronRight aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
                 )
               }
               onClick={() =>
@@ -341,8 +344,8 @@ function CatalogPanel({
             className={
               open ? "home-catalog__chevron home-catalog__chevron--open" : "home-catalog__chevron"
             }
-            size={16}
-            strokeWidth={1.75}
+            size={ICON.md}
+            strokeWidth={ICON_STROKE}
           />
         }
         onClick={onToggle}
@@ -389,14 +392,19 @@ function CatalogRow({ copy, item }: { copy: HomeCopy; item: HomeCatalogItem }) {
       ) : (
         <span className="home-catalog__row-count home-catalog__row-count--empty">—</span>
       )}
-      <ChevronRight aria-hidden className="home-catalog__row-open" size={16} strokeWidth={1.75} />
+      <ChevronRight
+        aria-hidden
+        className="home-catalog__row-open"
+        size={ICON.md}
+        strokeWidth={ICON_STROKE}
+      />
     </Link>
   );
 }
 
 function CatalogIcon({ item }: { item: HomeCatalogItem }) {
   const Icon = catalogIcon(item);
-  return <Icon aria-hidden size={16} strokeWidth={1.75} />;
+  return <Icon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />;
 }
 
 function catalogIcon(item: HomeCatalogItem) {

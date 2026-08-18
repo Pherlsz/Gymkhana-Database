@@ -5,6 +5,7 @@ import { ColumnPicker, type ColumnPickerItem } from "./ColumnPicker";
 import { FilterSurface } from "./FilterSurface";
 import { ToolbarSurface } from "./ToolbarSurface";
 import type { ToolbarFilterField } from "./FilterControl";
+import { ICON, ICON_STROKE } from "../../components/icons";
 
 export type { ToolbarFilterField } from "./FilterControl";
 
@@ -98,7 +99,7 @@ export function TablesToolbar({
           <ToolbarSurface
             active={columnPicker.hiddenCount > 0}
             count={columnPicker.hiddenCount}
-            icon={<Columns3 aria-hidden size={16} strokeWidth={1.75} />}
+            icon={<Columns3 aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
             label={columnPicker.label}
             open={openSurface === "columns"}
             title={columnPicker.title}
@@ -122,7 +123,7 @@ export function TablesToolbar({
           <ToolbarSurface
             active={filterCount > 0}
             count={filterCount}
-            icon={<SlidersHorizontal aria-hidden size={16} strokeWidth={1.75} />}
+            icon={<SlidersHorizontal aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
             label={fieldFiltersLabel}
             open={openSurface === "filters"}
             title={fieldFiltersLabel}

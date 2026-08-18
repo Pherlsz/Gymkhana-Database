@@ -1,0 +1,71 @@
+/*
+ * Styles for the shared primitives in `src/components`. Anything here is used by
+ * more than one surface; page-specific styling stays with its page.
+ */
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.page-header__copy {
+  min-width: 0;
+}
+
+.page-header__title.ant-typography {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+.page-header__description.ant-typography {
+  /* Description sits tight under its heading; the gap above it belongs to the
+     section boundary, not to the pairing. */
+  margin: 0.25rem 0 0;
+  max-width: 60ch;
+  color: var(--md-on-surface-variant);
+}
+
+.page-header__actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.state-block {
+  width: 100%;
+}
+
+.state-block--empty {
+  display: grid;
+  place-items: center;
+  padding: var(--gym-space-6) var(--gym-space-4);
+}
+
+.segmented-tabs.ant-segmented {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+/* One card padding scale. The app had 0, 1rem and 1.25rem in parallel. */
+.confirm-delete {
+  display: grid;
+  gap: var(--gym-space-3);
+  padding: var(--gym-space-4);
+  border: 1px solid color-mix(in oklch, var(--md-error) 40%, var(--md-outline));
+  border-radius: var(--gym-radius-lg);
+  background: color-mix(in oklch, var(--md-error) 5%, transparent);
+}
+
+.confirm-delete__field {
+  display: grid;
+  gap: var(--gym-space-2);
+  max-width: 24rem;
+  color: var(--md-on-surface-variant);
+  font-size: var(--gym-font-size-sm);
+}

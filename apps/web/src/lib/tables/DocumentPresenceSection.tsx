@@ -1,3 +1,4 @@
+import { Input, Select } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
@@ -160,31 +161,31 @@ function PresenceRow({
       <span className="document-presence__type" title={type.label}>
         {acronym}
       </span>
-      <select
+      <Select<"" | "absence" | "indication" | "informed_number">
         aria-label={type.label}
         disabled={locked || pending}
-        value={claim}
-        onChange={(event) => {
-          const next = event.target.value as "" | "absence" | "indication" | "informed_number";
+        onChange={(next) => {
           if (next === "informed_number" && !identifier.trim()) return;
           onSave(next, identifier.trim());
         }}
-      >
-        {claim === UNSPECIFIED ? <option value={UNSPECIFIED}>{copy.unspecified}</option> : null}
-        <option value="absence">{copy.absence}</option>
-        <option value="indication">{copy.indication}</option>
-        <option value="informed_number">{copy.informedNumber}</option>
-      </select>
+        options={[
+          ...(claim === UNSPECIFIED ? [{ value: UNSPECIFIED, label: copy.unspecified }] : []),
+          { value: "absence", label: copy.absence },
+          { value: "indication", label: copy.indication },
+          { value: "informed_number", label: copy.informedNumber },
+        ]}
+        value={claim}
+      />
       {locked ? <span className="document-presence__hint">{copy.hasExemplar}</span> : null}
-      <input
+      <Input
         aria-label={`${copy.number} · ${type.label}`}
         disabled={locked || pending}
-        placeholder={copy.number}
-        value={identifier}
         onBlur={() => {
           if (identifier.trim()) onSave("informed_number", identifier.trim());
         }}
         onChange={(event) => setIdentifier(event.target.value)}
+        placeholder={copy.number}
+        value={identifier}
       />
     </li>
   );
