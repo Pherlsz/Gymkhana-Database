@@ -61,8 +61,10 @@ export function FilterControl({
         optionFilterProp="label"
         options={selectOptions}
         placeholder={field.allLabel || field.label}
+        popupMatchSelectWidth
         showSearch
-        {...(field.value ? { value: field.value } : {})}
+        style={{ width: "100%" }}
+        value={field.value || undefined}
         onChange={(value) => field.onChange(value ?? "")}
       />
     );
@@ -74,6 +76,7 @@ export function FilterControl({
       aria-label={field.label}
       autoFocus={autoFocus}
       placeholder={field.label}
+      style={{ width: "100%" }}
       value={draft}
       {...(field.kind === "date" ? { type: "date" } : {})}
       onBlur={commitDraft}

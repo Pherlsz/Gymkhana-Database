@@ -160,8 +160,8 @@
 
 .toolbar-surface__body {
   display: flex;
-  width: min(22rem, calc(100vw - 2rem));
-  max-height: min(60vh, 28rem);
+  width: min(42rem, calc(100vw - 2rem));
+  max-height: min(70vh, 36rem);
   flex-direction: column;
   min-height: 0;
   overscroll-behavior: contain;
@@ -202,10 +202,10 @@
 
 .filter-surface__list,
 .column-picker__groups {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr;
   flex: 1 1 auto;
-  flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.65rem 1rem;
   margin: 0;
   padding: 0;
   min-height: 0;
@@ -214,79 +214,41 @@
   list-style: none;
 }
 
-.filter-surface__row {
+.column-picker__groups {
   display: flex;
   flex-direction: column;
-  border-radius: var(--gym-radius-md);
+  gap: 0.1rem;
 }
 
-.filter-surface__toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  min-height: 2.5rem;
-  padding: 0.35rem 0.5rem;
-  border: 0;
-  border-radius: var(--gym-radius-md);
-  background: transparent;
-  color: var(--md-on-surface);
-  cursor: pointer;
-  text-align: start;
-  touch-action: manipulation;
-}
-
-.filter-surface__toggle:hover {
-  background: var(--md-state-hover);
-}
-
-.filter-surface__toggle:focus-visible,
-.column-picker__item:focus-within {
-  outline: 2px solid var(--md-primary-text);
-  outline-offset: -2px;
+.filter-surface__field {
+  display: grid;
+  gap: 0.25rem;
+  align-content: start;
+  min-width: 0;
 }
 
 .filter-surface__name {
-  flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* An applied column reads as marked, and its value is the quiet half. */
-.filter-surface__row.is-applied .filter-surface__name {
-  font-weight: 600;
-}
-
-.filter-surface__value {
-  flex: 0 1 auto;
-  max-width: 45%;
   overflow: hidden;
   color: var(--md-on-surface-variant);
   font-size: 0.75rem;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.filter-surface__chevron {
-  flex: none;
-  color: var(--md-on-surface-variant);
-  transition: transform 150ms ease;
-}
-
-.filter-surface__chevron.is-open {
-  transform: rotate(180deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .filter-surface__chevron {
-    transition: none;
-  }
+.filter-surface__field.is-applied .filter-surface__name {
+  color: var(--md-on-surface);
 }
 
 .filter-surface__control {
-  padding: 0.15rem 0.5rem 0.55rem;
+  min-width: 0;
+}
+
+.filter-surface__control .ant-select,
+.filter-surface__control .ant-input-affix-wrapper,
+.filter-surface__control .ant-input {
+  width: 100%;
 }
 
 .filter-surface__footer,
@@ -363,6 +325,11 @@
 
 .column-picker__item:hover {
   background: var(--md-state-hover);
+}
+
+.column-picker__item:focus-within {
+  outline: 2px solid var(--md-primary);
+  outline-offset: -2px;
 }
 
 .column-picker__item .ant-checkbox-wrapper {
@@ -829,7 +796,19 @@
   font-size: 1rem;
 }
 
-.filter-surface__toggle,
+.toolbar-surface__body .ant-select .ant-select-selector {
+  display: flex;
+  align-items: center;
+}
+
+.toolbar-surface__body .ant-select .ant-select-selection-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-surface__field,
 .column-picker__item {
   min-height: 2.75rem;
 }
@@ -928,7 +907,11 @@
     font-size: 0.875rem;
   }
 
-  .filter-surface__toggle,
+  .filter-surface__list {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filter-surface__field,
   .column-picker__item {
     min-height: 2.25rem;
   }
@@ -947,8 +930,34 @@
     gap: 0.75rem;
   }
 
-  .spreadsheet-table__page-size {
-    display: block;
+  .spreadsheet-table__page-size.ant-select {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    min-width: 8.75rem;
+  }
+
+  .spreadsheet-table__page-size.ant-select .ant-select-selector {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    min-height: 2.75rem;
+  }
+
+  .spreadsheet-table__page-size.ant-select .ant-select-selection-wrap,
+  .spreadsheet-table__page-size.ant-select .ant-select-selection-item {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+
+  .spreadsheet-table__page-size.ant-select .ant-select-arrow {
+    position: absolute;
+    top: 50%;
+    inset-inline-end: 11px;
+    inset-inline-start: auto;
+    transform: translateY(-50%);
   }
 
   .spreadsheet-table__pager .ant-pagination-item:not(.ant-pagination-item-active),
