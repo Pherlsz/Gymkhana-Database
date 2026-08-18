@@ -74,9 +74,13 @@ export function ToolbarSurface({
 
   const trigger = (
     <Button
+      // The name stays the subject alone. Folding the badge in would rename the
+      // control every time the count moves, and the surfaces already announce
+      // their own state once opened.
       aria-controls={open ? surfaceId : undefined}
       aria-expanded={open}
       aria-haspopup="dialog"
+      aria-label={label}
       className={active || open ? "toolbar-surface__trigger is-active" : "toolbar-surface__trigger"}
       icon={icon}
       onClick={() => onOpenChange(!open)}
@@ -85,7 +89,11 @@ export function ToolbarSurface({
       }}
     >
       <span className="toolbar-surface__label">{label}</span>
-      {count ? <span className="toolbar-surface__count">{count}</span> : null}
+      {count ? (
+        <span aria-hidden className="toolbar-surface__count">
+          {count}
+        </span>
+      ) : null}
       <ChevronDown
         aria-hidden
         className={open ? "toolbar-surface__chevron is-open" : "toolbar-surface__chevron"}

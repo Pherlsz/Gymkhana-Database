@@ -316,4 +316,3 @@ export function activeFilterChips(fields: ToolbarFilterField[]): {
       onClear: () => field.onChange(""),
     }));
 }
-

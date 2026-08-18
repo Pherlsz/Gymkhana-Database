@@ -274,6 +274,63 @@ describe("TablesPage", () => {
     ).toBe(0);
   });
 
+  it("opens the toolbar surfaces as overlays that never displace the grid", async () => {
+    window.history.replaceState(null, "", "/tables/people");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    const filters = await screen.findByRole("button", { name: "Filtros" });
+    const columns = screen.getByRole("button", { name: "Colunas" });
+    expect(filters).toHaveAttribute("aria-haspopup", "dialog");
+    expect(filters).toHaveAttribute("aria-expanded", "false");
+    expect(columns).toHaveAttribute("aria-haspopup", "dialog");
+
+    fireEvent.click(filters);
+    expect(filters).toHaveAttribute("aria-expanded", "true");
+    const surface = await screen.findByRole("dialog", { name: "Filtros" });
+    // The trigger points at the surface it controls, and the surface is an
+    // overlay rather than a sibling panel inside the toolbar.
+    expect(filters.getAttribute("aria-controls")).toBe(surface.id);
+    expect(document.querySelector(".tables-toolbar")?.contains(surface)).toBe(false);
+
+    fireEvent.keyDown(surface, { key: "Escape" });
+    await waitFor(() => expect(filters).toHaveAttribute("aria-expanded", "false"));
+  });
+
+  it("marks an applied column and clears it from the chip", async () => {
+    window.history.replaceState(null, "", "/tables/people?city=Porto+Alegre");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    await waitFor(() =>
+      expect(document.querySelector(".tables-toolbar__chip")?.textContent).toBe(
+        "Cidade: Porto Alegre",
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
+    const city = await screen.findByRole("button", { name: /^Cidade/ });
+    expect(city).toHaveAttribute("aria-pressed", "true");
+
+    const chipClose = document.querySelector<HTMLElement>(
+      ".tables-toolbar__chip .ant-tag-close-icon",
+    );
+    fireEvent.click(chipClose as HTMLElement);
+    await waitFor(() => expect(window.location.search).not.toContain("city="));
+  });
+
   it("commits text filters only after blur", async () => {
     window.history.replaceState(null, "", "/tables/people");
     const fetchMock = vi
@@ -285,6 +342,8 @@ describe("TablesPage", () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Filtros" }));
+    // Filtering is column-first now: choose the column, then narrow it.
+    fireEvent.click(screen.getByRole("button", { name: "Cidade" }));
     const city = screen.getByRole("textbox", { name: "Cidade" });
     const initialProfileCalls = fetchMock.mock.calls.filter((call) =>
       String(call[0]).includes("/api/v1/profiles?"),
@@ -406,7 +465,7 @@ describe("TablesPage", () => {
     expect(headerTexts()).toContain("Nome");
   });
 
-  it("opens additional filters in an inline searchable field library", async () => {
+  it("filters by column from one searchable list, with Tipo promoted first", async () => {
     window.history.replaceState(null, "", "/tables/documents");
     vi.stubGlobal(
       "fetch",
@@ -424,16 +483,21 @@ describe("TablesPage", () => {
     expect(
       screen.queryByRole("button", { name: "Soma (A=1…Z=26 / dígitos)" }),
     ).not.toBeInTheDocument();
+    // Closed, the surface contributes nothing to the bar; the grid keeps its height.
+    expect(screen.queryByRole("textbox", { name: "Buscar campo…" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
-    expect(screen.queryByRole("combobox", { name: "Buscar campo…" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar filtro" }));
+    // One list, no quick/advanced split and no "Adicionar filtro" step.
     expect(screen.getByRole("textbox", { name: "Buscar campo…" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tipo" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Adicionar filtro" })).not.toBeInTheDocument();
+    const fields = [...document.querySelectorAll(".filter-surface__name")].map(
+      (node) => node.textContent,
+    );
+    expect(fields[0]).toBe("Tipo");
     expect(screen.getByRole("button", { name: "Status" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Suporte" })).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Categoria")).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "Categoria" }));
-    expect(document.querySelector(".tables-toolbar__active-field .ant-select")).not.toBeNull();
+    expect(document.querySelector(".filter-surface__control .ant-select")).not.toBeNull();
   });
 
   it("sends the document type filter from the URL and lists mixed types without tabs", async () => {
@@ -547,10 +611,13 @@ describe("TablesPage", () => {
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Contas" })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Buscar em todos os campos…")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Tipo" })).toBeInTheDocument();
+    // Tipo is no longer a Select pinned to the bills bar; it is the promoted
+    // first column filter, identical to documents.
+    expect(screen.queryByRole("combobox", { name: "Tipo" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Nova conta" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
-    expect(screen.queryByRole("button", { name: "Tipo" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Tipo" }));
+    expect(screen.getByRole("combobox", { name: "Tipo" })).toBeInTheDocument();
     expect(await screen.findByText("UC-100")).toBeInTheDocument();
     expect(headerTexts().includes("Soma referência")).toBe(false);
     expect(screen.queryByText("Ref maiúscula")).not.toBeInTheDocument();
@@ -696,7 +763,12 @@ describe("TablesPage", () => {
     fireEvent.click(within(inspector).getByRole("button", { name: "Documentos desta pessoa" }));
     expect(await screen.findByRole("heading", { name: "Documentos" })).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "Detalhes da pessoa" })).toBeInTheDocument();
-    expect(await screen.findByText("Pessoa: Ana da Silva")).toBeInTheDocument();
+    // The chip names its field: the value alone used to be all a screen reader got.
+    await waitFor(() =>
+      expect(document.querySelector(".tables-toolbar__chip")?.textContent).toBe(
+        "Pessoa: Ana da Silva",
+      ),
+    );
     await waitFor(() => {
       const documentCalls = fetchMock.mock.calls
         .map((call) => String(call[0]))

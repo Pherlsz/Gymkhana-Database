@@ -152,7 +152,9 @@ export function TablesToolbar({
                 chip.onClear();
               }}
             >
-              <span className="tables-toolbar__chip-field">{chip.field}</span>
+              {/* The separator is a real text node: a CSS ::after colon is not
+                  reliably exposed, which left the chip reading "PessoaAna". */}
+              <span className="tables-toolbar__chip-field">{chip.field}:</span>{" "}
               <span className="tables-toolbar__chip-value">{chip.value}</span>
             </Tag>
           ))}
