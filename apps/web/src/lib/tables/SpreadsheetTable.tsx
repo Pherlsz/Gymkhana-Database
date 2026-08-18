@@ -299,16 +299,17 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
       <div className="spreadsheet-table__footer">
         <span className="spreadsheet-table__range">{rangeLabel}</span>
         <div className="spreadsheet-table__pager">
-          <Select
-            aria-label={pageSizeAriaLabel}
-            className="spreadsheet-table__page-size"
-            options={pageSizeChoices}
-            popupMatchSelectWidth={false}
-            showSearch={false}
-            size="small"
-            value={pageSize}
-            onChange={(value) => onPage(page, value)}
-          />
+          <div className="spreadsheet-table__page-size">
+            <Select
+              aria-label={pageSizeAriaLabel}
+              options={pageSizeChoices}
+              popupMatchSelectWidth={false}
+              showSearch={false}
+              size="small"
+              value={pageSize}
+              onChange={(value) => onPage(page, value)}
+            />
+          </div>
           <Pagination
             current={page}
             pageSize={pageSize}

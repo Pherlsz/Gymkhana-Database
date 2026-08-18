@@ -1280,11 +1280,11 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 
 .home-attention {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: min-content minmax(0, 1fr);
   grid-template-areas:
-    "title action"
+    "copy copy"
     "value chips";
-  gap: 0.55rem 0.85rem;
+  gap: 0.55rem 0.75rem;
   align-items: start;
   min-width: 0;
   padding: 0.8rem 0.45rem;
@@ -1297,12 +1297,13 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 .home-attention--empty {
   grid-template-columns: 1fr;
   grid-template-areas:
-    "title"
+    "copy"
     "none";
 }
 
 .home-attention__copy {
-  grid-area: title;
+  grid-area: copy;
+  padding-inline-end: 3.5rem;
 }
 
 .home-attention__title.ant-typography {
@@ -1317,8 +1318,9 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 }
 
 .home-attention__open.ant-btn {
-  grid-area: action;
+  grid-area: copy;
   justify-self: end;
+  align-self: start;
 }
 
 .home-attention__value {
@@ -1335,8 +1337,8 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 .home-attention__chips {
   grid-area: chips;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
-  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  gap: 0.35rem;
   max-height: 10rem;
   min-width: 0;
   overflow: auto;

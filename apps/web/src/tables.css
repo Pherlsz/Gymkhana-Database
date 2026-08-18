@@ -762,10 +762,6 @@
   gap: 0.75rem;
 }
 
-.spreadsheet-table__page-size {
-  min-width: 8.75rem;
-}
-
 .spreadsheet-table__range {
   font-size: 0.8125rem;
   color: var(--md-on-surface-variant);
@@ -930,34 +926,9 @@
     gap: 0.75rem;
   }
 
-  .spreadsheet-table__page-size.ant-select {
-    display: inline-flex;
-    align-items: center;
-    flex-wrap: nowrap;
-    min-width: 8.75rem;
-  }
-
-  .spreadsheet-table__page-size.ant-select .ant-select-selector {
-    display: flex;
-    align-items: center;
-    flex-wrap: nowrap;
-    min-height: 2.75rem;
-  }
-
-  .spreadsheet-table__page-size.ant-select .ant-select-selection-wrap,
-  .spreadsheet-table__page-size.ant-select .ant-select-selection-item {
-    display: flex;
-    align-items: center;
-    flex-wrap: nowrap;
-    min-width: 0;
-  }
-
-  .spreadsheet-table__page-size.ant-select .ant-select-arrow {
-    position: absolute;
-    top: 50%;
-    inset-inline-end: 11px;
-    inset-inline-start: auto;
-    transform: translateY(-50%);
+  .spreadsheet-table__page-size {
+    display: block;
+    min-width: 10.5rem;
   }
 
   .spreadsheet-table__pager .ant-pagination-item:not(.ant-pagination-item-active),
