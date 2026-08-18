@@ -2,7 +2,7 @@ import { Button } from "antd";
 import { ChevronRight } from "lucide-react";
 import { ICON, ICON_STROKE } from "../../components/icons";
 import { StateBlock } from "../../components/StateBlock";
-import type { TableRow } from "./tableRows";
+import { EMPTY_CELL, type TableRow } from "./tableRows";
 
 export type RecordInspectorField = {
   key: string;
@@ -136,7 +136,9 @@ export function recordInspectorFields(
     if (omit.has(key)) continue;
     const raw = row.cells[key];
     const value = typeof raw === "string" ? raw.trim() : raw == null ? "" : String(raw);
-    if (!value) continue;
+    // The grid renders a missing value as an em dash; the card omits the field
+    // instead, so what is left on screen is what the record actually has.
+    if (!value || value === EMPTY_CELL) continue;
     fields.push({ key, label, value });
   }
   return fields;

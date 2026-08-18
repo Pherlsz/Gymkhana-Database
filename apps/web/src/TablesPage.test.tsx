@@ -846,6 +846,8 @@ describe("TablesPage", () => {
     // substituted for the record.
     expect(within(card).getByText("Dono")).toBeInTheDocument();
     expect(card.querySelector(".record-panel__owner strong")?.textContent).toBe("Ana da Silva");
+    // Missing values are omitted, not drawn as the grid's em dash.
+    expect(within(card).queryByText("—")).toBeNull();
 
     fireEvent.click(within(card).getByRole("button", { name: /Ver pessoa/ }));
     await waitFor(() =>
