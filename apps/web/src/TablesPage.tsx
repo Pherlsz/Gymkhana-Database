@@ -47,6 +47,11 @@ import { buildPeopleColumns, PEOPLE_DOC_KEY_SET } from "./lib/tables/peopleColum
 import { buildBillColumns, buildDocumentColumns } from "./lib/tables/recordColumns";
 import { activeFilterChips, buildSheetFilters } from "./lib/tables/sheetFilters";
 import {
+  RecordInspector,
+  RecordInspectorState,
+  recordInspectorFields,
+} from "./lib/tables/RecordInspector";
+import {
   billSearch,
   clearFilters,
   documentSearch,
@@ -70,6 +75,21 @@ import { DEFAULT_SHEET_PREFERENCES } from "./lib/tables/sheetPreferences";
 import { clampSpreadsheetPageSize } from "./lib/tables/spreadsheetViewport";
 
 const tablesRoute = getRouteApi("/tables/$table");
+
+/**
+ * Keys the record card does not repeat: plumbing ids, and the identifier the
+ * card already shows as its heading.
+ */
+const RECORD_CARD_OMITTED_KEYS: ReadonlySet<string> = new Set([
+  "identifier",
+  "reference",
+  "owner",
+  "owner_id",
+  "type_id",
+  "type_key",
+  "current_holder_id",
+  "document_badges",
+]);
 
 const MemoSpreadsheetTable = memo(SpreadsheetTable) as typeof SpreadsheetTable;
 
@@ -485,29 +505,29 @@ export function TablesPage() {
         }
         apply();
       };
+      // Each table opens its own record. Documents and bills used to set
+      // `selected` to the owner, so clicking a document showed the person.
       if (section === "documents") {
-        const ownerId = String(row.cells.owner_id ?? "");
-        confirmIfEditing(ownerId || undefined, () =>
+        confirmIfEditing(undefined, () =>
           startTransition(() => {
             updateSearch({
-              selected: ownerId || undefined,
+              selected: undefined,
+              mode: undefined,
               document_selected: row.id,
               document_mode: "view",
-              mode: ownerId ? "view" : undefined,
             });
           }),
         );
         return;
       }
       if (section === "bills") {
-        const ownerId = String(row.cells.owner_id ?? "");
-        confirmIfEditing(ownerId || undefined, () =>
+        confirmIfEditing(undefined, () =>
           startTransition(() => {
             updateSearch({
-              selected: ownerId || undefined,
+              selected: undefined,
+              mode: undefined,
               bill_selected: row.id,
               bill_mode: "view",
-              mode: ownerId ? "view" : undefined,
             });
           }),
         );
@@ -599,6 +619,73 @@ export function TablesPage() {
       updateSearch({ cols });
     });
   };
+
+  const recordCopy = copy.record;
+  const selectedRecordId =
+    section === "documents"
+      ? search.document_selected
+      : section === "bills"
+        ? search.bill_selected
+        : undefined;
+  const selectedRecordRow = selectedRecordId
+    ? baseRows.find((row) => row.id === selectedRecordId)
+    : undefined;
+  const closeRecord = useCallback(() => {
+    updateSearch({
+      document_selected: undefined,
+      document_mode: undefined,
+      bill_selected: undefined,
+      bill_mode: undefined,
+    });
+  }, [updateSearch]);
+
+  const recordInspector = selectedRecordId ? (
+    selectedRecordRow ? (
+      <RecordInspector
+        ariaLabel={section === "bills" ? recordCopy.billAria : recordCopy.documentAria}
+        closeLabel={copy.inspector.close}
+        eyebrow={section === "bills" ? recordCopy.billEyebrow : recordCopy.documentEyebrow}
+        fields={recordInspectorFields(
+          selectedRecordRow,
+          columns.map((column) => ({ key: column.key, label: columnLabel(column) })),
+          RECORD_CARD_OMITTED_KEYS,
+        )}
+        onClose={closeRecord}
+        onOpenOwner={
+          selectedRecordRow.cells.owner_id
+            ? () =>
+                updateSearch({
+                  section: "profile",
+                  selected: String(selectedRecordRow.cells.owner_id),
+                  mode: "view",
+                  document_selected: undefined,
+                  document_mode: undefined,
+                  bill_selected: undefined,
+                  bill_mode: undefined,
+                })
+            : undefined
+        }
+        openOwnerLabel={recordCopy.openOwner}
+        ownerLabel={recordCopy.owner}
+        ownerName={String(selectedRecordRow.cells.owner ?? "")}
+        title={
+          String(
+            selectedRecordRow.cells[section === "bills" ? "reference" : "identifier"] ?? "",
+          ).trim() || recordCopy.untitled
+        }
+      />
+    ) : (
+      <RecordInspectorState
+        ariaLabel={section === "bills" ? recordCopy.billAria : recordCopy.documentAria}
+        closeLabel={copy.inspector.close}
+        description={loading ? undefined : recordCopy.notFoundHint}
+        eyebrow={section === "bills" ? recordCopy.billEyebrow : recordCopy.documentEyebrow}
+        kind={loading ? "loading" : "error"}
+        onClose={closeRecord}
+        title={loading ? recordCopy.loading : recordCopy.notFound}
+      />
+    )
+  ) : null;
 
   const inspector = search.mode ? (
     <ProfilePanel
@@ -757,18 +844,18 @@ export function TablesPage() {
             getContainer={false}
             size={DEFAULT_SHEET_PREFERENCES.inspectorSheetSize}
             mask={false}
-            open={Boolean(search.mode)}
+            open={Boolean(search.mode) || Boolean(recordInspector)}
             placement="bottom"
             styles={{
               body: { display: "flex", height: "100%", overflow: "hidden", padding: 0 },
               wrapper: { pointerEvents: "auto" },
             }}
-            onClose={closeInspector}
+            onClose={recordInspector ? closeRecord : closeInspector}
           >
-            {inspector}
+            {recordInspector ?? inspector}
           </Drawer>
         ) : (
-          inspector
+          (recordInspector ?? inspector)
         )}
       </div>
     </div>

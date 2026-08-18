@@ -12,7 +12,6 @@ import {
   type ProfileValuesRequest,
   type UserRole,
 } from "./lib/api/client";
-import { DocumentBadges, type BadgeMarksCopy } from "./lib/tables/documentBadges";
 import { DocumentPresenceSection } from "./lib/tables/DocumentPresenceSection";
 
 const emptyValues: ProfileValuesRequest = {
@@ -343,15 +342,12 @@ export function ProfilePanel(props: {
               <ProfileReadout
                 boolean={messages.tables.boolean}
                 columns={messages.tables.columns}
-                documentsLabel={messages.tables.columns.documents}
                 empty={copy.empty}
                 fields={fields}
                 profile={props.profile}
                 sections={copy.sections}
                 showLessLabel={copy.showLess}
                 showMoreLabel={copy.showMore}
-                withOwnerLabel={copy.presence.withOwner}
-                badgeMarks={messages.tables.badges}
                 documentPresence={
                   <DocumentPresenceSection
                     copy={copy.presence}
@@ -527,12 +523,9 @@ function ProfileReadout({
   columns,
   sections,
   boolean,
-  documentsLabel,
   documentPresence,
   showMoreLabel,
   showLessLabel,
-  withOwnerLabel,
-  badgeMarks,
 }: {
   profile: Profile;
   empty: string;
@@ -540,30 +533,36 @@ function ProfileReadout({
   columns: ReturnType<typeof useI18n>["messages"]["tables"]["columns"];
   sections: ReturnType<typeof useI18n>["messages"]["tables"]["inspector"]["sections"];
   boolean: ReturnType<typeof useI18n>["messages"]["tables"]["boolean"];
-  documentsLabel: string;
   documentPresence: ReactNode;
   showMoreLabel: string;
   showLessLabel: string;
-  withOwnerLabel: string;
-  badgeMarks: BadgeMarksCopy;
 }) {
   const [expanded, setExpanded] = useState(false);
   useEffect(() => setExpanded(false), [profile.id]);
+  /**
+   * Empty fields are omitted rather than drawn as an em dash. The grid already
+   * works this way, and "Ver mais dados" used to dump ~40 labels of which most
+   * were placeholders, which buried the ones that carried data.
+   */
   const item = (
     label: string,
     value: unknown,
     options?: { date?: boolean; key?: string; wide?: boolean },
-  ) => (
-    <div
-      className={
-        options?.wide ? "profile-view__item profile-view__item--wide" : "profile-view__item"
-      }
-      key={options?.key}
-    >
-      <dt>{label}</dt>
-      <dd>{displayProfileValue(value, empty, boolean, options?.date)}</dd>
-    </div>
-  );
+  ) => {
+    const display = displayProfileValue(value, empty, boolean, options?.date);
+    if (display === empty || display === "") return null;
+    return (
+      <div
+        className={
+          options?.wide ? "profile-view__item profile-view__item--wide" : "profile-view__item"
+        }
+        key={options?.key}
+      >
+        <dt>{label}</dt>
+        <dd>{display}</dd>
+      </div>
+    );
+  };
   const section = (title: string, content: ReactNode) => (
     <section className="profile-view__section">
       <h3>{title}</h3>
@@ -587,21 +586,10 @@ function ProfileReadout({
           {item(columns.gender, profile.gender)}
           {item(columns.bloodType, profile.blood_type)}
           {item(columns.maritalStatus, profile.marital_status)}
-          {profile.document_badges?.length ? (
-            <div className="profile-view__item profile-view__item--wide">
-              <dt>{documentsLabel}</dt>
-              <dd>
-                <DocumentBadges
-                  badges={profile.document_badges}
-                  empty={empty}
-                  marks={badgeMarks}
-                  withOwnerLabel={withOwnerLabel}
-                />
-              </dd>
-            </div>
-          ) : null}
         </>,
       )}
+      {/* The badges used to be drawn here and again at the top of the presence
+          section immediately below, which showed the same row twice. */}
       {documentPresence}
       <Button
         aria-controls={detailsId}

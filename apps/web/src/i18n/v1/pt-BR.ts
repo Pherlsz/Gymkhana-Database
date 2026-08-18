@@ -370,6 +370,18 @@ export const ptBRV1 = {
     notices: {
       personDeleted: "Pessoa excluída permanentemente.",
     },
+    record: {
+      documentEyebrow: "Documento",
+      billEyebrow: "Conta",
+      documentAria: "Detalhes do documento",
+      billAria: "Detalhes da conta",
+      untitled: "Sem identificador",
+      owner: "Dono",
+      openOwner: "Ver pessoa",
+      notFound: "Registro não encontrado",
+      notFoundHint: "Atualize a lista e tente novamente.",
+      loading: "Carregando registro",
+    },
     inspector: {
       eyebrow: "Perfil",
       newPerson: "Nova pessoa",

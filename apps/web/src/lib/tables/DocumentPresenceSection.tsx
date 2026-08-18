@@ -72,9 +72,9 @@ export function DocumentPresenceSection({
     (type) =>
       (type.active || presenceFor(profile, type.id)) && !isRepeatedIdentity(type.technical_key),
   );
-  const visibleBadges = (profile.document_badges ?? []).filter(
-    (badge) => !isRepeatedIdentity(badge.technical_key),
-  );
+  // Badges are no longer filtered against the readout: this section is now the
+  // only place they render, so hiding CPF and RG here would drop them entirely.
+  const visibleBadges = profile.document_badges ?? [];
   if (
     !editable &&
     activeTypes.every((type) => !presenceFor(profile, type.id)) &&

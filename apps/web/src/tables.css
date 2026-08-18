@@ -956,3 +956,32 @@
     line-height: 2rem;
   }
 }
+
+/*
+ * The document and bill row cards. They borrow the person panel's chrome so the
+ * three cards read as one family, and differ only in what they show.
+ */
+.record-panel__grid {
+  margin: 0;
+}
+
+.record-panel__owner {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  text-align: start;
+}
+
+.record-panel__owner-label {
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.record-panel__owner strong {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

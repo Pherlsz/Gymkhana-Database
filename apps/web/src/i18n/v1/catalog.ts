@@ -368,6 +368,19 @@ export type CatalogV1 = {
     notices: {
       personDeleted: string;
     };
+    /** The document and bill row cards, one per table. */
+    record: {
+      documentEyebrow: string;
+      billEyebrow: string;
+      documentAria: string;
+      billAria: string;
+      untitled: string;
+      owner: string;
+      openOwner: string;
+      notFound: string;
+      notFoundHint: string;
+      loading: string;
+    };
     inspector: {
       eyebrow: string;
       newPerson: string;

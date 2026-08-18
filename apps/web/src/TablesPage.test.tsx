@@ -657,7 +657,10 @@ describe("TablesPage", () => {
     expect(
       within(inspector).queryByRole("heading", { name: "Contato e endereço" }),
     ).not.toBeInTheDocument();
-    expect(within(inspector).getByText("Documentos")).toBeInTheDocument();
+    // The badges are drawn once, by the presence section. They used to also be
+    // repeated as a "Documentos" row directly above it.
+    expect(within(inspector).queryByText("Documentos")).not.toBeInTheDocument();
+    await waitFor(() => expect(inspector.querySelectorAll(".document-badge")).toHaveLength(1));
     expect(within(inspector).getByText("14/08/1990")).toBeInTheDocument();
     expect(within(inspector).getByText("O+")).toBeInTheDocument();
     fireEvent.click(within(inspector).getByRole("button", { name: "Ver mais dados" }));
@@ -823,8 +826,61 @@ describe("TablesPage", () => {
     });
   });
 
-  it("shows a loading state in the inspector while the person is fetched", async () => {
+  it("opens the document's own card, not the owner's, and links to the owner", async () => {
+    window.history.replaceState(null, "", "/tables/documents");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    fireEvent.click(await screen.findByText("1234567890"));
+
+    const card = await screen.findByRole("complementary", { name: "Detalhes do documento" });
+    expect(screen.queryByRole("complementary", { name: "Detalhes da pessoa" })).toBeNull();
+    expect(within(card).getByRole("heading", { name: "1234567890" })).toBeInTheDocument();
+    // The record's own data, and the owner offered as a link rather than
+    // substituted for the record.
+    expect(within(card).getByText("Dono")).toBeInTheDocument();
+    expect(card.querySelector(".record-panel__owner strong")?.textContent).toBe("Ana da Silva");
+
+    fireEvent.click(within(card).getByRole("button", { name: /Ver pessoa/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("complementary", { name: "Detalhes da pessoa" })).toBeInTheDocument(),
+    );
+    expect(window.location.pathname).toBe("/tables/people");
+  });
+
+  it("opens the bill's own card from the bills table", async () => {
     window.history.replaceState(null, "", "/tables/bills");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    fireEvent.click(await screen.findByText("UC-100"));
+
+    const card = await screen.findByRole("complementary", { name: "Detalhes da conta" });
+    expect(screen.queryByRole("complementary", { name: "Detalhes da pessoa" })).toBeNull();
+    expect(within(card).getByRole("heading", { name: "UC-100" })).toBeInTheDocument();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Fechar" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("complementary", { name: "Detalhes da conta" })).toBeNull(),
+    );
+  });
+
+  it("shows a loading state in the inspector while the person is fetched", async () => {
+    // Deep link to a person who is not in the loaded page, which is what makes
+    // the inspector fetch. A bill row no longer opens the owner.
+    window.history.replaceState(null, "", `/tables/people?selected=${anaProfile().id}&mode=view`);
     let release: ((value: Response) => void) | undefined;
     const held = new Promise<Response>((resolve) => {
       release = resolve;
@@ -836,11 +892,13 @@ describe("TablesPage", () => {
         if (url.includes(`/api/v1/profiles/${anaProfile().id}`) && !url.includes("?")) {
           return held;
         }
+        if (url.includes("/api/v1/profiles?")) {
+          return Promise.resolve(jsonResponse({ profiles: [], page: { total: 0 } }));
+        }
         return Promise.resolve(apiResponse(url) ?? jsonResponse({ status: "ok" }));
       }),
     );
     render(<App />);
-    fireEvent.click(await screen.findByText("UC-100"));
     const inspector = await screen.findByRole("complementary", { name: "Detalhes da pessoa" });
     expect(inspector).toHaveAttribute("aria-busy", "true");
     expect(within(inspector).getByRole("status")).toHaveTextContent("Carregando perfil");
