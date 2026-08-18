@@ -15,8 +15,7 @@ const assignBillCurrentUse = `-- name: AssignBillCurrentUse :one
 INSERT INTO bill_current_uses (bill_id, holder_profile_id)
 SELECT bill.id, $1
 FROM bills AS bill
-JOIN bill_types AS bill_type ON bill_type.id = bill.bill_type_id
-WHERE bill.id = $2 AND bill_type.supports_current_use
+WHERE bill.id = $2 AND bill.medium = 'PHYSICAL'
 ON CONFLICT (bill_id) DO UPDATE
 SET holder_profile_id = EXCLUDED.holder_profile_id, assigned_at = now()
 RETURNING bill_id, holder_profile_id, assigned_at
@@ -72,10 +71,10 @@ WHERE ($1::uuid IS NULL OR bill.owner_profile_id = $1::uuid)
   AND ($2::uuid IS NULL OR bill.bill_type_id = $2::uuid)
   AND ($3::text = '' OR lower(coalesce(bill.reference_value, '')) LIKE '%' || lower($3::text) || '%')
   AND ($4::text = '' OR coalesce(bill.competence, '') = $4::text)
-  AND ($5::text = '' OR bill.record_state = $5::text)
+  AND ($5::text = '' OR bill.medium = $5::text)
   AND ($6::text = '' OR
-    ($6::text = 'IN_USE' AND bill_current_use.bill_id IS NOT NULL) OR
-    ($6::text = 'AVAILABLE' AND bill_current_use.bill_id IS NULL))
+    ($6::text = 'IN_USE' AND bill.medium = 'PHYSICAL' AND bill_current_use.bill_id IS NOT NULL) OR
+    ($6::text = 'AVAILABLE' AND bill.medium = 'PHYSICAL' AND bill.idle_custody = 'ORGANIZATION' AND bill_current_use.bill_id IS NULL))
   AND ($7::uuid IS NULL OR bill_current_use.holder_profile_id = $7::uuid)
 `
 
@@ -84,7 +83,7 @@ type CountBillsParams struct {
 	BillTypeIDFilter      pgtype.UUID `json:"bill_type_id_filter"`
 	ReferenceFilter       string      `json:"reference_filter"`
 	CompetenceFilter      string      `json:"competence_filter"`
-	RecordStateFilter     string      `json:"record_state_filter"`
+	MediumFilter          string      `json:"medium_filter"`
 	StatusFilter          string      `json:"status_filter"`
 	HolderProfileIDFilter pgtype.UUID `json:"holder_profile_id_filter"`
 }
@@ -95,7 +94,7 @@ func (q *Queries) CountBills(ctx context.Context, arg CountBillsParams) (int64, 
 		arg.BillTypeIDFilter,
 		arg.ReferenceFilter,
 		arg.CompetenceFilter,
-		arg.RecordStateFilter,
+		arg.MediumFilter,
 		arg.StatusFilter,
 		arg.HolderProfileIDFilter,
 	)
@@ -104,17 +103,51 @@ func (q *Queries) CountBills(ctx context.Context, arg CountBillsParams) (int64, 
 	return count, err
 }
 
+const countBillsByType = `-- name: CountBillsByType :many
+SELECT bill.bill_type_id, count(*)::bigint AS bill_count
+FROM bills AS bill
+LEFT JOIN bill_current_uses AS current_use ON current_use.bill_id = bill.id
+WHERE bill.medium = 'PHYSICAL'
+  AND (bill.idle_custody = 'ORGANIZATION' OR current_use.bill_id IS NOT NULL)
+GROUP BY bill.bill_type_id
+`
+
+type CountBillsByTypeRow struct {
+	BillTypeID pgtype.UUID `json:"bill_type_id"`
+	BillCount  int64       `json:"bill_count"`
+}
+
+func (q *Queries) CountBillsByType(ctx context.Context) ([]CountBillsByTypeRow, error) {
+	rows, err := q.db.Query(ctx, countBillsByType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountBillsByTypeRow{}
+	for rows.Next() {
+		var i CountBillsByTypeRow
+		if err := rows.Scan(&i.BillTypeID, &i.BillCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createBill = `-- name: CreateBill :one
 INSERT INTO bills (
   id, owner_profile_id, bill_type_id, printed_holder_name, printed_address,
-  reference_value, competence, amount, currency, notes, record_state
+  reference_value, competence, amount, currency, notes, medium, idle_custody
 )
 SELECT $1, $2, bill_type.id, $3,
   $4, $5, $6,
-  $7, $8, $9, $10
+  $7, $8, $9, $10, $11
 FROM bill_types AS bill_type
-WHERE bill_type.id = $11 AND bill_type.active
-RETURNING id, owner_profile_id, bill_type_id, printed_holder_name, printed_address, reference_value, competence, amount, currency, notes, record_state, version, created_at, updated_at
+WHERE bill_type.id = $12 AND bill_type.active
+RETURNING id, owner_profile_id, bill_type_id, printed_holder_name, printed_address, reference_value, competence, amount, currency, notes, medium, idle_custody, version, created_at, updated_at
 `
 
 type CreateBillParams struct {
@@ -127,7 +160,8 @@ type CreateBillParams struct {
 	Amount            pgtype.Numeric `json:"amount"`
 	Currency          *string        `json:"currency"`
 	Notes             *string        `json:"notes"`
-	RecordState       string         `json:"record_state"`
+	Medium            string         `json:"medium"`
+	IdleCustody       *string        `json:"idle_custody"`
 	BillTypeID        pgtype.UUID    `json:"bill_type_id"`
 }
 
@@ -142,7 +176,8 @@ func (q *Queries) CreateBill(ctx context.Context, arg CreateBillParams) (Bill, e
 		arg.Amount,
 		arg.Currency,
 		arg.Notes,
-		arg.RecordState,
+		arg.Medium,
+		arg.IdleCustody,
 		arg.BillTypeID,
 	)
 	var i Bill
@@ -157,7 +192,8 @@ func (q *Queries) CreateBill(ctx context.Context, arg CreateBillParams) (Bill, e
 		&i.Amount,
 		&i.Currency,
 		&i.Notes,
-		&i.RecordState,
+		&i.Medium,
+		&i.IdleCustody,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -167,19 +203,18 @@ func (q *Queries) CreateBill(ctx context.Context, arg CreateBillParams) (Bill, e
 
 const createBillType = `-- name: CreateBillType :one
 INSERT INTO bill_types (
-  id, technical_key, label, active, supports_current_use
+  id, technical_key, label, active
 ) VALUES (
-  $1, $2, $3, $4, $5
+  $1, $2, $3, $4
 )
-RETURNING id, technical_key, label, active, supports_current_use, version, created_at, updated_at
+RETURNING id, technical_key, label, active, version, created_at, updated_at
 `
 
 type CreateBillTypeParams struct {
-	ID                 pgtype.UUID `json:"id"`
-	TechnicalKey       string      `json:"technical_key"`
-	Label              string      `json:"label"`
-	Active             bool        `json:"active"`
-	SupportsCurrentUse bool        `json:"supports_current_use"`
+	ID           pgtype.UUID `json:"id"`
+	TechnicalKey string      `json:"technical_key"`
+	Label        string      `json:"label"`
+	Active       bool        `json:"active"`
 }
 
 func (q *Queries) CreateBillType(ctx context.Context, arg CreateBillTypeParams) (BillType, error) {
@@ -188,7 +223,6 @@ func (q *Queries) CreateBillType(ctx context.Context, arg CreateBillTypeParams) 
 		arg.TechnicalKey,
 		arg.Label,
 		arg.Active,
-		arg.SupportsCurrentUse,
 	)
 	var i BillType
 	err := row.Scan(
@@ -196,7 +230,6 @@ func (q *Queries) CreateBillType(ctx context.Context, arg CreateBillTypeParams) 
 		&i.TechnicalKey,
 		&i.Label,
 		&i.Active,
-		&i.SupportsCurrentUse,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -239,14 +272,14 @@ func (q *Queries) DeleteBillType(ctx context.Context, arg DeleteBillTypeParams) 
 const duplicateBill = `-- name: DuplicateBill :one
 INSERT INTO bills (
   id, owner_profile_id, bill_type_id, printed_holder_name, printed_address,
-  reference_value, competence, amount, currency, notes, record_state
+  reference_value, competence, amount, currency, notes, medium, idle_custody
 )
 SELECT $1, source.owner_profile_id, source.bill_type_id, source.printed_holder_name,
   source.printed_address, source.reference_value, source.competence, source.amount,
-  source.currency, source.notes, source.record_state
+  source.currency, source.notes, source.medium, source.idle_custody
 FROM bills AS source
 WHERE source.id = $2
-RETURNING id, owner_profile_id, bill_type_id, printed_holder_name, printed_address, reference_value, competence, amount, currency, notes, record_state, version, created_at, updated_at
+RETURNING id, owner_profile_id, bill_type_id, printed_holder_name, printed_address, reference_value, competence, amount, currency, notes, medium, idle_custody, version, created_at, updated_at
 `
 
 type DuplicateBillParams struct {
@@ -268,7 +301,8 @@ func (q *Queries) DuplicateBill(ctx context.Context, arg DuplicateBillParams) (B
 		&i.Amount,
 		&i.Currency,
 		&i.Notes,
-		&i.RecordState,
+		&i.Medium,
+		&i.IdleCustody,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -278,19 +312,22 @@ func (q *Queries) DuplicateBill(ctx context.Context, arg DuplicateBillParams) (B
 
 const getBillByID = `-- name: GetBillByID :one
 SELECT
-  bill.id, bill.owner_profile_id, bill.bill_type_id, bill.printed_holder_name, bill.printed_address, bill.reference_value, bill.competence, bill.amount, bill.currency, bill.notes, bill.record_state, bill.version, bill.created_at, bill.updated_at,
+  bill.id, bill.owner_profile_id, bill.bill_type_id, bill.printed_holder_name, bill.printed_address, bill.reference_value, bill.competence, bill.amount, bill.currency, bill.notes, bill.medium, bill.idle_custody, bill.version, bill.created_at, bill.updated_at,
+  owner.full_name AS owner_full_name,
   bill_type.technical_key AS type_technical_key,
   bill_type.label AS type_label,
   bill_type.active AS type_active,
-  bill_type.supports_current_use AS type_supports_current_use,
   bill_type.version AS type_version,
   bill_type.created_at AS type_created_at,
   bill_type.updated_at AS type_updated_at,
   bill_current_use.holder_profile_id AS current_holder_profile_id,
+  holder.full_name AS current_holder_full_name,
   bill_current_use.assigned_at AS current_assigned_at
 FROM bills AS bill
+JOIN profiles AS owner ON owner.id = bill.owner_profile_id
 JOIN bill_types AS bill_type ON bill_type.id = bill.bill_type_id
 LEFT JOIN bill_current_uses AS bill_current_use ON bill_current_use.bill_id = bill.id
+LEFT JOIN profiles AS holder ON holder.id = bill_current_use.holder_profile_id
 WHERE bill.id = $1
 `
 
@@ -305,18 +342,20 @@ type GetBillByIDRow struct {
 	Amount                 pgtype.Numeric     `json:"amount"`
 	Currency               *string            `json:"currency"`
 	Notes                  *string            `json:"notes"`
-	RecordState            string             `json:"record_state"`
+	Medium                 string             `json:"medium"`
+	IdleCustody            *string            `json:"idle_custody"`
 	Version                int64              `json:"version"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	OwnerFullName          string             `json:"owner_full_name"`
 	TypeTechnicalKey       string             `json:"type_technical_key"`
 	TypeLabel              string             `json:"type_label"`
 	TypeActive             bool               `json:"type_active"`
-	TypeSupportsCurrentUse bool               `json:"type_supports_current_use"`
 	TypeVersion            int64              `json:"type_version"`
 	TypeCreatedAt          pgtype.Timestamptz `json:"type_created_at"`
 	TypeUpdatedAt          pgtype.Timestamptz `json:"type_updated_at"`
 	CurrentHolderProfileID pgtype.UUID        `json:"current_holder_profile_id"`
+	CurrentHolderFullName  *string            `json:"current_holder_full_name"`
 	CurrentAssignedAt      pgtype.Timestamptz `json:"current_assigned_at"`
 }
 
@@ -334,18 +373,20 @@ func (q *Queries) GetBillByID(ctx context.Context, id pgtype.UUID) (GetBillByIDR
 		&i.Amount,
 		&i.Currency,
 		&i.Notes,
-		&i.RecordState,
+		&i.Medium,
+		&i.IdleCustody,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OwnerFullName,
 		&i.TypeTechnicalKey,
 		&i.TypeLabel,
 		&i.TypeActive,
-		&i.TypeSupportsCurrentUse,
 		&i.TypeVersion,
 		&i.TypeCreatedAt,
 		&i.TypeUpdatedAt,
 		&i.CurrentHolderProfileID,
+		&i.CurrentHolderFullName,
 		&i.CurrentAssignedAt,
 	)
 	return i, err
@@ -363,7 +404,7 @@ func (q *Queries) GetBillCurrentUse(ctx context.Context, billID pgtype.UUID) (Bi
 }
 
 const getBillTypeByID = `-- name: GetBillTypeByID :one
-SELECT id, technical_key, label, active, supports_current_use, version, created_at, updated_at FROM bill_types WHERE id = $1
+SELECT id, technical_key, label, active, version, created_at, updated_at FROM bill_types WHERE id = $1
 `
 
 func (q *Queries) GetBillTypeByID(ctx context.Context, id pgtype.UUID) (BillType, error) {
@@ -374,7 +415,6 @@ func (q *Queries) GetBillTypeByID(ctx context.Context, id pgtype.UUID) (BillType
 		&i.TechnicalKey,
 		&i.Label,
 		&i.Active,
-		&i.SupportsCurrentUse,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -383,7 +423,7 @@ func (q *Queries) GetBillTypeByID(ctx context.Context, id pgtype.UUID) (BillType
 }
 
 const listBillTypes = `-- name: ListBillTypes :many
-SELECT id, technical_key, label, active, supports_current_use, version, created_at, updated_at
+SELECT id, technical_key, label, active, version, created_at, updated_at
 FROM bill_types
 WHERE ($1::text = '' OR lower(label) LIKE '%' || lower($1::text) || '%')
   AND ($2::text = '' OR active = $2::boolean)
@@ -431,7 +471,6 @@ func (q *Queries) ListBillTypes(ctx context.Context, arg ListBillTypesParams) ([
 			&i.TechnicalKey,
 			&i.Label,
 			&i.Active,
-			&i.SupportsCurrentUse,
 			&i.Version,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -448,27 +487,30 @@ func (q *Queries) ListBillTypes(ctx context.Context, arg ListBillTypesParams) ([
 
 const listBills = `-- name: ListBills :many
 SELECT
-  bill.id, bill.owner_profile_id, bill.bill_type_id, bill.printed_holder_name, bill.printed_address, bill.reference_value, bill.competence, bill.amount, bill.currency, bill.notes, bill.record_state, bill.version, bill.created_at, bill.updated_at,
+  bill.id, bill.owner_profile_id, bill.bill_type_id, bill.printed_holder_name, bill.printed_address, bill.reference_value, bill.competence, bill.amount, bill.currency, bill.notes, bill.medium, bill.idle_custody, bill.version, bill.created_at, bill.updated_at,
+  owner.full_name AS owner_full_name,
   bill_type.technical_key AS type_technical_key,
   bill_type.label AS type_label,
   bill_type.active AS type_active,
-  bill_type.supports_current_use AS type_supports_current_use,
   bill_type.version AS type_version,
   bill_type.created_at AS type_created_at,
   bill_type.updated_at AS type_updated_at,
   bill_current_use.holder_profile_id AS current_holder_profile_id,
+  holder.full_name AS current_holder_full_name,
   bill_current_use.assigned_at AS current_assigned_at
 FROM bills AS bill
+JOIN profiles AS owner ON owner.id = bill.owner_profile_id
 JOIN bill_types AS bill_type ON bill_type.id = bill.bill_type_id
 LEFT JOIN bill_current_uses AS bill_current_use ON bill_current_use.bill_id = bill.id
+LEFT JOIN profiles AS holder ON holder.id = bill_current_use.holder_profile_id
 WHERE ($1::uuid IS NULL OR bill.owner_profile_id = $1::uuid)
   AND ($2::uuid IS NULL OR bill.bill_type_id = $2::uuid)
   AND ($3::text = '' OR lower(coalesce(bill.reference_value, '')) LIKE '%' || lower($3::text) || '%')
   AND ($4::text = '' OR coalesce(bill.competence, '') = $4::text)
-  AND ($5::text = '' OR bill.record_state = $5::text)
+  AND ($5::text = '' OR bill.medium = $5::text)
   AND ($6::text = '' OR
-    ($6::text = 'IN_USE' AND bill_current_use.bill_id IS NOT NULL) OR
-    ($6::text = 'AVAILABLE' AND bill_current_use.bill_id IS NULL))
+    ($6::text = 'IN_USE' AND bill.medium = 'PHYSICAL' AND bill_current_use.bill_id IS NOT NULL) OR
+    ($6::text = 'AVAILABLE' AND bill.medium = 'PHYSICAL' AND bill.idle_custody = 'ORGANIZATION' AND bill_current_use.bill_id IS NULL))
   AND ($7::uuid IS NULL OR bill_current_use.holder_profile_id = $7::uuid)
 ORDER BY
   CASE WHEN $8::text = 'reference_value' AND $9::text = 'asc' THEN lower(bill.reference_value) END ASC NULLS LAST,
@@ -493,7 +535,7 @@ type ListBillsParams struct {
 	BillTypeIDFilter      pgtype.UUID `json:"bill_type_id_filter"`
 	ReferenceFilter       string      `json:"reference_filter"`
 	CompetenceFilter      string      `json:"competence_filter"`
-	RecordStateFilter     string      `json:"record_state_filter"`
+	MediumFilter          string      `json:"medium_filter"`
 	StatusFilter          string      `json:"status_filter"`
 	HolderProfileIDFilter pgtype.UUID `json:"holder_profile_id_filter"`
 	SortField             string      `json:"sort_field"`
@@ -513,18 +555,20 @@ type ListBillsRow struct {
 	Amount                 pgtype.Numeric     `json:"amount"`
 	Currency               *string            `json:"currency"`
 	Notes                  *string            `json:"notes"`
-	RecordState            string             `json:"record_state"`
+	Medium                 string             `json:"medium"`
+	IdleCustody            *string            `json:"idle_custody"`
 	Version                int64              `json:"version"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	OwnerFullName          string             `json:"owner_full_name"`
 	TypeTechnicalKey       string             `json:"type_technical_key"`
 	TypeLabel              string             `json:"type_label"`
 	TypeActive             bool               `json:"type_active"`
-	TypeSupportsCurrentUse bool               `json:"type_supports_current_use"`
 	TypeVersion            int64              `json:"type_version"`
 	TypeCreatedAt          pgtype.Timestamptz `json:"type_created_at"`
 	TypeUpdatedAt          pgtype.Timestamptz `json:"type_updated_at"`
 	CurrentHolderProfileID pgtype.UUID        `json:"current_holder_profile_id"`
+	CurrentHolderFullName  *string            `json:"current_holder_full_name"`
 	CurrentAssignedAt      pgtype.Timestamptz `json:"current_assigned_at"`
 }
 
@@ -534,7 +578,7 @@ func (q *Queries) ListBills(ctx context.Context, arg ListBillsParams) ([]ListBil
 		arg.BillTypeIDFilter,
 		arg.ReferenceFilter,
 		arg.CompetenceFilter,
-		arg.RecordStateFilter,
+		arg.MediumFilter,
 		arg.StatusFilter,
 		arg.HolderProfileIDFilter,
 		arg.SortField,
@@ -560,18 +604,20 @@ func (q *Queries) ListBills(ctx context.Context, arg ListBillsParams) ([]ListBil
 			&i.Amount,
 			&i.Currency,
 			&i.Notes,
-			&i.RecordState,
+			&i.Medium,
+			&i.IdleCustody,
 			&i.Version,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OwnerFullName,
 			&i.TypeTechnicalKey,
 			&i.TypeLabel,
 			&i.TypeActive,
-			&i.TypeSupportsCurrentUse,
 			&i.TypeVersion,
 			&i.TypeCreatedAt,
 			&i.TypeUpdatedAt,
 			&i.CurrentHolderProfileID,
+			&i.CurrentHolderFullName,
 			&i.CurrentAssignedAt,
 		); err != nil {
 			return nil, err
@@ -601,11 +647,12 @@ SET owner_profile_id = $1, bill_type_id = bill_type.id,
   printed_holder_name = $2, printed_address = $3,
   reference_value = $4, competence = $5,
   amount = $6, currency = $7, notes = $8,
-  record_state = $9, version = bill.version + 1, updated_at = now()
+  medium = $9, idle_custody = $10,
+  version = bill.version + 1, updated_at = now()
 FROM bill_types AS bill_type
-WHERE bill.id = $10 AND bill.version = $11
-  AND bill_type.id = $12 AND bill_type.active
-RETURNING bill.id, bill.owner_profile_id, bill.bill_type_id, bill.printed_holder_name, bill.printed_address, bill.reference_value, bill.competence, bill.amount, bill.currency, bill.notes, bill.record_state, bill.version, bill.created_at, bill.updated_at
+WHERE bill.id = $11 AND bill.version = $12
+  AND bill_type.id = $13 AND bill_type.active
+RETURNING bill.id, bill.owner_profile_id, bill.bill_type_id, bill.printed_holder_name, bill.printed_address, bill.reference_value, bill.competence, bill.amount, bill.currency, bill.notes, bill.medium, bill.idle_custody, bill.version, bill.created_at, bill.updated_at
 `
 
 type UpdateBillParams struct {
@@ -617,7 +664,8 @@ type UpdateBillParams struct {
 	Amount            pgtype.Numeric `json:"amount"`
 	Currency          *string        `json:"currency"`
 	Notes             *string        `json:"notes"`
-	RecordState       string         `json:"record_state"`
+	Medium            string         `json:"medium"`
+	IdleCustody       *string        `json:"idle_custody"`
 	ID                pgtype.UUID    `json:"id"`
 	Version           int64          `json:"version"`
 	BillTypeID        pgtype.UUID    `json:"bill_type_id"`
@@ -633,7 +681,8 @@ func (q *Queries) UpdateBill(ctx context.Context, arg UpdateBillParams) (Bill, e
 		arg.Amount,
 		arg.Currency,
 		arg.Notes,
-		arg.RecordState,
+		arg.Medium,
+		arg.IdleCustody,
 		arg.ID,
 		arg.Version,
 		arg.BillTypeID,
@@ -650,7 +699,8 @@ func (q *Queries) UpdateBill(ctx context.Context, arg UpdateBillParams) (Bill, e
 		&i.Amount,
 		&i.Currency,
 		&i.Notes,
-		&i.RecordState,
+		&i.Medium,
+		&i.IdleCustody,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -660,25 +710,23 @@ func (q *Queries) UpdateBill(ctx context.Context, arg UpdateBillParams) (Bill, e
 
 const updateBillType = `-- name: UpdateBillType :one
 UPDATE bill_types
-SET label = $1, active = $2, supports_current_use = $3,
+SET label = $1, active = $2,
   version = version + 1, updated_at = now()
-WHERE id = $4 AND version = $5
-RETURNING id, technical_key, label, active, supports_current_use, version, created_at, updated_at
+WHERE id = $3 AND version = $4
+RETURNING id, technical_key, label, active, version, created_at, updated_at
 `
 
 type UpdateBillTypeParams struct {
-	Label              string      `json:"label"`
-	Active             bool        `json:"active"`
-	SupportsCurrentUse bool        `json:"supports_current_use"`
-	ID                 pgtype.UUID `json:"id"`
-	Version            int64       `json:"version"`
+	Label   string      `json:"label"`
+	Active  bool        `json:"active"`
+	ID      pgtype.UUID `json:"id"`
+	Version int64       `json:"version"`
 }
 
 func (q *Queries) UpdateBillType(ctx context.Context, arg UpdateBillTypeParams) (BillType, error) {
 	row := q.db.QueryRow(ctx, updateBillType,
 		arg.Label,
 		arg.Active,
-		arg.SupportsCurrentUse,
 		arg.ID,
 		arg.Version,
 	)
@@ -688,7 +736,6 @@ func (q *Queries) UpdateBillType(ctx context.Context, arg UpdateBillTypeParams) 
 		&i.TechnicalKey,
 		&i.Label,
 		&i.Active,
-		&i.SupportsCurrentUse,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,

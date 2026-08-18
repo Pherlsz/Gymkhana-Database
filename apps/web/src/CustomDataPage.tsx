@@ -1,42 +1,35 @@
 import { Flex, Layout, Typography } from "antd";
 import { useState } from "react";
 import "./customdata.css";
-import { useApplicationSession } from "./App";
 import { CustomEntitiesAdmin } from "./CustomEntitiesAdmin";
 import { CustomEntityTypesAdmin } from "./CustomEntityTypesAdmin";
 import { CustomFieldsAdmin } from "./CustomFieldsAdmin";
-import { CustomRecordValuesAdmin } from "./CustomRecordValuesAdmin";
+import { useApplicationSession } from "./session";
 
-type Section = "values" | "types" | "fields" | "entities";
+type Section = "types" | "fields" | "entities";
 
 export function CustomDataPage() {
   const session = useApplicationSession();
-  const [section, setSection] = useState<Section>("values");
+  const [section, setSection] = useState<Section>("fields");
   const canAdminister = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN";
   return (
-    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+    <Layout className="page-measure">
       <header className="page-header">
-        <div className="page-eyebrow">M5 · Dados personalizados tipados</div>
-        <Typography.Title level={1} className="page-title">
-          Dados personalizados
+        <Typography.Title level={2} className="page-title">
+          Campos extras
         </Typography.Title>
         <Typography.Paragraph className="page-description">
-          Defina campos tipados reutilizáveis e cadastre entidades vinculadas ou independentes sem
-          depender de JSON livre.
+          Defina campos tipados reutilizáveis e entidades vinculadas. Os valores aparecem na grade,
+          não nesta tela.
         </Typography.Paragraph>
       </header>
       <div className="page-content">
         <Flex vertical gap="1.25rem">
-          <nav aria-label="Seções de dados personalizados" className="custom-data-tabs">
-            <button
-              className={section === "values" ? "custom-data-tabs__active" : undefined}
-              onClick={() => setSection("values")}
-            >
-              Pessoas e registros
-            </button>
+          <nav aria-label="Definições de campos extras" className="custom-data-tabs">
             <button
               className={section === "entities" ? "custom-data-tabs__active" : undefined}
               onClick={() => setSection("entities")}
+              type="button"
             >
               Entidades
             </button>
@@ -45,19 +38,20 @@ export function CustomDataPage() {
                 <button
                   className={section === "types" ? "custom-data-tabs__active" : undefined}
                   onClick={() => setSection("types")}
+                  type="button"
                 >
                   Tipos
                 </button>
                 <button
                   className={section === "fields" ? "custom-data-tabs__active" : undefined}
                   onClick={() => setSection("fields")}
+                  type="button"
                 >
                   Campos e opções
                 </button>
               </>
             ) : null}
           </nav>
-          {section === "values" ? <CustomRecordValuesAdmin /> : null}
           {section === "types" && canAdminister ? <CustomEntityTypesAdmin /> : null}
           {section === "fields" && canAdminister ? <CustomFieldsAdmin /> : null}
           {section === "entities" ? <CustomEntitiesAdmin /> : null}

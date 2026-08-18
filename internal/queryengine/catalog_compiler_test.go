@@ -111,6 +111,9 @@ func TestCompilerBuildsParameterizedNestedPlanWithoutMutatingInput(t *testing.T)
 		!strings.Contains(compiled.SQL, "LIMIT $3::integer") || strings.Contains(compiled.SQL, "OR true") {
 		t.Fatalf("compiled SQL is not safely parameterized:\n%s", compiled.SQL)
 	}
+	if !strings.Contains(compiled.SQL, "q0.full_name COLLATE gymkhana_pt_br DESC NULLS LAST") {
+		t.Fatalf("compiled SQL does not use Portuguese name collation:\n%s", compiled.SQL)
+	}
 	if got := compiled.Arguments[0]; got != "%ana\\%' or true --%" {
 		t.Fatalf("literal argument = %#v", got)
 	}

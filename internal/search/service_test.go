@@ -131,6 +131,9 @@ func TestSearchRejectsUnknownLogicalIdentifiersBeforeReservation(t *testing.T) {
 
 func TestSearchRequiresAnExplicitBoundedFieldSelectionForLargeCatalogs(t *testing.T) {
 	dynamicCount := MaxFields - len(staticFields) + 1
+	if dynamicCount < 1 {
+		dynamicCount = 1
+	}
 	fields := make([]FieldDefinition, 0, dynamicCount)
 	for range dynamicCount {
 		identifier, err := auth.NewIdentifier()

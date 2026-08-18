@@ -60,7 +60,8 @@ type Bill struct {
 	Amount            pgtype.Numeric     `json:"amount"`
 	Currency          *string            `json:"currency"`
 	Notes             *string            `json:"notes"`
-	RecordState       string             `json:"record_state"`
+	Medium            string             `json:"medium"`
+	IdleCustody       *string            `json:"idle_custody"`
 	Version           int64              `json:"version"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
@@ -86,28 +87,26 @@ type BillCurrentUse struct {
 }
 
 type BillType struct {
-	ID                 pgtype.UUID        `json:"id"`
-	TechnicalKey       string             `json:"technical_key"`
-	Label              string             `json:"label"`
-	Active             bool               `json:"active"`
-	SupportsCurrentUse bool               `json:"supports_current_use"`
-	Version            int64              `json:"version"`
-	CreatedAt          pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	ID           pgtype.UUID        `json:"id"`
+	TechnicalKey string             `json:"technical_key"`
+	Label        string             `json:"label"`
+	Active       bool               `json:"active"`
+	Version      int64              `json:"version"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Document struct {
-	ID               pgtype.UUID        `json:"id"`
-	OwnerProfileID   pgtype.UUID        `json:"owner_profile_id"`
-	DocumentTypeID   pgtype.UUID        `json:"document_type_id"`
-	IdentifierValue  string             `json:"identifier_value"`
-	UniquenessPolicy string             `json:"uniqueness_policy"`
-	DocumentDate     pgtype.Date        `json:"document_date"`
-	Notes            *string            `json:"notes"`
-	RecordState      string             `json:"record_state"`
-	Version          int64              `json:"version"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	ID           pgtype.UUID        `json:"id"`
+	PresenceID   pgtype.UUID        `json:"presence_id"`
+	Medium       string             `json:"medium"`
+	IdleCustody  *string            `json:"idle_custody"`
+	DocumentDate pgtype.Date        `json:"document_date"`
+	ValidUntil   pgtype.Date        `json:"valid_until"`
+	Notes        *string            `json:"notes"`
+	Version      int64              `json:"version"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type DocumentAuditEvent struct {
@@ -129,6 +128,19 @@ type DocumentCurrentUse struct {
 	AssignedAt      pgtype.Timestamptz `json:"assigned_at"`
 }
 
+type DocumentPresence struct {
+	ID               pgtype.UUID        `json:"id"`
+	ProfileID        pgtype.UUID        `json:"profile_id"`
+	DocumentTypeID   pgtype.UUID        `json:"document_type_id"`
+	UniquenessPolicy string             `json:"uniqueness_policy"`
+	Claim            string             `json:"claim"`
+	IdentifierValue  *string            `json:"identifier_value"`
+	IdentifierDigits *string            `json:"identifier_digits"`
+	Version          int64              `json:"version"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DocumentType struct {
 	ID               pgtype.UUID        `json:"id"`
 	TechnicalKey     string             `json:"technical_key"`
@@ -146,7 +158,6 @@ type Profile struct {
 	ID                  pgtype.UUID        `json:"id"`
 	FullName            string             `json:"full_name"`
 	SocialName          *string            `json:"social_name"`
-	Cpf                 *string            `json:"cpf"`
 	Email               *string            `json:"email"`
 	MobilePhone         *string            `json:"mobile_phone"`
 	LandlinePhone       *string            `json:"landline_phone"`
@@ -158,6 +169,37 @@ type Profile struct {
 	AddressState        *string            `json:"address_state"`
 	AddressPostalCode   *string            `json:"address_postal_code"`
 	Notes               *string            `json:"notes"`
+	BirthDate           pgtype.Date        `json:"birth_date"`
+	Gender              *string            `json:"gender"`
+	BloodType           *string            `json:"blood_type"`
+	Nationality         *string            `json:"nationality"`
+	BirthCity           *string            `json:"birth_city"`
+	MaritalStatus       *string            `json:"marital_status"`
+	WeddingDate         pgtype.Date        `json:"wedding_date"`
+	FatherName          *string            `json:"father_name"`
+	FatherBirthDate     pgtype.Date        `json:"father_birth_date"`
+	MotherName          *string            `json:"mother_name"`
+	MotherBirthDate     pgtype.Date        `json:"mother_birth_date"`
+	HealthPlan          *string            `json:"health_plan"`
+	BloodDonor          *bool              `json:"blood_donor"`
+	OrganDonor          *bool              `json:"organ_donor"`
+	Team                *string            `json:"team"`
+	Sector              *string            `json:"sector"`
+	Collections         *string            `json:"collections"`
+	VehicleModel        *string            `json:"vehicle_model"`
+	VehicleColor        *string            `json:"vehicle_color"`
+	VehiclePlate        *string            `json:"vehicle_plate"`
+	VehicleYear         *int32             `json:"vehicle_year"`
+	ClubMembership      *string            `json:"club_membership"`
+	MembershipType      *string            `json:"membership_type"`
+	PlaceOfOrigin       *string            `json:"place_of_origin"`
+	BirthCountry        *string            `json:"birth_country"`
+	ParentsWeddingDate  pgtype.Date        `json:"parents_wedding_date"`
+	SupermarketClub     *string            `json:"supermarket_club"`
+	Pet                 *string            `json:"pet"`
+	TravelCountries     *string            `json:"travel_countries"`
+	CardBrand           *string            `json:"card_brand"`
+	CardBank            *string            `json:"card_bank"`
 	Version             int64              `json:"version"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`

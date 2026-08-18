@@ -56,7 +56,7 @@ func profileHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeProfileS
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
 		ID: actorID, Email: "member", Role: auth.RoleExternal, Active: true,
 	}}}}
-	value := profile.Profile{ID: id, Values: profile.Values{FullName: "Ana"}, Version: 1, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
+	value := profile.Profile{ID: id, Values: profile.Values{FullName: "Ana", CPF: "52998224725"}, Version: 1, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
 	service := &fakeProfileService{value: value, page: profile.Page{Profiles: []profile.Profile{value}, Total: 1, Limit: 100, SortField: profile.SortFullName, SortOrder: profile.SortAscending}}
 	return authentication, service, id, New(authTestLogger(), nil, Options{Auth: authentication, Profile: service})
 }
@@ -70,6 +70,24 @@ func TestProfileRoutesListCreateUpdateAndDelete(t *testing.T) {
 	handler.ServeHTTP(listResponse, listRequest)
 	if listResponse.Code != http.StatusOK || service.listOptions.Limit != 250 || service.listOptions.Offset != 10 || service.listOptions.Filters.State != "rs" {
 		t.Fatalf("list status = %d, options = %#v, body = %s", listResponse.Code, service.listOptions, listResponse.Body.String())
+	}
+	var listed profilePageResponse
+	if err := json.Unmarshal(listResponse.Body.Bytes(), &listed); err != nil || len(listed.Profiles) != 1 || listed.Profiles[0].CustomValues == nil || listed.Profiles[0].DocumentIdentifiers == nil || listed.Profiles[0].DocumentBadges == nil {
+		t.Fatalf("list body should embed custom_values, document_identifiers and document_badges: err=%v body=%s", err, listResponse.Body.String())
+	}
+	if listed.Profiles[0].CPF != "***.***.***-25" || listed.Profiles[0].CPFDigitSum == nil || *listed.Profiles[0].CPFDigitSum != 55 {
+		t.Fatalf("external list CPF = %#v", listed.Profiles[0])
+	}
+
+	authentication, _, _, adminHandler := profileHTTPFixture(t)
+	authentication.session.User.Role = auth.RoleAdmin
+	adminRequest := httptest.NewRequest(http.MethodGet, "/api/v1/profiles?limit=10", nil)
+	adminRequest.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
+	adminResponse := httptest.NewRecorder()
+	adminHandler.ServeHTTP(adminResponse, adminRequest)
+	var adminListed profilePageResponse
+	if err := json.Unmarshal(adminResponse.Body.Bytes(), &adminListed); err != nil || len(adminListed.Profiles) != 1 || adminListed.Profiles[0].CPF != "529.982.247-25" {
+		t.Fatalf("admin list CPF: err=%v body=%s", err, adminResponse.Body.String())
 	}
 
 	createBody := `{"full_name":"Ana","social_name":"","cpf":"","email":"","mobile_phone":"","landline_phone":"","address":{"street":"","number":"","complement":"","neighborhood":"","city":"","state":"","postal_code":""},"notes":""}`

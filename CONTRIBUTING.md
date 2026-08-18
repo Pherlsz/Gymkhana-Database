@@ -35,4 +35,6 @@ Never commit credentials, production data, signed URLs, OAuth tokens, private at
 
 ## Planning
 
-Read `docs/ORCHESTRATION.md` before changing architecture or milestone scope. Starting with M1, issues are assigned to GitHub milestones according to `docs/IMPLEMENTATION.md`.
+[`docs/ORCHESTRATION.md`](docs/ORCHESTRATION.md) is the only permanent source of product, domain, and architecture rules. Agents must follow [`AGENTS.md`](AGENTS.md): before any Gymkhana migration task, read the architecture/design sections and the requested module section — not the whole file — and do not contradict them.
+
+Issue [#31](https://github.com/Pherlsz/Gymkhana-Database/issues/31) is the only live checklist.

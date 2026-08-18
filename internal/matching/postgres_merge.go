@@ -145,13 +145,13 @@ func (store *PostgresStore) Merge(ctx context.Context, actorID auth.Identifier, 
 	}
 	var survivorVersion int64
 	err = tx.QueryRow(ctx, `UPDATE profiles SET
-  full_name=$3, social_name=$4, cpf=$5, email=$6, mobile_phone=$7, landline_phone=$8,
-  address_street=$9, address_number=$10, address_complement=$11, address_neighborhood=$12,
-  address_city=$13, address_state=$14, address_postal_code=$15, notes=$16,
-  version=version+1, updated_at=$17
+  full_name=$3, social_name=$4, email=$5, mobile_phone=$6, landline_phone=$7,
+  address_street=$8, address_number=$9, address_complement=$10, address_neighborhood=$11,
+  address_city=$12, address_state=$13, address_postal_code=$14, notes=$15,
+  version=version+1, updated_at=$16
 WHERE id=$1 AND version=$2
 RETURNING version`, matchingUUID(input.SurvivorID), input.SurvivorVersion,
-		mergedProfile.FullName, nullableString(mergedProfile.SocialName), nullableString(mergedProfile.CPF),
+		mergedProfile.FullName, nullableString(mergedProfile.SocialName),
 		nullableString(mergedProfile.Email), nullableString(mergedProfile.MobilePhone), nullableString(mergedProfile.LandlinePhone),
 		nullableString(mergedProfile.AddressStreet), nullableString(mergedProfile.AddressNumber), nullableString(mergedProfile.AddressComplement),
 		nullableString(mergedProfile.AddressNeighborhood), nullableString(mergedProfile.AddressCity), nullableString(mergedProfile.AddressState),
@@ -173,6 +173,9 @@ RETURNING version`, matchingUUID(input.SurvivorID), input.SurvivorVersion,
 		return MergeResult{}, false, ErrInvalidState
 	}
 	if err := moveProfileDependencies(ctx, tx, input.SourceID, input.SurvivorID, now); err != nil {
+		return MergeResult{}, false, err
+	}
+	if err := syncMergedCPFPresence(ctx, tx, input.SurvivorID, mergedProfile.CPF, now); err != nil {
 		return MergeResult{}, false, err
 	}
 	command, err := tx.Exec(ctx, `DELETE FROM profiles WHERE id=$1 AND version=$2`, matchingUUID(input.SourceID), input.SourceVersion)
@@ -346,7 +349,13 @@ FROM matching_cases WHERE id=$1`, matchingUUID(input.CaseID)).Scan(&state, &left
 func loadProfileSnapshot(ctx context.Context, tx pgx.Tx, id Identifier) (ProfileSnapshot, error) {
 	var value ProfileSnapshot
 	var databaseID pgtype.UUID
-	err := tx.QueryRow(ctx, `SELECT id,full_name,COALESCE(social_name,''),COALESCE(cpf,''),COALESCE(email,''),
+	err := tx.QueryRow(ctx, `SELECT id,full_name,COALESCE(social_name,''),COALESCE((
+         SELECT presence.identifier_value FROM document_presences presence
+         JOIN document_types document_type ON document_type.id = presence.document_type_id
+         WHERE presence.profile_id = profiles.id AND document_type.technical_key = 'cpf'
+           AND presence.claim = 'informed_number'
+         LIMIT 1
+       ),''),COALESCE(email,''),
        COALESCE(mobile_phone,''),COALESCE(landline_phone,''),COALESCE(address_street,''),COALESCE(address_number,''),
        COALESCE(address_complement,''),COALESCE(address_neighborhood,''),COALESCE(address_city,''),
        COALESCE(address_state,''),COALESCE(address_postal_code,''),COALESCE(notes,''),version,updated_at
@@ -439,7 +448,7 @@ func loadMergeDependencies(ctx context.Context, tx pgx.Tx, survivorID, sourceID 
 	var counts [8]int
 	var digests [8]string
 	err := tx.QueryRow(ctx, `SELECT
-  (SELECT count(*) FROM documents WHERE owner_profile_id=$1),
+  (SELECT count(*) FROM documents document JOIN document_presences presence ON presence.id = document.presence_id WHERE presence.profile_id=$1),
   (SELECT count(*) FROM document_current_uses WHERE holder_profile_id=$1),
   (SELECT count(*) FROM bills WHERE owner_profile_id=$1),
   (SELECT count(*) FROM bill_current_uses WHERE holder_profile_id=$1),
@@ -447,7 +456,7 @@ func loadMergeDependencies(ctx context.Context, tx pgx.Tx, survivorID, sourceID 
   (SELECT count(*) FROM custom_field_values WHERE profile_id=$1),
   (SELECT count(*) FROM attachment_upload_intents WHERE custom_profile_id=$1),
   (SELECT count(*) FROM attachments WHERE custom_profile_id=$1),
-  (SELECT md5(COALESCE(string_agg(id::text||':'||version::text,',' ORDER BY id),'')) FROM documents WHERE owner_profile_id=$1),
+  (SELECT md5(COALESCE(string_agg(document.id::text||':'||document.version::text,',' ORDER BY document.id),'')) FROM documents document JOIN document_presences presence ON presence.id = document.presence_id WHERE presence.profile_id=$1),
   (SELECT md5(COALESCE(string_agg(document_id::text,',' ORDER BY document_id),'')) FROM document_current_uses WHERE holder_profile_id=$1),
   (SELECT md5(COALESCE(string_agg(id::text||':'||version::text,',' ORDER BY id),'')) FROM bills WHERE owner_profile_id=$1),
   (SELECT md5(COALESCE(string_agg(bill_id::text,',' ORDER BY bill_id),'')) FROM bill_current_uses WHERE holder_profile_id=$1),
@@ -470,12 +479,10 @@ func loadMergeDependencies(ctx context.Context, tx pgx.Tx, survivorID, sourceID 
 	}
 	var documentConflicts, entityConflicts int
 	if err := tx.QueryRow(ctx, `SELECT
-  (SELECT count(*) FROM documents source_document
-   JOIN documents survivor_document ON survivor_document.owner_profile_id=$2
-    AND survivor_document.document_type_id=source_document.document_type_id
-    AND survivor_document.identifier_value=source_document.identifier_value
-    AND survivor_document.uniqueness_policy='PER_PROFILE'
-   WHERE source_document.owner_profile_id=$1 AND source_document.uniqueness_policy='PER_PROFILE'),
+  (SELECT count(*) FROM document_presences source_presence
+   JOIN document_presences survivor_presence ON survivor_presence.profile_id=$2
+    AND survivor_presence.document_type_id=source_presence.document_type_id
+   WHERE source_presence.profile_id=$1),
   (SELECT count(*) FROM custom_entities source_entity
    JOIN custom_entities survivor_entity ON survivor_entity.owner_profile_id=$2
     AND survivor_entity.custom_entity_type_id=source_entity.custom_entity_type_id
@@ -535,7 +542,7 @@ func moveProfileDependencies(ctx context.Context, tx pgx.Tx, sourceID, survivorI
 		name      string
 		updatedAt bool
 	}{
-		{`UPDATE documents SET owner_profile_id=$2,version=version+1,updated_at=$3 WHERE owner_profile_id=$1`, "document owners", true},
+		{`UPDATE document_presences SET profile_id=$2,version=version+1,updated_at=$3 WHERE profile_id=$1`, "document owners", true},
 		{`UPDATE document_current_uses SET holder_profile_id=$2 WHERE holder_profile_id=$1`, "document holders", false},
 		{`UPDATE bills SET owner_profile_id=$2,version=version+1,updated_at=$3 WHERE owner_profile_id=$1`, "bill owners", true},
 		{`UPDATE bill_current_uses SET holder_profile_id=$2 WHERE holder_profile_id=$1`, "bill holders", false},
@@ -553,6 +560,34 @@ func moveProfileDependencies(ctx context.Context, tx pgx.Tx, sourceID, survivorI
 		}
 	}
 	return nil
+}
+
+func syncMergedCPFPresence(ctx context.Context, tx pgx.Tx, profileID Identifier, cpf string, now time.Time) error {
+	if cpf == "" {
+		_, err := tx.Exec(ctx, `UPDATE document_presences AS presence
+SET claim = 'indication', identifier_value = NULL, version = presence.version + 1, updated_at = $2
+FROM document_types AS document_type
+WHERE document_type.id = presence.document_type_id
+  AND document_type.technical_key = 'cpf'
+  AND presence.profile_id = $1
+  AND presence.claim = 'informed_number'`, matchingUUID(profileID), now)
+		return err
+	}
+	presenceID, err := NewIdentifier()
+	if err != nil {
+		return fmt.Errorf("generate merged cpf presence identifier: %w", err)
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO document_presences (
+  id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value, created_at, updated_at
+)
+SELECT $1, $2, document_type.id, document_type.uniqueness_policy, 'informed_number', $3, $4, $4
+FROM document_types AS document_type
+WHERE document_type.technical_key = 'cpf'
+ON CONFLICT (profile_id, document_type_id) DO UPDATE
+SET claim = 'informed_number', identifier_value = EXCLUDED.identifier_value,
+  uniqueness_policy = EXCLUDED.uniqueness_policy, version = document_presences.version + 1, updated_at = EXCLUDED.updated_at`,
+		matchingUUID(presenceID), matchingUUID(profileID), cpf, now)
+	return err
 }
 
 func selectedProfile(preview MergePreview) (ProfileSnapshot, error) {

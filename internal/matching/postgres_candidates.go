@@ -14,8 +14,13 @@ import (
 const candidateEvidenceQuery = `WITH exact_pairs AS (
   SELECT left_profile.id AS left_id, right_profile.id AS right_id
   FROM profiles left_profile
-  JOIN profiles right_profile ON right_profile.id > left_profile.id AND right_profile.cpf=left_profile.cpf
-  WHERE left_profile.cpf IS NOT NULL
+  JOIN document_presences left_cpf ON left_cpf.profile_id = left_profile.id AND left_cpf.claim = 'informed_number'
+  JOIN document_types left_type ON left_type.id = left_cpf.document_type_id AND left_type.technical_key = 'cpf'
+  JOIN document_presences right_cpf ON right_cpf.identifier_digits = left_cpf.identifier_digits
+    AND right_cpf.claim = 'informed_number' AND right_cpf.identifier_digits IS NOT NULL
+  JOIN document_types right_type ON right_type.id = right_cpf.document_type_id AND right_type.technical_key = 'cpf'
+  JOIN profiles right_profile ON right_profile.id = right_cpf.profile_id AND right_profile.id > left_profile.id
+  WHERE left_cpf.identifier_digits IS NOT NULL
   UNION
   SELECT left_profile.id, right_profile.id
   FROM profiles left_profile
@@ -64,7 +69,18 @@ const candidateEvidenceQuery = `WITH exact_pairs AS (
   JOIN profiles right_profile ON right_profile.id=pair.right_id
   CROSS JOIN LATERAL (
     SELECT 'CPF_EXACT'::text, 100::integer, 100::integer
-    WHERE left_profile.cpf IS NOT NULL AND left_profile.cpf=right_profile.cpf
+    WHERE EXISTS (
+      SELECT 1
+      FROM document_presences left_cpf
+      JOIN document_types left_type ON left_type.id = left_cpf.document_type_id AND left_type.technical_key = 'cpf'
+      JOIN document_presences right_cpf ON right_cpf.profile_id = right_profile.id
+        AND right_cpf.claim = 'informed_number'
+        AND right_cpf.identifier_digits = left_cpf.identifier_digits
+      JOIN document_types right_type ON right_type.id = right_cpf.document_type_id AND right_type.technical_key = 'cpf'
+      WHERE left_cpf.profile_id = left_profile.id
+        AND left_cpf.claim = 'informed_number'
+        AND left_cpf.identifier_digits IS NOT NULL
+    )
     UNION ALL
     SELECT 'EMAIL_EXACT', 100, 95
     WHERE left_profile.email IS NOT NULL AND left_profile.email=right_profile.email

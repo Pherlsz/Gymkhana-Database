@@ -1,0 +1,25 @@
+---
+description: Before Gymkhana migration, legacy port, or feature-parity work, read Orchestration architecture/design plus the requested module section; do not contradict it.
+alwaysApply: true
+---
+
+# Orchestration is binding
+
+`docs/ORCHESTRATION.md` is the only permanent source of product, domain, security, UX, and architecture rules. Read it in Portuguese. Do not replace it with the legacy Vercel app, a summary, or prior-session memory.
+
+## Before a Gymkhana migration task
+
+A migration task is any port, mapping, parity, import, cutover, or replacement of `Gymkhana-Database-Vercel` behavior in this repo.
+
+Do **not** read the whole file. In this session, read:
+
+1. Architecture and design: `Arquitetura escolhida e racional`, sections `2`, `23`, `24`, `25`, `26`, and `12` when UI is in scope.
+2. Only the numbered module section that owns the request (see the table in `AGENTS.md`), plus sections it depends on.
+
+Then:
+
+- Obey recorded decisions and rejected alternatives.
+- If a request conflicts with those sections, stop and quote the heading. Do not insist on the rejected approach.
+- Issue #31 is the only live tracker.
+
+Tern SQL files do not skip this gate when they implement product migration.

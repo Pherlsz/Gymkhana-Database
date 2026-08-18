@@ -1,17 +1,19 @@
 # Multimodal OCR operations runbook
 
-Multimodal OCR is a private, permission-aware extraction workspace for existing PDF, JPEG, and PNG attachments. Extraction creates typed suggestions with evidence; it never mutates canonical data. A user must review each suggestion and then perform a separate confirmed application protected by current target versions.
+Multimodal OCR is a private, permission-aware extraction path for existing PDF, JPEG, and PNG attachments. There is no `/ocr` destination (Orchestration §12.0); review happens on the record form. Extraction creates typed suggestions with evidence; it never mutates canonical data. A user must review each suggestion and then perform a separate confirmed application protected by current target versions.
 
 ## Activation boundary
 
 The feature is disabled by default. The repository currently contains only a deterministic fake extractor, and configuration accepts it only in `APP_ENV=test`. Staging and production therefore fail closed if `OCR_ENABLED=true`.
+
+Use a model (Gemini or equivalent) only when that is the adequate extraction path. An explicit Gemini-only feature flag may require the shared Administração model key; without that key the model path stays off for everyone. Do not send private attachments to Gemini unless the flag is on and the key is present.
 
 Production activation requires an owner decision and reviewed implementation for all of the following:
 
 1. select the provider, API, exact model, region, retention policy, and contractual privacy terms;
 2. confirm which private attachment classes may be transmitted outside the application boundary;
 3. implement a narrow adapter for the existing `Extractor` port using the fixed provider-neutral schema;
-4. add credentials through the deployment secret manager, never the repository or database;
+4. add credentials through lokeys locally or the deployment secret manager, never the repository or database;
 5. document provider deletion/incident procedures and validate them with the privacy owner;
 6. complete security, quota, timeout, malformed-output, cancellation, and staging smoke tests before enabling the switch.
 
@@ -123,7 +125,7 @@ Run the deterministic path only in an isolated test environment:
 
 1. apply all application and River migrations to a disposable PostgreSQL database;
 2. configure authentication, private object storage, canonical target services, and the test-only OCR values above;
-3. sign in as an active member and confirm `/api/v1/ocr/capability` reports enabled with the fixed limits;
+3. sign in as an active EXTERNAL user and confirm `/api/v1/ocr/capability` reports enabled with the fixed limits;
 4. upload one valid PDF/image, start a job, observe ordered SSE, and reconnect from a recorded sequence;
 5. compare current/proposed/evidence values, edit and accept one suggestion, reject another, and confirm neither action changed canonical data;
 6. select an accepted suggestion, inspect the confirmation step, apply it, and replay the same application key;

@@ -113,7 +113,7 @@ export function DataGrid<TData>({
     data.length > 10 ? { defaultPageSize: 10, showSizeChanger: true } : false;
 
   return (
-    <Card aria-busy={loading} className={surfaceClassName} style={{ padding: "1rem" }}>
+    <Card aria-busy={loading} className={surfaceClassName}>
       {loading ? (
         <p className="data-grid__status" role="status">
           {loadingLabel}

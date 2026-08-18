@@ -44,7 +44,7 @@ export function CustomOptionsAdmin({
       queryClient.invalidateQueries({ queryKey: ["custom-field-options", field.id] }),
   });
   return (
-    <Card className="custom-admin-form" style={{ padding: "1rem" }}>
+    <Card className="custom-admin-form">
       <Flex vertical gap="1rem">
         <Flex align="center" className="custom-admin-card__header">
           <div>

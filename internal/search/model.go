@@ -8,7 +8,7 @@ import (
 const (
 	MaxTerms             = 5
 	MaxTermLength        = 128
-	MaxFields            = 40
+	MaxFields            = 50
 	MaxPageSize          = 100
 	MaxOffset            = 10_000
 	MaxResultCardinality = 50_000

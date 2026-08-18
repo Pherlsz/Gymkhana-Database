@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { getRouteApi, RouterProvider } from "@tanstack/react-router";
+import { RouterProvider } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { LoginScreen } from "./LoginScreen";
 import {
@@ -11,19 +11,8 @@ import {
 } from "./lib/api/client";
 import { createAppRouter } from "./router";
 import { SessionContext, useApplicationSession } from "./session";
+import { ThemeProvider } from "./theme";
 
-// Transitional compatibility for pages that previously imported the manual route
-// objects from App.tsx. These are typed APIs for the file routes, not a second
-// route tree. New page code should import getRouteApi/useApplicationSession from
-// their dedicated modules instead of adding more App.tsx dependencies.
-export const profilesRoute = getRouteApi("/profiles");
-export const searchRoute = getRouteApi("/search");
-export const queryRoute = getRouteApi("/query");
-export const taskRoute = getRouteApi("/tasks");
-export const matchingRoute = getRouteApi("/matching");
-export const chatRoute = getRouteApi("/chat");
-export const ocrRoute = getRouteApi("/ocr");
-export const operationsRoute = getRouteApi("/operations");
 export { useApplicationSession };
 
 type AuthState =
@@ -81,17 +70,18 @@ export function App() {
     }
   }, [queryClient]);
 
-  if (authentication.kind !== "authenticated") {
-    return <LoginScreen onLogin={() => window.location.assign(apiURL("/auth/login"))} />;
-  }
+  const tree =
+    authentication.kind !== "authenticated" ? (
+      <LoginScreen onLogin={() => window.location.assign(apiURL("/auth/login"))} />
+    ) : (
+      <QueryClientProvider client={queryClient}>
+        <SessionContext.Provider
+          value={{ session: authentication.session, signingOut, signOut: () => void signOut() }}
+        >
+          <RouterProvider router={router} />
+        </SessionContext.Provider>
+      </QueryClientProvider>
+    );
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <SessionContext.Provider
-        value={{ session: authentication.session, signingOut, signOut: () => void signOut() }}
-      >
-        <RouterProvider router={router} />
-      </SessionContext.Provider>
-    </QueryClientProvider>
-  );
+  return <ThemeProvider>{tree}</ThemeProvider>;
 }

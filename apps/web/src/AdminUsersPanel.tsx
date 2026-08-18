@@ -63,7 +63,7 @@ export function AdminUsersPanel({ currentLogin }: { currentLogin: string }) {
 
   return (
     <Flex vertical gap="1rem">
-      {state.users.map((user) => (
+      {state.users?.map((user) => (
         <ManagedUserCard
           current={user.login === currentLogin}
           key={user.id}
@@ -120,7 +120,7 @@ function ManagedUserCard({
   };
 
   return (
-    <Card className="managed-user" style={{ padding: "1rem" }}>
+    <Card className="managed-user">
       <Flex vertical gap="1rem">
         <Flex align="center" justify="space-between">
           <div>

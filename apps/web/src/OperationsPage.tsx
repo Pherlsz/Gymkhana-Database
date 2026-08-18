@@ -2,7 +2,7 @@ import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { operationsRoute } from "./App";
+import { getRouteApi } from "@tanstack/react-router";
 import { DataGrid } from "./DataGrid";
 import { APIRequestError } from "./lib/api/client";
 import {
@@ -45,13 +45,15 @@ export function normalizeOperationsSearch(search: Record<string, unknown>): Oper
   return operationIdentifierPattern.test(selected) ? { selected } : {};
 }
 
+const adminRoute = getRouteApi("/admin");
+
 export function OperationsPage() {
   const queryClient = useQueryClient();
-  const search = operationsRoute.useSearch();
-  const navigate = operationsRoute.useNavigate();
+  const search = adminRoute.useSearch();
+  const navigate = adminRoute.useNavigate();
   const selectedImportID = search.selected;
   const setSelectedImportID = (selected?: string) => {
-    void navigate({ search: () => normalizeOperationsSearch({ selected }) });
+    void navigate({ search: () => normalizeOperationsSearch({ selected }), to: "/admin" });
   };
   const catalog = useQuery({
     queryKey: ["operations-catalog"],
@@ -135,7 +137,7 @@ export function OperationsPage() {
     [moduleLabels],
   );
   return (
-    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+    <Layout className="page-measure">
       <header className="page-header">
         <div className="page-eyebrow">M8 · Operações</div>
         <Typography.Title level={1} className="page-title">
@@ -254,7 +256,7 @@ function ImportCreator({
   });
   if (modules.length === 0) return null;
   return (
-    <Card className="operations-creator" style={{ padding: "1rem" }}>
+    <Card className="operations-creator">
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -349,7 +351,7 @@ function ImportWorkspace({
     );
   const module = catalog.find((candidate) => candidate.id === value.module);
   return (
-    <Card className="operations-workspace" style={{ padding: "1rem" }}>
+    <Card className="operations-workspace">
       <Flex vertical gap="1.25rem">
         <Flex align="center" className="operations-heading">
           <div>
@@ -1032,7 +1034,7 @@ function BulkDeleteWorkspace({
         A exclusão exige IDs e versões atuais, confirmação literal e permissão administrativa. Toda
         a seleção é transacional.
       </Typography.Paragraph>
-      <Card className="operations-danger-zone" style={{ padding: "1rem" }}>
+      <Card className="operations-danger-zone">
         <form onSubmit={submit}>
           <Flex vertical gap="1rem">
             <div className="operations-form-grid">

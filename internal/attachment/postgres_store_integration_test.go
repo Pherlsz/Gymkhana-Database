@@ -51,15 +51,21 @@ VALUES($1,$2,$3,$4,'EXTERNAL',true)`, databaseUUID(actorID), technicalKey, techn
 VALUES($1,$2,$3,true,'NONE',false)`, databaseUUID(typeID), technicalKey, "Attachment test type"); err != nil {
 		t.Fatalf("insert document type: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO documents
-(id, owner_profile_id, document_type_id, identifier_value, uniqueness_policy)
-VALUES($1,$2,$3,$4,'NONE')`, databaseUUID(documentID), databaseUUID(profileID), databaseUUID(typeID), technicalKey); err != nil {
+	if _, err := pool.Exec(ctx, `WITH presence AS (
+  INSERT INTO document_presences (id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value)
+  SELECT gen_random_uuid(), $2, document_type.id, document_type.uniqueness_policy, 'informed_number', $4
+  FROM document_types AS document_type WHERE document_type.id = $3
+  RETURNING id
+)
+INSERT INTO documents (id, presence_id, medium, idle_custody)
+SELECT $1, presence.id, 'PHYSICAL', 'ORGANIZATION' FROM presence`, databaseUUID(documentID), databaseUUID(profileID), databaseUUID(typeID), technicalKey); err != nil {
 		t.Fatalf("insert document: %v", err)
 	}
 	defer func() {
 		_, _ = pool.Exec(context.Background(), "DELETE FROM attachment_upload_intents WHERE actor_user_id=$1", databaseUUID(actorID))
 		_, _ = pool.Exec(context.Background(), "DELETE FROM attachments WHERE document_id=$1", databaseUUID(documentID))
 		_, _ = pool.Exec(context.Background(), "DELETE FROM documents WHERE id=$1", databaseUUID(documentID))
+		_, _ = pool.Exec(context.Background(), "DELETE FROM document_presences WHERE profile_id=$1", databaseUUID(profileID))
 		_, _ = pool.Exec(context.Background(), "DELETE FROM document_types WHERE id=$1", databaseUUID(typeID))
 		_, _ = pool.Exec(context.Background(), "DELETE FROM profiles WHERE id=$1", databaseUUID(profileID))
 		_, _ = pool.Exec(context.Background(), "DELETE FROM app_users WHERE id=$1", databaseUUID(actorID))

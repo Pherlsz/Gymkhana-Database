@@ -90,7 +90,7 @@ export function CustomValuesPanel(props: Props) {
   }
   if (activeFields.length === 0) {
     return (
-      <Card className="custom-values" style={{ padding: "1rem" }}>
+      <Card className="custom-values">
         <span className="custom-values__empty">
           Nenhum campo personalizado ativo para este registro.
         </span>
@@ -101,7 +101,7 @@ export function CustomValuesPanel(props: Props) {
   return (
     <Flex vertical gap="1rem">
       {scalarFields.length > 0 ? (
-        <Card className="custom-values" style={{ padding: "1rem" }}>
+        <Card className="custom-values">
           <Flex vertical gap="1rem">
             <Flex align="center" className="custom-values__header">
               <div>

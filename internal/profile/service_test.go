@@ -40,6 +40,9 @@ func (store *fakeServiceStore) List(_ context.Context, options ListOptions) ([]P
 	store.list = options
 	return store.profiles, store.err
 }
+func (store *fakeServiceStore) ListByExactFullName(context.Context, string) ([]Profile, error) {
+	return store.profiles, store.err
+}
 func (store *fakeServiceStore) Update(_ context.Context, id Identifier, version int64, values Values) (Profile, error) {
 	if store.err != nil {
 		return Profile{}, store.err

@@ -27,14 +27,13 @@ const (
 	CapAttachments Capability = "ATTACHMENTS"
 	CapChat        Capability = "CHAT"
 	CapQuery       Capability = "QUERY"
-	CapTasks       Capability = "TASKS"
 	CapCustomData  Capability = "CUSTOM_DATA"
 )
 
 var allCapabilities = []Capability{
 	CapProfiles, CapDataTables, CapSearch, CapOCR, CapOperations,
 	CapMatching, CapGoogleForms, CapAttachments, CapChat, CapQuery,
-	CapTasks, CapCustomData,
+	CapCustomData,
 }
 
 func (c Capability) Valid() bool {

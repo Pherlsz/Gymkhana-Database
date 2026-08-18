@@ -69,10 +69,10 @@ func Catalog(role auth.Role) []ModuleCatalog {
 				{ID: "version", Label: "Versão", Kind: FieldInteger, Importable: true, Exportable: true},
 				{ID: "owner_profile_id", Label: "ID da pessoa proprietária", Kind: FieldIdentifier, Required: true, Importable: true, Exportable: true},
 				{ID: "document_type_id", Label: "ID do tipo", Kind: FieldIdentifier, Required: true, Importable: true, Exportable: true},
-				{ID: "identifier_value", Label: "Identificador", Kind: FieldText, Required: true, Importable: true, Exportable: true},
+				{ID: "identifier_value", Label: "Identificador", Kind: FieldText, Importable: true, Exportable: true},
 				{ID: "document_date", Label: "Data", Kind: FieldCivilDate, Importable: true, Exportable: true},
 				{ID: "notes", Label: "Observações", Kind: FieldText, Importable: true, Exportable: true},
-				{ID: "record_state", Label: "Estado", Kind: FieldText, Importable: true, Exportable: true},
+				{ID: "medium", Label: "Meio", Kind: FieldText, Required: true, Importable: true, Exportable: true},
 			},
 		},
 		{
@@ -89,7 +89,7 @@ func Catalog(role auth.Role) []ModuleCatalog {
 				{ID: "amount", Label: "Valor", Kind: FieldDecimal, Importable: true, Exportable: true},
 				{ID: "currency", Label: "Moeda", Kind: FieldText, Importable: true, Exportable: true},
 				{ID: "notes", Label: "Observações", Kind: FieldText, Importable: true, Exportable: true},
-				{ID: "record_state", Label: "Estado", Kind: FieldText, Importable: true, Exportable: true},
+				{ID: "medium", Label: "Meio", Kind: FieldText, Required: true, Importable: true, Exportable: true},
 			},
 		},
 	}

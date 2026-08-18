@@ -51,9 +51,14 @@ VALUES($1,$2,lower($3) || '@example.test','OCR integration actor','EXTERNAL',tru
 VALUES($1,$2,'OCR integration type',true,'NONE',false)`, typeID.String(), key); err != nil {
 		t.Fatalf("insert document type: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO documents
-(id,owner_profile_id,document_type_id,identifier_value,uniqueness_policy)
-VALUES($1,$2,$3,$4,'NONE')`, documentID.String(), profileID.String(), typeID.String(), key); err != nil {
+	if _, err := pool.Exec(ctx, `WITH presence AS (
+  INSERT INTO document_presences (id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value)
+  SELECT gen_random_uuid(), $2, document_type.id, document_type.uniqueness_policy, 'informed_number', $4
+  FROM document_types AS document_type WHERE document_type.id = $3
+  RETURNING id
+)
+INSERT INTO documents (id, presence_id, medium, idle_custody)
+SELECT $1, presence.id, 'PHYSICAL', 'ORGANIZATION' FROM presence`, documentID.String(), profileID.String(), typeID.String(), key); err != nil {
 		t.Fatalf("insert document: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO attachments
@@ -66,6 +71,7 @@ VALUES($1,'DOCUMENT',$2,'private.pdf','application/pdf','application/pdf',100,$3
 		cleanup := context.Background()
 		_, _ = pool.Exec(cleanup, `DELETE FROM attachments WHERE id=$1`, attachmentID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM documents WHERE id=$1`, documentID.String())
+		_, _ = pool.Exec(cleanup, `DELETE FROM document_presences WHERE profile_id=$1`, profileID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM document_types WHERE id=$1`, typeID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM profiles WHERE id=$1`, profileID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM app_users WHERE id=$1`, authDatabaseUUID(actorID))

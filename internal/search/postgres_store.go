@@ -178,10 +178,19 @@ WITH search_values AS NOT MATERIALIZED (
          field.weight,
          profile.updated_at
   FROM profiles AS profile
+  LEFT JOIN LATERAL (
+    SELECT presence.identifier_value AS cpf
+    FROM document_presences AS presence
+    JOIN document_types AS document_type ON document_type.id = presence.document_type_id
+    WHERE presence.profile_id = profile.id
+      AND document_type.technical_key = 'cpf'
+      AND presence.claim = 'informed_number'
+    LIMIT 1
+  ) AS cpf_presence ON true
   CROSS JOIN LATERAL (VALUES
     ('profile.full_name', 'Nome completo', profile.full_name, profile.full_name, 80),
     ('profile.social_name', 'Nome social', profile.social_name, profile.social_name, 70),
-    ('profile.cpf', 'CPF', profile.cpf, profile.cpf, 75),
+    ('profile.cpf', 'CPF', cpf_presence.cpf, cpf_presence.cpf, 75),
     ('profile.email', 'E-mail', profile.email, profile.email, 60),
     ('profile.mobile_phone', 'Celular', profile.mobile_phone, profile.mobile_phone, 55),
     ('profile.landline_phone', 'Telefone', profile.landline_phone, profile.landline_phone, 50),
@@ -192,20 +201,52 @@ WITH search_values AS NOT MATERIALIZED (
     ('profile.address_city', 'Cidade', profile.address_city, profile.address_city, 40),
     ('profile.address_state', 'UF', profile.address_state, profile.address_state, 20),
     ('profile.address_postal_code', 'CEP', profile.address_postal_code, profile.address_postal_code, 45),
-    ('profile.notes', 'Observações', profile.notes, profile.notes, 10)
+    ('profile.notes', 'Observações', profile.notes, profile.notes, 10),
+    ('profile.team', 'Equipe', profile.team, profile.team, 40),
+    ('profile.club_membership', 'Sócio clube', profile.club_membership, profile.club_membership, 35),
+    ('profile.place_of_origin', 'Naturalidade', profile.place_of_origin, profile.place_of_origin, 30),
+    ('profile.birth_country', 'País de nascimento', profile.birth_country, profile.birth_country, 25),
+    ('profile.supermarket_club', 'Clube de supermercado', profile.supermarket_club, profile.supermarket_club, 25),
+    ('profile.pet', 'Animal', profile.pet, profile.pet, 20),
+    ('profile.travel_countries', 'Viagem', profile.travel_countries, profile.travel_countries, 20),
+    ('profile.card_brand', 'Bandeira do cartão', profile.card_brand, profile.card_brand, 15),
+    ('profile.card_bank', 'Banco do cartão', profile.card_bank, profile.card_bank, 15)
   ) AS field(field_key, field_label, search_value, display_value, weight)
   WHERE field.search_value IS NOT NULL AND field.search_value <> ''
+
+  UNION ALL
+
+  SELECT 'profiles'::text,
+         'profile'::text,
+         profile.id::text,
+         profile.id::text,
+         'profile'::text,
+         profile.id::text,
+         'profile:' || profile.id::text,
+         profile.full_name,
+         'profile.document_identifier',
+         document_type.label || ' · número informado',
+         presence.identifier_value,
+         presence.identifier_value,
+         75,
+         presence.updated_at
+  FROM document_presences AS presence
+  JOIN document_types AS document_type ON document_type.id = presence.document_type_id
+  JOIN profiles AS profile ON profile.id = presence.profile_id
+  WHERE presence.claim = 'informed_number'
+    AND presence.identifier_value IS NOT NULL
+    AND presence.identifier_value <> ''
 
   UNION ALL
 
   SELECT 'documents',
          'document',
          document.id::text,
-         document.owner_profile_id::text,
+         presence.profile_id::text,
          'document',
          document.id::text,
-         'profile:' || document.owner_profile_id::text,
-         document_type.label || ' · ' || document.identifier_value,
+         'profile:' || presence.profile_id::text,
+         document_type.label || ' · ' || COALESCE(presence.identifier_value, ''),
          field.field_key,
          field.field_label,
          field.search_value,
@@ -213,15 +254,16 @@ WITH search_values AS NOT MATERIALIZED (
          field.weight,
          document.updated_at
   FROM documents AS document
-  JOIN document_types AS document_type ON document_type.id = document.document_type_id
+  JOIN document_presences AS presence ON presence.id = document.presence_id
+  JOIN document_types AS document_type ON document_type.id = presence.document_type_id
   LEFT JOIN document_current_uses AS current_use ON current_use.document_id = document.id
   LEFT JOIN profiles AS holder ON holder.id = current_use.holder_profile_id
   CROSS JOIN LATERAL (VALUES
     ('document.type', 'Tipo de documento', document_type.label, document_type.label, 55),
-    ('document.identifier', 'Identificador', document.identifier_value, document.identifier_value, 75),
+    ('document.identifier', 'Identificador', presence.identifier_value, presence.identifier_value, 75),
     ('document.date', 'Data', document.document_date::text, document.document_date::text, 35),
     ('document.notes', 'Observações', document.notes, document.notes, 10),
-    ('document.record_state', 'Estado do registro', document.record_state, document.record_state, 20),
+    ('document.medium', 'Meio', document.medium, document.medium, 20),
     ('document.current_holder', 'Pessoa em uso', holder.full_name, holder.full_name, 45)
   ) AS field(field_key, field_label, search_value, display_value, weight)
   WHERE field.search_value IS NOT NULL AND field.search_value <> ''
@@ -255,7 +297,7 @@ WITH search_values AS NOT MATERIALIZED (
     ('bill.amount', 'Valor', bill.amount::text, bill.amount::text, 35),
     ('bill.currency', 'Moeda', bill.currency, bill.currency, 20),
     ('bill.notes', 'Observações', bill.notes, bill.notes, 10),
-    ('bill.record_state', 'Estado do registro', bill.record_state, bill.record_state, 20),
+    ('bill.medium', 'Meio', bill.medium, bill.medium, 20),
     ('bill.current_holder', 'Pessoa em uso', holder.full_name, holder.full_name, 45)
   ) AS field(field_key, field_label, search_value, display_value, weight)
   WHERE field.search_value IS NOT NULL AND field.search_value <> ''
@@ -270,7 +312,7 @@ WITH search_values AS NOT MATERIALIZED (
            ELSE 'custom_entity'
          END,
          COALESCE(value.profile_id, value.document_id, value.bill_id, value.custom_entity_id)::text,
-         COALESCE(value.profile_id, document.owner_profile_id, bill.owner_profile_id, entity.owner_profile_id)::text,
+         COALESCE(value.profile_id, document_presence.profile_id, bill.owner_profile_id, entity.owner_profile_id)::text,
          CASE
            WHEN value.profile_id IS NOT NULL THEN 'profile'
            WHEN value.document_id IS NOT NULL THEN 'document'
@@ -279,12 +321,12 @@ WITH search_values AS NOT MATERIALIZED (
          END,
          COALESCE(value.profile_id, value.document_id, value.bill_id, value.custom_entity_id)::text,
          COALESCE(
-           'profile:' || COALESCE(value.profile_id, document.owner_profile_id, bill.owner_profile_id, entity.owner_profile_id)::text,
+           'profile:' || COALESCE(value.profile_id, document_presence.profile_id, bill.owner_profile_id, entity.owner_profile_id)::text,
            'custom_entity:' || value.custom_entity_id::text
          ),
          COALESCE(
            profile.full_name,
-           document_type.label || ' · ' || document.identifier_value,
+           document_type.label || ' · ' || COALESCE(document_presence.identifier_value, ''),
            bill_type.label || COALESCE(' · ' || bill.reference_value, ''),
            entity_type.label
          ),
@@ -298,7 +340,8 @@ WITH search_values AS NOT MATERIALIZED (
   JOIN custom_field_definitions AS definition ON definition.id = value.field_definition_id AND definition.active = true
   LEFT JOIN profiles AS profile ON profile.id = value.profile_id
   LEFT JOIN documents AS document ON document.id = value.document_id
-  LEFT JOIN document_types AS document_type ON document_type.id = document.document_type_id
+  LEFT JOIN document_presences AS document_presence ON document_presence.id = document.presence_id
+  LEFT JOIN document_types AS document_type ON document_type.id = document_presence.document_type_id
   LEFT JOIN bills AS bill ON bill.id = value.bill_id
   LEFT JOIN bill_types AS bill_type ON bill_type.id = bill.bill_type_id
   LEFT JOIN custom_entities AS entity ON entity.id = value.custom_entity_id
@@ -349,8 +392,8 @@ WITH search_values AS NOT MATERIALIZED (
   SELECT 'attachments',
          'attachment',
          attachment.id::text,
-         COALESCE(document.owner_profile_id, bill.owner_profile_id, attachment.custom_profile_id,
-                  custom_document.owner_profile_id, custom_bill.owner_profile_id, custom_entity.owner_profile_id)::text,
+         COALESCE(document_presence.profile_id, bill.owner_profile_id, attachment.custom_profile_id,
+                  custom_document_presence.profile_id, custom_bill.owner_profile_id, custom_entity.owner_profile_id)::text,
          CASE attachment.owner_kind
            WHEN 'DOCUMENT' THEN 'document'
            WHEN 'BILL' THEN 'bill'
@@ -359,8 +402,8 @@ WITH search_values AS NOT MATERIALIZED (
          COALESCE(attachment.document_id, attachment.bill_id, attachment.custom_profile_id,
                   attachment.custom_document_id, attachment.custom_bill_id, attachment.custom_entity_id)::text,
          COALESCE(
-           'profile:' || COALESCE(document.owner_profile_id, bill.owner_profile_id, attachment.custom_profile_id,
-                                  custom_document.owner_profile_id, custom_bill.owner_profile_id, custom_entity.owner_profile_id)::text,
+           'profile:' || COALESCE(document_presence.profile_id, bill.owner_profile_id, attachment.custom_profile_id,
+                                  custom_document_presence.profile_id, custom_bill.owner_profile_id, custom_entity.owner_profile_id)::text,
            'custom_entity:' || attachment.custom_entity_id::text
          ),
          attachment.original_filename,
@@ -372,8 +415,10 @@ WITH search_values AS NOT MATERIALIZED (
          attachment.updated_at
   FROM attachments AS attachment
   LEFT JOIN documents AS document ON document.id = attachment.document_id
+  LEFT JOIN document_presences AS document_presence ON document_presence.id = document.presence_id
   LEFT JOIN bills AS bill ON bill.id = attachment.bill_id
   LEFT JOIN documents AS custom_document ON custom_document.id = attachment.custom_document_id
+  LEFT JOIN document_presences AS custom_document_presence ON custom_document_presence.id = custom_document.presence_id
   LEFT JOIN bills AS custom_bill ON custom_bill.id = attachment.custom_bill_id
   LEFT JOIN custom_entities AS custom_entity ON custom_entity.id = attachment.custom_entity_id
   LEFT JOIN custom_field_definitions AS definition ON definition.id = attachment.field_definition_id

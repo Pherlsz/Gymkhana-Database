@@ -385,11 +385,11 @@ func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row
 		values := mutation.Profile
 		if action == ActionCreate {
 			_, err := tx.Exec(ctx, `INSERT INTO profiles (
-  id, full_name, social_name, cpf, email, mobile_phone, landline_phone,
+  id, full_name, social_name, email, mobile_phone, landline_phone,
   address_street, address_number, address_complement, address_neighborhood,
   address_city, address_state, address_postal_code, notes, created_at, updated_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$16)`,
-				databaseUUID(targetID), values.FullName, nullableString(values.SocialName), nullableString(values.CPF),
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$15)`,
+				databaseUUID(targetID), values.FullName, nullableString(values.SocialName),
 				nullableString(values.Email), nullableString(values.MobilePhone), nullableString(values.LandlinePhone),
 				nullableString(values.Address.Street), nullableString(values.Address.Number), nullableString(values.Address.Complement),
 				nullableString(values.Address.Neighborhood), nullableString(values.Address.City), nullableString(values.Address.State),
@@ -399,13 +399,13 @@ func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row
 			}
 		} else {
 			command, err := tx.Exec(ctx, `UPDATE profiles SET
-  full_name=$3, social_name=$4, cpf=$5, email=$6, mobile_phone=$7,
-  landline_phone=$8, address_street=$9, address_number=$10,
-  address_complement=$11, address_neighborhood=$12, address_city=$13,
-  address_state=$14, address_postal_code=$15, notes=$16,
-  version=version+1, updated_at=$17
+  full_name=$3, social_name=$4, email=$5, mobile_phone=$6,
+  landline_phone=$7, address_street=$8, address_number=$9,
+  address_complement=$10, address_neighborhood=$11, address_city=$12,
+  address_state=$13, address_postal_code=$14, notes=$15,
+  version=version+1, updated_at=$16
  WHERE id=$1 AND version=$2`, databaseUUID(targetID), row.TargetVersion, values.FullName,
-				nullableString(values.SocialName), nullableString(values.CPF), nullableString(values.Email),
+				nullableString(values.SocialName), nullableString(values.Email),
 				nullableString(values.MobilePhone), nullableString(values.LandlinePhone), nullableString(values.Address.Street),
 				nullableString(values.Address.Number), nullableString(values.Address.Complement), nullableString(values.Address.Neighborhood),
 				nullableString(values.Address.City), nullableString(values.Address.State), nullableString(values.Address.PostalCode),
@@ -416,6 +416,9 @@ func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row
 			if command.RowsAffected() != 1 {
 				return Identifier{}, ErrConflict
 			}
+		}
+		if err := syncImportedCPFPresence(ctx, tx, targetID, values.CPF, now); err != nil {
+			return Identifier{}, err
 		}
 		if err := applyCustomValueMutations(ctx, tx, imported.Module, targetID, mutation.CustomValues, now); err != nil {
 			return Identifier{}, err
@@ -437,12 +440,19 @@ func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row
 			return Identifier{}, ErrInvalidInput
 		}
 		values := mutation.Document
+		var identifier any
+		if values.Identifier != "" {
+			identifier = values.Identifier
+		}
+		idleCustody := importedIdleCustody(string(values.Medium), string(values.IdleCustody))
 		if action == ActionCreate {
+			presenceID, err := upsertImportedDocumentPresence(ctx, tx, Identifier(values.OwnerProfileID), Identifier(values.TypeID), identifier, now)
+			if err != nil {
+				return Identifier{}, err
+			}
 			command, err := tx.Exec(ctx, `INSERT INTO documents (
-  id, owner_profile_id, document_type_id, identifier_value, uniqueness_policy,
-  document_date, notes, record_state, created_at, updated_at
-) SELECT $1,$2,t.id,$4,t.uniqueness_policy,$5,$6,$7,$8,$8
-    FROM document_types t WHERE t.id=$3 AND t.active=true`, databaseUUID(targetID), databaseUUID(Identifier(values.OwnerProfileID)), databaseUUID(Identifier(values.TypeID)), values.Identifier, nullableDate(values.DocumentDate), nullableString(values.Notes), values.RecordState, now)
+  id, presence_id, document_date, notes, medium, idle_custody, valid_until, created_at, updated_at
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8)`, databaseUUID(targetID), databaseUUID(presenceID), nullableDate(values.DocumentDate), nullableString(values.Notes), values.Medium, idleCustody, nullableDate(values.ValidUntil), now)
 			if err != nil {
 				return Identifier{}, err
 			}
@@ -450,12 +460,14 @@ func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row
 				return Identifier{}, ErrConflict
 			}
 		} else {
-			command, err := tx.Exec(ctx, `UPDATE documents d SET
-  owner_profile_id=$3, document_type_id=t.id, identifier_value=$5,
-  uniqueness_policy=t.uniqueness_policy, document_date=$6, notes=$7,
-  record_state=$8, version=d.version+1, updated_at=$9
- FROM document_types t
- WHERE d.id=$1 AND d.version=$2 AND t.id=$4 AND t.active=true`, databaseUUID(targetID), row.TargetVersion, databaseUUID(Identifier(values.OwnerProfileID)), databaseUUID(Identifier(values.TypeID)), values.Identifier, nullableDate(values.DocumentDate), nullableString(values.Notes), values.RecordState, now)
+			presenceID, err := upsertImportedDocumentPresence(ctx, tx, Identifier(values.OwnerProfileID), Identifier(values.TypeID), identifier, now)
+			if err != nil {
+				return Identifier{}, err
+			}
+			command, err := tx.Exec(ctx, `UPDATE documents SET
+  presence_id=$3, document_date=$4, notes=$5, medium=$6, idle_custody=$7, valid_until=$8,
+  version=version+1, updated_at=$9
+ WHERE id=$1 AND version=$2`, databaseUUID(targetID), row.TargetVersion, databaseUUID(presenceID), nullableDate(values.DocumentDate), nullableString(values.Notes), values.Medium, idleCustody, nullableDate(values.ValidUntil), now)
 			if err != nil {
 				return Identifier{}, err
 			}
@@ -483,12 +495,13 @@ func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row
 			return Identifier{}, ErrInvalidInput
 		}
 		values := mutation.Bill
+		idleCustody := importedIdleCustody(string(values.Medium), string(values.IdleCustody))
 		if action == ActionCreate {
 			command, err := tx.Exec(ctx, `INSERT INTO bills (
   id, owner_profile_id, bill_type_id, printed_holder_name, printed_address,
-  reference_value, competence, amount, currency, notes, record_state, created_at, updated_at
-) SELECT $1,$2,t.id,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12
-    FROM bill_types t WHERE t.id=$3 AND t.active=true`, databaseUUID(targetID), databaseUUID(Identifier(values.OwnerProfileID)), databaseUUID(Identifier(values.TypeID)), nullableString(values.PrintedHolderName), nullableString(values.PrintedAddress), nullableString(values.Reference), nullableString(values.Competence), nullableDecimal(values.Amount), nullableString(values.Currency), nullableString(values.Notes), values.RecordState, now)
+  reference_value, competence, amount, currency, notes, medium, idle_custody, created_at, updated_at
+) SELECT $1,$2,t.id,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$13
+    FROM bill_types t WHERE t.id=$3 AND t.active=true`, databaseUUID(targetID), databaseUUID(Identifier(values.OwnerProfileID)), databaseUUID(Identifier(values.TypeID)), nullableString(values.PrintedHolderName), nullableString(values.PrintedAddress), nullableString(values.Reference), nullableString(values.Competence), nullableDecimal(values.Amount), nullableString(values.Currency), nullableString(values.Notes), values.Medium, idleCustody, now)
 			if err != nil {
 				return Identifier{}, err
 			}
@@ -499,9 +512,9 @@ func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row
 			command, err := tx.Exec(ctx, `UPDATE bills b SET
   owner_profile_id=$3, bill_type_id=t.id, printed_holder_name=$5,
   printed_address=$6, reference_value=$7, competence=$8, amount=$9,
-  currency=$10, notes=$11, record_state=$12, version=b.version+1, updated_at=$13
+  currency=$10, notes=$11, medium=$12, idle_custody=$13, version=b.version+1, updated_at=$14
  FROM bill_types t
- WHERE b.id=$1 AND b.version=$2 AND t.id=$4 AND t.active=true`, databaseUUID(targetID), row.TargetVersion, databaseUUID(Identifier(values.OwnerProfileID)), databaseUUID(Identifier(values.TypeID)), nullableString(values.PrintedHolderName), nullableString(values.PrintedAddress), nullableString(values.Reference), nullableString(values.Competence), nullableDecimal(values.Amount), nullableString(values.Currency), nullableString(values.Notes), values.RecordState, now)
+ WHERE b.id=$1 AND b.version=$2 AND t.id=$4 AND t.active=true`, databaseUUID(targetID), row.TargetVersion, databaseUUID(Identifier(values.OwnerProfileID)), databaseUUID(Identifier(values.TypeID)), nullableString(values.PrintedHolderName), nullableString(values.PrintedAddress), nullableString(values.Reference), nullableString(values.Competence), nullableDecimal(values.Amount), nullableString(values.Currency), nullableString(values.Notes), values.Medium, idleCustody, now)
 			if err != nil {
 				return Identifier{}, err
 			}
@@ -770,6 +783,73 @@ func nullableString(value string) any {
 		return nil
 	}
 	return value
+}
+
+func importedIdleCustody(medium, custody string) any {
+	if medium != "PHYSICAL" {
+		return nil
+	}
+	if custody == "" {
+		return "ORGANIZATION"
+	}
+	return custody
+}
+
+func syncImportedCPFPresence(ctx context.Context, tx pgx.Tx, profileID Identifier, cpf string, now time.Time) error {
+	if cpf == "" {
+		_, err := tx.Exec(ctx, `UPDATE document_presences AS presence
+SET claim = 'indication', identifier_value = NULL, version = presence.version + 1, updated_at = $2
+FROM document_types AS document_type
+WHERE document_type.id = presence.document_type_id
+  AND document_type.technical_key = 'cpf'
+  AND presence.profile_id = $1
+  AND presence.claim = 'informed_number'`, databaseUUID(profileID), now)
+		return err
+	}
+	presenceID, err := NewIdentifier()
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO document_presences (
+  id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value, created_at, updated_at
+)
+SELECT $1, $2, document_type.id, document_type.uniqueness_policy, 'informed_number', $3, $4, $4
+FROM document_types AS document_type
+WHERE document_type.technical_key = 'cpf'
+ON CONFLICT (profile_id, document_type_id) DO UPDATE
+SET claim = 'informed_number', identifier_value = EXCLUDED.identifier_value,
+  uniqueness_policy = EXCLUDED.uniqueness_policy, version = document_presences.version + 1, updated_at = EXCLUDED.updated_at`,
+		databaseUUID(presenceID), databaseUUID(profileID), cpf, now)
+	return err
+}
+
+func upsertImportedDocumentPresence(ctx context.Context, tx pgx.Tx, ownerID, typeID Identifier, identifier any, now time.Time) (Identifier, error) {
+	presenceID, err := NewIdentifier()
+	if err != nil {
+		return Identifier{}, err
+	}
+	claim := "indication"
+	if identifier != nil {
+		claim = "informed_number"
+	}
+	var returned pgtype.UUID
+	err = tx.QueryRow(ctx, `INSERT INTO document_presences (
+  id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value, created_at, updated_at
+)
+SELECT $1, $2, document_type.id, document_type.uniqueness_policy, $4, $5, $6, $6
+FROM document_types AS document_type
+WHERE document_type.id = $3 AND document_type.active = true
+ON CONFLICT (profile_id, document_type_id) DO UPDATE
+SET claim = EXCLUDED.claim, identifier_value = EXCLUDED.identifier_value,
+  uniqueness_policy = EXCLUDED.uniqueness_policy, version = document_presences.version + 1, updated_at = EXCLUDED.updated_at
+RETURNING id`, databaseUUID(presenceID), databaseUUID(ownerID), databaseUUID(typeID), claim, identifier, now).Scan(&returned)
+	if err != nil {
+		return Identifier{}, err
+	}
+	if !returned.Valid {
+		return Identifier{}, ErrConflict
+	}
+	return identifierFromUUID(returned), nil
 }
 
 func nullableDate(value string) any    { return nullableString(value) }

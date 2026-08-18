@@ -166,7 +166,7 @@ func taskTestSpec(catalogVersion string) TaskSpec {
 		},
 		Requirements: []Requirement{
 			{Key: "person_name", Role: "person", Binding: FieldBinding{Field: "profile.full_name"}, Operator: queryengine.OperatorStartsWith, Values: []string{"Ana"}},
-			{Key: "person_available_document", Role: "person", Binding: FieldBinding{Field: "document.record_state", RelationPath: []string{"profile.documents"}}, Operator: queryengine.OperatorEqual, Values: []string{"AVAILABLE"}},
+			{Key: "person_available_document", Role: "person", Binding: FieldBinding{Field: "document.medium", RelationPath: []string{"profile.documents"}}, Operator: queryengine.OperatorEqual, Values: []string{"PHYSICAL"}},
 			{Key: "document_binary", Role: "document", Binding: FieldBinding{Field: "document.identifier"}, Pattern: &PatternBinding{Grammar: queryengine.PatternBinaryDigits, Value: "01?", Anchored: true}},
 		},
 		Constraints: []Constraint{{
@@ -191,7 +191,7 @@ func taskTestCatalog() queryengine.Catalog {
 			{Key: "profile.full_name", Entity: "profiles", Kind: queryengine.ValueText, Projectable: true, Filterable: true, Sortable: true, Operators: []queryengine.Operator{queryengine.OperatorStartsWith}},
 			{Key: "document.identifier", Entity: "documents", Kind: queryengine.ValueIdentifier, Projectable: true, Filterable: true, Sortable: true, Operators: []queryengine.Operator{queryengine.OperatorEqual}},
 			{Key: "document.owner_profile_id", Entity: "documents", Kind: queryengine.ValueIdentifier, Projectable: true, Filterable: true, Sortable: true, Operators: []queryengine.Operator{queryengine.OperatorEqual}},
-			{Key: "document.record_state", Entity: "documents", Kind: queryengine.ValueEnum, Projectable: true, Filterable: true, Sortable: true, Operators: []queryengine.Operator{queryengine.OperatorEqual}},
+			{Key: "document.medium", Entity: "documents", Kind: queryengine.ValueEnum, Projectable: true, Filterable: true, Sortable: true, Operators: []queryengine.Operator{queryengine.OperatorEqual}},
 		},
 		Relations: []queryengine.RelationDefinition{{Key: "profile.documents", FromEntity: "profiles", ToEntity: "documents", Cardinality: queryengine.CardinalityMany}},
 		Advanced: &queryengine.AdvancedCatalog{FieldCapabilities: []queryengine.FieldCapability{

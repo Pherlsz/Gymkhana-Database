@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sessionState = vi.hoisted(() => ({ role: "ADMIN" }));
 
-vi.mock("./App", () => ({
+vi.mock("./session", () => ({
   useApplicationSession: () => ({ user: { role: sessionState.role } }),
 }));
 
@@ -99,7 +99,7 @@ describe("GoogleFormsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionState.role = "ADMIN";
-    window.history.replaceState({}, "", "/google-forms");
+    window.history.replaceState({}, "", "/forms");
     vi.mocked(listGoogleFormsSources).mockResolvedValue({
       sources: [source],
       total: 1,
@@ -161,15 +161,13 @@ describe("GoogleFormsPage", () => {
   });
 
   it("handles the OAuth return and starts a connection with safe URL state", async () => {
-    window.history.replaceState({}, "", "/google-forms?tab=history&google_forms=connected");
+    window.history.replaceState({}, "", "/forms?tab=history&google_forms=connected");
     vi.mocked(getGoogleFormsStatus).mockResolvedValue({ enabled: true, connected: false });
     vi.mocked(beginGoogleFormsOAuth).mockResolvedValue();
     renderPage();
     expect(await screen.findByText("Google Forms conectado")).toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "Conectar com Google" }));
-    await waitFor(() =>
-      expect(beginGoogleFormsOAuth).toHaveBeenCalledWith("/google-forms?tab=history"),
-    );
+    await waitFor(() => expect(beginGoogleFormsOAuth).toHaveBeenCalledWith("/forms?tab=history"));
   });
 
   it("adds an explicitly supplied form", async () => {
@@ -241,7 +239,7 @@ describe("GoogleFormsPage", () => {
   });
 
   it("keeps source/history URL state and links staged batches to Operations", async () => {
-    window.history.replaceState({}, "", `/google-forms?tab=history&source=${source.id}`);
+    window.history.replaceState({}, "", `/forms?tab=history&source=${source.id}`);
     vi.mocked(getGoogleFormsStatus).mockResolvedValue(connectedStatus());
     vi.mocked(listGoogleFormsSyncs).mockResolvedValue({
       runs: [
@@ -267,7 +265,7 @@ describe("GoogleFormsPage", () => {
     expect(await screen.findByText("Sincronizando")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Abrir importação" })).toHaveAttribute(
       "href",
-      "/operations?selected=40000000-0000-4000-8000-000000000001",
+      "/admin?selected=40000000-0000-4000-8000-000000000001",
     );
     expect(window.location.search).toContain("tab=history");
     fireEvent.click(screen.getByRole("tab", { name: "Fontes" }));

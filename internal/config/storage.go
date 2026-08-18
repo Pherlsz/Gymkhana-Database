@@ -34,7 +34,7 @@ type StorageConfig struct {
 }
 
 func LoadStorage() (StorageConfig, error) {
-	environment := Environment(strings.ToLower(valueOrDefault("APP_ENV", string(EnvironmentLocal))))
+	environment := parseEnvironment()
 	immutableRelease := environment == EnvironmentStaging || environment == EnvironmentProduction
 	if err := releaseinfo.Current().Validate(immutableRelease); err != nil {
 		return StorageConfig{}, fmt.Errorf("validate release identity: %w", err)

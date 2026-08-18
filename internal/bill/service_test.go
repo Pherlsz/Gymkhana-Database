@@ -38,7 +38,7 @@ func (store *fakeServiceStore) GetType(context.Context, Identifier) (TypeDefinit
 	}
 	if store.createdType.ID.IsZero() {
 		id, _ := NewIdentifier()
-		store.createdType = TypeDefinition{ID: id, Values: TypeValues{TechnicalKey: "rg", Label: "RG", Active: true, SupportsCurrentUse: true}, Version: 1}
+		store.createdType = TypeDefinition{ID: id, Values: TypeValues{TechnicalKey: "rg", Label: "RG", Active: true}, Version: 1}
 	}
 	return store.createdType, nil
 }
@@ -71,7 +71,7 @@ func (store *fakeServiceStore) Get(context.Context, Identifier) (Bill, error) {
 	if store.createdBill.ID.IsZero() {
 		id, _ := NewIdentifier()
 		definition, _ := store.GetType(context.Background(), Identifier{})
-		store.createdBill = Bill{ID: id, Type: definition, Status: StatusAvailable, Version: 1}
+		store.createdBill = Bill{ID: id, Type: definition, Values: Values{Medium: MediumPhysical}, Status: StatusAvailable, Version: 1}
 	}
 	return store.createdBill, nil
 }
@@ -144,12 +144,12 @@ func TestServiceNormalizesBillAndTypeLists(t *testing.T) {
 func TestServiceProtectsTypeAdministrationAndPermanentDelete(t *testing.T) {
 	store := &fakeServiceStore{}
 	service, _ := NewService(store, ServiceOptions{})
-	_, err := service.CreateType(context.Background(), billActor(auth.RoleExternal), TypeValues{TechnicalKey: "rg", Label: "RG", Active: true, SupportsCurrentUse: true}, "req-denied")
+	_, err := service.CreateType(context.Background(), billActor(auth.RoleExternal), TypeValues{TechnicalKey: "rg", Label: "RG", Active: true}, "req-denied")
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("member create type error = %v", err)
 	}
 	admin := billActor(auth.RoleAdmin)
-	created, err := service.CreateType(context.Background(), admin, TypeValues{TechnicalKey: "rg", Label: "RG", Active: true, SupportsCurrentUse: true}, "req-create")
+	created, err := service.CreateType(context.Background(), admin, TypeValues{TechnicalKey: "rg", Label: "RG", Active: true}, "req-create")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,6 +161,78 @@ func TestServiceProtectsTypeAdministrationAndPermanentDelete(t *testing.T) {
 	}
 	if len(store.audits) < 3 || store.audits[1].Outcome != auth.AuditOutcomeSuccess {
 		t.Fatalf("audits = %#v", store.audits)
+	}
+}
+
+type fakeOwnerResolver struct {
+	matches []profile.Profile
+	created profile.Profile
+}
+
+func (resolver *fakeOwnerResolver) ListByExactFullName(context.Context, string) ([]profile.Profile, error) {
+	return resolver.matches, nil
+}
+
+func (resolver *fakeOwnerResolver) Create(_ context.Context, id profile.Identifier, values profile.Values) (profile.Profile, error) {
+	resolver.created = profile.Profile{ID: id, Values: values, Version: 1}
+	return resolver.created, nil
+}
+
+func TestServiceCreatesProfileWhenOwnerNameHasNoMatch(t *testing.T) {
+	store := &fakeServiceStore{}
+	owners := &fakeOwnerResolver{}
+	service, err := NewService(store, ServiceOptions{Owners: owners})
+	if err != nil {
+		t.Fatal(err)
+	}
+	typeID, _ := NewIdentifier()
+	store.createdType = TypeDefinition{ID: typeID, Values: TypeValues{TechnicalKey: "energia", Label: "Energia", Active: true}, Version: 1}
+	created, err := service.Create(context.Background(), billActor(auth.RoleExternal), Values{
+		OwnerName: "Ana Nova", TypeID: typeID, Medium: MediumPhysical,
+	}, "req-owner-create")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if owners.created.Values.FullName != "Ana Nova" || created.Values.OwnerProfileID != owners.created.ID {
+		t.Fatalf("created owner = %#v, bill = %#v", owners.created, created)
+	}
+}
+
+func TestServiceLinksUniqueOwnerNameMatch(t *testing.T) {
+	store := &fakeServiceStore{}
+	ownerID, _ := profile.NewIdentifier()
+	owners := &fakeOwnerResolver{matches: []profile.Profile{{ID: ownerID, Values: profile.Values{FullName: "Ana da Silva"}}}}
+	service, _ := NewService(store, ServiceOptions{Owners: owners})
+	typeID, _ := NewIdentifier()
+	store.createdType = TypeDefinition{ID: typeID, Values: TypeValues{TechnicalKey: "energia", Label: "Energia", Active: true}, Version: 1}
+	created, err := service.Create(context.Background(), billActor(auth.RoleExternal), Values{
+		OwnerName: "Ana da Silva", TypeID: typeID, Medium: MediumPhysical,
+	}, "req-owner-link")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.Values.OwnerProfileID != ownerID {
+		t.Fatalf("linked owner = %#v", created.Values.OwnerProfileID)
+	}
+}
+
+func TestServiceRejectsAmbiguousOwnerName(t *testing.T) {
+	store := &fakeServiceStore{}
+	first, _ := profile.NewIdentifier()
+	second, _ := profile.NewIdentifier()
+	owners := &fakeOwnerResolver{matches: []profile.Profile{
+		{ID: first, Values: profile.Values{FullName: "Ana da Silva"}},
+		{ID: second, Values: profile.Values{FullName: "Ana da Silva"}},
+	}}
+	service, _ := NewService(store, ServiceOptions{Owners: owners})
+	typeID, _ := NewIdentifier()
+	store.createdType = TypeDefinition{ID: typeID, Values: TypeValues{TechnicalKey: "energia", Label: "Energia", Active: true}, Version: 1}
+	_, err := service.Create(context.Background(), billActor(auth.RoleExternal), Values{
+		OwnerName: "Ana da Silva", TypeID: typeID, Medium: MediumPhysical,
+	}, "req-owner-ambiguous")
+	var ambiguous *AmbiguousOwnerError
+	if !errors.As(err, &ambiguous) || len(ambiguous.Candidates) != 2 {
+		t.Fatalf("error = %v", err)
 	}
 }
 
@@ -179,5 +251,16 @@ func TestServiceAuditsAssignAndReturnCurrentUse(t *testing.T) {
 	}
 	if got := store.audits[len(store.audits)-1]; got.EventType != AuditEventUseReturned || got.Outcome != auth.AuditOutcomeSuccess || got.HolderProfileID == nil {
 		t.Fatalf("last audit = %#v", got)
+	}
+}
+
+func TestServiceRejectsCurrentUseOnDigital(t *testing.T) {
+	store := &fakeServiceStore{}
+	service, _ := NewService(store, ServiceOptions{})
+	holder, _ := profile.NewIdentifier()
+	billID, _ := NewIdentifier()
+	store.createdBill = Bill{ID: billID, Values: Values{Medium: MediumDigital}, Version: 1}
+	if _, err := service.AssignCurrentUse(context.Background(), billActor(auth.RoleExternal), billID, holder, "req-digital"); !errors.Is(err, ErrCurrentUseUnsupported) {
+		t.Fatalf("error = %v", err)
 	}
 }

@@ -85,7 +85,7 @@
   outline: none;
 }
 
-@media (max-width: 48rem) {
+@media (max-width: 768px) {
   .search-options {
     grid-template-columns: 1fr;
   }

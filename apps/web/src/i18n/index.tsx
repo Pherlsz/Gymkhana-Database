@@ -1,4 +1,4 @@
-import { createContext, useContext, type PropsWithChildren } from "react";
+import { createContext, useContext, useMemo, type PropsWithChildren } from "react";
 import ptBR from "antd/locale/pt_BR";
 import { ptBRV1 } from "./v1/pt-BR";
 
@@ -41,13 +41,15 @@ export function getAntdLocale(locale: AppLocale) {
 }
 
 export function I18nProvider({ locale, children }: PropsWithChildren<{ locale: AppLocale }>) {
-  return (
-    <I18nContext.Provider
-      value={{ version: I18N_CATALOG_VERSION, locale, messages: catalogs[locale] }}
-    >
-      {children}
-    </I18nContext.Provider>
+  const value = useMemo(
+    (): I18nContextValue => ({
+      version: I18N_CATALOG_VERSION,
+      locale,
+      messages: catalogs[locale],
+    }),
+    [locale],
   );
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n(): I18nContextValue {

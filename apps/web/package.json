@@ -9,12 +9,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false"
   },
   "dependencies": {
-    "@ant-design/icons": "^6.3.2",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-router": "^1.170.20",
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.14.9",
     "antd": "^6.5.0",
     "dayjs": "^1.11.21",
+    "lucide-react": "^1.31.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "valibot": "1.4.2"

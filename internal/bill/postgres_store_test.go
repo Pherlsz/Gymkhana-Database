@@ -37,6 +37,9 @@ func (q *fakeBillQueries) GetBillTypeByID(context.Context, pgtype.UUID) (dbgen.B
 func (q *fakeBillQueries) CountBillTypes(context.Context, dbgen.CountBillTypesParams) (int64, error) {
 	return 0, nil
 }
+func (q *fakeBillQueries) CountBillsByType(context.Context) ([]dbgen.CountBillsByTypeRow, error) {
+	return nil, nil
+}
 func (q *fakeBillQueries) ListBillTypes(context.Context, dbgen.ListBillTypesParams) ([]dbgen.BillType, error) {
 	return nil, nil
 }
@@ -85,9 +88,9 @@ func (q *fakeBillQueries) GetBillCurrentUse(context.Context, pgtype.UUID) (dbgen
 func TestPostgresStoreCreatesNormalizedBillType(t *testing.T) {
 	id, _ := NewIdentifier()
 	now := time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC)
-	queries := &fakeBillQueries{typeValue: databaseBillType(id, now, true)}
+	queries := &fakeBillQueries{typeValue: databaseBillType(id, now)}
 	store := &PostgresStore{queries: queries}
-	value, err := store.CreateType(context.Background(), id, TypeValues{TechnicalKey: "  ENERGY_BILL ", Label: "  Conta   de Energia ", Active: true, SupportsCurrentUse: true})
+	value, err := store.CreateType(context.Background(), id, TypeValues{TechnicalKey: "  ENERGY_BILL ", Label: "  Conta   de Energia ", Active: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,16 +99,12 @@ func TestPostgresStoreCreatesNormalizedBillType(t *testing.T) {
 	}
 }
 
-func TestPostgresStoreProtectsCurrentUseCapabilityAfterUse(t *testing.T) {
+func TestPostgresStoreProtectsTechnicalKeyAfterUse(t *testing.T) {
 	id, _ := NewIdentifier()
 	now := time.Now().UTC()
-	queries := &fakeBillQueries{typeValue: databaseBillType(id, now, true), hasBills: true}
+	queries := &fakeBillQueries{typeValue: databaseBillType(id, now), hasBills: true}
 	store := &PostgresStore{queries: queries}
-	changed := TypeValues{TechnicalKey: "energy_bill", Label: "Conta de Energia", Active: true, SupportsCurrentUse: false}
-	if _, err := store.UpdateType(context.Background(), id, 1, changed); !errors.Is(err, ErrTypeInUse) {
-		t.Fatalf("update type error = %v", err)
-	}
-	changed = billTypeValues(queries.typeValue)
+	changed := billTypeValues(queries.typeValue)
 	changed.TechnicalKey = "other_key"
 	if _, err := store.UpdateType(context.Background(), id, 1, changed); !errors.Is(err, ErrTechnicalKeyImmutable) {
 		t.Fatalf("technical key error = %v", err)
@@ -127,20 +126,26 @@ func TestPostgresStoreCreatesBillWithDecimalAndPrintedData(t *testing.T) {
 	competence := "2026-07"
 	currency := "BRL"
 	queries := &fakeBillQueries{
-		typeValue: databaseBillType(typeID, now, true),
+		typeValue: databaseBillType(typeID, now),
 		billValue: dbgen.Bill{ID: databaseUUID(billID), OwnerProfileID: profileUUID(ownerID), BillTypeID: databaseUUID(typeID),
 			PrintedHolderName: &holder, PrintedAddress: &address, ReferenceValue: &reference, Competence: &competence,
-			Amount: amount, Currency: &currency, RecordState: string(RecordCurrent), Version: 1,
+			Amount: amount, Currency: &currency, Medium: string(MediumPhysical), IdleCustody: optionalString(string(IdleCustodyOrganization)), Version: 1,
 			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true}, UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true}},
+		getBillValue: dbgen.GetBillByIDRow{ID: databaseUUID(billID), OwnerProfileID: profileUUID(ownerID), BillTypeID: databaseUUID(typeID),
+			PrintedHolderName: &holder, PrintedAddress: &address, ReferenceValue: &reference, Competence: &competence,
+			Amount: amount, Currency: &currency, Medium: string(MediumPhysical), IdleCustody: optionalString(string(IdleCustodyOrganization)), Version: 1,
+			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true}, UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			OwnerFullName: "Ana da Silva", TypeTechnicalKey: "energy_bill", TypeLabel: "Conta de Energia", TypeActive: true,
+			TypeVersion: 1, TypeCreatedAt: pgtype.Timestamptz{Time: now, Valid: true}, TypeUpdatedAt: pgtype.Timestamptz{Time: now, Valid: true}},
 	}
 	store := &PostgresStore{queries: queries}
 	value, err := store.Create(context.Background(), billID, Values{OwnerProfileID: ownerID, TypeID: typeID,
 		PrintedHolderName: "  Ana   da Silva ", PrintedAddress: " Rua   Original, 001 ", Reference: "  000A-99  ",
-		Competence: "2026-07", Amount: "000123.4", Currency: "brl"})
+		Competence: "2026-07", Amount: "000123.4", Currency: "brl", Medium: MediumPhysical})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if value.Values.Amount != "123.40" || value.Values.Reference != "000A-99" || value.Values.Currency != "BRL" {
+	if value.Values.Amount != "123.40" || value.Values.Reference != "000A-99" || value.Values.Currency != "BRL" || value.OwnerFullName != "Ana da Silva" {
 		t.Fatalf("value = %#v", value)
 	}
 	storedAmount, err := numericValue(queries.createdParams.Amount)
@@ -151,7 +156,7 @@ func TestPostgresStoreCreatesBillWithDecimalAndPrintedData(t *testing.T) {
 
 func TestPostgresStoreClassifiesOptimisticTypeWrites(t *testing.T) {
 	id, _ := NewIdentifier()
-	queries := &fakeBillQueries{typeValue: databaseBillType(id, time.Now(), true), updateTypeErr: pgx.ErrNoRows}
+	queries := &fakeBillQueries{typeValue: databaseBillType(id, time.Now()), updateTypeErr: pgx.ErrNoRows}
 	store := &PostgresStore{queries: queries}
 	if _, err := store.UpdateType(context.Background(), id, 1, billTypeValues(queries.typeValue)); !errors.Is(err, ErrTypeConflict) {
 		t.Fatalf("conflict error = %v", err)
@@ -162,15 +167,15 @@ func TestPostgresStoreClassifiesOptimisticTypeWrites(t *testing.T) {
 	}
 }
 
-func TestPostgresStoreAssignsOnlySupportedCurrentUse(t *testing.T) {
+func TestPostgresStoreAssignsOnlyPhysicalCurrentUse(t *testing.T) {
 	typeID, _ := NewIdentifier()
 	billID, _ := NewIdentifier()
 	ownerID, _ := profile.NewIdentifier()
 	holderID, _ := profile.NewIdentifier()
 	now := time.Now().UTC()
 	queries := &fakeBillQueries{
-		typeValue:       databaseBillType(typeID, now, true),
-		getBillValue:    databaseJoinedBill(billID, ownerID, typeID, now, true),
+		typeValue:       databaseBillType(typeID, now),
+		getBillValue:    databaseJoinedBill(billID, ownerID, typeID, now, MediumPhysical),
 		currentUseValue: dbgen.BillCurrentUse{BillID: databaseUUID(billID), HolderProfileID: profileUUID(holderID), AssignedAt: pgtype.Timestamptz{Time: now, Valid: true}},
 	}
 	store := &PostgresStore{queries: queries}
@@ -181,24 +186,33 @@ func TestPostgresStoreAssignsOnlySupportedCurrentUse(t *testing.T) {
 	if queries.assignedParams.BillID.Bytes != billID || value.HolderProfileID != holderID {
 		t.Fatalf("params = %#v, value = %#v", queries.assignedParams, value)
 	}
-	queries.getBillValue.TypeSupportsCurrentUse = false
+	queries.getBillValue.Medium = string(MediumDigital)
+	queries.getBillValue.IdleCustody = nil
 	if _, err := store.AssignCurrentUse(context.Background(), billID, holderID); !errors.Is(err, ErrCurrentUseUnsupported) {
 		t.Fatalf("unsupported error = %v", err)
 	}
 }
 
-func databaseBillType(id Identifier, now time.Time, supports bool) dbgen.BillType {
+func databaseBillType(id Identifier, now time.Time) dbgen.BillType {
 	return dbgen.BillType{ID: databaseUUID(id), TechnicalKey: "energy_bill", Label: "Conta de Energia", Active: true,
-		SupportsCurrentUse: supports, Version: 1, CreatedAt: pgtype.Timestamptz{Time: now, Valid: true}, UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true}}
+		Version: 1, CreatedAt: pgtype.Timestamptz{Time: now, Valid: true}, UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true}}
 }
 
 func billTypeValues(value dbgen.BillType) TypeValues {
-	return TypeValues{TechnicalKey: value.TechnicalKey, Label: value.Label, Active: value.Active, SupportsCurrentUse: value.SupportsCurrentUse}
+	return TypeValues{TechnicalKey: value.TechnicalKey, Label: value.Label, Active: value.Active}
 }
 
-func databaseJoinedBill(id Identifier, owner profile.Identifier, typeID Identifier, now time.Time, supports bool) dbgen.GetBillByIDRow {
+func databaseJoinedBill(id Identifier, owner profile.Identifier, typeID Identifier, now time.Time, medium Medium) dbgen.GetBillByIDRow {
 	return dbgen.GetBillByIDRow{ID: databaseUUID(id), OwnerProfileID: profileUUID(owner), BillTypeID: databaseUUID(typeID),
-		RecordState: string(RecordCurrent), Version: 1, CreatedAt: pgtype.Timestamptz{Time: now, Valid: true}, UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-		TypeTechnicalKey: "energy_bill", TypeLabel: "Conta de Energia", TypeActive: true, TypeSupportsCurrentUse: supports,
+		Medium: string(medium), IdleCustody: optionalIdleCustody(medium), Version: 1, CreatedAt: pgtype.Timestamptz{Time: now, Valid: true}, UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		TypeTechnicalKey: "energy_bill", TypeLabel: "Conta de Energia", TypeActive: true,
 		TypeVersion: 1, TypeCreatedAt: pgtype.Timestamptz{Time: now, Valid: true}, TypeUpdatedAt: pgtype.Timestamptz{Time: now, Valid: true}}
+}
+
+func optionalIdleCustody(medium Medium) *string {
+	if medium != MediumPhysical {
+		return nil
+	}
+	value := string(IdleCustodyOrganization)
+	return &value
 }

@@ -533,8 +533,22 @@ VALUES($1,$2,lower($3) || '@example.test','Matching Conflict','ADMIN',true)`, ma
 VALUES($1,$2,'Conflict document',true,'PER_PROFILE',false)`, matchingUUID(typeID), key+"_document"); err != nil {
 		t.Fatalf("insert conflict document type: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO documents(id,owner_profile_id,document_type_id,identifier_value,uniqueness_policy)
-VALUES($1,$3,$5,'SAME-ID','PER_PROFILE'),($2,$4,$5,'SAME-ID','PER_PROFILE')`,
+	if _, err := pool.Exec(ctx, `WITH first_presence AS (
+  INSERT INTO document_presences (id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value)
+  SELECT gen_random_uuid(), $3, document_type.id, document_type.uniqueness_policy, 'informed_number', 'SAME-ID'
+  FROM document_types AS document_type WHERE document_type.id = $5
+  RETURNING id
+), first_document AS (
+  INSERT INTO documents (id, presence_id, medium, idle_custody)
+  SELECT $1, first_presence.id, 'PHYSICAL', 'ORGANIZATION' FROM first_presence
+), second_presence AS (
+  INSERT INTO document_presences (id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value)
+  SELECT gen_random_uuid(), $4, document_type.id, document_type.uniqueness_policy, 'informed_number', 'SAME-ID'
+  FROM document_types AS document_type WHERE document_type.id = $5
+  RETURNING id
+)
+INSERT INTO documents (id, presence_id, medium, idle_custody)
+SELECT $2, second_presence.id, 'PHYSICAL', 'ORGANIZATION' FROM second_presence`,
 		matchingUUID(firstDocumentID), matchingUUID(secondDocumentID), matchingUUID(firstID), matchingUUID(secondID), matchingUUID(typeID)); err != nil {
 		t.Fatalf("insert conflicting documents: %v", err)
 	}
@@ -555,6 +569,7 @@ VALUES($1,$3,$4,'ONE_PER_PROFILE'),($2,$3,$5,'ONE_PER_PROFILE')`,
 		_, _ = pool.Exec(cleanup, `DELETE FROM matching_analyses WHERE actor_user_id=$1`, matchingAuthUUID(actorID))
 		_, _ = pool.Exec(cleanup, `DELETE FROM matching_cases WHERE left_profile_id IN ($1,$2) OR right_profile_id IN ($1,$2)`, matchingUUID(firstID), matchingUUID(secondID))
 		_, _ = pool.Exec(cleanup, `DELETE FROM documents WHERE id IN ($1,$2)`, matchingUUID(firstDocumentID), matchingUUID(secondDocumentID))
+		_, _ = pool.Exec(cleanup, `DELETE FROM document_presences WHERE profile_id IN ($1,$2)`, matchingUUID(firstID), matchingUUID(secondID))
 		_, _ = pool.Exec(cleanup, `DELETE FROM custom_entities WHERE id IN ($1,$2)`, matchingUUID(firstEntityID), matchingUUID(secondEntityID))
 		_, _ = pool.Exec(cleanup, `DELETE FROM custom_entity_types WHERE id=$1`, matchingUUID(entityTypeID))
 		_, _ = pool.Exec(cleanup, `DELETE FROM document_types WHERE id=$1`, matchingUUID(typeID))
@@ -706,12 +721,18 @@ func insertMatchingDependencies(t *testing.T, ctx context.Context, pool *pgxpool
 	}{
 		{`INSERT INTO document_types(id,technical_key,label,active,uniqueness_policy,date_required)
 VALUES($1,$2,'Matching document',true,'NONE',false)`, []any{matchingUUID(documentTypeID), key + "_document"}},
-		{`INSERT INTO documents(id,owner_profile_id,document_type_id,identifier_value,uniqueness_policy)
-VALUES($1,$2,$3,'MATCH-DOC','NONE')`, []any{matchingUUID(documentID), matchingUUID(sourceID), matchingUUID(documentTypeID)}},
+		{`WITH presence AS (
+  INSERT INTO document_presences (id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value)
+  SELECT gen_random_uuid(), $2, document_type.id, document_type.uniqueness_policy, 'informed_number', 'MATCH-DOC'
+  FROM document_types AS document_type WHERE document_type.id = $3
+  RETURNING id
+)
+INSERT INTO documents (id, presence_id, medium, idle_custody)
+SELECT $1, presence.id, 'PHYSICAL', 'ORGANIZATION' FROM presence`, []any{matchingUUID(documentID), matchingUUID(sourceID), matchingUUID(documentTypeID)}},
 		{`INSERT INTO document_current_uses(document_id,holder_profile_id) VALUES($1,$2)`, []any{matchingUUID(documentID), matchingUUID(sourceID)}},
-		{`INSERT INTO bill_types(id,technical_key,label,active,supports_current_use)
-VALUES($1,$2,'Matching bill',true,true)`, []any{matchingUUID(billTypeID), key + "_bill"}},
-		{`INSERT INTO bills(id,owner_profile_id,bill_type_id,reference_value) VALUES($1,$2,$3,'MATCH-BILL')`, []any{matchingUUID(billID), matchingUUID(sourceID), matchingUUID(billTypeID)}},
+		{`INSERT INTO bill_types(id,technical_key,label,active)
+VALUES($1,$2,'Matching bill',true)`, []any{matchingUUID(billTypeID), key + "_bill"}},
+		{`INSERT INTO bills(id,owner_profile_id,bill_type_id,reference_value,medium,idle_custody) VALUES($1,$2,$3,'MATCH-BILL','PHYSICAL','ORGANIZATION')`, []any{matchingUUID(billID), matchingUUID(sourceID), matchingUUID(billTypeID)}},
 		{`INSERT INTO bill_current_uses(bill_id,holder_profile_id) VALUES($1,$2)`, []any{matchingUUID(billID), matchingUUID(sourceID)}},
 		{`INSERT INTO custom_field_definitions(id,target_kind,technical_key,label,field_kind,required,active)
 VALUES($1,'PROFILE',$2,'Matching code','TEXT',false,true)`, []any{matchingUUID(customFieldID), key + "_code"}},
@@ -754,7 +775,7 @@ func assertMatchingMergeState(t *testing.T, ctx context.Context, pool *pgxpool.P
 		query string
 		id    Identifier
 	}{
-		{`SELECT owner_profile_id=$2 FROM documents WHERE id=$1`, documentID},
+		{`SELECT presence.profile_id=$2 FROM documents document JOIN document_presences presence ON presence.id = document.presence_id WHERE document.id=$1`, documentID},
 		{`SELECT holder_profile_id=$2 FROM document_current_uses WHERE document_id=$1`, documentID},
 		{`SELECT owner_profile_id=$2 FROM bills WHERE id=$1`, billID},
 		{`SELECT holder_profile_id=$2 FROM bill_current_uses WHERE bill_id=$1`, billID},
@@ -842,7 +863,8 @@ func cleanupMatchingIntegration(t *testing.T, pool *pgxpool.Pool, actorID auth.I
 	_, _ = pool.Exec(ctx, `DELETE FROM custom_entities WHERE owner_profile_id=ANY($1::uuid[])`, identifierStrings(profileIDs))
 	_, _ = pool.Exec(ctx, `DELETE FROM document_current_uses WHERE holder_profile_id=ANY($1::uuid[])`, identifierStrings(profileIDs))
 	_, _ = pool.Exec(ctx, `DELETE FROM bill_current_uses WHERE holder_profile_id=ANY($1::uuid[])`, identifierStrings(profileIDs))
-	_, _ = pool.Exec(ctx, `DELETE FROM documents WHERE owner_profile_id=ANY($1::uuid[])`, identifierStrings(profileIDs))
+	_, _ = pool.Exec(ctx, `DELETE FROM documents WHERE presence_id IN (SELECT id FROM document_presences WHERE profile_id=ANY($1::uuid[]))`, identifierStrings(profileIDs))
+	_, _ = pool.Exec(ctx, `DELETE FROM document_presences WHERE profile_id=ANY($1::uuid[])`, identifierStrings(profileIDs))
 	_, _ = pool.Exec(ctx, `DELETE FROM bills WHERE owner_profile_id=ANY($1::uuid[])`, identifierStrings(profileIDs))
 	_, _ = pool.Exec(ctx, `DELETE FROM custom_field_definitions WHERE id=ANY($1::uuid[])`, identifierStrings(definitionIDs[2:4]))
 	_, _ = pool.Exec(ctx, `DELETE FROM custom_entity_types WHERE id=$1`, matchingUUID(definitionIDs[4]))

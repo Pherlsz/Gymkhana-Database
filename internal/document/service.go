@@ -271,6 +271,10 @@ func (service *Service) AssignCurrentUse(ctx context.Context, actor auth.Session
 		service.recordAudit(ctx, actor.User.ID, &id, nil, nil, &holderProfileID, AuditEventUseAssigned, mutationOutcome(err), requestID)
 		return CurrentUse{}, err
 	}
+	if !documentValue.Values.Medium.SupportsCurrentUse() {
+		service.recordAudit(ctx, actor.User.ID, &id, nil, &documentValue.Type.ID, &holderProfileID, AuditEventUseAssigned, auth.AuditOutcomeDenied, requestID)
+		return CurrentUse{}, ErrCurrentUseUnsupported
+	}
 	currentUse, err := service.store.AssignCurrentUse(ctx, id, holderProfileID)
 	if err != nil {
 		service.recordAudit(ctx, actor.User.ID, &id, nil, &documentValue.Type.ID, &holderProfileID, AuditEventUseAssigned, mutationOutcome(err), requestID)
@@ -305,6 +309,20 @@ func (service *Service) ReturnCurrentUse(ctx context.Context, actor auth.Session
 	}
 	service.recordAudit(ctx, actor.User.ID, &id, nil, &documentValue.Type.ID, &currentUse.HolderProfileID, AuditEventUseReturned, auth.AuditOutcomeSuccess, requestID)
 	return nil
+}
+
+func (service *Service) UpsertPresence(ctx context.Context, actor auth.Session, owner profile.Identifier, typeID Identifier, claim Claim, identifier, requestID string) (Presence, error) {
+	if !actor.User.Active || !actor.User.Role.CanWriteDocuments() {
+		service.recordAudit(ctx, actor.User.ID, nil, nil, &typeID, nil, AuditEventUpdated, auth.AuditOutcomeDenied, requestID)
+		return Presence{}, ErrForbidden
+	}
+	presence, err := service.store.UpsertPresence(ctx, owner, typeID, claim, identifier)
+	if err != nil {
+		service.recordAudit(ctx, actor.User.ID, nil, nil, &typeID, nil, AuditEventUpdated, mutationOutcome(err), requestID)
+		return Presence{}, err
+	}
+	service.recordAudit(ctx, actor.User.ID, nil, nil, &presence.TypeID, nil, AuditEventUpdated, auth.AuditOutcomeSuccess, requestID)
+	return presence, nil
 }
 
 func normalizeTypeListOptions(options TypeListOptions) (TypeListOptions, error) {
@@ -352,7 +370,7 @@ func normalizeListOptions(options ListOptions) (ListOptions, error) {
 	if options.Filters.HolderProfileID != nil && *options.Filters.HolderProfileID == (profile.Identifier{}) {
 		return ListOptions{}, ErrInvalidListOptions
 	}
-	if options.Filters.RecordState != "" && !options.Filters.RecordState.Valid() {
+	if options.Filters.Medium != "" && !options.Filters.Medium.Valid() {
 		return ListOptions{}, ErrInvalidListOptions
 	}
 	if options.Filters.Status != "" && !options.Filters.Status.Valid() {
@@ -396,7 +414,8 @@ func mutationOutcome(err error) auth.AuditOutcome {
 		errors.Is(err, ErrTypeInactive) || errors.Is(err, ErrTypeInUse) ||
 		errors.Is(err, ErrTechnicalKeyImmutable) || errors.Is(err, ErrTechnicalKeyConflict) ||
 		errors.Is(err, ErrUniquenessConflict) || errors.Is(err, ErrReferenceNotFound) ||
-		errors.Is(err, ErrCurrentUseExists) || errors.Is(err, ErrCurrentUseNotFound) {
+		errors.Is(err, ErrCurrentUseExists) || errors.Is(err, ErrCurrentUseNotFound) ||
+		errors.Is(err, ErrCurrentUseUnsupported) || errors.Is(err, ErrDuplicateNotSupported) {
 		return auth.AuditOutcomeDenied
 	}
 	return auth.AuditOutcomeFailure

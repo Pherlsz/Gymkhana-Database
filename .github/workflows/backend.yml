@@ -149,7 +149,7 @@ jobs:
       DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_DB: gymkhana
           POSTGRES_USER: gymkhana
@@ -180,4 +180,4 @@ jobs:
         run: make migrate
 
       - name: Run PostgreSQL integration tests
-        run: go test -p=1 -tags=integration ./internal/attachment ./internal/search ./internal/operations ./internal/googleforms ./internal/queryengine ./internal/matching ./internal/aichat ./internal/ocr
+        run: go test -p=1 -tags=integration ./internal/attachment ./internal/search ./internal/operations ./internal/googleforms ./internal/queryengine ./internal/matching ./internal/aichat ./internal/ocr ./internal/profile

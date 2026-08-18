@@ -18,7 +18,7 @@ SERVICE_ACCOUNT = re.compile(r"^[a-z][a-z0-9-]{4,28}[a-z0-9]@[a-z][a-z0-9-]{4,28
 SECRET_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,254}$")
 SECRET_VERSION = re.compile(r"^[1-9][0-9]*$")
 VERSION = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$")
-GITHUB_LOGIN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
+EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 BUCKET = re.compile(r"^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$")
 
 
@@ -71,13 +71,13 @@ def validate_origin(name: str, value: str) -> str:
     return f"https://{parsed.netloc.lower()}"
 
 
-def validate_logins(name: str, value: str) -> str:
-    logins = [item.strip() for item in value.split(",")]
-    if not logins or any(not GITHUB_LOGIN.fullmatch(item) for item in logins):
-        raise SystemExit(f"{name} must be a comma-separated list of GitHub logins")
-    if len({item.lower() for item in logins}) != len(logins):
-        raise SystemExit(f"{name} contains duplicate GitHub logins")
-    return ",".join(logins)
+def validate_emails(name: str, value: str) -> str:
+    emails = [item.strip().lower() for item in value.split(",")]
+    if not emails or any(not EMAIL.fullmatch(item) for item in emails):
+        raise SystemExit(f"{name} must be a comma-separated list of email addresses")
+    if len(set(emails)) != len(emails):
+        raise SystemExit(f"{name} contains duplicate emails")
+    return ",".join(emails)
 
 
 def validate_positive_integer(name: str, value: str, maximum: int) -> str:
@@ -118,12 +118,12 @@ def main() -> None:
         raise SystemExit("RUNTIME_SERVICE_ACCOUNT must be a Google service-account email")
     application_url = validate_origin("APPLICATION_URL", required("APPLICATION_URL"))
     api_base_url = validate_origin("API_BASE_URL", required("API_BASE_URL"))
-    allowed_logins = validate_logins("ALLOWED_GITHUB_LOGINS", required("ALLOWED_GITHUB_LOGINS"))
-    superadmin = required("SUPERADMIN_GITHUB_LOGIN")
-    if not GITHUB_LOGIN.fullmatch(superadmin):
-        raise SystemExit("SUPERADMIN_GITHUB_LOGIN must be one GitHub login")
-    if superadmin.lower() not in {item.lower() for item in allowed_logins.split(",")}:
-        raise SystemExit("SUPERADMIN_GITHUB_LOGIN must be present in ALLOWED_GITHUB_LOGINS")
+    allowed_emails = validate_emails("ALLOWED_EMAILS", required("ALLOWED_EMAILS"))
+    superadmin = required("SUPERADMIN_EMAIL").strip().lower()
+    if not EMAIL.fullmatch(superadmin):
+        raise SystemExit("SUPERADMIN_EMAIL must be one email address")
+    if superadmin not in set(allowed_emails.split(",")):
+        raise SystemExit("SUPERADMIN_EMAIL must be present in ALLOWED_EMAILS")
     r2_endpoint = validate_origin("R2_ENDPOINT", required("R2_ENDPOINT"))
     r2_bucket = required("R2_BUCKET")
     if not BUCKET.fullmatch(r2_bucket):
@@ -135,15 +135,15 @@ def main() -> None:
         "RUNTIME_SERVICE_ACCOUNT": runtime_account,
         "APPLICATION_URL": application_url,
         "API_BASE_URL": api_base_url,
-        "ALLOWED_GITHUB_LOGINS": allowed_logins,
-        "SUPERADMIN_GITHUB_LOGIN": superadmin,
+        "ALLOWED_EMAILS": allowed_emails,
+        "SUPERADMIN_EMAIL": superadmin,
         "R2_ENDPOINT": r2_endpoint,
         "R2_BUCKET": r2_bucket,
     }
     for prefix in (
         "DATABASE_URL",
-        "GITHUB_OAUTH_CLIENT_ID",
-        "GITHUB_OAUTH_CLIENT_SECRET",
+        "GOOGLE_OAUTH_CLIENT_ID",
+        "GOOGLE_OAUTH_CLIENT_SECRET",
         "R2_ACCESS_KEY_ID",
         "R2_SECRET_ACCESS_KEY",
     ):

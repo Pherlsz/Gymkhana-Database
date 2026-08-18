@@ -23,8 +23,13 @@ func main() {
 
 	command := flag.String("command", "migrate", "tern command to execute")
 	migrations := flag.String("migrations", "database/migrations", "migration directory")
-	configPath := flag.String("config", "database/tern.conf", "tern configuration file")
 	flag.Parse()
+
+	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
+	if databaseURL == "" {
+		fmt.Fprintln(os.Stderr, "DATABASE_URL is required")
+		os.Exit(1)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -35,7 +40,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	args := []string{*command, "--migrations", *migrations, "--config", *configPath}
+	args := []string{*command, "--migrations", *migrations, "--conn-string", databaseURL}
 	cmd := exec.CommandContext(ctx, ternPath, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

@@ -93,7 +93,7 @@ describe("ProfileRecordsPanel", () => {
                 identifier_value: "00123",
                 document_date: "2026-07-01",
                 notes: "",
-                record_state: "CURRENT",
+                medium: "PHYSICAL",
                 status: "AVAILABLE",
                 type: {
                   id: "type-1",

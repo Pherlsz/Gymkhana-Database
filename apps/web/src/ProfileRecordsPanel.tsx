@@ -51,7 +51,7 @@ type Props = {
   onNotice: (message: string) => void;
 };
 
-const recordStates = ["CURRENT", "REPLACED", "EXPIRED", "ARCHIVED"] as const;
+const media = ["PHYSICAL", "DIGITAL"] as const;
 const documentColumn = createColumnHelper<DocumentRecord>();
 const billColumn = createColumnHelper<BillRecord>();
 
@@ -107,7 +107,9 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
         identifier_value: value.identifier_value,
         document_date: value.document_date,
         notes: value.notes,
-        record_state: value.record_state,
+        medium: value.medium,
+        ...physicalCustody(value.medium, value.idle_custody),
+        ...(value.valid_until ? { valid_until: value.valid_until } : {}),
         version: value.version,
         ...patch,
       });
@@ -162,11 +164,8 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
           <RecordCard
             key={value.id}
             title={`${value.type.label} · ${value.identifier_value}`}
-            lines={[
-              value.document_date || "Data não informada",
-              recordStateLabel(value.record_state),
-            ]}
-            status={value.status}
+            lines={[value.document_date || "Data não informada", mediumLabel(value.medium)]}
+            status={value.status ?? ""}
             onOpen={() => onSearch({ document_selected: value.id, document_mode: "view" })}
           />
         )}
@@ -263,7 +262,8 @@ function BillsSection({ profile, role, search, onSearch, onNotice }: Props) {
         amount: value.amount,
         currency: value.currency,
         notes: value.notes,
-        record_state: value.record_state,
+        medium: value.medium,
+        ...physicalCustody(value.medium, value.idle_custody),
         version: value.version,
         ...patch,
       });
@@ -315,8 +315,12 @@ function BillsSection({ profile, role, search, onSearch, onNotice }: Props) {
           <RecordCard
             key={value.id}
             title={`${value.type.label} · ${value.reference_value}`}
-            lines={[value.competence, `${value.currency} ${value.amount}`]}
-            status={value.status}
+            lines={[
+              mediumLabel(value.medium),
+              value.competence,
+              `${value.currency} ${value.amount}`,
+            ]}
+            status={value.status ?? ""}
             onOpen={() => onSearch({ bill_selected: value.id, bill_mode: "view" })}
           />
         )}
@@ -395,7 +399,7 @@ function DocumentFilters({
   onSearch: (patch: Partial<ProfileListSearch>) => void;
 }) {
   return (
-    <Card className="record-filters" style={{ padding: "1rem" }}>
+    <Card className="record-filters">
       <label>
         Identificador
         <input
@@ -436,20 +440,20 @@ function DocumentFilters({
         </select>
       </label>
       <label>
-        Estado
+        Meio
         <select
-          value={search.document_state}
+          value={search.document_medium}
           onChange={(event) =>
             onSearch({
-              document_state: event.target.value as ProfileListSearch["document_state"],
+              document_medium: event.target.value as ProfileListSearch["document_medium"],
               document_page: 1,
             })
           }
         >
           <option value="">Todos</option>
-          {recordStates.map((value) => (
+          {media.map((value) => (
             <option key={value} value={value}>
-              {recordStateLabel(value)}
+              {mediumLabel(value)}
             </option>
           ))}
         </select>
@@ -486,7 +490,7 @@ function BillFilters({
   onSearch: (patch: Partial<ProfileListSearch>) => void;
 }) {
   return (
-    <Card className="record-filters" style={{ padding: "1rem" }}>
+    <Card className="record-filters">
       <label>
         Referência
         <input
@@ -533,20 +537,20 @@ function BillFilters({
         </select>
       </label>
       <label>
-        Estado
+        Meio
         <select
-          value={search.bill_state}
+          value={search.bill_medium}
           onChange={(event) =>
             onSearch({
-              bill_state: event.target.value as ProfileListSearch["bill_state"],
+              bill_medium: event.target.value as ProfileListSearch["bill_medium"],
               bill_page: 1,
             })
           }
         >
           <option value="">Todos</option>
-          {recordStates.map((value) => (
+          {media.map((value) => (
             <option key={value} value={value}>
-              {recordStateLabel(value)}
+              {mediumLabel(value)}
             </option>
           ))}
         </select>
@@ -596,7 +600,8 @@ function DocumentEditor(props: {
           identifier_value: "",
           document_date: "",
           notes: "",
-          record_state: "CURRENT",
+          medium: "PHYSICAL",
+          idle_custody: "ORGANIZATION",
         },
   );
   const [confirmation, setConfirmation] = useState("");
@@ -619,7 +624,7 @@ function DocumentEditor(props: {
   };
   if (props.mode !== "create" && !props.record) return <MissingRecord onClose={props.onClose} />;
   return (
-    <Card className="record-editor" style={{ padding: "1rem" }}>
+    <Card className="record-editor">
       <EditorHeader
         title={
           props.record
@@ -667,24 +672,50 @@ function DocumentEditor(props: {
           />
         </label>
         <label>
-          Estado
+          Validade
+          <input
+            disabled={!editable}
+            type="date"
+            value={values.valid_until ?? ""}
+            onChange={(event) => setValues({ ...values, valid_until: event.target.value })}
+          />
+        </label>
+        <label>
+          Meio
           <select
             disabled={!editable}
-            value={values.record_state}
+            value={values.medium}
             onChange={(event) =>
-              setValues({
-                ...values,
-                record_state: event.target.value as DocumentValuesRequest["record_state"],
-              })
+              setValues(withMedium(values, event.target.value as DocumentValuesRequest["medium"]))
             }
           >
-            {recordStates.map((value) => (
+            {media.map((value) => (
               <option key={value} value={value}>
-                {recordStateLabel(value)}
+                {mediumLabel(value)}
               </option>
             ))}
           </select>
         </label>
+        {values.medium === "PHYSICAL" ? (
+          <label>
+            Guarda
+            <select
+              disabled={!editable}
+              value={values.idle_custody ?? "ORGANIZATION"}
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  idle_custody: event.target.value as NonNullable<
+                    DocumentValuesRequest["idle_custody"]
+                  >,
+                })
+              }
+            >
+              <option value="ORGANIZATION">Organização</option>
+              <option value="OWNER">Com o dono</option>
+            </select>
+          </label>
+        ) : null}
         <label className="record-form__wide">
           Observações
           <textarea
@@ -703,7 +734,7 @@ function DocumentEditor(props: {
         onEdit={props.onEdit}
         onDuplicate={props.onDuplicate}
       />
-      {props.record ? (
+      {props.record && props.record.medium === "PHYSICAL" ? (
         <CurrentUseControls
           kind="document"
           record={props.record}
@@ -751,7 +782,8 @@ function BillEditor(props: {
           amount: "",
           currency: "BRL",
           notes: "",
-          record_state: "CURRENT",
+          medium: "PHYSICAL",
+          idle_custody: "ORGANIZATION",
         },
   );
   const [confirmation, setConfirmation] = useState("");
@@ -763,7 +795,11 @@ function BillEditor(props: {
     setError(null);
     try {
       const saved = props.record
-        ? await updateBill(props.record.id, { ...values, version: props.record.version })
+        ? await updateBill(props.record.id, {
+            ...values,
+            owner_profile_id: values.owner_profile_id ?? props.record.owner_profile_id,
+            version: props.record.version,
+          })
         : await createBill(values);
       await props.onSaved(
         saved,
@@ -777,7 +813,7 @@ function BillEditor(props: {
   };
   if (props.mode !== "create" && !props.record) return <MissingRecord onClose={props.onClose} />;
   return (
-    <Card className="record-editor" style={{ padding: "1rem" }}>
+    <Card className="record-editor">
       <EditorHeader
         title={
           props.record
@@ -845,24 +881,41 @@ function BillEditor(props: {
           />
         </label>
         <label>
-          Estado
+          Meio
           <select
             disabled={!editable}
-            value={values.record_state}
+            value={values.medium}
             onChange={(event) =>
-              setValues({
-                ...values,
-                record_state: event.target.value as BillValuesRequest["record_state"],
-              })
+              setValues(withBillMedium(values, event.target.value as BillValuesRequest["medium"]))
             }
           >
-            {recordStates.map((value) => (
+            {media.map((value) => (
               <option key={value} value={value}>
-                {recordStateLabel(value)}
+                {mediumLabel(value)}
               </option>
             ))}
           </select>
         </label>
+        {values.medium === "PHYSICAL" ? (
+          <label>
+            Guarda
+            <select
+              disabled={!editable}
+              value={values.idle_custody ?? "ORGANIZATION"}
+              onChange={(event) =>
+                setValues({
+                  ...values,
+                  idle_custody: event.target.value as NonNullable<
+                    BillValuesRequest["idle_custody"]
+                  >,
+                })
+              }
+            >
+              <option value="ORGANIZATION">Organização</option>
+              <option value="OWNER">Com o dono</option>
+            </select>
+          </label>
+        ) : null}
         <label className="record-form__wide">
           Titular impresso
           <input
@@ -897,7 +950,7 @@ function BillEditor(props: {
         onEdit={props.onEdit}
         onDuplicate={props.onDuplicate}
       />
-      {props.record && props.record.type.supports_current_use ? (
+      {props.record && props.record.medium === "PHYSICAL" ? (
         <CurrentUseControls
           kind="bill"
           record={props.record}
@@ -951,7 +1004,7 @@ function CurrentUseControls(
     onError: (caught) => setError(errorMessage(caught)),
   });
   return (
-    <Card className="current-use" style={{ padding: "1rem" }}>
+    <Card className="current-use">
       <Flex vertical gap="0.75rem">
         <strong>Uso atual</strong>
         {error ? (
@@ -1171,7 +1224,6 @@ function BillTypesAdmin({
     technical_key: "",
     label: "",
     active: true,
-    supports_current_use: false,
   });
   const [confirmation, setConfirmation] = useState("");
   useEffect(() => {
@@ -1180,7 +1232,6 @@ function BillTypesAdmin({
         technical_key: selected.technical_key,
         label: selected.label,
         active: selected.active,
-        supports_current_use: selected.supports_current_use,
       });
   }, [selected]);
   const save = useMutation({
@@ -1191,7 +1242,7 @@ function BillTypesAdmin({
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["bill-types"] });
       setSelected(undefined);
-      setValues({ technical_key: "", label: "", active: true, supports_current_use: false });
+      setValues({ technical_key: "", label: "", active: true });
       onNotice("Tipo de conta/comprovante salvo.");
     },
   });
@@ -1213,10 +1264,7 @@ function BillTypesAdmin({
       list={query.data?.types.map((value) => (
         <button className="type-list-item" key={value.id} onClick={() => setSelected(value)}>
           <strong>{value.label}</strong>
-          <span>
-            {value.technical_key} ·{" "}
-            {value.supports_current_use ? "Permite uso atual" : "Sem uso atual"}
-          </span>
+          <span>{value.technical_key}</span>
         </button>
       ))}
       form={
@@ -1238,16 +1286,6 @@ function BillTypesAdmin({
           </label>
           <label className="record-checkbox">
             <input
-              checked={values.supports_current_use}
-              type="checkbox"
-              onChange={(event) =>
-                setValues({ ...values, supports_current_use: event.target.checked })
-              }
-            />
-            Permite uso atual
-          </label>
-          <label className="record-checkbox">
-            <input
               checked={values.active}
               type="checkbox"
               onChange={(event) => setValues({ ...values, active: event.target.checked })}
@@ -1265,7 +1303,6 @@ function BillTypesAdmin({
                   technical_key: "",
                   label: "",
                   active: true,
-                  supports_current_use: false,
                 });
               }}
             >
@@ -1312,12 +1349,8 @@ function TypesAdminShell(props: {
         <RecordsError title="Não foi possível alterar tipos" error={props.error} />
       ) : null}
       <div className="types-admin">
-        <Card className="type-list" style={{ padding: "1rem" }}>
-          {props.list}
-        </Card>
-        <Card className="type-form" style={{ padding: "1rem" }}>
-          {props.form}
-        </Card>
+        <Card className="type-list">{props.list}</Card>
+        <Card className="type-form">{props.form}</Card>
       </div>
     </Flex>
   );
@@ -1385,7 +1418,7 @@ function DeleteBox(props: {
   onDelete: () => void;
 }) {
   return (
-    <Card className="record-delete" style={{ padding: "1rem" }}>
+    <Card className="record-delete">
       <Flex vertical gap="0.75rem">
         <strong>Exclusão permanente</strong>
         <span>Digite Confirmar para excluir este {props.label}.</span>
@@ -1422,7 +1455,8 @@ function MissingRecord({ onClose }: { onClose: () => void }) {
 function RecordsError({ title, error }: { title: string; error: unknown }) {
   return <Alert title={title} type="error" description={<>{errorMessage(error)}</>} />;
 }
-function RecordStatus({ value }: { value: "AVAILABLE" | "IN_USE" }) {
+function RecordStatus({ value }: { value?: "AVAILABLE" | "IN_USE" | "" }) {
+  if (value !== "AVAILABLE" && value !== "IN_USE") return null;
   return (
     <Tag color={value === "IN_USE" ? "info" : "success"}>
       {value === "IN_USE" ? "Em uso" : "Disponível"}
@@ -1460,13 +1494,28 @@ function createDocumentColumns(
         />
       ),
     }),
-    documentColumn.accessor("record_state", {
-      header: "Estado",
-      cell: ({ getValue }) => recordStateLabel(getValue()),
+    documentColumn.accessor("medium", {
+      header: "Meio",
+      cell: ({ getValue }) => mediumLabel(getValue()),
+    }),
+    documentColumn.accessor("idle_custody", {
+      header: "Guarda",
+      cell: ({ getValue }) => custodyLabel(getValue() ?? ""),
+    }),
+    documentColumn.accessor("valid_until", {
+      header: "Validade",
+      cell: ({ row }) => (
+        <RecordInlineInput
+          ariaLabel={`Validade de ${row.original.type.label}`}
+          type="date"
+          value={row.original.valid_until ?? ""}
+          onSave={(next) => onSave(row.original, { valid_until: next })}
+        />
+      ),
     }),
     documentColumn.accessor("status", {
       header: "Status",
-      cell: ({ getValue }) => <RecordStatus value={getValue()} />,
+      cell: ({ getValue }) => <RecordStatus value={getValue() ?? ""} />,
     }),
     documentColumn.display({
       id: "actions",
@@ -1513,9 +1562,17 @@ function createBillColumns(
         />
       ),
     }),
+    billColumn.accessor("medium", {
+      header: "Meio",
+      cell: ({ getValue }) => mediumLabel(getValue()),
+    }),
+    billColumn.accessor("idle_custody", {
+      header: "Guarda",
+      cell: ({ getValue }) => custodyLabel(getValue() ?? ""),
+    }),
     billColumn.accessor("status", {
       header: "Status",
-      cell: ({ getValue }) => <RecordStatus value={getValue()} />,
+      cell: ({ getValue }) => <RecordStatus value={getValue() ?? ""} />,
     }),
     billColumn.display({
       id: "actions",
@@ -1528,17 +1585,17 @@ function createBillColumns(
 function RecordCard(props: {
   title: string;
   lines: string[];
-  status: "AVAILABLE" | "IN_USE";
+  status?: "AVAILABLE" | "IN_USE" | "";
   onOpen: () => void;
 }) {
   return (
-    <Card className="record-card" style={{ padding: "1rem" }}>
+    <Card className="record-card">
       <Flex vertical gap="0.5rem">
         <strong>{props.title}</strong>
         {props.lines.map((line) => (
           <span key={line}>{line}</span>
         ))}
-        <RecordStatus value={props.status} />
+        <RecordStatus value={props.status ?? ""} />
         <Button onClick={props.onOpen}>Abrir</Button>
       </Flex>
     </Card>
@@ -1576,7 +1633,9 @@ function documentValues(value: DocumentRecord): DocumentValuesRequest {
     identifier_value: value.identifier_value,
     document_date: value.document_date,
     notes: value.notes,
-    record_state: value.record_state,
+    medium: value.medium,
+    ...physicalCustody(value.medium, value.idle_custody),
+    ...(value.valid_until ? { valid_until: value.valid_until } : {}),
   };
 }
 function billValues(value: BillRecord): BillValuesRequest {
@@ -1590,7 +1649,8 @@ function billValues(value: BillRecord): BillValuesRequest {
     amount: value.amount,
     currency: value.currency,
     notes: value.notes,
-    record_state: value.record_state,
+    medium: value.medium,
+    ...physicalCustody(value.medium, value.idle_custody),
   };
 }
 function documentSearch(search: ProfileListSearch) {
@@ -1601,7 +1661,7 @@ function documentSearch(search: ProfileListSearch) {
     document_order: search.document_order,
     document_identifier: search.document_identifier,
     document_status: search.document_status,
-    document_state: search.document_state,
+    document_medium: search.document_medium,
     document_type: search.document_type,
   };
 }
@@ -1614,7 +1674,7 @@ function billSearch(search: ProfileListSearch) {
     bill_reference: search.bill_reference,
     bill_competence: search.bill_competence,
     bill_status: search.bill_status,
-    bill_state: search.bill_state,
+    bill_medium: search.bill_medium,
     bill_type: search.bill_type,
   };
 }
@@ -1631,14 +1691,42 @@ function profileAddress(value: Profile) {
     .filter(Boolean)
     .join(", ");
 }
-function recordStateLabel(value: string) {
-  return value === "CURRENT"
-    ? "Atual"
-    : value === "REPLACED"
-      ? "Substituído"
-      : value === "EXPIRED"
-        ? "Vencido"
-        : "Arquivado";
+function mediumLabel(value: string) {
+  return value === "DIGITAL" ? "Digital" : "Físico";
+}
+function custodyLabel(value: string) {
+  if (value === "OWNER") return "Com o dono";
+  if (value === "ORGANIZATION") return "Organização";
+  return "";
+}
+function physicalCustody(
+  medium: "PHYSICAL" | "DIGITAL",
+  custody?: "ORGANIZATION" | "OWNER",
+): { idle_custody?: "ORGANIZATION" | "OWNER" } {
+  if (medium !== "PHYSICAL") return {};
+  return { idle_custody: custody === "OWNER" ? "OWNER" : "ORGANIZATION" };
+}
+function withMedium(
+  values: DocumentValuesRequest,
+  medium: DocumentValuesRequest["medium"],
+): DocumentValuesRequest {
+  if (medium === "DIGITAL") {
+    const next = { ...values, medium };
+    delete next.idle_custody;
+    return next;
+  }
+  return { ...values, medium, idle_custody: values.idle_custody ?? "ORGANIZATION" };
+}
+function withBillMedium(
+  values: BillValuesRequest,
+  medium: BillValuesRequest["medium"],
+): BillValuesRequest {
+  if (medium === "DIGITAL") {
+    const next = { ...values, medium };
+    delete next.idle_custody;
+    return next;
+  }
+  return { ...values, medium, idle_custody: values.idle_custody ?? "ORGANIZATION" };
 }
 function conflictMessage(error: unknown) {
   return error instanceof APIRequestError && error.status === 409

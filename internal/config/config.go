@@ -86,7 +86,7 @@ type Config struct {
 }
 
 func Load() (Config, error) {
-	environment := Environment(strings.ToLower(valueOrDefault("APP_ENV", string(EnvironmentLocal))))
+	environment := parseEnvironment()
 	shutdownTimeout, err := time.ParseDuration(valueOrDefault("SHUTDOWN_TIMEOUT", "10s"))
 	if err != nil {
 		return Config{}, fmt.Errorf("parse SHUTDOWN_TIMEOUT: %w", err)
@@ -424,6 +424,17 @@ func validHTTPURL(value *url.URL) bool {
 		return false
 	}
 	return value.Scheme == "http" || value.Scheme == "https"
+}
+
+func parseEnvironment() Environment {
+	raw := strings.ToLower(valueOrDefault("APP_ENV", string(EnvironmentLocal)))
+	switch raw {
+	case "development", "dev":
+		// lokeys --env dev injects APP_ENV=development.
+		return EnvironmentLocal
+	default:
+		return Environment(raw)
+	}
 }
 
 func valueOrDefault(key, fallback string) string {

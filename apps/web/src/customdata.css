@@ -14,8 +14,8 @@
   white-space: nowrap;
 }
 .custom-data-tabs__active {
-  border-color: var(--gym-color-accent) !important;
-  background: var(--gym-color-surface-raised) !important;
+  border-color: var(--md-primary-text);
+  background: var(--md-state-selected);
   font-weight: 700;
 }
 .custom-section-title h2,
@@ -96,7 +96,7 @@
   align-items: center;
   gap: var(--gym-space-2);
 }
-@media (max-width: 48rem) {
+@media (max-width: 768px) {
   .custom-admin-grid,
   .custom-values__grid {
     grid-template-columns: 1fr;

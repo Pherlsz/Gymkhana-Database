@@ -109,7 +109,12 @@ func (store *PostgresStore) CanonicalValues(ctx context.Context, module Module, 
 	var err error
 	switch module {
 	case ModuleProfiles:
-		values, err = scanCanonicalValues(store.pool.QueryRow(ctx, `SELECT version::text, full_name, COALESCE(social_name,''), COALESCE(cpf,''),
+		values, err = scanCanonicalValues(store.pool.QueryRow(ctx, `SELECT version::text, full_name, COALESCE(social_name,''), COALESCE((
+         SELECT presence.identifier_value FROM document_presences presence
+         JOIN document_types document_type ON document_type.id = presence.document_type_id
+         WHERE presence.profile_id = profiles.id AND document_type.technical_key = 'cpf' AND presence.claim = 'informed_number'
+         LIMIT 1
+       ),''),
        COALESCE(email,''), COALESCE(mobile_phone,''), COALESCE(landline_phone,''),
        COALESCE(address_street,''), COALESCE(address_number,''), COALESCE(address_complement,''),
        COALESCE(address_neighborhood,''), COALESCE(address_city,''), COALESCE(address_state,''),
@@ -119,18 +124,20 @@ func (store *PostgresStore) CanonicalValues(ctx context.Context, module Module, 
 			"address_street", "address_number", "address_complement", "address_neighborhood",
 			"address_city", "address_state", "address_postal_code", "notes")
 	case ModuleDocuments:
-		values, err = scanCanonicalValues(store.pool.QueryRow(ctx, `SELECT version::text, owner_profile_id::text, document_type_id::text, identifier_value,
-       COALESCE(document_date::text,''), COALESCE(notes,''), record_state
-  FROM documents WHERE id=$1`, databaseUUID(id)),
-			"version", "owner_profile_id", "document_type_id", "identifier_value", "document_date", "notes", "record_state")
+		values, err = scanCanonicalValues(store.pool.QueryRow(ctx, `SELECT document.version::text, presence.profile_id::text, presence.document_type_id::text, COALESCE(presence.identifier_value,''),
+       COALESCE(document.document_date::text,''), COALESCE(document.notes,''), document.medium
+  FROM documents document
+  JOIN document_presences presence ON presence.id = document.presence_id
+ WHERE document.id=$1`, databaseUUID(id)),
+			"version", "owner_profile_id", "document_type_id", "identifier_value", "document_date", "notes", "medium")
 	case ModuleBills:
 		values, err = scanCanonicalValues(store.pool.QueryRow(ctx, `SELECT version::text, owner_profile_id::text, bill_type_id::text,
        COALESCE(printed_holder_name,''), COALESCE(printed_address,''), COALESCE(reference_value,''),
        COALESCE(competence,''), COALESCE(amount::text,''), COALESCE(currency,''),
-       COALESCE(notes,''), record_state
+       COALESCE(notes,''), medium
   FROM bills WHERE id=$1`, databaseUUID(id)),
 			"version", "owner_profile_id", "bill_type_id", "printed_holder_name", "printed_address", "reference_value",
-			"competence", "amount", "currency", "notes", "record_state")
+			"competence", "amount", "currency", "notes", "medium")
 	default:
 		return nil, ErrInvalidInput
 	}

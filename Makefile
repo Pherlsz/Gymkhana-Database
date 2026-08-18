@@ -11,7 +11,7 @@ STATICCHECK_VERSION := v0.7.0
 GOVULNCHECK_VERSION := v1.6.0
 OSV_SCANNER_VERSION := v2.4.0
 
-.PHONY: setup dev dev-api dev-web build build-backend build-frontend generate generate-go generate-ts generate-sql format format-check lint lint-backend lint-frontend test test-backend test-frontend test-race vuln scan check check-backend check-frontend check-config services-up services-down migrate migrate-down-one migrate-status reset-db clean
+.PHONY: setup dev dev-api dev-web build build-backend build-frontend generate generate-go generate-ts generate-sql format format-check lint lint-backend lint-frontend test test-backend test-frontend test-race vuln scan check check-backend check-frontend check-config services-up services-down require-database-url migrate migrate-down-one migrate-status reset-db clean
 
 setup:
 	@corepack enable
@@ -24,24 +24,32 @@ services-up:
 services-down:
 	@docker compose down
 
-migrate:
-	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --migrations database/migrations --config database/tern.conf
+require-database-url:
+	@if [ -z "$$DATABASE_URL" ]; then \
+		echo "DATABASE_URL is required. Inject Neon with: lokeys run -p gymkhana --env dev -- make migrate"; \
+		exit 1; \
+	fi
+
+migrate: require-database-url
+	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --migrations database/migrations --conn-string "$$DATABASE_URL"
 	@$(GO) run ./cmd/river-migrate -action migrate
 
-migrate-down-one:
-	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --destination -1 --migrations database/migrations --config database/tern.conf
+migrate-down-one: require-database-url
+	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --destination -1 --migrations database/migrations --conn-string "$$DATABASE_URL"
 
-migrate-status:
-	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) status --migrations database/migrations --config database/tern.conf
+migrate-status: require-database-url
+	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) status --migrations database/migrations --conn-string "$$DATABASE_URL"
 	@$(GO) run ./cmd/river-migrate -action validate
 
 reset-db:
-	@docker compose down -v
-	@docker compose up -d db
-	@$(MAKE) migrate
+	@echo "reset-db is retired: the rebuild uses Neon, not Compose PostgreSQL."
+	@echo "Do not drop Gymkhana-Database-Dev-18 from Make."
+	@exit 1
 
 dev:
-	@echo "Run 'make dev-api' and 'make dev-web' in separate terminals."
+	@echo "Inject secrets with lokeys, then run API and web in separate terminals:"
+	@echo "  lokeys run -p gymkhana --env dev -- make dev-api"
+	@echo "  lokeys run -p gymkhana --env dev -- make dev-web"
 
 dev-api:
 	@$(GO) run ./cmd/api
@@ -71,7 +79,6 @@ generate-go:
 	@mkdir -p api/generated/matching
 	@mkdir -p api/generated/chat
 	@mkdir -p api/generated/ocr
-	@mkdir -p api/generated/tasks
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-codegen.yaml api/openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-attachments-codegen.yaml api/attachments.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-search-codegen.yaml api/search.openapi.yaml
@@ -81,10 +88,6 @@ generate-go:
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-matching-codegen.yaml api/matching.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-chat-codegen.yaml api/chat.openapi.yaml
 	@$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-ocr-codegen.yaml api/ocr.openapi.yaml
-	@tmp="$$(mktemp --suffix=.tasks.openapi.yaml)"; \
-	sed 's/^openapi: 3\.1\.0/openapi: 3.0.3/' api/tasks.openapi.yaml > "$$tmp"; \
-	$(GO) run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config api/oapi-tasks-codegen.yaml "$$tmp"; \
-	status=$$?; rm -f "$$tmp"; exit $$status
 
 generate-ts:
 	@$(PNPM) generate:openapi:ts

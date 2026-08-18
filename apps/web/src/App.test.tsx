@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
@@ -46,31 +46,160 @@ function profilePage() {
   };
 }
 
+function emptyResourcePage() {
+  return {
+    documents: [],
+    bills: [],
+    page: { total: 0, limit: 1, offset: 0, sort_field: "updated_at", sort_order: "desc" },
+  };
+}
+
+function documentType(id: string, label: string, technicalKey: string, count = 0) {
+  return {
+    id,
+    technical_key: technicalKey,
+    label,
+    active: true,
+    uniqueness_policy: "PER_PROFILE",
+    validation_regex: "",
+    date_required: false,
+    count,
+    version: 1,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+}
+
+function billType(id: string, label: string, technicalKey: string) {
+  return {
+    id,
+    technical_key: technicalKey,
+    label,
+    active: true,
+    count: 0,
+    version: 1,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+}
+
+function homeOverviewResponse(url: string, options?: { rgCount?: number }): Response | undefined {
+  if (url.includes("/api/v1/profiles?")) {
+    return jsonResponse(profilePage());
+  }
+  if (url.includes("/api/v1/document-types")) {
+    return jsonResponse({
+      types: [documentType("type-rg", "RG", "rg", options?.rgCount ?? 0)],
+      page: { total: 1, limit: 1000, offset: 0 },
+    });
+  }
+  if (url.includes("/api/v1/bill-types")) {
+    return jsonResponse({
+      types: [billType("type-energy", "Energia", "energia")],
+      page: { total: 1, limit: 1000, offset: 0 },
+    });
+  }
+  if (url.includes("/api/v1/documents?")) {
+    return jsonResponse(emptyResourcePage());
+  }
+  if (url.includes("/api/v1/bills?")) {
+    return jsonResponse(emptyResourcePage());
+  }
+  if (url.includes("/api/v1/custom-fields?")) {
+    return jsonResponse({ fields: [], page: { total: 0, limit: 1000, offset: 0 } });
+  }
+  if (url.includes("/api/v1/custom-entity-types")) {
+    return jsonResponse({ types: [], page: { total: 0, limit: 1000, offset: 0 } });
+  }
+  if (url.includes("/api/v1/custom-entities?")) {
+    return jsonResponse({ entities: [], page: { total: 0, limit: 1, offset: 0 } });
+  }
+  return undefined;
+}
+
 describe("App", () => {
   beforeEach(() => window.history.replaceState(null, "", "/"));
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    window.localStorage.removeItem("gymkhana-nav-collapsed");
+    window.localStorage.removeItem("gymkhana-theme");
+    document.documentElement.classList.remove("dark");
   });
 
-  it("shows the authenticated application shell and signs out", async () => {
-    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+  it("shows the authenticated dashboard shell", async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
-      if (url.endsWith("/api/auth/logout") && init?.method === "POST")
-        return Promise.resolve(new Response(null, { status: 204 }));
       if (url.endsWith("/api/auth/session"))
         return Promise.resolve(jsonResponse(authenticatedSession()));
+      const overview = homeOverviewResponse(url);
+      if (overview) return Promise.resolve(overview);
       return Promise.resolve(jsonResponse({ status: "ok" }));
     });
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
-    expect(await screen.findByText("Member Name")).toBeInTheDocument();
-    expect(screen.getByText("@member · Membro")).toBeInTheDocument();
-    expect(screen.getByText("Sessão ativa")).toBeInTheDocument();
-    expect(screen.getByText("v0.2.2")).toBeInTheDocument();
-    expect(screen.getByText("Ant Design")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Sair" }));
-    expect(await screen.findByRole("button", { name: /Entrar com Google/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Bem-vindo de volta, Member Name" }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Nenhum documento em uso")).toBeInTheDocument();
+    expect(screen.getByText("Tabelas · em posse")).toBeInTheDocument();
+    expect(screen.queryByText("ver todas")).not.toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /Abrir pessoas/ })).toBeInTheDocument();
+    expect(screen.queryByText("Dados pessoais")).not.toBeInTheDocument();
+    expect(screen.getByText("Documentos civis")).toBeInTheDocument();
+    expect(screen.getByText("Trabalho e profissional")).toBeInTheDocument();
+    expect(screen.queryByText("Identidade")).not.toBeInTheDocument();
+    expect(screen.queryByText("CREA / OAB")).not.toBeInTheDocument();
+    expect(screen.getByText("CTPS")).toBeInTheDocument();
+    expect(screen.getByText("Conta de luz")).toBeInTheDocument();
+    expect(screen.getByText("Conta de água")).toBeInTheDocument();
+    expect(screen.getByText("Internet")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Documentos" })).toBeInTheDocument();
+    expect((await screen.findAllByText("em posse")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("cadastros")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("RG").length).toBeGreaterThan(0);
+    expect(screen.queryByText("56.401")).not.toBeInTheDocument();
+    expect(screen.queryByText("Nenhum registro")).not.toBeInTheDocument();
+    expect(screen.queryByText("Nova tabela")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /Início/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: /Pessoas/ }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /Tabelas/ }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: "Consultar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Tarefas" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "OCR" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Operações" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Duplicidades" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Chat IA" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Administração" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Chat IA" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Criar formulário/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir menu da conta" })).toBeInTheDocument();
+    expect(screen.getByText("Member Name")).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Sair" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menu da conta" }));
+    expect(await screen.findByText("Configurações")).toBeInTheDocument();
+    expect(screen.getByText("Aparência")).toBeInTheDocument();
+    expect(screen.getByText("Sair")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Recolher menu" })).toBeInTheDocument();
+    expect(screen.getByText("Gymkhana Database")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Novo cadastro/ })).toBeInTheDocument();
+    expect(screen.getByText("Documentos em uso")).toBeInTheDocument();
+  });
+
+  it("shows exemplar counts on Home when types have physical or digital stock", async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/auth/session"))
+        return Promise.resolve(jsonResponse(authenticatedSession()));
+      const overview = homeOverviewResponse(url, { rgCount: 56401 });
+      if (overview) return Promise.resolve(overview);
+      return Promise.resolve(jsonResponse({ status: "ok" }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    expect(await screen.findByText("56.401")).toBeInTheDocument();
+    expect(screen.getAllByText("em posse").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Nenhum registro")).not.toBeInTheDocument();
   });
 
   it("shows Google login when the protected session returns unauthorized", async () => {
@@ -91,116 +220,111 @@ describe("App", () => {
     expect(await screen.findByRole("button", { name: /Entrar com Google/ })).toBeInTheDocument();
   });
 
-  it("navigates to Profiles, keeps list state in the URL, and saves an inline edit", async () => {
-    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+  it("opens the people spreadsheet", async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/api/auth/session"))
         return Promise.resolve(jsonResponse(authenticatedSession()));
-      if (url.includes("/api/v1/profiles?") && (!init?.method || init.method === "GET"))
-        return Promise.resolve(jsonResponse(profilePage()));
-      if (url.includes("/api/v1/profiles/") && init?.method === "PUT")
-        return Promise.resolve(
-          jsonResponse({ ...profilePage().profiles[0], full_name: "Ana Souza", version: 2 }),
-        );
+      const overview = homeOverviewResponse(url);
+      if (overview) return Promise.resolve(overview);
       return Promise.resolve(jsonResponse({ status: "ok" }));
     });
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
-    await screen.findByText("Member Name");
-    fireEvent.click(screen.getByRole("link", { name: "Pessoas" }));
-    expect(await screen.findAllByText("Ana da Silva")).not.toHaveLength(0);
-    const nameFilter = screen.getByLabelText("Nome", { selector: "input" });
-    fireEvent.change(nameFilter, { target: { value: "Ana" } });
-    await waitFor(() => expect(window.location.search).toContain("full_name=Ana"));
-    const editor = await screen.findByLabelText("full_name de Ana da Silva");
-    fireEvent.change(editor, { target: { value: "Ana Souza" } });
-    fireEvent.blur(editor);
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining("/api/v1/profiles/019bf789-4400-7f12-9abc-123456789abc"),
-        expect.objectContaining({ method: "PUT" }),
-      ),
-    );
+    await screen.findByRole("heading", { name: "Bem-vindo de volta, Member Name" });
+    const peopleLinks = screen.getAllByRole("link", { name: /Pessoas/ });
+    const peopleLink = peopleLinks[0];
+    if (!peopleLink) throw new Error("expected a Pessoas link");
+    fireEvent.click(peopleLink);
+    expect(await screen.findByRole("heading", { name: "Pessoas" })).toBeInTheDocument();
+    expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
+    expect(screen.getAllByText("Documentos").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("CPF").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Filtros" })).toBeInTheDocument();
+    expect(screen.queryByText("A ser desenvolvido")).not.toBeInTheDocument();
   });
 
-  it("executes global Search with catalog filters and URL-backed terms", async () => {
-    window.history.replaceState(
-      null,
-      "",
-      "/search?q=Ana&page=1&limit=50&sort=relevance&order=desc",
-    );
-    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+  it("shows the search placeholder", async () => {
+    window.history.replaceState(null, "", "/search?q=Ana");
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/api/auth/session"))
         return Promise.resolve(jsonResponse(authenticatedSession()));
-      if (url.endsWith("/api/v1/search/catalog"))
+      if (url.includes("/api/v1/search/catalog")) {
         return Promise.resolve(
           jsonResponse({
             modules: [{ key: "profiles", label: "Pessoas" }],
-            fields: [
-              {
-                key: "profile.full_name",
-                module: "profiles",
-                label: "Nome completo",
-                kind: "text",
-              },
-            ],
-            limits: {
-              maximum_terms: 5,
-              maximum_term_length: 128,
-              maximum_fields: 40,
-              maximum_page_size: 100,
-              maximum_offset: 10000,
-            },
+            fields: [],
+            limits: { maximum_terms: 5 },
           }),
         );
-      if (url.endsWith("/api/v1/search") && init?.method === "POST")
+      }
+      if (url.includes("/api/v1/search")) {
         return Promise.resolve(
           jsonResponse({
-            results: [
-              {
-                module: "profiles",
-                entity_kind: "profile",
-                entity_id: "019bf789-4400-7f12-9abc-123456789abc",
-                profile_id: "019bf789-4400-7f12-9abc-123456789abc",
-                target_kind: "profile",
-                target_id: "019bf789-4400-7f12-9abc-123456789abc",
-                entity_label: "Ana da Silva",
-                field_key: "profile.full_name",
-                field_label: "Nome completo",
-                preview: "Ana da Silva",
-                score: 1080,
-                updated_at: "2026-07-17T12:00:00Z",
-              },
-            ],
-            page: { total: 1, limit: 50, offset: 0, sort: "relevance", sort_order: "desc" },
+            results: [],
+            page: { total: 0, limit: 50, offset: 0 },
           }),
         );
+      }
+      const overview = homeOverviewResponse(url);
+      if (overview) return Promise.resolve(overview);
       return Promise.resolve(jsonResponse({ status: "ok" }));
     });
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
+    expect(await screen.findByRole("heading", { name: "Em desenvolvimento" })).toBeInTheDocument();
+  });
 
-    expect(
-      await screen.findByRole("heading", { name: "Buscar dados autorizados" }),
-    ).toBeInTheDocument();
-    expect(await screen.findAllByText("Ana da Silva")).not.toHaveLength(0);
-    expect(screen.getByRole("table", { name: "Resultados da busca global" })).toBeInTheDocument();
-    expect(screen.queryByRole("checkbox", { name: "Documentos" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /physical/i })).not.toBeInTheDocument();
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining("/api/v1/search"),
-        expect.objectContaining({ method: "POST" }),
-      ),
-    );
-
-    fireEvent.change(screen.getByLabelText("Termos — um por linha"), {
-      target: { value: "Ana Maria\n001" },
+  it("does not let an admin create tables from home", async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/auth/session")) {
+        return Promise.resolve(
+          jsonResponse({
+            authenticated: true,
+            user: { login: "admin", display_name: "Admin Name", role: "ADMIN" },
+          }),
+        );
+      }
+      const overview = homeOverviewResponse(url);
+      if (overview) return Promise.resolve(overview);
+      return Promise.resolve(jsonResponse({ status: "ok" }));
     });
-    fireEvent.click(screen.getByRole("button", { name: "Buscar" }));
-    await waitFor(() =>
-      expect(new URLSearchParams(window.location.search).get("q")).toBe("Ana Maria\n001"),
-    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    expect(
+      await screen.findByRole("heading", { name: "Bem-vindo de volta, Admin Name" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Nova tabela")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Criar formulário/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menu da conta" }));
+    const accountMenu = await screen.findByRole("menu");
+    expect(within(accountMenu).queryByText("Administração")).not.toBeInTheDocument();
+  });
+
+  it("toggles html.dark from the account appearance switch without double-toggling", async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/auth/session"))
+        return Promise.resolve(jsonResponse(authenticatedSession()));
+      const overview = homeOverviewResponse(url);
+      if (overview) return Promise.resolve(overview);
+      return Promise.resolve(jsonResponse({ status: "ok" }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    await screen.findByRole("button", { name: "Abrir menu da conta" });
+    expect(document.documentElement).not.toHaveClass("dark");
+
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menu da conta" }));
+    const appearanceSwitch = await screen.findByRole("switch");
+    fireEvent.click(appearanceSwitch);
+    await waitFor(() => expect(document.documentElement).toHaveClass("dark"));
+    expect(window.localStorage.getItem("gymkhana-theme")).toBe("dark");
+
+    fireEvent.click(appearanceSwitch);
+    await waitFor(() => expect(document.documentElement).not.toHaveClass("dark"));
+    expect(window.localStorage.getItem("gymkhana-theme")).toBe("light");
   });
 });

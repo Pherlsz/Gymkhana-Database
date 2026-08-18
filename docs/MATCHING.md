@@ -1,6 +1,8 @@
 # Profile Matching and merge
 
-The Matching workspace provides an on-demand, Profiles-only review flow. It creates explainable candidates and persistent human decisions, but it never classifies a pair or chooses a merge winner automatically.
+Orchestration §15: Profile matching is the last product flow to implement. It is computationally expensive. There is no `/matching` destination. When a review UI exists, it belongs in Administração or the people grid — not a parallel menu module.
+
+The HTTP engine below is the backend contract for that flow. It creates explainable candidates and persistent human decisions, but it never classifies a pair or chooses a merge winner automatically.
 
 ## Candidate model
 
@@ -70,7 +72,7 @@ The authenticated API is documented in `api/matching.openapi.yaml`:
 
 Bodies reject unknown fields and use UUIDs, fixed enums, bounded arrays, optimistic versions and stable public errors. Unexpected database details are logged only with the request ID. Audits contain IDs, states, score bands, counts and outcomes—not CPF, e-mail, phone, address, field values or raw evidence.
 
-The `/matching` route stores only allowlisted filters, sorting, page number and the opaque selected case ID in the URL. It stores no Profile/evidence values in URL, local storage or session storage. Desktop renders the comparison side by side; the responsive layout stacks the same complete controls. A successful merge invalidates Profile, global Search, Query and Matching caches.
+There is no `/matching` SPA route. When review UI is added, it stores only allowlisted filters, sorting, page number and the opaque selected case ID in the URL. It stores no Profile/evidence values in URL, local storage or session storage. Desktop should render the comparison side by side; the responsive layout stacks the same complete controls. A successful merge invalidates Profile, global Search, Query and Matching caches.
 
 ## Operations, verification and rollback
 

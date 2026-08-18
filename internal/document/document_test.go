@@ -58,11 +58,12 @@ func TestNormalizeDocumentPreservesLeadingZerosAndAlphanumericContent(t *testing
 		Identifier:     "  00AB-009  ",
 		DocumentDate:   "2026-07-15",
 		Notes:          "  original value preserved  ",
+		Medium:         MediumPhysical,
 	}, definition)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if values.Identifier != "00AB-009" || values.DocumentDate != "2026-07-15" || values.RecordState != RecordCurrent {
+	if values.Identifier != "00AB-009" || values.DocumentDate != "2026-07-15" || values.Medium != MediumPhysical {
 		t.Fatalf("normalized document = %#v", values)
 	}
 }
@@ -81,7 +82,7 @@ func TestNormalizeDocumentValidatesTypeDateRegexAndState(t *testing.T) {
 		TypeID:         otherTypeID,
 		Identifier:     "AB12",
 		DocumentDate:   "15/07/2026",
-		RecordState:    "INVALID",
+		Medium:         "INVALID",
 	}, definition)
 	var validation *ValidationError
 	if !errors.As(err, &validation) {
@@ -90,7 +91,7 @@ func TestNormalizeDocumentValidatesTypeDateRegexAndState(t *testing.T) {
 	assertFieldCode(t, validation, "document_type_id", "invalid_value")
 	assertFieldCode(t, validation, "identifier_value", "invalid_format")
 	assertFieldCode(t, validation, "document_date", "invalid_format")
-	assertFieldCode(t, validation, "record_state", "invalid_value")
+	assertFieldCode(t, validation, "medium", "invalid_value")
 }
 
 func TestSameRulesIgnoresDisplayOnlyChanges(t *testing.T) {
@@ -104,6 +105,57 @@ func TestSameRulesIgnoresDisplayOnlyChanges(t *testing.T) {
 	right.DateRequired = true
 	if SameRules(left, right) {
 		t.Fatal("date requirement must be treated as a rule change")
+	}
+}
+
+func TestNormalizeDocumentAllowsSameIdentifierOnDifferentMedia(t *testing.T) {
+	owner, _ := profile.NewIdentifier()
+	typeID, _ := NewIdentifier()
+	definition := TypeDefinition{ID: typeID, Values: TypeValues{
+		TechnicalKey: "rg", Label: "RG", Active: true, UniquenessPolicy: UniquenessPerProfile,
+	}}
+	physical, err := Normalize(Values{OwnerProfileID: owner, TypeID: typeID, Identifier: "00AB-009", Medium: MediumPhysical}, definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digital, err := Normalize(Values{OwnerProfileID: owner, TypeID: typeID, Identifier: "00AB-009", Medium: MediumDigital}, definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if physical.Medium != MediumPhysical || digital.Medium != MediumDigital || physical.Identifier != digital.Identifier {
+		t.Fatalf("physical = %#v digital = %#v", physical, digital)
+	}
+}
+
+func TestNormalizeRequiresMediumForCreateAndStored(t *testing.T) {
+	owner, _ := profile.NewIdentifier()
+	typeID, _ := NewIdentifier()
+	definition := TypeDefinition{ID: typeID, Values: TypeValues{
+		TechnicalKey: "rg", Label: "RG", Active: true, UniquenessPolicy: UniquenessPerProfile,
+	}}
+	_, err := NormalizeStored(Values{OwnerProfileID: owner, TypeID: typeID, Identifier: "00AB-009"}, definition)
+	var validation *ValidationError
+	if !errors.As(err, &validation) {
+		t.Fatalf("error = %v", err)
+	}
+	assertFieldCode(t, validation, "medium", "invalid_value")
+	_, err = Normalize(Values{OwnerProfileID: owner, TypeID: typeID, Identifier: "00AB-009"}, definition)
+	if !errors.As(err, &validation) {
+		t.Fatalf("error = %v", err)
+	}
+	assertFieldCode(t, validation, "medium", "invalid_value")
+}
+
+func TestNormalizeDefaultsPhysicalIdleCustodyToOrganization(t *testing.T) {
+	owner, _ := profile.NewIdentifier()
+	typeID, _ := NewIdentifier()
+	definition := TypeDefinition{ID: typeID, Values: TypeValues{TechnicalKey: "rg", Label: "RG", Active: true, UniquenessPolicy: UniquenessPerProfile}}
+	values, err := Normalize(Values{OwnerProfileID: owner, TypeID: typeID, Identifier: "00AB-009", Medium: MediumPhysical}, definition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if values.IdleCustody != IdleCustodyOrganization {
+		t.Fatalf("idle custody = %#v", values.IdleCustody)
 	}
 }
 

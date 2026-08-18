@@ -6,7 +6,7 @@ This runbook covers Google OAuth, application sessions, authorization, capabilit
 
 - Google OAuth is the only application login mechanism; there are no local passwords.
 - Access requires the email to be present in the `allowed_emails` table (database-backed allowlist).
-- The application stores the Google subject (unique ID) and refreshes display identity after successful login.
+- Account lookup is by email, the same as the legacy application. Google subject is stored as provider metadata and display name is refreshed after each successful login; subject is not the account key.
 - Browser sessions use opaque random values. Only SHA-256 hashes are stored in PostgreSQL.
 - Sessions expire after 24 hours and are revocable server-side.
 - Session cookies are HttpOnly, SameSite=Lax, host-only, and Secure in staging and production.
@@ -30,15 +30,14 @@ The capability system provides granular permission control beyond role-based acc
 | --- | --- |
 | `search` | Access to search endpoints |
 | `profiles` | Access to profile management |
-| `data_tables` | Access to documents, bills, custom data |
+| `data_tables` | Access to documents, bills, custom data. A dedicated `custom_data` capability (beyond formula columns and user-created columns) is an open product question; do not invent a new grant surface until that is decided. |
 | `attachments` | Access to file attachments |
 | `ocr` | Access to OCR processing |
 | `operations` | Access to bulk operations |
 | `google_forms` | Access to Google Forms integration |
 | `query` | Access to query engine |
 | `matching` | Access to duplicate matching |
-| `chat` | Access to AI chat |
-| `tasks` | Access to task management |
+| `chat` | Access to the Assistente (same HTTP engine; not a /chat destination page) |
 
 ### Granting capabilities
 
@@ -70,7 +69,7 @@ GET /api/admin/users/{userID}/capabilities
 
 | Variable | Purpose |
 | --- | --- |
-| `APP_ENV` | `local`, `test`, `staging`, or `production` |
+| `APP_ENV` | `local`, `test`, `staging`, or `production`. lokeys `--env dev` injects `development`, which the application treats as `local` |
 | `DATABASE_URL` | PostgreSQL connection string; required whenever authentication is enabled |
 | `AUTH_ENABLED` | Must be `true` in staging and production |
 | `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth client ID |
@@ -82,32 +81,34 @@ GET /api/admin/users/{userID}/capabilities
 
 The email allowlist is now stored in the `allowed_emails` table and managed via admin endpoints, not environment variables.
 
-Never commit real client secrets, database credentials, session values, or production URLs containing credentials.
+Never commit real client secrets, database credentials, session values, or production URLs containing credentials. Locally, inject them with `lokeys run -p gymkhana --env dev`; do not copy `.env.example` to `.env`.
 
 ## Local setup
 
 1. Register a Google OAuth client with:
    - Authorized JavaScript origins: `http://localhost:5173`
    - Authorized redirect URIs: `http://localhost:8080/auth/callback`
-2. Copy `.env.example` to `.env` and fill the OAuth credentials, database URL, and superadmin email.
+2. Put the OAuth credentials, database URL, and superadmin email in the lokeys `gymkhana` profile. `.env.example` lists the names; do not copy it to `.env`.
 3. Validate the effective environment without printing secrets:
 
-```bash
-make check-config
+```powershell
+$env:LOKEYS_AGENT = "1"
+lokeys run -p gymkhana --env dev -- make check-config
 ```
 
-4. Start PostgreSQL and apply migrations:
+4. Apply migrations to Neon Dev:
 
-```bash
-make services-up
-make migrate
+```powershell
+$env:LOKEYS_AGENT = "1"
+lokeys run -p gymkhana --env dev -- make migrate
 ```
 
 5. Start the API and web application in separate terminals:
 
-```bash
-make dev-api
-make dev-web
+```powershell
+$env:LOKEYS_AGENT = "1"
+lokeys run -p gymkhana --env dev -- make dev-api
+lokeys run -p gymkhana --env dev -- make dev-web
 ```
 
 6. Sign in first with `AUTH_SUPERADMIN_EMAIL`. The first successful login creates the protected `SUPERADMIN` user.
@@ -250,13 +251,14 @@ Existing Gymkhana Database sessions remain valid because they are independent of
 
 ### User email changed
 
-1. Add the new email to the allowlist via admin API.
-2. If this is the protected superadmin, also update `AUTH_SUPERADMIN_EMAIL`.
-3. The user signs in with the new email. A new user record is created.
-4. Transfer any necessary data or capabilities from the old account.
-5. Deactivate the old account and remove the old email from the allowlist.
+Login identity is the allowlisted email. Keep the same application user.
 
-Note: Unlike GitHub OAuth, Google OAuth does not provide a stable user ID that persists across email changes. Each email is treated as a separate identity.
+1. Update the existing user's email through the administration panel (or a reviewed operational update).
+2. Add the new email to the allowlist and remove the old email.
+3. If this is the protected superadmin, also update `AUTH_SUPERADMIN_EMAIL`.
+4. The user signs in with the new Google account email. Lookup by email loads the same row and refreshes display identity.
+
+Do not create a second user and transfer capabilities. A new row is created only when that email has never signed in.
 
 ### Account compromised
 
@@ -268,7 +270,7 @@ Note: Unlike GitHub OAuth, Google OAuth does not provide a stable user ID that p
 
 ### Protected superadmin unavailable
 
-The administration API intentionally cannot demote, deactivate, or replace the protected `SUPERADMIN`. First restore access to the same Google account or add a new email for the superadmin.
+The administration API intentionally cannot demote, deactivate, or replace the protected `SUPERADMIN`. First restore access to the same Google account, or update that user's email plus `AUTH_SUPERADMIN_EMAIL` and the allowlist so the same account can sign in.
 
 If the Google account is permanently unrecoverable, do not run an ad-hoc partial update. Use a reviewed, transactional operational change that:
 
@@ -280,16 +282,3 @@ If the Google account is permanently unrecoverable, do not run an ad-hoc partial
 6. records the recovery in the audit trail and deployment log.
 
 A dedicated automated transfer command is intentionally deferred until a real recovery case justifies its permanent maintenance and permission surface.
-
-## Migration from GitHub OAuth
-
-The system migrated from GitHub OAuth to Google OAuth in migration 020. Key changes:
-
-- `github_user_id` and `github_login` columns replaced with `email` and `subject`.
-- `AUTH_ALLOWED_GITHUB_LOGINS` environment variable replaced with database-backed `allowed_emails` table.
-- `MEMBER` role renamed to `EXTERNAL`.
-- Capability system added for granular permission control.
-
-Migration 022 automatically:
-- Added all existing users to the email allowlist (using their GitHub login as email).
-- Granted basic capabilities (search, profiles, data_tables, attachments, query) to active EXTERNAL users.

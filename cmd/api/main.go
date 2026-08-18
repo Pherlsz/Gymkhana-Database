@@ -98,7 +98,8 @@ func run() error {
 	var chatCoordinator *aichat.Coordinator
 	var ocrService *ocr.Service
 	if pool != nil {
-		profileService, err = profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{OnAuditFailure: func(_ context.Context, event profile.AuditEvent, auditErr error) {
+		profileStore := profile.NewPostgresStore(pool)
+		profileService, err = profile.NewService(profileStore, profile.ServiceOptions{OnAuditFailure: func(_ context.Context, event profile.AuditEvent, auditErr error) {
 			logger.Error("profile audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "profile_id", event.ProfileID.String(), "error", auditErr)
 		}})
 		if err != nil {
@@ -110,7 +111,7 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("configure document service: %w", err)
 		}
-		billService, err = bill.NewService(bill.NewPostgresStore(pool), bill.ServiceOptions{OnAuditFailure: func(_ context.Context, event bill.AuditEvent, auditErr error) {
+		billService, err = bill.NewService(bill.NewPostgresStore(pool), bill.ServiceOptions{Owners: profileStore, OnAuditFailure: func(_ context.Context, event bill.AuditEvent, auditErr error) {
 			logger.Error("bill audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
 		}})
 		if err != nil {

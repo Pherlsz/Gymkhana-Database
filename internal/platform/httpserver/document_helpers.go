@@ -41,21 +41,21 @@ func (request documentValuesRequest) domainValues() (document.Values, *Problem) 
 	if err != nil {
 		return document.Values{}, &Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "O identificador do tipo de documento é inválido"}
 	}
-	return document.Values{OwnerProfileID: owner, TypeID: typeID, Identifier: request.Identifier, DocumentDate: request.DocumentDate, Notes: request.Notes, RecordState: request.RecordState}, nil
+	return document.Values{OwnerProfileID: owner, TypeID: typeID, Identifier: request.Identifier, DocumentDate: request.DocumentDate, ValidUntil: request.ValidUntil, Notes: request.Notes, Medium: request.Medium, IdleCustody: request.IdleCustody}, nil
 }
 
 func (request updateDocumentRequest) domainValues() (document.Values, *Problem) {
-	return documentValuesRequest{OwnerProfileID: request.OwnerProfileID, DocumentTypeID: request.DocumentTypeID, Identifier: request.Identifier, DocumentDate: request.DocumentDate, Notes: request.Notes, RecordState: request.RecordState}.domainValues()
+	return documentValuesRequest{OwnerProfileID: request.OwnerProfileID, DocumentTypeID: request.DocumentTypeID, Identifier: request.Identifier, DocumentDate: request.DocumentDate, ValidUntil: request.ValidUntil, Notes: request.Notes, Medium: request.Medium, IdleCustody: request.IdleCustody}.domainValues()
 }
 
 func documentTypeFromDomain(value document.TypeDefinition) documentTypeResponse {
-	return documentTypeResponse{ID: value.ID.String(), TechnicalKey: value.Values.TechnicalKey, Label: value.Values.Label, Active: value.Values.Active, UniquenessPolicy: value.Values.UniquenessPolicy, ValidationRegex: value.Values.ValidationRegex, DateRequired: value.Values.DateRequired, Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
+	return documentTypeResponse{ID: value.ID.String(), TechnicalKey: value.Values.TechnicalKey, Label: value.Values.Label, Active: value.Values.Active, UniquenessPolicy: value.Values.UniquenessPolicy, ValidationRegex: value.Values.ValidationRegex, DateRequired: value.Values.DateRequired, Count: value.ExemplarCount, Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
 }
 
 func documentFromDomain(value document.Document) documentResponse {
-	response := documentResponse{ID: value.ID.String(), OwnerProfileID: value.Values.OwnerProfileID.String(), DocumentTypeID: value.Values.TypeID.String(), Identifier: value.Values.Identifier, DocumentDate: value.Values.DocumentDate, Notes: value.Values.Notes, RecordState: value.Values.RecordState, Status: value.Status, Type: documentTypeFromDomain(value.Type), Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
+	response := documentResponse{ID: value.ID.String(), OwnerProfileID: value.Values.OwnerProfileID.String(), OwnerFullName: value.OwnerFullName, DocumentTypeID: value.Values.TypeID.String(), Identifier: value.Values.Identifier, DocumentDate: value.Values.DocumentDate, ValidUntil: value.Values.ValidUntil, Notes: value.Values.Notes, Medium: value.Values.Medium, IdleCustody: value.Values.IdleCustody, Status: value.Status, Type: documentTypeFromDomain(value.Type), CustomValues: map[string]string{}, Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
 	if value.CurrentUse != nil {
-		response.CurrentUse = &documentCurrentUseResponse{HolderProfileID: value.CurrentUse.HolderProfileID.String(), AssignedAt: value.CurrentUse.AssignedAt}
+		response.CurrentUse = &documentCurrentUseResponse{HolderProfileID: value.CurrentUse.HolderProfileID.String(), HolderFullName: value.CurrentUse.HolderFullName, AssignedAt: value.CurrentUse.AssignedAt}
 	}
 	return response
 }
@@ -100,7 +100,7 @@ func documentListOptionsFromRequest(r *http.Request) (document.ListOptions, *Pro
 	if problem != nil {
 		return document.ListOptions{}, problem
 	}
-	return document.ListOptions{Limit: limit, Offset: offset, SortField: document.SortField(r.URL.Query().Get("sort")), SortOrder: document.SortOrder(r.URL.Query().Get("order")), Filters: document.Filters{OwnerProfileID: owner, TypeID: typeID, Identifier: r.URL.Query().Get("identifier"), RecordState: document.RecordState(r.URL.Query().Get("record_state")), Status: document.Status(r.URL.Query().Get("status")), HolderProfileID: holder}}, nil
+	return document.ListOptions{Limit: limit, Offset: offset, SortField: document.SortField(r.URL.Query().Get("sort")), SortOrder: document.SortOrder(r.URL.Query().Get("order")), Filters: document.Filters{OwnerProfileID: owner, TypeID: typeID, Identifier: r.URL.Query().Get("identifier"), Medium: document.Medium(r.URL.Query().Get("medium")), Status: document.Status(r.URL.Query().Get("status")), HolderProfileID: holder}}, nil
 }
 
 func optionalProfileIdentifier(value, message string) (*profile.Identifier, *Problem) {
@@ -158,6 +158,10 @@ func writeDocumentError(w http.ResponseWriter, r *http.Request, logger *slog.Log
 		writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "O tipo de documento está inativo"})
 	case errors.Is(err, document.ErrCurrentUseExists):
 		writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "Devolva o documento antes de excluí-lo"})
+	case errors.Is(err, document.ErrCurrentUseUnsupported):
+		writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "Somente exemplar físico permite uso atual"})
+	case errors.Is(err, document.ErrDuplicateNotSupported):
+		writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "Já existe um exemplar deste meio para esta pessoa e tipo"})
 	default:
 		logger.Error(operation, "request_id", requestIDFromContext(r.Context()), "error", err)
 		writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Não foi possível concluir a operação"})
@@ -180,6 +184,12 @@ func documentFieldMessage(code string) string {
 		return "Valor maior que o permitido"
 	case "invalid_value":
 		return "Valor não permitido"
+	case "refused":
+		return "Este valor não é um número de documento"
+	case "has_exemplar":
+		return "Não é possível declarar ausência ou indicação enquanto houver exemplar"
+	case "unexpected":
+		return "Este campo não deve ser informado"
 	default:
 		return "Formato inválido"
 	}

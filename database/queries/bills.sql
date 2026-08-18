@@ -1,8 +1,8 @@
 -- name: CreateBillType :one
 INSERT INTO bill_types (
-  id, technical_key, label, active, supports_current_use
+  id, technical_key, label, active
 ) VALUES (
-  sqlc.arg(id), sqlc.arg(technical_key), sqlc.arg(label), sqlc.arg(active), sqlc.arg(supports_current_use)
+  sqlc.arg(id), sqlc.arg(technical_key), sqlc.arg(label), sqlc.arg(active)
 )
 RETURNING *;
 
@@ -33,12 +33,20 @@ ORDER BY
 LIMIT sqlc.arg(page_limit)
 OFFSET sqlc.arg(page_offset);
 
+-- name: CountBillsByType :many
+SELECT bill.bill_type_id, count(*)::bigint AS bill_count
+FROM bills AS bill
+LEFT JOIN bill_current_uses AS current_use ON current_use.bill_id = bill.id
+WHERE bill.medium = 'PHYSICAL'
+  AND (bill.idle_custody = 'ORGANIZATION' OR current_use.bill_id IS NOT NULL)
+GROUP BY bill.bill_type_id;
+
 -- name: BillTypeHasBills :one
 SELECT EXISTS(SELECT 1 FROM bills WHERE bill_type_id = sqlc.arg(bill_type_id));
 
 -- name: UpdateBillType :one
 UPDATE bill_types
-SET label = sqlc.arg(label), active = sqlc.arg(active), supports_current_use = sqlc.arg(supports_current_use),
+SET label = sqlc.arg(label), active = sqlc.arg(active),
   version = version + 1, updated_at = now()
 WHERE id = sqlc.arg(id) AND version = sqlc.arg(version)
 RETURNING *;
@@ -49,11 +57,11 @@ DELETE FROM bill_types WHERE id = sqlc.arg(id) AND version = sqlc.arg(version) R
 -- name: CreateBill :one
 INSERT INTO bills (
   id, owner_profile_id, bill_type_id, printed_holder_name, printed_address,
-  reference_value, competence, amount, currency, notes, record_state
+  reference_value, competence, amount, currency, notes, medium, idle_custody
 )
 SELECT sqlc.arg(id), sqlc.arg(owner_profile_id), bill_type.id, sqlc.narg(printed_holder_name),
   sqlc.narg(printed_address), sqlc.narg(reference_value), sqlc.narg(competence),
-  sqlc.narg(amount), sqlc.narg(currency), sqlc.narg(notes), sqlc.arg(record_state)
+  sqlc.narg(amount), sqlc.narg(currency), sqlc.narg(notes), sqlc.arg(medium), sqlc.narg(idle_custody)
 FROM bill_types AS bill_type
 WHERE bill_type.id = sqlc.arg(bill_type_id) AND bill_type.active
 RETURNING *;
@@ -61,18 +69,21 @@ RETURNING *;
 -- name: GetBillByID :one
 SELECT
   bill.*,
+  owner.full_name AS owner_full_name,
   bill_type.technical_key AS type_technical_key,
   bill_type.label AS type_label,
   bill_type.active AS type_active,
-  bill_type.supports_current_use AS type_supports_current_use,
   bill_type.version AS type_version,
   bill_type.created_at AS type_created_at,
   bill_type.updated_at AS type_updated_at,
   bill_current_use.holder_profile_id AS current_holder_profile_id,
+  holder.full_name AS current_holder_full_name,
   bill_current_use.assigned_at AS current_assigned_at
 FROM bills AS bill
+JOIN profiles AS owner ON owner.id = bill.owner_profile_id
 JOIN bill_types AS bill_type ON bill_type.id = bill.bill_type_id
 LEFT JOIN bill_current_uses AS bill_current_use ON bill_current_use.bill_id = bill.id
+LEFT JOIN profiles AS holder ON holder.id = bill_current_use.holder_profile_id
 WHERE bill.id = sqlc.arg(id);
 
 -- name: CountBills :one
@@ -83,35 +94,38 @@ WHERE (sqlc.narg(owner_profile_id_filter)::uuid IS NULL OR bill.owner_profile_id
   AND (sqlc.narg(bill_type_id_filter)::uuid IS NULL OR bill.bill_type_id = sqlc.narg(bill_type_id_filter)::uuid)
   AND (sqlc.arg(reference_filter)::text = '' OR lower(coalesce(bill.reference_value, '')) LIKE '%' || lower(sqlc.arg(reference_filter)::text) || '%')
   AND (sqlc.arg(competence_filter)::text = '' OR coalesce(bill.competence, '') = sqlc.arg(competence_filter)::text)
-  AND (sqlc.arg(record_state_filter)::text = '' OR bill.record_state = sqlc.arg(record_state_filter)::text)
+  AND (sqlc.arg(medium_filter)::text = '' OR bill.medium = sqlc.arg(medium_filter)::text)
   AND (sqlc.arg(status_filter)::text = '' OR
-    (sqlc.arg(status_filter)::text = 'IN_USE' AND bill_current_use.bill_id IS NOT NULL) OR
-    (sqlc.arg(status_filter)::text = 'AVAILABLE' AND bill_current_use.bill_id IS NULL))
+    (sqlc.arg(status_filter)::text = 'IN_USE' AND bill.medium = 'PHYSICAL' AND bill_current_use.bill_id IS NOT NULL) OR
+    (sqlc.arg(status_filter)::text = 'AVAILABLE' AND bill.medium = 'PHYSICAL' AND bill.idle_custody = 'ORGANIZATION' AND bill_current_use.bill_id IS NULL))
   AND (sqlc.narg(holder_profile_id_filter)::uuid IS NULL OR bill_current_use.holder_profile_id = sqlc.narg(holder_profile_id_filter)::uuid);
 
 -- name: ListBills :many
 SELECT
   bill.*,
+  owner.full_name AS owner_full_name,
   bill_type.technical_key AS type_technical_key,
   bill_type.label AS type_label,
   bill_type.active AS type_active,
-  bill_type.supports_current_use AS type_supports_current_use,
   bill_type.version AS type_version,
   bill_type.created_at AS type_created_at,
   bill_type.updated_at AS type_updated_at,
   bill_current_use.holder_profile_id AS current_holder_profile_id,
+  holder.full_name AS current_holder_full_name,
   bill_current_use.assigned_at AS current_assigned_at
 FROM bills AS bill
+JOIN profiles AS owner ON owner.id = bill.owner_profile_id
 JOIN bill_types AS bill_type ON bill_type.id = bill.bill_type_id
 LEFT JOIN bill_current_uses AS bill_current_use ON bill_current_use.bill_id = bill.id
+LEFT JOIN profiles AS holder ON holder.id = bill_current_use.holder_profile_id
 WHERE (sqlc.narg(owner_profile_id_filter)::uuid IS NULL OR bill.owner_profile_id = sqlc.narg(owner_profile_id_filter)::uuid)
   AND (sqlc.narg(bill_type_id_filter)::uuid IS NULL OR bill.bill_type_id = sqlc.narg(bill_type_id_filter)::uuid)
   AND (sqlc.arg(reference_filter)::text = '' OR lower(coalesce(bill.reference_value, '')) LIKE '%' || lower(sqlc.arg(reference_filter)::text) || '%')
   AND (sqlc.arg(competence_filter)::text = '' OR coalesce(bill.competence, '') = sqlc.arg(competence_filter)::text)
-  AND (sqlc.arg(record_state_filter)::text = '' OR bill.record_state = sqlc.arg(record_state_filter)::text)
+  AND (sqlc.arg(medium_filter)::text = '' OR bill.medium = sqlc.arg(medium_filter)::text)
   AND (sqlc.arg(status_filter)::text = '' OR
-    (sqlc.arg(status_filter)::text = 'IN_USE' AND bill_current_use.bill_id IS NOT NULL) OR
-    (sqlc.arg(status_filter)::text = 'AVAILABLE' AND bill_current_use.bill_id IS NULL))
+    (sqlc.arg(status_filter)::text = 'IN_USE' AND bill.medium = 'PHYSICAL' AND bill_current_use.bill_id IS NOT NULL) OR
+    (sqlc.arg(status_filter)::text = 'AVAILABLE' AND bill.medium = 'PHYSICAL' AND bill.idle_custody = 'ORGANIZATION' AND bill_current_use.bill_id IS NULL))
   AND (sqlc.narg(holder_profile_id_filter)::uuid IS NULL OR bill_current_use.holder_profile_id = sqlc.narg(holder_profile_id_filter)::uuid)
 ORDER BY
   CASE WHEN sqlc.arg(sort_field)::text = 'reference_value' AND sqlc.arg(sort_order)::text = 'asc' THEN lower(bill.reference_value) END ASC NULLS LAST,
@@ -136,7 +150,8 @@ SET owner_profile_id = sqlc.arg(owner_profile_id), bill_type_id = bill_type.id,
   printed_holder_name = sqlc.narg(printed_holder_name), printed_address = sqlc.narg(printed_address),
   reference_value = sqlc.narg(reference_value), competence = sqlc.narg(competence),
   amount = sqlc.narg(amount), currency = sqlc.narg(currency), notes = sqlc.narg(notes),
-  record_state = sqlc.arg(record_state), version = bill.version + 1, updated_at = now()
+  medium = sqlc.arg(medium), idle_custody = sqlc.narg(idle_custody),
+  version = bill.version + 1, updated_at = now()
 FROM bill_types AS bill_type
 WHERE bill.id = sqlc.arg(id) AND bill.version = sqlc.arg(version)
   AND bill_type.id = sqlc.arg(bill_type_id) AND bill_type.active
@@ -145,11 +160,11 @@ RETURNING bill.*;
 -- name: DuplicateBill :one
 INSERT INTO bills (
   id, owner_profile_id, bill_type_id, printed_holder_name, printed_address,
-  reference_value, competence, amount, currency, notes, record_state
+  reference_value, competence, amount, currency, notes, medium, idle_custody
 )
 SELECT sqlc.arg(new_id), source.owner_profile_id, source.bill_type_id, source.printed_holder_name,
   source.printed_address, source.reference_value, source.competence, source.amount,
-  source.currency, source.notes, source.record_state
+  source.currency, source.notes, source.medium, source.idle_custody
 FROM bills AS source
 WHERE source.id = sqlc.arg(source_id)
 RETURNING *;
@@ -161,8 +176,7 @@ DELETE FROM bills WHERE id = sqlc.arg(id) AND version = sqlc.arg(version) RETURN
 INSERT INTO bill_current_uses (bill_id, holder_profile_id)
 SELECT bill.id, sqlc.arg(holder_profile_id)
 FROM bills AS bill
-JOIN bill_types AS bill_type ON bill_type.id = bill.bill_type_id
-WHERE bill.id = sqlc.arg(bill_id) AND bill_type.supports_current_use
+WHERE bill.id = sqlc.arg(bill_id) AND bill.medium = 'PHYSICAL'
 ON CONFLICT (bill_id) DO UPDATE
 SET holder_profile_id = EXCLUDED.holder_profile_id, assigned_at = now()
 RETURNING *;

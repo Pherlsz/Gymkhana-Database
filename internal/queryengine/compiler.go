@@ -72,7 +72,7 @@ func compilePlan(plan QueryPlan, catalog resolvedCatalog, maximumCost int) (Comp
 		if sortValue.Direction == SortDescending {
 			direction = "DESC"
 		}
-		order = append(order, fmt.Sprintf("%s %s NULLS LAST", expandSQL(definition.Expression, rootPrefix), direction))
+		order = append(order, orderExpression(expandSQL(definition.Expression, rootPrefix), definition.Public.Kind, direction))
 	}
 	order = append(order, expandSQL(root.IDExpression, rootPrefix)+" ASC")
 	limitPosition := state.bind(normalized.MaximumRows)
@@ -363,6 +363,7 @@ func expandSQL(value, prefix string) string {
 		"{root}", prefix,
 		"{type}", prefix+"_type",
 		"{owner}", prefix+"_owner",
+		"{presence}", prefix+"_presence",
 		"{current}", prefix+"_current",
 		"{holder}", prefix+"_holder",
 	).Replace(value)
@@ -371,8 +372,10 @@ func expandSQL(value, prefix string) string {
 func expandRelationSQL(value, from, to string) string {
 	replacer := strings.NewReplacer(
 		"{from.root}", from, "{from.type}", from+"_type", "{from.owner}", from+"_owner",
+		"{from.presence}", from+"_presence",
 		"{from.current}", from+"_current", "{from.holder}", from+"_holder",
 		"{to.root}", to, "{to.type}", to+"_type", "{to.owner}", to+"_owner",
+		"{to.presence}", to+"_presence",
 		"{to.current}", to+"_current", "{to.holder}", to+"_holder",
 	)
 	return replacer.Replace(value)

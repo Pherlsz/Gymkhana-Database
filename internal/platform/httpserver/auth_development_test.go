@@ -69,6 +69,37 @@ func TestDevelopmentLoginCreatesSessionWhenCookiesAreNotSecure(t *testing.T) {
 	}
 }
 
+func TestDevelopmentLoginGetRedirectsToTheApplication(t *testing.T) {
+	service := &fakeDevelopmentAuthenticationService{}
+	handler := New(authTestLogger(), nil, Options{Auth: service, Development: true, SecureCookies: false, ApplicationURL: "http://localhost:5173"})
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/auth/dev-login", nil))
+
+	if response.Code != http.StatusFound {
+		t.Fatalf("development login GET status = %d, want %d", response.Code, http.StatusFound)
+	}
+	if location := response.Header().Get("Location"); location != "/" {
+		t.Fatalf("development login GET location = %q", location)
+	}
+	if service.developmentLoginCalls != 1 {
+		t.Fatalf("development login calls = %d", service.developmentLoginCalls)
+	}
+	var sessionCookie *http.Cookie
+	for _, cookie := range response.Result().Cookies() {
+		if cookie.Name == sessionCookieName && cookie.MaxAge > 0 {
+			sessionCookie = cookie
+			break
+		}
+	}
+	if sessionCookie == nil {
+		t.Fatal("development login GET did not set a session cookie")
+	}
+	if sessionCookie.Secure {
+		t.Fatal("development session cookie must not require HTTPS locally")
+	}
+}
+
 func TestDevelopmentLoginRouteIsAbsentOutsideDevelopment(t *testing.T) {
 	service := &fakeDevelopmentAuthenticationService{}
 	handler := New(authTestLogger(), nil, Options{Auth: service, Development: false, SecureCookies: false})

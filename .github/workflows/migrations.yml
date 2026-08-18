@@ -29,7 +29,7 @@ jobs:
       DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_DB: gymkhana
           POSTGRES_USER: gymkhana

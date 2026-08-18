@@ -129,7 +129,7 @@
   color: var(--gym-color-text);
 }
 
-@media (max-width: 52rem) {
+@media (max-width: 768px) {
   .operations-heading {
     display: grid;
   }

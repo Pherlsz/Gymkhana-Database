@@ -64,13 +64,12 @@ const billType = {
   technical_key: "energy",
   label: "Energia",
   active: true,
-  supports_current_use: true,
   version: 1,
   created_at: "2026-07-15T12:00:00Z",
   updated_at: "2026-07-15T12:00:00Z",
 };
 
-function billRecord(supportsCurrentUse = true) {
+function billRecord(physical = true) {
   return {
     id: "bill-1",
     owner_profile_id: profile.id,
@@ -82,10 +81,10 @@ function billRecord(supportsCurrentUse = true) {
     amount: "123.40",
     currency: "BRL",
     notes: "",
-    record_state: "REPLACED" as const,
-    status: supportsCurrentUse ? ("IN_USE" as const) : ("AVAILABLE" as const),
-    type: { ...billType, supports_current_use: supportsCurrentUse },
-    ...(supportsCurrentUse
+    medium: physical ? ("PHYSICAL" as const) : ("DIGITAL" as const),
+    status: physical ? ("IN_USE" as const) : undefined,
+    type: billType,
+    ...(physical
       ? {
           current_use: {
             holder_profile_id: "019bf789-4400-7f12-9abc-123456789abd",
@@ -99,8 +98,8 @@ function billRecord(supportsCurrentUse = true) {
   };
 }
 
-function billFetchMock(supportsCurrentUse = true) {
-  const record = billRecord(supportsCurrentUse);
+function billFetchMock(physical = true) {
+  const record = billRecord(physical);
   return vi.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.includes("/api/v1/bill-types"))
@@ -161,11 +160,11 @@ describe("M4 Profile records acceptance", () => {
       bill_reference: "000A",
       bill_competence: "2026-07",
       bill_status: "IN_USE",
-      bill_state: "EXPIRED",
+      bill_medium: "DIGITAL",
       bill_type: "bill-type-1",
       bill_selected: "bill-1",
       bill_mode: "view",
-      document_state: "INVALID",
+      document_medium: "INVALID",
       document_mode: "invalid",
     });
 
@@ -178,11 +177,11 @@ describe("M4 Profile records acceptance", () => {
       bill_reference: "000A",
       bill_competence: "2026-07",
       bill_status: "IN_USE",
-      bill_state: "EXPIRED",
+      bill_medium: "DIGITAL",
       bill_type: "bill-type-1",
       bill_selected: "bill-1",
       bill_mode: "view",
-      document_state: "",
+      document_medium: "",
       document_mode: undefined,
     });
   });
@@ -241,7 +240,7 @@ describe("M4 Profile records acceptance", () => {
     );
   });
 
-  it("does not fabricate current-use controls for unsupported bill types", async () => {
+  it("does not fabricate current-use controls for digital bills", async () => {
     vi.stubGlobal("fetch", billFetchMock(false));
     renderRecords("bills", { bill_selected: "bill-1", bill_mode: "view" });
 
@@ -270,7 +269,7 @@ describe("M4 Profile records acceptance", () => {
       identifier_value: "00123",
       document_date: "2026-07-01",
       notes: "",
-      record_state: "CURRENT",
+      medium: "PHYSICAL",
       status: "AVAILABLE",
       type: documentType,
       version: 1,

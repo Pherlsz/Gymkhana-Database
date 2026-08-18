@@ -66,13 +66,13 @@
     "/auth/login": {
       "get": {
         "operationId": "beginGitHubLogin",
-        "summary": "Begin GitHub OAuth authentication",
+        "summary": "Begin Google OAuth authentication",
         "tags": [
           "Authentication"
         ],
         "responses": {
           "302": {
-            "description": "Redirect to GitHub authorization"
+            "description": "Redirect to Google authorization"
           },
           "503": {
             "$ref": "#/components/responses/AuthUnavailable"
@@ -83,7 +83,7 @@
     "/auth/callback": {
       "get": {
         "operationId": "completeGitHubLogin",
-        "summary": "Complete GitHub OAuth authentication",
+        "summary": "Complete Google OAuth authentication",
         "tags": [
           "Authentication"
         ],
@@ -116,7 +116,7 @@
             "$ref": "#/components/responses/Forbidden"
           },
           "502": {
-            "description": "GitHub authentication failed",
+            "description": "Google authentication failed",
             "content": {
               "application/json": {
                 "schema": {
@@ -969,6 +969,63 @@
         ]
       }
     },
+    "/api/v1/document-presences": {
+      "put": {
+        "operationId": "upsertDocumentPresence",
+        "summary": "Declare absence, indication, or an informed number for a person and document type",
+        "tags": [
+          "Documents"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertDocumentPresenceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Persisted presence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentPresence"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/documents": {
       "get": {
         "operationId": "listDocuments",
@@ -1036,10 +1093,10 @@
             }
           },
           {
-            "name": "record_state",
+            "name": "medium",
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/DocumentRecordState"
+              "$ref": "#/components/schemas/DocumentMedium"
             }
           },
           {
@@ -1835,10 +1892,10 @@
             }
           },
           {
-            "name": "record_state",
+            "name": "medium",
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/BillRecordState"
+              "$ref": "#/components/schemas/BillMedium"
             }
           },
           {
@@ -3939,7 +3996,38 @@
           "notes": {
             "type": "string",
             "maxLength": 5000
-          }
+          },
+          "birth_date": { "type": "string", "format": "date" },
+          "gender": { "type": "string", "maxLength": 80 },
+          "blood_type": { "type": "string", "maxLength": 20 },
+          "nationality": { "type": "string", "maxLength": 80 },
+          "birth_city": { "type": "string", "maxLength": 100 },
+          "marital_status": { "type": "string", "maxLength": 80 },
+          "wedding_date": { "type": "string", "format": "date" },
+          "father_name": { "type": "string", "maxLength": 200 },
+          "father_birth_date": { "type": "string", "format": "date" },
+          "mother_name": { "type": "string", "maxLength": 200 },
+          "mother_birth_date": { "type": "string", "format": "date" },
+          "health_plan": { "type": "string", "maxLength": 200 },
+          "blood_donor": { "type": "boolean" },
+          "organ_donor": { "type": "boolean" },
+          "team": { "type": "string", "maxLength": 120 },
+          "sector": { "type": "string", "maxLength": 120 },
+          "collections": { "type": "string", "maxLength": 500 },
+          "vehicle_model": { "type": "string", "maxLength": 120 },
+          "vehicle_color": { "type": "string", "maxLength": 80 },
+          "vehicle_plate": { "type": "string", "maxLength": 20 },
+          "vehicle_year": { "type": "integer", "minimum": 1886, "maximum": 9999 },
+          "club_membership": { "type": "string", "maxLength": 80 },
+          "membership_type": { "type": "string", "maxLength": 80 },
+          "place_of_origin": { "type": "string", "maxLength": 100 },
+          "birth_country": { "type": "string", "maxLength": 80 },
+          "parents_wedding_date": { "type": "string", "format": "date" },
+          "supermarket_club": { "type": "string", "maxLength": 80 },
+          "pet": { "type": "string", "maxLength": 120 },
+          "travel_countries": { "type": "string", "maxLength": 500 },
+          "card_brand": { "type": "string", "maxLength": 120 },
+          "card_bank": { "type": "string", "maxLength": 120 }
         }
       },
       "UpdateProfileRequest": {
@@ -3989,6 +4077,37 @@
             "type": "string",
             "maxLength": 5000
           },
+          "birth_date": { "type": "string", "format": "date" },
+          "gender": { "type": "string", "maxLength": 80 },
+          "blood_type": { "type": "string", "maxLength": 20 },
+          "nationality": { "type": "string", "maxLength": 80 },
+          "birth_city": { "type": "string", "maxLength": 100 },
+          "marital_status": { "type": "string", "maxLength": 80 },
+          "wedding_date": { "type": "string", "format": "date" },
+          "father_name": { "type": "string", "maxLength": 200 },
+          "father_birth_date": { "type": "string", "format": "date" },
+          "mother_name": { "type": "string", "maxLength": 200 },
+          "mother_birth_date": { "type": "string", "format": "date" },
+          "health_plan": { "type": "string", "maxLength": 200 },
+          "blood_donor": { "type": "boolean" },
+          "organ_donor": { "type": "boolean" },
+          "team": { "type": "string", "maxLength": 120 },
+          "sector": { "type": "string", "maxLength": 120 },
+          "collections": { "type": "string", "maxLength": 500 },
+          "vehicle_model": { "type": "string", "maxLength": 120 },
+          "vehicle_color": { "type": "string", "maxLength": 80 },
+          "vehicle_plate": { "type": "string", "maxLength": 20 },
+          "vehicle_year": { "type": "integer", "minimum": 1886, "maximum": 9999 },
+          "club_membership": { "type": "string", "maxLength": 80 },
+          "membership_type": { "type": "string", "maxLength": 80 },
+          "place_of_origin": { "type": "string", "maxLength": 100 },
+          "birth_country": { "type": "string", "maxLength": 80 },
+          "parents_wedding_date": { "type": "string", "format": "date" },
+          "supermarket_club": { "type": "string", "maxLength": 80 },
+          "pet": { "type": "string", "maxLength": 120 },
+          "travel_countries": { "type": "string", "maxLength": 500 },
+          "card_brand": { "type": "string", "maxLength": 120 },
+          "card_bank": { "type": "string", "maxLength": 120 },
           "version": {
             "type": "integer",
             "format": "int64",
@@ -4061,6 +4180,37 @@
           "notes": {
             "type": "string"
           },
+          "birth_date": { "type": "string", "format": "date" },
+          "gender": { "type": "string" },
+          "blood_type": { "type": "string" },
+          "nationality": { "type": "string" },
+          "birth_city": { "type": "string" },
+          "marital_status": { "type": "string" },
+          "wedding_date": { "type": "string", "format": "date" },
+          "father_name": { "type": "string" },
+          "father_birth_date": { "type": "string", "format": "date" },
+          "mother_name": { "type": "string" },
+          "mother_birth_date": { "type": "string", "format": "date" },
+          "health_plan": { "type": "string" },
+          "blood_donor": { "type": "boolean" },
+          "organ_donor": { "type": "boolean" },
+          "team": { "type": "string" },
+          "sector": { "type": "string" },
+          "collections": { "type": "string" },
+          "vehicle_model": { "type": "string" },
+          "vehicle_color": { "type": "string" },
+          "vehicle_plate": { "type": "string" },
+          "vehicle_year": { "type": "integer" },
+          "club_membership": { "type": "string" },
+          "membership_type": { "type": "string" },
+          "place_of_origin": { "type": "string" },
+          "birth_country": { "type": "string" },
+          "parents_wedding_date": { "type": "string", "format": "date" },
+          "supermarket_club": { "type": "string" },
+          "pet": { "type": "string" },
+          "travel_countries": { "type": "string" },
+          "card_brand": { "type": "string" },
+          "card_bank": { "type": "string" },
           "version": {
             "type": "integer",
             "format": "int64",
@@ -4073,6 +4223,34 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "custom_values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Custom field technical_key to display value for this person on the current page."
+          },
+          "document_identifiers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Latest informed identifier_value per document type technical_key for this person, including cpf."
+          },
+          "document_badges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileDocumentBadge"
+            },
+            "description": "Positive document-type badges for the current people-listing page. Loaded with WHERE profile_id = ANY($ids); absence and unspecified are omitted."
+          },
+          "document_presences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileDocumentPresence"
+            },
+            "description": "Sparse persisted claims for this person, including absence. Unspecified types are omitted."
           }
         }
       },
@@ -4181,6 +4359,13 @@
             "items": {
               "$ref": "#/components/schemas/FieldError"
             }
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerCandidate"
+            },
+            "description": "Present when creating a bill and owner_name matches more than one Profile."
           }
         }
       },
@@ -4192,13 +4377,11 @@
           "GLOBAL_BY_TYPE"
         ]
       },
-      "DocumentRecordState": {
+      "DocumentMedium": {
         "type": "string",
         "enum": [
-          "CURRENT",
-          "REPLACED",
-          "EXPIRED",
-          "ARCHIVED"
+          "PHYSICAL",
+          "DIGITAL"
         ]
       },
       "DocumentStatus": {
@@ -4383,6 +4566,12 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "Number of exemplars of this type currently in possession"
           }
         }
       },
@@ -4395,7 +4584,7 @@
           "identifier_value",
           "document_date",
           "notes",
-          "record_state"
+          "medium"
         ],
         "properties": {
           "owner_profile_id": {
@@ -4408,7 +4597,6 @@
           },
           "identifier_value": {
             "type": "string",
-            "minLength": 1,
             "maxLength": 500
           },
           "document_date": {
@@ -4419,8 +4607,15 @@
             "type": "string",
             "maxLength": 5000
           },
-          "record_state": {
-            "$ref": "#/components/schemas/DocumentRecordState"
+          "medium": {
+            "$ref": "#/components/schemas/DocumentMedium"
+          },
+          "idle_custody": {
+            "$ref": "#/components/schemas/IdleCustody"
+          },
+          "valid_until": {
+            "type": "string",
+            "maxLength": 10
           }
         }
       },
@@ -4433,7 +4628,7 @@
           "identifier_value",
           "document_date",
           "notes",
-          "record_state",
+          "medium",
           "version"
         ],
         "properties": {
@@ -4447,7 +4642,6 @@
           },
           "identifier_value": {
             "type": "string",
-            "minLength": 1,
             "maxLength": 500
           },
           "document_date": {
@@ -4458,13 +4652,20 @@
             "type": "string",
             "maxLength": 5000
           },
-          "record_state": {
-            "$ref": "#/components/schemas/DocumentRecordState"
+          "medium": {
+            "$ref": "#/components/schemas/DocumentMedium"
           },
           "version": {
             "type": "integer",
             "format": "int64",
             "minimum": 1
+          },
+          "idle_custody": {
+            "$ref": "#/components/schemas/IdleCustody"
+          },
+          "valid_until": {
+            "type": "string",
+            "maxLength": 10
           }
         }
       },
@@ -4493,6 +4694,9 @@
             "type": "string",
             "format": "uuid"
           },
+          "holder_full_name": {
+            "type": "string"
+          },
           "assigned_at": {
             "type": "string",
             "format": "date-time"
@@ -4505,12 +4709,12 @@
         "required": [
           "id",
           "owner_profile_id",
+          "owner_full_name",
           "document_type_id",
           "identifier_value",
           "document_date",
           "notes",
-          "record_state",
-          "status",
+          "medium",
           "type",
           "current_use",
           "version",
@@ -4526,13 +4730,15 @@
             "type": "string",
             "format": "uuid"
           },
+          "owner_full_name": {
+            "type": "string"
+          },
           "document_type_id": {
             "type": "string",
             "format": "uuid"
           },
           "identifier_value": {
             "type": "string",
-            "minLength": 1,
             "maxLength": 500
           },
           "document_date": {
@@ -4543,8 +4749,8 @@
             "type": "string",
             "maxLength": 5000
           },
-          "record_state": {
-            "$ref": "#/components/schemas/DocumentRecordState"
+          "medium": {
+            "$ref": "#/components/schemas/DocumentMedium"
           },
           "status": {
             "$ref": "#/components/schemas/DocumentStatus"
@@ -4568,6 +4774,20 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "custom_values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Custom field technical_key to display value for this document on the current page."
+          },
+          "idle_custody": {
+            "$ref": "#/components/schemas/IdleCustody"
+          },
+          "valid_until": {
+            "type": "string",
+            "maxLength": 10
           }
         }
       },
@@ -4701,13 +4921,11 @@
         ],
         "default": "reference_value"
       },
-      "BillRecordState": {
+      "BillMedium": {
         "type": "string",
         "enum": [
-          "CURRENT",
-          "REPLACED",
-          "EXPIRED",
-          "ARCHIVED"
+          "PHYSICAL",
+          "DIGITAL"
         ]
       },
       "BillStatus": {
@@ -4723,8 +4941,7 @@
         "required": [
           "technical_key",
           "label",
-          "active",
-          "supports_current_use"
+          "active"
         ],
         "properties": {
           "technical_key": {
@@ -4740,9 +4957,6 @@
           },
           "active": {
             "type": "boolean"
-          },
-          "supports_current_use": {
-            "type": "boolean"
           }
         }
       },
@@ -4753,7 +4967,6 @@
           "technical_key",
           "label",
           "active",
-          "supports_current_use",
           "version"
         ],
         "properties": {
@@ -4771,9 +4984,6 @@
           "active": {
             "type": "boolean"
           },
-          "supports_current_use": {
-            "type": "boolean"
-          },
           "version": {
             "type": "integer",
             "format": "int64",
@@ -4789,7 +4999,6 @@
           "technical_key",
           "label",
           "active",
-          "supports_current_use",
           "version",
           "created_at",
           "updated_at"
@@ -4808,9 +5017,6 @@
           "active": {
             "type": "boolean"
           },
-          "supports_current_use": {
-            "type": "boolean"
-          },
           "version": {
             "type": "integer",
             "format": "int64",
@@ -4823,6 +5029,12 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "Number of exemplars of this type currently in possession"
           }
         }
       },
@@ -4830,7 +5042,6 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "owner_profile_id",
           "bill_type_id",
           "printed_holder_name",
           "printed_address",
@@ -4839,12 +5050,13 @@
           "amount",
           "currency",
           "notes",
-          "record_state"
+          "medium"
         ],
         "properties": {
           "owner_profile_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Optional when owner_name is provided. Required when more than one Profile matches the name."
           },
           "bill_type_id": {
             "type": "string",
@@ -4878,8 +5090,16 @@
             "type": "string",
             "maxLength": 5000
           },
-          "record_state": {
-            "$ref": "#/components/schemas/BillRecordState"
+          "medium": {
+            "$ref": "#/components/schemas/BillMedium"
+          },
+          "idle_custody": {
+            "$ref": "#/components/schemas/IdleCustody"
+          },
+          "owner_name": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Owner full name used to look up or create a Profile when owner_profile_id is omitted."
           }
         }
       },
@@ -4896,7 +5116,7 @@
           "amount",
           "currency",
           "notes",
-          "record_state",
+          "medium",
           "version"
         ],
         "properties": {
@@ -4936,13 +5156,16 @@
             "type": "string",
             "maxLength": 5000
           },
-          "record_state": {
-            "$ref": "#/components/schemas/BillRecordState"
+          "medium": {
+            "$ref": "#/components/schemas/BillMedium"
           },
           "version": {
             "type": "integer",
             "format": "int64",
             "minimum": 1
+          },
+          "idle_custody": {
+            "$ref": "#/components/schemas/IdleCustody"
           }
         }
       },
@@ -4990,6 +5213,9 @@
             "type": "string",
             "format": "uuid"
           },
+          "holder_full_name": {
+            "type": "string"
+          },
           "assigned_at": {
             "type": "string",
             "format": "date-time"
@@ -5002,6 +5228,7 @@
         "required": [
           "id",
           "owner_profile_id",
+          "owner_full_name",
           "bill_type_id",
           "printed_holder_name",
           "printed_address",
@@ -5010,8 +5237,7 @@
           "amount",
           "currency",
           "notes",
-          "record_state",
-          "status",
+          "medium",
           "type",
           "current_use",
           "version",
@@ -5026,6 +5252,9 @@
           "owner_profile_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "owner_full_name": {
+            "type": "string"
           },
           "bill_type_id": {
             "type": "string",
@@ -5059,8 +5288,8 @@
             "type": "string",
             "maxLength": 5000
           },
-          "record_state": {
-            "$ref": "#/components/schemas/BillRecordState"
+          "medium": {
+            "$ref": "#/components/schemas/BillMedium"
           },
           "status": {
             "$ref": "#/components/schemas/BillStatus"
@@ -5083,6 +5312,16 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "custom_values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Custom field technical_key to display value for this bill on the current page."
+          },
+          "idle_custody": {
+            "$ref": "#/components/schemas/IdleCustody"
           }
         }
       },
@@ -6044,6 +6283,203 @@
             "enum": [
               "Confirmar"
             ]
+          }
+        }
+      },
+      "IdleCustody": {
+        "type": "string",
+        "enum": [
+          "ORGANIZATION",
+          "OWNER"
+        ],
+        "description": "Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer."
+      },
+      "DocumentPresenceClaim": {
+        "type": "string",
+        "enum": [
+          "absence",
+          "indication",
+          "informed_number"
+        ],
+        "description": "Persisted presence claim for a document type on a person. Absence is never invented."
+      },
+      "UpsertDocumentPresenceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "profile_id",
+          "document_type_id",
+          "claim"
+        ],
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "document_type_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "claim": {
+            "$ref": "#/components/schemas/DocumentPresenceClaim"
+          },
+          "identifier_value": {
+            "type": "string",
+            "description": "Required when claim is informed_number; forbidden for absence and indication."
+          }
+        }
+      },
+      "DocumentPresence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "profile_id",
+          "document_type_id",
+          "claim",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "profile_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "document_type_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "claim": {
+            "$ref": "#/components/schemas/DocumentPresenceClaim"
+          },
+          "identifier_value": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          }
+        }
+      },
+      "DocumentBadgeKind": {
+        "type": "string",
+        "enum": [
+          "indication",
+          "informed_number",
+          "physical",
+          "physical_with_owner",
+          "digital",
+          "physical_digital",
+          "physical_with_owner_digital"
+        ],
+        "description": "Positive people-listing badge kind for one document type. Absence and unspecified emit no badge."
+      },
+      "ProfileDocumentBadge": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "document_type_id",
+          "technical_key",
+          "label",
+          "claim",
+          "badge",
+          "has_physical",
+          "has_digital",
+          "in_hands"
+        ],
+        "properties": {
+          "document_type_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "technical_key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string",
+            "description": "Type label for display; the grid cell uses the type acronym, not this state name."
+          },
+          "claim": {
+            "$ref": "#/components/schemas/DocumentPresenceClaim"
+          },
+          "badge": {
+            "$ref": "#/components/schemas/DocumentBadgeKind"
+          },
+          "identifier_value": {
+            "type": "string",
+            "description": "Present only when claim is informed_number."
+          },
+          "has_physical": {
+            "type": "boolean"
+          },
+          "has_digital": {
+            "type": "boolean"
+          },
+          "idle_custody": {
+            "$ref": "#/components/schemas/IdleCustody"
+          },
+          "in_hands": {
+            "type": "boolean",
+            "description": "Physical exemplar with ORGANIZATION idle custody or a current use."
+          }
+        },
+        "description": "JSON contract for people-listing document badges per type. Frontend renders chips later; this payload is the source of truth."
+      },
+      "ProfileDocumentPresence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "document_type_id",
+          "technical_key",
+          "label",
+          "claim",
+          "has_physical",
+          "has_digital"
+        ],
+        "properties": {
+          "document_type_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "technical_key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "claim": {
+            "$ref": "#/components/schemas/DocumentPresenceClaim"
+          },
+          "identifier_value": {
+            "type": "string"
+          },
+          "has_physical": {
+            "type": "boolean"
+          },
+          "has_digital": {
+            "type": "boolean"
+          }
+        },
+        "description": "Persisted presence claim for one document type on a person. Absence is included; unspecified types are omitted."
+      },
+      "OwnerCandidate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "full_name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "full_name": {
+            "type": "string"
           }
         }
       }

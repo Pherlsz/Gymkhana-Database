@@ -11,18 +11,32 @@ export type AdminUser = AdminUsersResponse["users"][number];
 export type UserRole = AdminUser["role"];
 export type ProfilePageResponse =
   paths["/api/v1/profiles"]["get"]["responses"][200]["content"]["application/json"];
-export type Profile = ProfilePageResponse["profiles"][number];
+export type Profile = ProfilePageResponse["profiles"][number] & {
+  custom_values?: Record<string, string>;
+  document_identifiers?: Record<string, string>;
+  document_badges?: ProfilePageResponse["profiles"][number]["document_badges"];
+  document_presences?: ProfilePageResponse["profiles"][number]["document_presences"];
+  cpf_digit_sum?: number | null;
+};
+export type ProfileDocumentBadge = NonNullable<Profile["document_badges"]>[number];
+export type ProfileDocumentPresence = NonNullable<Profile["document_presences"]>[number];
 export type ProfileValuesRequest =
   paths["/api/v1/profiles"]["post"]["requestBody"]["content"]["application/json"];
 export type UpdateProfileRequest =
   paths["/api/v1/profiles/{profile_id}"]["put"]["requestBody"]["content"]["application/json"];
+export type UpsertDocumentPresenceRequest =
+  paths["/api/v1/document-presences"]["put"]["requestBody"]["content"]["application/json"];
+export type DocumentPresence =
+  paths["/api/v1/document-presences"]["put"]["responses"][200]["content"]["application/json"];
 
 export type DocumentTypePageResponse =
   paths["/api/v1/document-types"]["get"]["responses"][200]["content"]["application/json"];
 export type DocumentType = DocumentTypePageResponse["types"][number];
 export type DocumentPageResponse =
   paths["/api/v1/documents"]["get"]["responses"][200]["content"]["application/json"];
-export type DocumentRecord = DocumentPageResponse["documents"][number];
+export type DocumentRecord = DocumentPageResponse["documents"][number] & {
+  custom_values?: Record<string, string>;
+};
 export type DocumentValuesRequest =
   paths["/api/v1/documents"]["post"]["requestBody"]["content"]["application/json"];
 export type UpdateDocumentRequest =
@@ -37,7 +51,9 @@ export type BillTypePageResponse =
 export type BillType = BillTypePageResponse["types"][number];
 export type BillPageResponse =
   paths["/api/v1/bills"]["get"]["responses"][200]["content"]["application/json"];
-export type BillRecord = BillPageResponse["bills"][number];
+export type BillRecord = BillPageResponse["bills"][number] & {
+  custom_values?: Record<string, string>;
+};
 export type BillValuesRequest =
   paths["/api/v1/bills"]["post"]["requestBody"]["content"]["application/json"];
 export type UpdateBillRequest =
@@ -105,7 +121,12 @@ export class APIRequestError extends Error {
 }
 
 export function apiURL(path: string): string {
-  const baseURL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+  if (import.meta.env.DEV && (path.startsWith("/api/") || path.startsWith("/health/"))) {
+    return path;
+  }
+  const baseURL = (
+    import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8080" : "")
+  ).replace(/\/$/, "");
   return `${baseURL}${path}`;
 }
 
@@ -211,7 +232,7 @@ export type ProfileListSearch = {
   document_order: "asc" | "desc";
   document_identifier: string;
   document_status: "" | "AVAILABLE" | "IN_USE";
-  document_state: "" | "CURRENT" | "REPLACED" | "EXPIRED" | "ARCHIVED";
+  document_medium: "" | "PHYSICAL" | "DIGITAL";
   document_type: string;
   document_selected: string | undefined;
   document_mode: "create" | "view" | "edit" | "types" | undefined;
@@ -228,10 +249,12 @@ export type ProfileListSearch = {
   bill_reference: string;
   bill_competence: string;
   bill_status: "" | "AVAILABLE" | "IN_USE";
-  bill_state: "" | "CURRENT" | "REPLACED" | "EXPIRED" | "ARCHIVED";
+  bill_medium: "" | "PHYSICAL" | "DIGITAL";
   bill_type: string;
   bill_selected: string | undefined;
   bill_mode: "create" | "view" | "edit" | "types" | undefined;
+  records_owner: string | undefined;
+  cols: string;
 };
 
 export async function listProfiles(
@@ -248,6 +271,71 @@ export async function listProfiles(
     if (search[key]) query.set(key, search[key]);
   }
   return requestJSON<ProfilePageResponse>(`/api/v1/profiles?${query}`, signal ? { signal } : {});
+}
+
+export async function getProfileListTotals(signal?: AbortSignal): Promise<ProfilePageResponse> {
+  return requestJSON<ProfilePageResponse>(
+    "/api/v1/profiles?limit=1&offset=0&sort=updated_at&order=desc",
+    signal ? { signal } : {},
+  );
+}
+
+export async function getDocumentListTotals(
+  status?: components["schemas"]["DocumentStatus"],
+  signal?: AbortSignal,
+  typeId?: string,
+): Promise<DocumentPageResponse> {
+  const query = new URLSearchParams({
+    limit: "1",
+    offset: "0",
+    sort: "updated_at",
+    order: "desc",
+  });
+  if (status) query.set("status", status);
+  if (typeId) query.set("document_type_id", typeId);
+  return requestJSON<DocumentPageResponse>(`/api/v1/documents?${query}`, signal ? { signal } : {});
+}
+
+export async function listDocumentsInUse(signal?: AbortSignal): Promise<DocumentPageResponse> {
+  return requestJSON<DocumentPageResponse>(
+    "/api/v1/documents?limit=50&offset=0&sort=updated_at&order=desc&status=IN_USE",
+    signal ? { signal } : {},
+  );
+}
+
+export async function getBillListTotals(
+  status?: components["schemas"]["BillStatus"],
+  signal?: AbortSignal,
+  typeId?: string,
+): Promise<BillPageResponse> {
+  const query = new URLSearchParams({
+    limit: "1",
+    offset: "0",
+    sort: "updated_at",
+    order: "desc",
+  });
+  if (status) query.set("status", status);
+  if (typeId) query.set("bill_type_id", typeId);
+  return requestJSON<BillPageResponse>(`/api/v1/bills?${query}`, signal ? { signal } : {});
+}
+
+export async function listBillsInUse(signal?: AbortSignal): Promise<BillPageResponse> {
+  return requestJSON<BillPageResponse>(
+    "/api/v1/bills?limit=50&offset=0&sort=updated_at&order=desc&status=IN_USE",
+    signal ? { signal } : {},
+  );
+}
+
+export async function getCustomEntityListTotals(
+  entityTypeId: string,
+  signal?: AbortSignal,
+): Promise<components["schemas"]["CustomEntityPageResponse"]> {
+  const query = new URLSearchParams({
+    entity_type_id: entityTypeId,
+    limit: "1",
+    offset: "0",
+  });
+  return requestJSON(`/api/v1/custom-entities?${query}`, signal ? { signal } : {});
 }
 
 export async function listProfilesForSelection(signal?: AbortSignal): Promise<ProfilePageResponse> {
@@ -293,7 +381,7 @@ export type DocumentListSearch = Pick<
   | "document_order"
   | "document_identifier"
   | "document_status"
-  | "document_state"
+  | "document_medium"
   | "document_type"
 >;
 
@@ -331,23 +419,36 @@ export async function deleteDocumentType(
   );
 }
 
+export async function getProfile(id: string, signal?: AbortSignal): Promise<Profile> {
+  return requestJSON<Profile>(
+    `/api/v1/profiles/${encodeURIComponent(id)}`,
+    signal ? { signal } : {},
+  );
+}
+
 export async function listDocuments(
-  profileId: string,
+  profileId: string | undefined,
   search: DocumentListSearch,
   signal?: AbortSignal,
 ): Promise<DocumentPageResponse> {
   const query = new URLSearchParams({
-    owner_profile_id: profileId,
     limit: String(search.document_limit),
     offset: String((search.document_page - 1) * search.document_limit),
     sort: search.document_sort,
     order: search.document_order,
   });
+  if (profileId) query.set("owner_profile_id", profileId);
   if (search.document_identifier) query.set("identifier", search.document_identifier);
   if (search.document_status) query.set("status", search.document_status);
-  if (search.document_state) query.set("record_state", search.document_state);
+  if (search.document_medium) query.set("medium", search.document_medium);
   if (search.document_type) query.set("document_type_id", search.document_type);
   return requestJSON<DocumentPageResponse>(`/api/v1/documents?${query}`, signal ? { signal } : {});
+}
+
+export async function upsertDocumentPresence(
+  request: UpsertDocumentPresenceRequest,
+): Promise<DocumentPresence> {
+  return requestJSON<DocumentPresence>("/api/v1/document-presences", jsonRequest("PUT", request));
 }
 
 export async function createDocument(request: DocumentValuesRequest): Promise<DocumentRecord> {
@@ -406,7 +507,7 @@ export type BillListSearch = Pick<
   | "bill_reference"
   | "bill_competence"
   | "bill_status"
-  | "bill_state"
+  | "bill_medium"
   | "bill_type"
 >;
 
@@ -443,21 +544,21 @@ export async function deleteBillType(
 }
 
 export async function listBills(
-  profileId: string,
+  profileId: string | undefined,
   search: BillListSearch,
   signal?: AbortSignal,
 ): Promise<BillPageResponse> {
   const query = new URLSearchParams({
-    owner_profile_id: profileId,
     limit: String(search.bill_limit),
     offset: String((search.bill_page - 1) * search.bill_limit),
     sort: search.bill_sort,
     order: search.bill_order,
   });
+  if (profileId) query.set("owner_profile_id", profileId);
   if (search.bill_reference) query.set("reference", search.bill_reference);
   if (search.bill_competence) query.set("competence", search.bill_competence);
   if (search.bill_status) query.set("status", search.bill_status);
-  if (search.bill_state) query.set("record_state", search.bill_state);
+  if (search.bill_medium) query.set("medium", search.bill_medium);
   if (search.bill_type) query.set("bill_type_id", search.bill_type);
   return requestJSON<BillPageResponse>(`/api/v1/bills?${query}`, signal ? { signal } : {});
 }

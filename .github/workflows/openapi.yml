@@ -68,7 +68,7 @@ jobs:
           {
             make generate-go generate-ts
             find api/generated -type f -name '*.go' -print0 | xargs -0 --no-run-if-empty gofmt -w
-            pnpm exec oxfmt apps/web/src/generated/api.ts apps/web/src/generated/attachments-api.ts apps/web/src/generated/search-api.ts apps/web/src/generated/operations-api.ts apps/web/src/generated/google-forms-api.ts apps/web/src/generated/query-api.ts apps/web/src/generated/matching-api.ts apps/web/src/generated/chat-api.ts apps/web/src/generated/ocr-api.ts apps/web/src/generated/tasks-api.ts --write
+            pnpm exec oxfmt apps/web/src/generated/api.ts apps/web/src/generated/attachments-api.ts apps/web/src/generated/search-api.ts apps/web/src/generated/operations-api.ts apps/web/src/generated/google-forms-api.ts apps/web/src/generated/query-api.ts apps/web/src/generated/matching-api.ts apps/web/src/generated/chat-api.ts apps/web/src/generated/ocr-api.ts --write
           } 2>&1 | tee /tmp/openapi-generation.log
 
       - name: Preserve OpenAPI generator diagnostics

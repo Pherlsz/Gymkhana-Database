@@ -53,16 +53,22 @@ VALUES($1,'Ana Query','ana.query@example.org','Recife'),($2,'Zed Query','zed.que
 VALUES($1,$2,'Documento Query',true,'NONE',false)`, documentTypeID.String(), key+"_doc"); err != nil {
 		t.Fatalf("insert query document type: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO documents(id, owner_profile_id, document_type_id, identifier_value, uniqueness_policy)
-VALUES($1,$2,$3,'RG%_42','NONE')`, documentID.String(), profileID.String(), documentTypeID.String()); err != nil {
+	if _, err := pool.Exec(ctx, `WITH presence AS (
+  INSERT INTO document_presences (id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value)
+  SELECT gen_random_uuid(), $2, document_type.id, document_type.uniqueness_policy, 'informed_number', 'RG%_42'
+  FROM document_types AS document_type WHERE document_type.id = $3
+  RETURNING id
+)
+INSERT INTO documents (id, presence_id, medium, idle_custody)
+SELECT $1, presence.id, 'PHYSICAL', 'ORGANIZATION' FROM presence`, documentID.String(), profileID.String(), documentTypeID.String()); err != nil {
 		t.Fatalf("insert query document: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO bill_types(id, technical_key, label, active, supports_current_use)
-VALUES($1,$2,'Conta Query',true,false)`, billTypeID.String(), key+"_bill"); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO bill_types(id, technical_key, label, active)
+VALUES($1,$2,'Conta Query',true)`, billTypeID.String(), key+"_bill"); err != nil {
 		t.Fatalf("insert query bill type: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO bills(id, owner_profile_id, bill_type_id, reference_value, amount, currency)
-VALUES($1,$2,$3,'UC-QUERY-42',42.50,'BRL')`, billID.String(), profileID.String(), billTypeID.String()); err != nil {
+	if _, err := pool.Exec(ctx, `INSERT INTO bills(id, owner_profile_id, bill_type_id, reference_value, amount, currency, medium, idle_custody)
+VALUES($1,$2,$3,'UC-QUERY-42',42.50,'BRL','PHYSICAL','ORGANIZATION')`, billID.String(), profileID.String(), billTypeID.String()); err != nil {
 		t.Fatalf("insert query bill: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO custom_field_definitions
@@ -85,6 +91,7 @@ VALUES($1,$2,$3,'DECIMAL',12.34)`, valueID.String(), fieldID.String(), profileID
 		_, _ = pool.Exec(cleanup, `DELETE FROM bills WHERE id=$1`, billID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM bill_types WHERE id=$1`, billTypeID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM documents WHERE id=$1`, documentID.String())
+		_, _ = pool.Exec(cleanup, `DELETE FROM document_presences WHERE profile_id IN ($1,$2)`, profileID.String(), otherProfileID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM document_types WHERE id=$1`, documentTypeID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM profiles WHERE id IN ($1,$2)`, profileID.String(), otherProfileID.String())
 		_, _ = pool.Exec(cleanup, `DELETE FROM app_users WHERE id IN ($1,$2)`, actorID.String(), otherActorID.String())

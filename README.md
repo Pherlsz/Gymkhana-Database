@@ -4,61 +4,14 @@ Private web application for managing people, documents, bills, custom data, impo
 
 ## Documentation and tracking
 
-Permanent product, domain, security, UX, and architecture rules live in [`docs/ORCHESTRATION.md`](docs/ORCHESTRATION.md).
+Permanent product, domain, security, UX, and architecture rules live in [`docs/ORCHESTRATION.md`](docs/ORCHESTRATION.md). Agents must read the architecture/design sections and the requested module section before any Gymkhana migration task; see [`AGENTS.md`](AGENTS.md).
 
-Development status, milestone definitions, completed work, pending work, and continuation context live only in the [master checklist issue #31](https://github.com/Pherlsz/Gymkhana-Database/issues/31). The README and repository documents do not track the current milestone or next action.
-
-## GitHub milestone operating model
-
-GitHub milestones are delivery containers, not a second roadmap. Issue #31 remains the only cross-milestone tracker and source of truth for current state and next action.
-
-### Structure
-
-- One GitHub milestone represents one delivery stage, named `M<n> — <outcome>`.
-- Keep only the current milestone and, when useful, the immediately following milestone open. Future roadmap items remain in #31 until they are prepared for execution.
-- Every milestone has one parent issue that defines scope, exclusions, dependencies, acceptance, and the final closing gate.
-- The parent issue and every executable issue belong to the milestone.
-- Pull requests normally do not belong to the milestone when they already close a milestone issue. They must link the issue with `Closes #<number>` so GitHub closes the issue after merge. Assign a PR directly to a milestone only when it represents required delivery work that has no separate issue.
-- The master tracker #31 is never assigned to a product milestone.
-- Labels describe cross-cutting concerns such as backend, frontend, security, dependency, or blocked work; they do not replace milestones.
-
-This avoids counting the same work twice. GitHub calculates milestone completion from the number of closed issues and pull requests, not from estimated effort, so issue sizing should remain reasonably consistent and delivery PRs should not duplicate their issues in the progress bar.
-
-### Milestone description template
-
-```text
-Parent issue: #<number>
-Outcome: <observable product result>
-Depends on: <previous milestone or external dependency>
-Exit gate: <final acceptance issue or criteria>
-Next milestone: M<n+1> — <name>
-```
-
-Add a due date only for an active planning window. A due date is a forecast, not a release promise; update it when scope or dependencies change instead of hiding delay in issue state.
-
-### Lifecycle
-
-1. Before development, create the parent issue, executable issues, and GitHub milestone; assign the parent and executable issues to it.
-2. Order the issues on the milestone page by dependency and execution sequence.
-3. Start implementation from an executable issue and keep one draft PR per active workstream.
-4. Any newly discovered scope must become a milestone issue, be explicitly deferred to a later milestone in #31, or be rejected as out of scope. It must not remain hidden only in a PR description.
-5. Close executable issues only through merged delivery or an explicit `not planned` decision with rationale.
-6. Close the final acceptance issue last, after all required integration gates are satisfied.
-7. Update #31 with the delivered result and next executable unit, then close the GitHub milestone.
-8. Releases and version tags remain separate from milestones. A milestone may lead to a release, but milestone progress must not depend on release automation.
-
-### Milestone hygiene
-
-- Do not use a milestone as a backlog bucket for unrelated work.
-- Do not move unfinished work silently to the next milestone; record why it was deferred.
-- Do not create tiny diagnostic, formatting, or CI-only issues merely to inflate completion.
-- Do not close the parent issue before the final acceptance gate.
-- Review milestone scope, dependencies, due date, and open-item ordering at every project resumption.
+Live status lives only in the [master checklist issue #31](https://github.com/Pherlsz/Gymkhana-Database/issues/31). Repository documents do not track current work or next action, and must not be created for that purpose.
 
 The application consumes:
 
 - `github.com/Pherlsz/Gymkhana-Core v0.2.1` for deterministic normalization and civil-time values;
-- `antd` (Ant Design) for layouts, controls, feedback, and overlays — replacing the former private `@pherlsz/gymkhana-ui` package (discontinued);
+- Lucide and in-repo UI primitives. Orchestration §12.3 rejects Ant Design, Material UI, and shadcn as the visual base; leftover `antd` in the tree is not the approved component layer and must not be expanded;
 - `openapi-typescript 7.13.0` for deterministic generated TypeScript contracts.
 
 ## Requirements
@@ -66,9 +19,9 @@ The application consumes:
 - Go 1.26.5
 - Node.js 24 LTS
 - pnpm 11.12.0
-- Docker with Compose
 - GNU Make or a compatible environment such as WSL/Git Bash on Windows
 - Git credentials that can read the private Gymkhana Core repository
+- lokeys on the Windows PATH (DPAPI-backed local secrets; never a plaintext `.env`)
 
 ## Private dependency access
 
@@ -79,25 +32,43 @@ go env -w GOPRIVATE=github.com/Pherlsz/Gymkhana-Core
 go env -w GONOSUMDB=github.com/Pherlsz/Gymkhana-Core
 ```
 
-GitHub Actions uses the repository secret `GYMKHANA_REPOSITORY_TOKEN`, backed by a fine-grained token with read-only access to Gymkhana Core. The UI package uses the workflow token with package read access.
+GitHub Actions uses the repository secret `GYMKHANA_REPOSITORY_TOKEN`, backed by a fine-grained token with read-only access to Gymkhana Core.
 
 ## Setup
 
+`.env.example` is the catalog of environment names for the lokeys `gymkhana` profile. Do not copy it to `.env`. Store values with `lokeys ui`.
+
+The rebuild uses Neon only. The lokeys `gymkhana` profile scopes `DATABASE_URL` by `--env`:
+
+- `--env dev` → Neon `Gymkhana-Database-Dev-18`, database `gymkhana`, unpooled (direct) endpoint;
+- `--env prod` → Neon `Gymkhana-Database-Prod-18`, database `gymkhana`, unpooled.
+
+Do not store a PgBouncer `-pooler` URL: Tern and the Go `pgx` pool need the direct compute. Production PostgreSQL is Neon major 18 (Orchestration §24); there is no in-place major upgrade.
+
+`make migrate` and `make migrate-status` require `DATABASE_URL` and apply Tern plus River to that Neon database. `make reset-db` is retired so Compose cannot be mistaken for a Neon wipe.
+
+Run lokeys from Windows PowerShell. It uses Windows DPAPI; do not call Linux Python in WSL. If Make, Go, and pnpm live in WSL, pass the same command through `wsl`.
+
 ```bash
-cp .env.example .env
 corepack enable
 pnpm install --frozen-lockfile
 go mod download
-docker compose up -d db
-make migrate
-make check-config
 ```
+
+```powershell
+$env:LOKEYS_AGENT = "1"
+lokeys run -p gymkhana --env dev -- make check-config
+lokeys run -p gymkhana --env dev -- make migrate
+```
+
+`lokeys --env dev` injects `APP_ENV=development`, which this application treats as `local` for auth cookie rules. The database is still Neon Dev-18.
 
 Run the API and web app in separate terminals:
 
-```bash
-make dev-api
-pnpm dev:web
+```powershell
+$env:LOKEYS_AGENT = "1"
+lokeys run -p gymkhana --env dev -- make dev-api
+lokeys run -p gymkhana --env dev -- pnpm dev:web
 ```
 
 - API: `http://localhost:8080`
@@ -105,23 +76,53 @@ pnpm dev:web
 - Live health: `http://localhost:8080/health/live`
 - Ready health: `http://localhost:8080/health/ready`
 
-## GitHub authentication
+## Legacy application (Gymkhana-Database-Vercel)
+
+The production Next.js app lives in the sibling repository `Gymkhana-Database-Vercel` (`~/projects/product/Gymkhana-Database-Vercel`). It is not a dependency of this rebuild.
+
+Start it only when the operator also asks to run the legacy. Default local work is this repository alone.
+
+Do not wrap the legacy with `lokeys run`. `npm run dev` is `prisma generate && next dev`. Prisma loads `prisma.config.ts`, which uses `dotenv/config` and therefore reads `.env`. Next.js also loads `.env` / `.env.local` and inlines those files into Edge middleware (`AUTH_SECRET`). lokeys `--env dev` overwrites `NODE_ENV` and `APP_ENV` in the child process, which fights Next. Run Next from WSL against the gitignored env files; lokeys itself is a Windows DPAPI CLI.
+
+The two apps do not share a database. Legacy local runs use the rotating Dev Neon `DATABASE_URL` in `.env`, never the Compose PostgreSQL on port 5432. Ports do not collide: legacy `http://localhost:3000`, rebuild API `8080`, rebuild web `5173`. `AUTH_URL` for local login is `http://localhost:3000`.
+
+From the Vercel repository:
+
+```bash
+npm install
+npm run dev
+```
+
+If `.env` is missing and must be materialized from lokeys without printing values, write the file first, then start Next unwrapped:
+
+```powershell
+$env:LOKEYS_AGENT = "1"
+lokeys apply -p gymkhana_vercel --env dev --format dotenv -o .env
+```
+
+```bash
+npm run dev
+```
+
+Do not run `prisma db push`, seed, or other Neon writes unless the operator explicitly asks.
+
+## Google authentication
 
 Authentication is optional only in local and test environments. Staging and production fail during startup unless private application access is completely configured.
 
-Create a GitHub OAuth App and configure these environment values:
+Create a Google OAuth client and configure these environment values:
 
 - `AUTH_ENABLED=true`
-- `GITHUB_OAUTH_CLIENT_ID`
-- `GITHUB_OAUTH_CLIENT_SECRET`, supplied through the local or deployment secret manager;
-- `GITHUB_OAUTH_REDIRECT_URL`, ending in `/auth/callback`;
+- `GOOGLE_OAUTH_CLIENT_ID`
+- `GOOGLE_OAUTH_CLIENT_SECRET`, supplied through lokeys locally or the deployment secret manager;
+- `GOOGLE_OAUTH_REDIRECT_URL`, ending in `/auth/callback`;
 - `AUTH_APPLICATION_URL`, the web application URL used after login and the only browser origin trusted for credentialed CORS and state-changing requests;
-- `AUTH_ALLOWED_GITHUB_LOGINS`, a comma-separated allowlist;
-- `AUTH_SUPERADMIN_GITHUB_LOGIN`, which must also appear in the allowlist.
+- `AUTH_ALLOWED_EMAILS`, a comma-separated bootstrap allowlist (runtime access is the `allowed_emails` table);
+- `AUTH_SUPERADMIN_EMAIL`, which must also appear in the allowlist.
 
 For local testing, use callback `http://localhost:8080/auth/callback` and application URL `http://localhost:5173`. The API stores only SHA-256 session hashes. Browser cookies are HttpOnly, SameSite=Lax, host-only, and become Secure outside local/test. Application sessions expire after 24 hours and logout revokes the server-side session.
 
-The first successful login matching `AUTH_SUPERADMIN_GITHUB_LOGIN` creates the initial `SUPERADMIN`. Other allowed first-time users are created as `MEMBER`. Disabled users remain denied even when their GitHub login is allowed.
+The first successful login matching `AUTH_SUPERADMIN_EMAIL` creates the initial `SUPERADMIN`. Other allowed first-time users are created as `EXTERNAL`. Account lookup is by email. Disabled users remain denied even when their email is allowed.
 
 The complete setup, lifecycle, audit, smoke-test, incident, and recovery procedures are in [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
 
@@ -133,15 +134,15 @@ Configuration, key rotation, smoke testing, and recovery procedures are in [`doc
 
 ## Query Engine
 
-The authenticated Query Engine builds permission-filtered, typed, read-only relational plans without accepting SQL or physical schema paths. Its supported v1 nodes, limits, retention, safe error surface, M14 boundary, and rollback procedure are documented in [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md).
+The authenticated Query Engine builds permission-filtered, typed, read-only relational plans without accepting SQL or physical schema paths. Versioned plan nodes, limits, retention, and rollback are documented in [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md). Gymkhana tasks are Chat capabilities, not a user module; see [`docs/TASKS.md`](docs/TASKS.md).
 
 ## Profile Matching
 
-The authenticated Matching workspace generates bounded, explainable Profile candidates on demand, persists human review decisions and permits only ADMIN/SUPERADMIN to perform an explicit previewed transactional merge. Candidate rules, permissions, dependency movement, recovery and rollback are documented in [`docs/MATCHING.md`](docs/MATCHING.md).
+The authenticated Matching HTTP API generates bounded, explainable Profile candidates on demand, persists human review decisions and permits only ADMIN/SUPERADMIN to perform an explicit previewed transactional merge. Orchestration §15: this is the last module to implement; there is no `/matching` destination. Candidate rules, permissions, dependency movement, recovery and rollback are documented in [`docs/MATCHING.md`](docs/MATCHING.md).
 
-## AI Chat
+## AI Assistente
 
-The private AI Chat uses only permission-filtered, typed, read-only Search and Query tools. It remains disabled in production until the owner selects a provider/model and a default retention period. Configuration, privacy, quotas, crash recovery, smoke testing and rollback are documented in [`docs/AI_CHAT.md`](docs/AI_CHAT.md).
+The private Assistente (Orchestration §18) uses only permission-filtered, typed, read-only Search and Query tools. It is hosted in tables, Search, and a wide panel. There is no `/chat`, `/query`, or `/tasks` destination for users. The HTTP engine remains `/api/v1/chat`. Production uses a shared model key stored in Administração. Configuration, privacy, quotas, crash recovery, smoke testing and rollback are documented in [`docs/AI_CHAT.md`](docs/AI_CHAT.md).
 
 ## Multimodal OCR
 
@@ -153,10 +154,17 @@ Private OCR validates authorized PDF/image attachments, creates typed evidence-b
 make generate
 make check
 make test
-make check-config
-make migrate
-make reset-db
 ```
+
+Commands that need the local profile:
+
+```powershell
+$env:LOKEYS_AGENT = "1"
+lokeys run -p gymkhana --env dev -- make check-config
+lokeys run -p gymkhana --env dev -- make migrate-status
+```
+
+Schema changes go to Neon through `make migrate`. Do not drop Dev-18 from Make.
 
 Use targeted commands such as `make check-backend` or `make check-frontend` while developing. Before a PR becomes ready for review, run `make check` plus every relevant migration or generated-contract verification. Dependency and lockfile changes must always be validated locally with `make scan` (govulncheck, OSV-Scanner, `pnpm audit`) before pushing, so the Security workflow never acts as the first place a vulnerability is discovered.
 
@@ -179,12 +187,12 @@ Mandatory usage rules:
 
 1. Keep exactly one implementation PR per active workstream. Helper, diagnostic, formatting, export, validation, and squash PRs are prohibited.
 2. Open implementation PRs as drafts. Develop, format, generate, and test locally before marking them ready for review.
-3. Before the first ready-for-review transition, run the relevant targeted checks and every applicable deterministic generator or migration check. Run `make check` before milestone acceptance or any security-sensitive merge.
+3. Before the first ready-for-review transition, run the relevant targeted checks and every applicable deterministic generator or migration check. Run `make check` before any security-sensitive merge.
 4. If a ready PR needs more than a trivial correction, convert it back to draft, batch all corrections, validate locally, and mark it ready once again. Do not use repeated pushes as a remote test loop.
 5. Do not create dummy commits, close/reopen PRs, or add temporary workflows to force executions. Re-run only a failed job, and only when the failure was caused by transient runner or network infrastructure.
 6. Do not push product changes directly to `main`. GitHub Pro branch protection or a repository ruleset must enforce PR-only integration.
 7. No temporary artifacts or diagnostic archives may be uploaded. Required artifacts must use the shortest practical retention.
-8. Review Actions usage before starting a milestone. At 70% monthly usage, move heavy validation to local or self-hosted execution. At 85%, reserve hosted runners for final merge-blocking gates. At 95%, hosted execution requires explicit owner approval.
+8. Review Actions usage before starting a large workstream. At 70% monthly usage, move heavy validation to local or self-hosted execution. At 85%, reserve hosted runners for final merge-blocking gates. At 95%, hosted execution requires explicit owner approval.
 9. Dependabot PRs still receive functional review. Do not merge solely because dependency checks are green.
 10. Any change that increases workflow frequency, job count, timeout, matrix size, artifact retention, or runner cost must explain the expected monthly impact in its PR.
 
@@ -215,10 +223,10 @@ docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN -f Dockerfil
 ## Platform contracts
 
 - typed environment validation that fails closed in deployed environments;
-- GitHub OAuth with state validation and an explicit login allowlist;
+- Google OAuth with state validation and an explicit email allowlist;
 - exact-origin CSRF validation and credentialed CORS derived from `AUTH_APPLICATION_URL`;
 - opaque, revocable, server-side sessions with a 24-hour lifetime;
-- centralized `MEMBER`, `ADMIN`, and protected `SUPERADMIN` authorization;
+- centralized `EXTERNAL`, `ADMIN`, and protected `SUPERADMIN` authorization;
 - correlated authentication and administration audit events with observable persistence failures;
 - stable JSON error envelopes with request IDs and safe public messages;
 - generated Go and TypeScript API contracts;
@@ -227,19 +235,21 @@ docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN -f Dockerfil
 
 ## Repository boundaries
 
-Gymkhana Database owns the product, persistence, HTTP API, workers, provider integrations, authorization, and application routes. Reusable infrastructure-independent Go logic belongs in Gymkhana Core.
+Gymkhana Database owns the product, persistence, HTTP API, workers, provider integrations, authorization, application routes, and the private UI. Reusable infrastructure-independent Go logic belongs in Gymkhana Core.
 
-Private UI/Core versions are pinned only after their releases are published. Permanent branch, commit, `replace`, subtree, submodule, or copied-source dependencies are not allowed.
+Core versions are pinned only after their releases are published. Permanent branch, commit, `replace`, subtree, submodule, or copied-source dependencies are not allowed.
 
 ## Project governance
 
 - [`docs/ORCHESTRATION.md`](docs/ORCHESTRATION.md) contains permanent approved rules only.
+- [`AGENTS.md`](AGENTS.md) requires agents to read Orchestration architecture/design plus the requested module section before any Gymkhana migration task.
 - [Issue #31](https://github.com/Pherlsz/Gymkhana-Database/issues/31) is the only live project checklist and continuation tracker.
-- GitHub milestones summarize one delivery stage and derive progress from its parent and executable issues; they do not replace #31.
 - [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) is an operational runbook for the implemented authentication feature.
 - [`docs/GOOGLE_FORMS.md`](docs/GOOGLE_FORMS.md) is the activation, rotation, smoke-test, and recovery runbook for Google Forms ingestion.
-- [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md) defines the QueryPlan v1 security, execution, retention, M14, and rollback boundaries.
+- [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md) defines QueryPlan security, execution, retention, and rollback boundaries.
+- [`docs/TASKS.md`](docs/TASKS.md) defines gymkhana task interpretation as a Chat capability (no user Tasks workspace).
 - [`docs/MATCHING.md`](docs/MATCHING.md) defines Profile candidate evidence, review lifecycle, explicit merge invariants, operations, and rollback boundaries.
 - [`docs/AI_CHAT.md`](docs/AI_CHAT.md) defines the read-only tool boundary, privacy, quotas, activation, recovery, retention, smoke-test, and rollback procedures.
 - [`docs/OCR.md`](docs/OCR.md) defines source/provider validation, privacy, review/application, retries, activation, acceptance, and rollback procedures.
-- New milestone-status, acceptance-tracking, continuation, or next-action documents must not be created.
+- [`docs/LAUNCH_RUNBOOK.md`](docs/LAUNCH_RUNBOOK.md) is the production cutover, promotion, and rollback procedure.
+- New status, continuation, or next-action documents must not be created.

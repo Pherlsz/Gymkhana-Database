@@ -830,7 +830,7 @@ func (service *Service) mutationForRow(ctx context.Context, module Module, value
 		}
 		normalized, err := document.Normalize(document.Values{OwnerProfileID: ownerID, TypeID: typeID,
 			Identifier: effective["identifier_value"], DocumentDate: effective["document_date"],
-			Notes: effective["notes"], RecordState: document.RecordState(effective["record_state"])}, definition)
+			Notes: effective["notes"], Medium: document.Medium(effective["medium"])}, definition)
 		if err != nil {
 			return Mutation{}, 0, err
 		}
@@ -851,7 +851,7 @@ func (service *Service) mutationForRow(ctx context.Context, module Module, value
 		normalized, err := bill.Normalize(bill.Values{OwnerProfileID: ownerID, TypeID: typeID,
 			PrintedHolderName: effective["printed_holder_name"], PrintedAddress: effective["printed_address"],
 			Reference: effective["reference_value"], Competence: effective["competence"], Amount: effective["amount"],
-			Currency: effective["currency"], Notes: effective["notes"], RecordState: bill.RecordState(effective["record_state"])}, definition)
+			Currency: effective["currency"], Notes: effective["notes"], Medium: bill.Medium(effective["medium"])}, definition)
 		if err != nil {
 			return Mutation{}, 0, err
 		}

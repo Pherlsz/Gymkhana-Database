@@ -107,6 +107,22 @@ func TestLoadUsesSafeTypedDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadTreatsDevelopmentAsLocal(t *testing.T) {
+	for _, value := range []string{"development", "dev", "DEVELOPMENT"} {
+		t.Run(value, func(t *testing.T) {
+			clearConfiguration(t)
+			t.Setenv("APP_ENV", value)
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load() error = %v", err)
+			}
+			if cfg.Environment != EnvironmentLocal {
+				t.Fatalf("Environment = %q, want %q", cfg.Environment, EnvironmentLocal)
+			}
+		})
+	}
+}
+
 func TestLoadRejectsInvalidTypedValues(t *testing.T) {
 	tests := []struct {
 		name  string

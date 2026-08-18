@@ -1,6 +1,6 @@
 # AI Chat operations runbook
 
-AI Chat is a private, permission-aware, read-only interface over the existing Search and Query Engine services. It has no arbitrary database, SQL, code, HTTP, or mutation tool. This runbook describes its configuration, privacy boundary, limits, recovery, smoke test, and rollback.
+The product surface is the **Assistente** (tables, Search, wide panel) defined in [`ORCHESTRATION.md`](ORCHESTRATION.md) §18. HTTP, capability `CHAT`, and this runbook still use the `/api/v1/chat` engine: a private, permission-aware, read-only interface over Search and Query Engine. It has no arbitrary database, SQL, code, HTTP, or mutation tool. The model never authors SQL; it calls typed tools and answers from retrieved catalog, prior result sets, and tool evidence. This runbook describes configuration, privacy boundary, limits, recovery, smoke test, and rollback.
 
 ## Activation boundary
 
@@ -8,13 +8,14 @@ The feature is disabled by default. The repository currently contains only a det
 
 Production activation requires all of the following owner decisions and implementation work:
 
-1. select the provider, API, and exact model;
+1. Administração: a shared provider key for Assistente and model OCR, encrypted at rest; SUPERADMIN/ADMIN manage it; EXTERNAL with `CHAT` may use it but never sees the secret; never store that key in the repo;
 2. select the default conversation/result retention period;
-3. implement and review a narrow production adapter for the existing `ModelClient` port;
-4. add its credentials through the deployment secret manager, never the repository;
-5. extend fail-closed configuration for that specific adapter and validate the complete flow in staging.
+3. implement and review a narrow production adapter for the existing `ModelClient` port that reads the shared Administração key;
+4. extend fail-closed configuration so Assistente is unavailable to everyone without a valid shared key, and unavailable to EXTERNAL without `CHAT`;
+5. wire Query v1/v2 and gymkhana-task interpretation as Assistente tools (no user Query, Tasks, or Chat screens);
+6. validate the complete flow in staging.
 
-Do not reuse `fake`, add a provider SDK, invent a credential variable, or choose retention by assumption.
+Do not reuse `fake` as a production adapter, invent a global API key in lokeys as the only production path, or choose retention by assumption.
 
 ## Configuration contract
 
@@ -45,12 +46,17 @@ The application owns a fixed registry containing only:
 
 - permission-filtered logical catalog inspection;
 - Search execution;
-- QueryPlan v1 execution;
+- QueryPlan v1 and later versions of the same engine;
+- gymkhana-task interpretation (requirement lists → per-step results);
 - reopening an existing owner-scoped result reference.
 
 Tool schemas reject unknown fields. Model arguments cannot select a new tool, increase a server limit, supply SQL, use physical schema names, or introduce a mutation. Search and Query reauthorize the current user during catalog access, execution, refinement, pagination, and result serialization. Result references are owner- and thread-scoped and are reloaded through the underlying service rather than trusting cached rows.
 
 All user messages, prior assistant messages, and database/tool values are marked as untrusted model input. Instruction-like text in those values grants no permission and cannot create a tool call. Saved queries are not selected or executed from manually typed text.
+
+## Gymkhana tasks
+
+Gymkhana tasks are Assistente capabilities, not a user module. A task is a list of requirements, often a full proof pasted as free text. The model may split it into steps and must return authorized Search/Query results for each step. It still cannot mutate canonical data, invent tools, or bypass the Search/Query allowlist. Operational detail lives in [`TASKS.md`](TASKS.md).
 
 ## Persistent data and privacy
 
@@ -114,7 +120,7 @@ Run the deterministic path only in an isolated test environment:
 
 1. apply all migrations to a disposable PostgreSQL database;
 2. configure application authentication plus the test-only values above;
-3. sign in as an active member and confirm `/api/v1/chat/capability` reports `enabled=true` and the fixed limits;
+3. sign in as an active EXTERNAL user and confirm `/api/v1/chat/capability` reports `enabled=true` and the fixed limits;
 4. create a private thread, submit a turn, observe ordered SSE text, and reconnect from a recorded sequence;
 5. exercise Search and Query evidence, select/clear active context, and submit a follow-up;
 6. cancel a run, retry it explicitly, rename the thread, and delete it;

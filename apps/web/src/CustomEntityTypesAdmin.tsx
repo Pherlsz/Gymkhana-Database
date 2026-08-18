@@ -50,7 +50,7 @@ export function CustomEntityTypesAdmin() {
           description={<>{customDataError(error)}</>}
         />
       ) : null}
-      <Card className="custom-admin-form" style={{ padding: "1rem" }}>
+      <Card className="custom-admin-form">
         <div className="custom-admin-grid">
           <label>
             Chave técnica
@@ -115,7 +115,7 @@ export function CustomEntityTypesAdmin() {
       </Card>
       <div className="custom-admin-list">
         {query.data?.types.map((value) => (
-          <Card className="custom-admin-card" key={value.id} style={{ padding: "1rem" }}>
+          <Card className="custom-admin-card" key={value.id}>
             <Flex vertical gap="0.75rem">
               <Flex className="custom-admin-card__header">
                 <div>

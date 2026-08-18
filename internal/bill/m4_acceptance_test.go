@@ -29,7 +29,7 @@ func TestM4AcceptanceBillRequiresProfileAndType(t *testing.T) {
 	assertBillFieldCode(t, validation, "bill_type_id", "invalid_value")
 }
 
-func TestM4AcceptanceBillKeepsPrintedDataAndEveryHistoricalState(t *testing.T) {
+func TestM4AcceptanceBillKeepsPrintedDataAndPhysicalOrDigitalMedium(t *testing.T) {
 	ownerID, err := profile.NewIdentifier()
 	if err != nil {
 		t.Fatal(err)
@@ -47,8 +47,8 @@ func TestM4AcceptanceBillKeepsPrintedDataAndEveryHistoricalState(t *testing.T) {
 		},
 	}
 
-	for _, state := range []RecordState{RecordCurrent, RecordReplaced, RecordExpired, RecordArchived} {
-		t.Run(string(state), func(t *testing.T) {
+	for _, medium := range []Medium{MediumPhysical, MediumDigital} {
+		t.Run(string(medium), func(t *testing.T) {
 			values, normalizeErr := Normalize(Values{
 				OwnerProfileID:    ownerID,
 				TypeID:            typeID,
@@ -58,12 +58,12 @@ func TestM4AcceptanceBillKeepsPrintedDataAndEveryHistoricalState(t *testing.T) {
 				Competence:        "2026-07",
 				Amount:            "000123.4",
 				Currency:          "brl",
-				RecordState:       state,
+				Medium:            medium,
 			}, definition)
 			if normalizeErr != nil {
 				t.Fatal(normalizeErr)
 			}
-			if values.RecordState != state || values.PrintedHolderName != "Original Printed Holder" || values.PrintedAddress != "Original Address, 001" {
+			if values.Medium != medium || values.PrintedHolderName != "Original Printed Holder" || values.PrintedAddress != "Original Address, 001" {
 				t.Fatalf("printed values = %#v", values)
 			}
 			if values.Reference != "000A-99" || values.Competence != "2026-07" || values.Amount != "123.40" || values.Currency != "BRL" {

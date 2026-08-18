@@ -188,15 +188,16 @@ func (state *advancedCompileState) compileHaving(node AggregateFilterNode, expre
 func (state *advancedCompileState) compileAdvancedOrder(plan QueryPlan, prefix string, aggregates map[string]string) []string {
 	order := make([]string, 0, len(plan.Sort))
 	for _, value := range plan.Sort {
-		expression := aggregates[value.Field]
-		if expression == "" {
-			expression = expandSQL(state.catalog.Fields[value.Field].Expression, prefix)
-		}
 		direction := "ASC"
 		if value.Direction == SortDescending {
 			direction = "DESC"
 		}
-		order = append(order, expression+" "+direction+" NULLS LAST")
+		if expression := aggregates[value.Field]; expression != "" {
+			order = append(order, expression+" "+direction+" NULLS LAST")
+			continue
+		}
+		field := state.catalog.Fields[value.Field]
+		order = append(order, orderExpression(expandSQL(field.Expression, prefix), field.Public.Kind, direction))
 	}
 	return order
 }

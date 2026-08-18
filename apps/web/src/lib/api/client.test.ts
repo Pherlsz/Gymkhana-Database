@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { APIRequestError, getAuthSession, getLiveHealth, logout } from "./client";
+import {
+  APIRequestError,
+  getAuthSession,
+  getLiveHealth,
+  listBills,
+  listDocuments,
+  logout,
+} from "./client";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
@@ -64,5 +71,60 @@ describe("generated API client helpers", () => {
       expect.stringContaining("/api/auth/logout"),
       expect.objectContaining({ method: "POST", credentials: "include" }),
     );
+  });
+
+  it("lists documents without requiring an owner", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        documents: [],
+        page: {
+          total: 0,
+          limit: 100,
+          offset: 0,
+          sort_field: "identifier_value",
+          sort_order: "asc",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await listDocuments(undefined, {
+      document_page: 1,
+      document_limit: 100,
+      document_sort: "identifier_value",
+      document_order: "asc",
+      document_identifier: "",
+      document_status: "",
+      document_medium: "",
+      document_type: "type-rg",
+    });
+    const url = String(fetchMock.mock.calls[0]?.[0]);
+    expect(url).toContain("/api/v1/documents?");
+    expect(url).toContain("document_type_id=type-rg");
+    expect(url).not.toContain("owner_profile_id=");
+  });
+
+  it("lists bills without requiring an owner", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        bills: [],
+        page: { total: 0, limit: 100, offset: 0, sort_field: "reference_value", sort_order: "asc" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await listBills(undefined, {
+      bill_page: 1,
+      bill_limit: 100,
+      bill_sort: "reference_value",
+      bill_order: "asc",
+      bill_reference: "",
+      bill_competence: "",
+      bill_status: "",
+      bill_medium: "",
+      bill_type: "type-luz",
+    });
+    const url = String(fetchMock.mock.calls[0]?.[0]);
+    expect(url).toContain("/api/v1/bills?");
+    expect(url).toContain("bill_type_id=type-luz");
+    expect(url).not.toContain("owner_profile_id=");
   });
 });

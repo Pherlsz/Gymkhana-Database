@@ -88,7 +88,7 @@ export function CustomEntitiesAdmin() {
           }
         />
       ) : null}
-      <Card className="custom-admin-form" style={{ padding: "1rem" }}>
+      <Card className="custom-admin-form">
         <div className="custom-admin-grid">
           <label>
             Tipo
@@ -156,7 +156,7 @@ export function CustomEntitiesAdmin() {
       </Card>
       <div className="custom-admin-list">
         {entities.data?.entities.map((value, index) => (
-          <Card key={value.id} className="custom-admin-card" style={{ padding: "1rem" }}>
+          <Card key={value.id} className="custom-admin-card">
             <Flex vertical gap="0.75rem">
               <strong>
                 {selectedType?.label ?? "Entidade"} #{index + 1}

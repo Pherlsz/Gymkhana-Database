@@ -1,11 +1,11 @@
 import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { getRouteApi, Link } from "@tanstack/react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
 import { DataGrid, DataGridPagination } from "./DataGrid";
 import { normalizeProfileSearch } from "./ProfilesPage";
-import { searchRoute } from "./App";
+import { tableLinkProps } from "./lib/tables/tableRoutes";
 import {
   APIRequestError,
   executeSearch,
@@ -26,6 +26,8 @@ export type GlobalSearchState = {
   sort: "relevance" | "updated_at";
   order: "asc" | "desc";
 };
+
+const searchRoute = getRouteApi("/search");
 
 const moduleValues: SearchModule[] = [
   "profiles",
@@ -51,6 +53,8 @@ export function normalizeGlobalSearch(search: Record<string, unknown>): GlobalSe
     order: search.order === "asc" ? "asc" : "desc",
   };
 }
+
+export const GLOBAL_SEARCH_DEFAULTS = normalizeGlobalSearch({});
 
 export function termsFromSearch(value: string): string[] {
   return value
@@ -135,7 +139,9 @@ export function SearchPage() {
   );
 
   const updateSearch = (patch: Partial<GlobalSearchState>) => {
-    void navigate({ search: (current) => ({ ...current, ...patch }) });
+    void navigate({
+      search: (current) => ({ ...current, ...patch }),
+    });
   };
   const submit = () => updateSearch({ q: draft, page: 1 });
   const toggleModule = (module: SearchModule, checked: boolean) => {
@@ -158,7 +164,7 @@ export function SearchPage() {
   };
 
   return (
-    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+    <Layout className="page-measure">
       <header className="page-header">
         <div className="page-eyebrow">M7 · Busca global</div>
         <Typography.Title level={1} className="page-title">
@@ -171,7 +177,7 @@ export function SearchPage() {
       </header>
       <div className="page-content">
         <Flex vertical gap="1.25rem">
-          <Card className="search-controls" style={{ padding: "1rem" }}>
+          <Card className="search-controls">
             <Flex vertical gap="1rem">
               <label className="search-controls__terms">
                 Termos — um por linha
@@ -368,7 +374,7 @@ function createSearchColumns(moduleLabels: Map<string, string>) {
 
 function SearchResultCard({ result, moduleLabel }: { result: SearchResult; moduleLabel: string }) {
   return (
-    <Card className="search-result-card" style={{ padding: "1rem" }}>
+    <Card className="search-result-card">
       <Flex vertical gap="0.5rem">
         <Flex align="center">
           <Tag color="info">{moduleLabel}</Tag>
@@ -385,16 +391,10 @@ function SearchResultCard({ result, moduleLabel }: { result: SearchResult; modul
 
 function SearchTargetLink({ result }: { result: SearchResult }) {
   const profileSearch = profileSearchForResult(result);
-  if (profileSearch) {
-    return (
-      <Link className="search-result__link" search={profileSearch} to="/profiles">
-        Abrir registro
-      </Link>
-    );
-  }
+  if (!profileSearch) return null;
   return (
-    <Link className="search-result__link" to="/custom-data">
-      Abrir dados personalizados
+    <Link className="search-result__link" {...tableLinkProps(profileSearch)}>
+      Abrir registro
     </Link>
   );
 }

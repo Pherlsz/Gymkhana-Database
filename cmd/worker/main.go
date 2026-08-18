@@ -143,7 +143,8 @@ func run() error {
 		Stopped() <-chan struct{}
 	}
 	if cfg.OCR.Enabled {
-		profileService, err := profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{})
+		profileStore := profile.NewPostgresStore(pool)
+		profileService, err := profile.NewService(profileStore, profile.ServiceOptions{})
 		if err != nil {
 			return fmt.Errorf("configure OCR Profile target: %w", err)
 		}
@@ -151,7 +152,7 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("configure OCR Document target: %w", err)
 		}
-		billService, err := bill.NewService(bill.NewPostgresStore(pool), bill.ServiceOptions{})
+		billService, err := bill.NewService(bill.NewPostgresStore(pool), bill.ServiceOptions{Owners: profileStore})
 		if err != nil {
 			return fmt.Errorf("configure OCR Bill target: %w", err)
 		}

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"
-	taskdomain "github.com/Pherlsz/Gymkhana-Database/internal/taskengine"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -93,9 +92,9 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	})
 	registerAuthRoutes(mux, logger, settings.Auth, settings.Development, settings.SecureCookies, settings.ApplicationURL)
 	registerAdministrationRoutes(mux, logger, settings.Auth)
-	registerProfileRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Profile)
-	registerDocumentRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Document)
-	registerBillRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Bill)
+	registerProfileRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Profile, pool)
+	registerDocumentRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Document, pool)
+	registerBillRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Bill, pool)
 	registerCustomDataRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.CustomData)
 	registerAttachmentRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Attachment)
 	registerSearchRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Search)
@@ -103,22 +102,6 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerGoogleFormsRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.GoogleForms, settings.ApplicationURL)
 	registerQueryRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Query)
 	registerAdvancedQueryRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Query)
-	var tasks taskService
-	if pool != nil && settings.Query != nil {
-		if gateway, ok := settings.Query.(taskdomain.QueryGateway); ok {
-			service, _, err := taskdomain.NewRuntime(pool, gateway, taskdomain.DisabledInterpreter{}, taskdomain.ServiceOptions{
-				OnAuditFailure: func(_ context.Context, event taskdomain.AuditEvent, auditErr error) {
-					logger.Error("task audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error_type", auditErr)
-				},
-			}, false)
-			if err != nil {
-				logger.Error("advanced task runtime is unavailable", "error_type", err)
-			} else {
-				tasks = service
-			}
-		}
-	}
-	registerTaskRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, tasks)
 	registerMatchingRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Matching)
 	registerChatRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Chat, settings.ChatResults, settings.ChatLauncher)
 	registerOCRRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.OCR)

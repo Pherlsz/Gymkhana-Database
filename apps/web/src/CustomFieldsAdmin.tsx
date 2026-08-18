@@ -129,7 +129,7 @@ export function CustomFieldsAdmin() {
           description={<>{customDataError(save.error ?? remove.error ?? fields.error)}</>}
         />
       ) : null}
-      <Card className="custom-admin-form" style={{ padding: "1rem" }}>
+      <Card className="custom-admin-form">
         <div className="custom-admin-grid">
           <label>
             Contexto
@@ -267,8 +267,8 @@ export function CustomFieldsAdmin() {
         </Flex>
       </Card>
       <div className="custom-admin-list">
-        {fields.data?.fields.map((value) => (
-          <Card key={value.id} className="custom-admin-card" style={{ padding: "1rem" }}>
+        {fields.data?.fields?.map((value) => (
+          <Card key={value.id} className="custom-admin-card">
             <Flex vertical gap="0.75rem">
               <Flex align="center" className="custom-admin-card__header">
                 <div>

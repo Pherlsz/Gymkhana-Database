@@ -2,7 +2,7 @@ import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useApplicationSession } from "./App";
+import { useApplicationSession } from "./session";
 import { APIRequestError } from "./lib/api/client";
 import {
   beginGoogleFormsOAuth,
@@ -80,7 +80,7 @@ export function GoogleFormsPage() {
 
   if (!canManage) {
     return (
-      <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+      <Layout className="page-measure">
         <header className="page-header">
           <div className="page-eyebrow">M9 · Integrações</div>
           <Typography.Title level={1} className="page-title">
@@ -99,7 +99,7 @@ export function GoogleFormsPage() {
   }
 
   return (
-    <Layout style={{ maxWidth: "lg", margin: "0 auto" }}>
+    <Layout className="page-measure">
       <header className="page-header">
         <div className="page-eyebrow">M9 · Integrações</div>
         <Typography.Title level={1} className="page-title">
@@ -250,7 +250,7 @@ function ConnectionSetup({ onConnected }: { onConnected: () => void }) {
     onSuccess: onConnected,
   });
   return (
-    <Card className="google-forms-panel" style={{ padding: "1rem" }}>
+    <Card className="google-forms-panel">
       <Flex vertical gap="1rem">
         <div>
           <h2>Conectar conta Google</h2>
@@ -288,7 +288,7 @@ function ConnectionSummary({
     onSuccess: onDisconnected,
   });
   return (
-    <Card className="google-forms-panel" style={{ padding: "1rem" }}>
+    <Card className="google-forms-panel">
       <Flex align="center" className="google-forms-heading">
         <div>
           <h2>Conexão Google</h2>
@@ -336,7 +336,7 @@ function SourceCreator({
     },
   });
   return (
-    <Card className="google-forms-panel" style={{ padding: "1rem" }}>
+    <Card className="google-forms-panel">
       <form
         onSubmit={(event: FormEvent) => {
           event.preventDefault();
@@ -449,7 +449,7 @@ function SourceCard({
   const busy =
     saveMapping.isPending || updateState.isPending || refresh.isPending || sync.isPending;
   return (
-    <Card className="google-forms-source" style={{ padding: "1rem" }}>
+    <Card className="google-forms-source">
       <Flex vertical gap="1rem">
         <Flex align="center" className="google-forms-heading">
           <div>
@@ -647,7 +647,7 @@ function SyncRow({
     onSuccess: onUpdated,
   });
   return (
-    <Card className="google-forms-sync" style={{ padding: "1rem" }}>
+    <Card className="google-forms-sync">
       <Flex align="center" className="google-forms-heading">
         <div>
           <strong>{name}</strong>
@@ -662,7 +662,7 @@ function SyncRow({
             <Link
               className="app-nav__link"
               search={{ selected: value.operation_import_id }}
-              to="/operations"
+              to="/admin"
             >
               Abrir importação
             </Link>
@@ -748,5 +748,5 @@ function googleFormsReturnPath() {
   if (tab === "sources" || tab === "history") parameters.set("tab", tab);
   if (source && /^[0-9a-f-]{36}$/i.test(source)) parameters.set("source", source);
   const query = parameters.toString();
-  return query ? `/google-forms?${query}` : "/google-forms";
+  return query ? `/forms?${query}` : "/forms";
 }

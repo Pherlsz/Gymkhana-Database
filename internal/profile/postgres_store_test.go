@@ -56,6 +56,15 @@ func (queries *fakeProfileQueries) DuplicateProfile(_ context.Context, params db
 	queries.duplicatedParams = params
 	return queries.profile, queries.duplicateErr
 }
+func (queries *fakeProfileQueries) ListProfilesByExactFullName(context.Context, string) ([]dbgen.Profile, error) {
+	return queries.profiles, queries.listErr
+}
+func (queries *fakeProfileQueries) UpsertCPFPresence(context.Context, dbgen.UpsertCPFPresenceParams) (dbgen.DocumentPresence, error) {
+	return dbgen.DocumentPresence{}, nil
+}
+func (queries *fakeProfileQueries) ClearCPFPresenceNumber(context.Context, pgtype.UUID) error {
+	return nil
+}
 func (queries *fakeProfileQueries) DeleteProfile(_ context.Context, params dbgen.DeleteProfileParams) (pgtype.UUID, error) {
 	queries.deletedParams = params
 	return params.ID, queries.deleteErr
@@ -78,7 +87,7 @@ func TestPostgresStoreCreatesNormalizedProfile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if queries.createdParams.FullName != "Ana da Silva" || pointerValue(queries.createdParams.Email) != "ana@example.com" || value.ID != id {
+	if queries.createdParams.FullName != "Ana da Silva" || pointerValue(queries.createdParams.Email) != "ana@example.com" || value.ID != id || value.Values.CPF != "52998224725" {
 		t.Fatalf("params = %#v, profile = %#v", queries.createdParams, value)
 	}
 }
@@ -98,6 +107,25 @@ func TestPostgresStorePassesFiltersSortingAndPagination(t *testing.T) {
 	}
 	if queries.countedParams.CpfFilter != "123" || queries.listedParams.PageLimit != 250 || queries.listedParams.SortField != "updated_at" || queries.listedParams.SortOrder != "desc" {
 		t.Fatalf("count params = %#v, list params = %#v", queries.countedParams, queries.listedParams)
+	}
+}
+
+func TestPostgresStoreListsStoredValuesWithoutRevalidating(t *testing.T) {
+	id, _ := NewIdentifier()
+	row := databaseProfile(id, time.Now())
+	invalidMobile := "3333-4444"
+	row.MobilePhone = &invalidMobile
+	queries := &fakeProfileQueries{profiles: []dbgen.Profile{row}}
+	store := &PostgresStore{queries: queries}
+
+	values, err := store.List(context.Background(), ListOptions{
+		Limit: 10, Offset: 0, SortField: SortFullName, SortOrder: SortAscending,
+	})
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if len(values) != 1 || values[0].Values.MobilePhone != invalidMobile {
+		t.Fatalf("values = %#v", values)
 	}
 }
 
@@ -139,7 +167,6 @@ func authIdentifier() (auth.Identifier, error) {
 
 func databaseProfile(id Identifier, createdAt time.Time) dbgen.Profile {
 	socialName := "Ana"
-	cpf := "52998224725"
 	email := "ana@example.com"
 	mobile := "+5551999998888"
 	landline := "+555133334444"
@@ -152,7 +179,7 @@ func databaseProfile(id Identifier, createdAt time.Time) dbgen.Profile {
 	postalCode := "90000000"
 	notes := "Observação"
 	return dbgen.Profile{
-		ID: databaseUUID(id), FullName: "Ana da Silva", SocialName: &socialName, Cpf: &cpf, Email: &email,
+		ID: databaseUUID(id), FullName: "Ana da Silva", SocialName: &socialName, Email: &email,
 		MobilePhone: &mobile, LandlinePhone: &landline, AddressStreet: &street, AddressNumber: &number,
 		AddressComplement: &complement, AddressNeighborhood: &neighborhood, AddressCity: &city,
 		AddressState: &state, AddressPostalCode: &postalCode, Notes: &notes, Version: 1,

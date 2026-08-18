@@ -105,7 +105,7 @@ export function AttachmentsPanel({
   };
 
   return (
-    <Card className="attachments-panel" style={{ padding: "1rem" }}>
+    <Card className="attachments-panel">
       <Flex vertical gap="1rem">
         <div className="attachments-panel__header">
           <div>
@@ -215,16 +215,6 @@ function AttachmentCard({
         </Tag>
         {value.lifecycle_state === "ACTIVE" ? (
           <>
-            {["application/pdf", "image/jpeg", "image/png"].includes(value.detected_mime) ? (
-              <Button
-                disabled={pending || value.byte_size > 20 * 1024 * 1024}
-                onClick={() =>
-                  window.location.assign(`/ocr?attachment=${encodeURIComponent(value.id)}`)
-                }
-              >
-                Revisar com OCR
-              </Button>
-            ) : null}
             <Button disabled={pending} onClick={onDownload}>
               Baixar
             </Button>

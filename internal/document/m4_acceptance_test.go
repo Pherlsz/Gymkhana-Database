@@ -28,10 +28,25 @@ func TestM4AcceptanceDocumentRequiresProfileTypeAndIdentifier(t *testing.T) {
 	}
 	assertFieldCode(t, validation, "owner_profile_id", "required")
 	assertFieldCode(t, validation, "document_type_id", "invalid_value")
-	assertFieldCode(t, validation, "identifier_value", "required")
 }
 
-func TestM4AcceptanceDocumentKeepsEveryHistoricalStateRepresentable(t *testing.T) {
+func TestNormalizeAllowsEmptyIdentifierAndRejectsRefusal(t *testing.T) {
+	owner, _ := profile.NewIdentifier()
+	typeID, _ := NewIdentifier()
+	definition := TypeDefinition{ID: typeID, Values: TypeValues{UniquenessPolicy: UniquenessNone}}
+	values, err := Normalize(Values{OwnerProfileID: owner, TypeID: typeID, Identifier: "Sim", Medium: MediumPhysical}, definition)
+	if err != nil || values.Identifier != "" {
+		t.Fatalf("empty possession identifier: %#v %v", values, err)
+	}
+	_, err = Normalize(Values{OwnerProfileID: owner, TypeID: typeID, Identifier: "Não", Medium: MediumPhysical}, definition)
+	var validation *ValidationError
+	if !errors.As(err, &validation) {
+		t.Fatalf("error = %v", err)
+	}
+	assertFieldCode(t, validation, "identifier_value", "refused")
+}
+
+func TestM4AcceptanceDocumentKeepsPhysicalAndDigitalMedia(t *testing.T) {
 	ownerID, err := profile.NewIdentifier()
 	if err != nil {
 		t.Fatal(err)
@@ -50,21 +65,33 @@ func TestM4AcceptanceDocumentKeepsEveryHistoricalStateRepresentable(t *testing.T
 		},
 	}
 
-	for _, state := range []RecordState{RecordCurrent, RecordReplaced, RecordExpired, RecordArchived} {
-		t.Run(string(state), func(t *testing.T) {
+	for _, medium := range []Medium{MediumPhysical, MediumDigital} {
+		t.Run(string(medium), func(t *testing.T) {
 			values, normalizeErr := Normalize(Values{
 				OwnerProfileID: ownerID,
 				TypeID:         typeID,
 				Identifier:     "00AB-009",
-				RecordState:    state,
+				Medium:         medium,
 			}, definition)
 			if normalizeErr != nil {
 				t.Fatal(normalizeErr)
 			}
-			if values.RecordState != state || values.Identifier != "00AB-009" {
+			if values.Medium != medium || values.Identifier != "00AB-009" {
 				t.Fatalf("normalized values = %#v", values)
 			}
 		})
+	}
+}
+
+func TestM4AcceptanceDocumentRejectsCurrentUseOnDigital(t *testing.T) {
+	if OperationalStatus(MediumDigital, true, "") != "" {
+		t.Fatal("digital exemplar must not expose lending status")
+	}
+	if OperationalStatus(MediumPhysical, false, IdleCustodyOrganization) != StatusAvailable {
+		t.Fatal("physical exemplar without current use must be available")
+	}
+	if OperationalStatus(MediumPhysical, true, IdleCustodyOrganization) != StatusInUse {
+		t.Fatal("physical exemplar with current use must be in use")
 	}
 }
 

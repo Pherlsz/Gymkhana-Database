@@ -15,15 +15,19 @@ import (
 type fakeDocumentQueries struct {
 	typeValue         dbgen.DocumentType
 	documentValue     dbgen.Document
+	getDocumentValue  dbgen.GetDocumentByIDRow
+	presenceValue     dbgen.DocumentPresence
 	currentUseValue   dbgen.DocumentCurrentUse
 	createdTypeParams dbgen.CreateDocumentTypeParams
 	createdParams     dbgen.CreateDocumentParams
+	upsertPresence    dbgen.UpsertDocumentPresenceParams
 	updatedTypeParams dbgen.UpdateDocumentTypeParams
 	assignedParams    dbgen.AssignDocumentCurrentUseParams
 	hasDocuments      bool
 	updateTypeErr     error
 	getTypeErr        error
 	getDocumentErr    error
+	getPresenceErr    error
 	assignErr         error
 }
 
@@ -40,6 +44,9 @@ func (q *fakeDocumentQueries) CountDocumentTypes(context.Context, dbgen.CountDoc
 func (q *fakeDocumentQueries) ListDocumentTypes(context.Context, dbgen.ListDocumentTypesParams) ([]dbgen.DocumentType, error) {
 	return nil, nil
 }
+func (q *fakeDocumentQueries) CountDocumentsByType(context.Context) ([]dbgen.CountDocumentsByTypeRow, error) {
+	return nil, nil
+}
 func (q *fakeDocumentQueries) DocumentTypeHasDocuments(context.Context, pgtype.UUID) (bool, error) {
 	return q.hasDocuments, nil
 }
@@ -50,12 +57,34 @@ func (q *fakeDocumentQueries) UpdateDocumentType(_ context.Context, p dbgen.Upda
 func (q *fakeDocumentQueries) DeleteDocumentType(context.Context, dbgen.DeleteDocumentTypeParams) (pgtype.UUID, error) {
 	return pgtype.UUID{}, nil
 }
+func (q *fakeDocumentQueries) GetDocumentPresence(context.Context, dbgen.GetDocumentPresenceParams) (dbgen.DocumentPresence, error) {
+	if q.getPresenceErr != nil {
+		return dbgen.DocumentPresence{}, q.getPresenceErr
+	}
+	return q.presenceValue, nil
+}
+func (q *fakeDocumentQueries) UpsertDocumentPresence(_ context.Context, p dbgen.UpsertDocumentPresenceParams) (dbgen.DocumentPresence, error) {
+	q.upsertPresence = p
+	if q.presenceValue.ID.Valid {
+		return q.presenceValue, nil
+	}
+	return dbgen.DocumentPresence{ID: p.ID, ProfileID: p.ProfileID, DocumentTypeID: p.DocumentTypeID, Claim: p.Claim, IdentifierValue: p.IdentifierValue}, nil
+}
+func (q *fakeDocumentQueries) CountExemplarsByPresence(context.Context, pgtype.UUID) (int64, error) {
+	return 0, nil
+}
 func (q *fakeDocumentQueries) CreateDocument(_ context.Context, p dbgen.CreateDocumentParams) (dbgen.Document, error) {
 	q.createdParams = p
 	return q.documentValue, nil
 }
 func (q *fakeDocumentQueries) GetDocumentByID(context.Context, pgtype.UUID) (dbgen.GetDocumentByIDRow, error) {
-	return dbgen.GetDocumentByIDRow{}, q.getDocumentErr
+	if q.getDocumentErr != nil {
+		return dbgen.GetDocumentByIDRow{}, q.getDocumentErr
+	}
+	if q.getDocumentValue.ID.Valid {
+		return q.getDocumentValue, nil
+	}
+	return dbgen.GetDocumentByIDRow{}, pgx.ErrNoRows
 }
 func (q *fakeDocumentQueries) CountDocuments(context.Context, dbgen.CountDocumentsParams) (int64, error) {
 	return 0, nil
@@ -71,6 +100,9 @@ func (q *fakeDocumentQueries) DuplicateDocument(context.Context, dbgen.Duplicate
 }
 func (q *fakeDocumentQueries) DeleteDocument(context.Context, dbgen.DeleteDocumentParams) (pgtype.UUID, error) {
 	return pgtype.UUID{}, nil
+}
+func (q *fakeDocumentQueries) DeleteDocumentCurrentUseForDelete(context.Context, pgtype.UUID) error {
+	return nil
 }
 func (q *fakeDocumentQueries) AssignDocumentCurrentUse(_ context.Context, p dbgen.AssignDocumentCurrentUseParams) (dbgen.DocumentCurrentUse, error) {
 	q.assignedParams = p
@@ -122,22 +154,35 @@ func TestPostgresStoreCreatesDocumentPreservingIdentifier(t *testing.T) {
 	documentID, _ := NewIdentifier()
 	ownerID, _ := profile.NewIdentifier()
 	now := time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC)
+	typeValue := databaseDocumentType(typeID, now)
 	queries := &fakeDocumentQueries{
-		typeValue: databaseDocumentType(typeID, now),
+		typeValue:      typeValue,
+		getPresenceErr: pgx.ErrNoRows,
 		documentValue: dbgen.Document{
-			ID: databaseUUID(documentID), OwnerProfileID: profileUUID(ownerID), DocumentTypeID: databaseUUID(typeID),
-			IdentifierValue: "00AB-009", UniquenessPolicy: string(UniquenessPerProfile),
-			DocumentDate: pgtype.Date{Time: now, Valid: true}, RecordState: string(RecordCurrent), Version: 1,
+			ID: databaseUUID(documentID), PresenceID: pgtype.UUID{Bytes: documentID, Valid: true},
+			DocumentDate: pgtype.Date{Time: now, Valid: true}, Medium: string(MediumPhysical),
+			IdleCustody: optionalString(string(IdleCustodyOrganization)), Version: 1,
 			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true}, UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		},
+		getDocumentValue: dbgen.GetDocumentByIDRow{
+			ID: databaseUUID(documentID), OwnerProfileID: profileUUID(ownerID), OwnerFullName: "Ana da Silva", DocumentTypeID: databaseUUID(typeID),
+			IdentifierValue: optionalString("00AB-009"), Medium: string(MediumPhysical),
+			IdleCustody:  optionalString(string(IdleCustodyOrganization)),
+			DocumentDate: pgtype.Date{Time: now, Valid: true}, Version: 1,
+			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true}, UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			TypeTechnicalKey: typeValue.TechnicalKey, TypeLabel: typeValue.Label, TypeActive: typeValue.Active,
+			UniquenessPolicy: typeValue.UniquenessPolicy, TypeValidationRegex: typeValue.ValidationRegex,
+			TypeDateRequired: typeValue.DateRequired, TypeVersion: typeValue.Version,
+			TypeCreatedAt: typeValue.CreatedAt, TypeUpdatedAt: typeValue.UpdatedAt,
 		},
 	}
 	store := &PostgresStore{queries: queries}
-	value, err := store.Create(context.Background(), documentID, Values{OwnerProfileID: ownerID, TypeID: typeID, Identifier: "  00AB-009  ", DocumentDate: "2026-07-15"})
+	value, err := store.Create(context.Background(), documentID, Values{OwnerProfileID: ownerID, TypeID: typeID, Identifier: "  00AB-009  ", DocumentDate: "2026-07-15", Medium: MediumPhysical})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if queries.createdParams.IdentifierValue != "00AB-009" || value.Values.Identifier != "00AB-009" || value.Status != StatusAvailable {
-		t.Fatalf("params = %#v, value = %#v", queries.createdParams, value)
+	if stringValue(queries.upsertPresence.IdentifierValue) != "00AB-009" || queries.createdParams.Medium != string(MediumPhysical) || value.Values.Identifier != "00AB-009" || value.Status != StatusAvailable || value.OwnerFullName != "Ana da Silva" {
+		t.Fatalf("upsert = %#v, params = %#v, value = %#v", queries.upsertPresence, queries.createdParams, value)
 	}
 }
 
@@ -166,6 +211,15 @@ func TestPostgresStoreAssignsCurrentUse(t *testing.T) {
 	}
 	if queries.assignedParams.DocumentID.Bytes != documentID || value.HolderProfileID != holderID || !value.AssignedAt.Equal(now) {
 		t.Fatalf("params = %#v, value = %#v", queries.assignedParams, value)
+	}
+}
+
+func TestPostgresStoreRejectsCurrentUseOnDigital(t *testing.T) {
+	documentID, _ := NewIdentifier()
+	holderID, _ := profile.NewIdentifier()
+	store := &PostgresStore{queries: &fakeDocumentQueries{assignErr: pgx.ErrNoRows}}
+	if _, err := store.AssignCurrentUse(context.Background(), documentID, holderID); !errors.Is(err, ErrCurrentUseUnsupported) {
+		t.Fatalf("unsupported error = %v", err)
 	}
 }
 

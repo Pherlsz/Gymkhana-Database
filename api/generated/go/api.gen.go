@@ -22,24 +22,18 @@ const (
 	SessionCookieScopes sessionCookieContextKey = "sessionCookie.Scopes"
 )
 
-// Defines values for BillRecordState.
+// Defines values for BillMedium.
 const (
-	BillRecordStateARCHIVED BillRecordState = "ARCHIVED"
-	BillRecordStateCURRENT  BillRecordState = "CURRENT"
-	BillRecordStateEXPIRED  BillRecordState = "EXPIRED"
-	BillRecordStateREPLACED BillRecordState = "REPLACED"
+	BillMediumDIGITAL  BillMedium = "DIGITAL"
+	BillMediumPHYSICAL BillMedium = "PHYSICAL"
 )
 
-// Valid indicates whether the value is a known member of the BillRecordState enum.
-func (e BillRecordState) Valid() bool {
+// Valid indicates whether the value is a known member of the BillMedium enum.
+func (e BillMedium) Valid() bool {
 	switch e {
-	case BillRecordStateARCHIVED:
+	case BillMediumDIGITAL:
 		return true
-	case BillRecordStateCURRENT:
-		return true
-	case BillRecordStateEXPIRED:
-		return true
-	case BillRecordStateREPLACED:
+	case BillMediumPHYSICAL:
 		return true
 	default:
 		return false
@@ -247,24 +241,72 @@ func (e DeleteCustomDataRequestConfirmation) Valid() bool {
 	}
 }
 
-// Defines values for DocumentRecordState.
+// Defines values for DocumentBadgeKind.
 const (
-	DocumentRecordStateARCHIVED DocumentRecordState = "ARCHIVED"
-	DocumentRecordStateCURRENT  DocumentRecordState = "CURRENT"
-	DocumentRecordStateEXPIRED  DocumentRecordState = "EXPIRED"
-	DocumentRecordStateREPLACED DocumentRecordState = "REPLACED"
+	DocumentBadgeKindDigital                  DocumentBadgeKind = "digital"
+	DocumentBadgeKindIndication               DocumentBadgeKind = "indication"
+	DocumentBadgeKindInformedNumber           DocumentBadgeKind = "informed_number"
+	DocumentBadgeKindPhysical                 DocumentBadgeKind = "physical"
+	DocumentBadgeKindPhysicalDigital          DocumentBadgeKind = "physical_digital"
+	DocumentBadgeKindPhysicalWithOwner        DocumentBadgeKind = "physical_with_owner"
+	DocumentBadgeKindPhysicalWithOwnerDigital DocumentBadgeKind = "physical_with_owner_digital"
 )
 
-// Valid indicates whether the value is a known member of the DocumentRecordState enum.
-func (e DocumentRecordState) Valid() bool {
+// Valid indicates whether the value is a known member of the DocumentBadgeKind enum.
+func (e DocumentBadgeKind) Valid() bool {
 	switch e {
-	case DocumentRecordStateARCHIVED:
+	case DocumentBadgeKindDigital:
 		return true
-	case DocumentRecordStateCURRENT:
+	case DocumentBadgeKindIndication:
 		return true
-	case DocumentRecordStateEXPIRED:
+	case DocumentBadgeKindInformedNumber:
 		return true
-	case DocumentRecordStateREPLACED:
+	case DocumentBadgeKindPhysical:
+		return true
+	case DocumentBadgeKindPhysicalDigital:
+		return true
+	case DocumentBadgeKindPhysicalWithOwner:
+		return true
+	case DocumentBadgeKindPhysicalWithOwnerDigital:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentMedium.
+const (
+	DocumentMediumDIGITAL  DocumentMedium = "DIGITAL"
+	DocumentMediumPHYSICAL DocumentMedium = "PHYSICAL"
+)
+
+// Valid indicates whether the value is a known member of the DocumentMedium enum.
+func (e DocumentMedium) Valid() bool {
+	switch e {
+	case DocumentMediumDIGITAL:
+		return true
+	case DocumentMediumPHYSICAL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentPresenceClaim.
+const (
+	DocumentPresenceClaimAbsence        DocumentPresenceClaim = "absence"
+	DocumentPresenceClaimIndication     DocumentPresenceClaim = "indication"
+	DocumentPresenceClaimInformedNumber DocumentPresenceClaim = "informed_number"
+)
+
+// Valid indicates whether the value is a known member of the DocumentPresenceClaim enum.
+func (e DocumentPresenceClaim) Valid() bool {
+	switch e {
+	case DocumentPresenceClaimAbsence:
+		return true
+	case DocumentPresenceClaimIndication:
+		return true
+	case DocumentPresenceClaimInformedNumber:
 		return true
 	default:
 		return false
@@ -373,6 +415,24 @@ func (e HealthResponseStatus) Valid() bool {
 	case Ok:
 		return true
 	case Unavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IdleCustody.
+const (
+	ORGANIZATION IdleCustody = "ORGANIZATION"
+	OWNER        IdleCustody = "OWNER"
+)
+
+// Valid indicates whether the value is a known member of the IdleCustody enum.
+func (e IdleCustody) Valid() bool {
+	switch e {
+	case ORGANIZATION:
+		return true
+	case OWNER:
 		return true
 	default:
 		return false
@@ -535,20 +595,27 @@ type AuthUser struct {
 
 // Bill defines model for Bill.
 type Bill struct {
-	Amount            string             `json:"amount"`
-	BillTypeId        openapi_types.UUID `json:"bill_type_id"`
-	Competence        string             `json:"competence"`
-	CreatedAt         time.Time          `json:"created_at"`
-	Currency          string             `json:"currency"`
-	CurrentUse        BillCurrentUse     `json:"current_use"`
-	Id                openapi_types.UUID `json:"id"`
+	Amount     string             `json:"amount"`
+	BillTypeId openapi_types.UUID `json:"bill_type_id"`
+	Competence string             `json:"competence"`
+	CreatedAt  time.Time          `json:"created_at"`
+	Currency   string             `json:"currency"`
+	CurrentUse BillCurrentUse     `json:"current_use"`
+
+	// CustomValues Custom field technical_key to display value for this bill on the current page.
+	CustomValues *map[string]string `json:"custom_values,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody       *IdleCustody       `json:"idle_custody,omitempty"`
+	Medium            BillMedium         `json:"medium"`
 	Notes             string             `json:"notes"`
+	OwnerFullName     string             `json:"owner_full_name"`
 	OwnerProfileId    openapi_types.UUID `json:"owner_profile_id"`
 	PrintedAddress    string             `json:"printed_address"`
 	PrintedHolderName string             `json:"printed_holder_name"`
-	RecordState       BillRecordState    `json:"record_state"`
 	ReferenceValue    string             `json:"reference_value"`
-	Status            BillStatus         `json:"status"`
+	Status            *BillStatus        `json:"status,omitempty"`
 	Type              BillType           `json:"type"`
 	UpdatedAt         time.Time          `json:"updated_at"`
 	Version           int64              `json:"version"`
@@ -557,8 +624,12 @@ type Bill struct {
 // BillCurrentUse defines model for BillCurrentUse.
 type BillCurrentUse struct {
 	AssignedAt      time.Time          `json:"assigned_at"`
+	HolderFullName  *string            `json:"holder_full_name,omitempty"`
 	HolderProfileId openapi_types.UUID `json:"holder_profile_id"`
 }
+
+// BillMedium defines model for BillMedium.
+type BillMedium string
 
 // BillPageMeta defines model for BillPageMeta.
 type BillPageMeta struct {
@@ -575,9 +646,6 @@ type BillPageResponse struct {
 	Page  BillPageMeta `json:"page"`
 }
 
-// BillRecordState defines model for BillRecordState.
-type BillRecordState string
-
 // BillSortField defines model for BillSortField.
 type BillSortField string
 
@@ -586,14 +654,16 @@ type BillStatus string
 
 // BillType defines model for BillType.
 type BillType struct {
-	Active             bool               `json:"active"`
-	CreatedAt          time.Time          `json:"created_at"`
-	Id                 openapi_types.UUID `json:"id"`
-	Label              string             `json:"label"`
-	SupportsCurrentUse bool               `json:"supports_current_use"`
-	TechnicalKey       string             `json:"technical_key"`
-	UpdatedAt          time.Time          `json:"updated_at"`
-	Version            int64              `json:"version"`
+	Active bool `json:"active"`
+
+	// Count Number of exemplars of this type currently in possession
+	Count        *int64             `json:"count,omitempty"`
+	CreatedAt    time.Time          `json:"created_at"`
+	Id           openapi_types.UUID `json:"id"`
+	Label        string             `json:"label"`
+	TechnicalKey string             `json:"technical_key"`
+	UpdatedAt    time.Time          `json:"updated_at"`
+	Version      int64              `json:"version"`
 }
 
 // BillTypePageResponse defines model for BillTypePageResponse.
@@ -613,24 +683,31 @@ type BillTypeSortField string
 
 // BillTypeValuesRequest defines model for BillTypeValuesRequest.
 type BillTypeValuesRequest struct {
-	Active             bool   `json:"active"`
-	Label              string `json:"label"`
-	SupportsCurrentUse bool   `json:"supports_current_use"`
-	TechnicalKey       string `json:"technical_key"`
+	Active       bool   `json:"active"`
+	Label        string `json:"label"`
+	TechnicalKey string `json:"technical_key"`
 }
 
 // BillValuesRequest defines model for BillValuesRequest.
 type BillValuesRequest struct {
-	Amount            string             `json:"amount"`
-	BillTypeId        openapi_types.UUID `json:"bill_type_id"`
-	Competence        string             `json:"competence"`
-	Currency          string             `json:"currency"`
-	Notes             string             `json:"notes"`
-	OwnerProfileId    openapi_types.UUID `json:"owner_profile_id"`
-	PrintedAddress    string             `json:"printed_address"`
-	PrintedHolderName string             `json:"printed_holder_name"`
-	RecordState       BillRecordState    `json:"record_state"`
-	ReferenceValue    string             `json:"reference_value"`
+	Amount     string             `json:"amount"`
+	BillTypeId openapi_types.UUID `json:"bill_type_id"`
+	Competence string             `json:"competence"`
+	Currency   string             `json:"currency"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody *IdleCustody `json:"idle_custody,omitempty"`
+	Medium      BillMedium   `json:"medium"`
+	Notes       string       `json:"notes"`
+
+	// OwnerName Owner full name used to look up or create a Profile when owner_profile_id is omitted.
+	OwnerName *string `json:"owner_name,omitempty"`
+
+	// OwnerProfileId Optional when owner_name is provided. Required when more than one Profile matches the name.
+	OwnerProfileId    *openapi_types.UUID `json:"owner_profile_id,omitempty"`
+	PrintedAddress    string              `json:"printed_address"`
+	PrintedHolderName string              `json:"printed_holder_name"`
+	ReferenceValue    string              `json:"reference_value"`
 }
 
 // CreateCustomEntityRequest defines model for CreateCustomEntityRequest.
@@ -849,26 +926,41 @@ type DeleteProfileRequest struct {
 
 // Document defines model for Document.
 type Document struct {
-	CreatedAt       time.Time           `json:"created_at"`
-	CurrentUse      DocumentCurrentUse  `json:"current_use"`
-	DocumentDate    string              `json:"document_date"`
-	DocumentTypeId  openapi_types.UUID  `json:"document_type_id"`
-	Id              openapi_types.UUID  `json:"id"`
-	IdentifierValue string              `json:"identifier_value"`
-	Notes           string              `json:"notes"`
-	OwnerProfileId  openapi_types.UUID  `json:"owner_profile_id"`
-	RecordState     DocumentRecordState `json:"record_state"`
-	Status          DocumentStatus      `json:"status"`
-	Type            DocumentType        `json:"type"`
-	UpdatedAt       time.Time           `json:"updated_at"`
-	Version         int64               `json:"version"`
+	CreatedAt  time.Time          `json:"created_at"`
+	CurrentUse DocumentCurrentUse `json:"current_use"`
+
+	// CustomValues Custom field technical_key to display value for this document on the current page.
+	CustomValues    *map[string]string `json:"custom_values,omitempty"`
+	DocumentDate    string             `json:"document_date"`
+	DocumentTypeId  openapi_types.UUID `json:"document_type_id"`
+	Id              openapi_types.UUID `json:"id"`
+	IdentifierValue string             `json:"identifier_value"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody    *IdleCustody       `json:"idle_custody,omitempty"`
+	Medium         DocumentMedium     `json:"medium"`
+	Notes          string             `json:"notes"`
+	OwnerFullName  string             `json:"owner_full_name"`
+	OwnerProfileId openapi_types.UUID `json:"owner_profile_id"`
+	Status         *DocumentStatus    `json:"status,omitempty"`
+	Type           DocumentType       `json:"type"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+	ValidUntil     *string            `json:"valid_until,omitempty"`
+	Version        int64              `json:"version"`
 }
+
+// DocumentBadgeKind Positive people-listing badge kind for one document type. Absence and unspecified emit no badge.
+type DocumentBadgeKind string
 
 // DocumentCurrentUse defines model for DocumentCurrentUse.
 type DocumentCurrentUse struct {
 	AssignedAt      time.Time          `json:"assigned_at"`
+	HolderFullName  *string            `json:"holder_full_name,omitempty"`
 	HolderProfileId openapi_types.UUID `json:"holder_profile_id"`
 }
+
+// DocumentMedium defines model for DocumentMedium.
+type DocumentMedium string
 
 // DocumentPageMeta defines model for DocumentPageMeta.
 type DocumentPageMeta struct {
@@ -885,8 +977,19 @@ type DocumentPageResponse struct {
 	Page      DocumentPageMeta `json:"page"`
 }
 
-// DocumentRecordState defines model for DocumentRecordState.
-type DocumentRecordState string
+// DocumentPresence defines model for DocumentPresence.
+type DocumentPresence struct {
+	// Claim Persisted presence claim for a document type on a person. Absence is never invented.
+	Claim           DocumentPresenceClaim `json:"claim"`
+	DocumentTypeId  openapi_types.UUID    `json:"document_type_id"`
+	Id              openapi_types.UUID    `json:"id"`
+	IdentifierValue *string               `json:"identifier_value,omitempty"`
+	ProfileId       openapi_types.UUID    `json:"profile_id"`
+	Version         int64                 `json:"version"`
+}
+
+// DocumentPresenceClaim Persisted presence claim for a document type on a person. Absence is never invented.
+type DocumentPresenceClaim string
 
 // DocumentSortField defines model for DocumentSortField.
 type DocumentSortField string
@@ -896,7 +999,10 @@ type DocumentStatus string
 
 // DocumentType defines model for DocumentType.
 type DocumentType struct {
-	Active           bool                     `json:"active"`
+	Active bool `json:"active"`
+
+	// Count Number of exemplars of this type currently in possession
+	Count            *int64                   `json:"count,omitempty"`
 	CreatedAt        time.Time                `json:"created_at"`
 	DateRequired     bool                     `json:"date_required"`
 	Id               openapi_types.UUID       `json:"id"`
@@ -941,17 +1047,23 @@ type DocumentUniquenessPolicy string
 
 // DocumentValuesRequest defines model for DocumentValuesRequest.
 type DocumentValuesRequest struct {
-	DocumentDate    string              `json:"document_date"`
-	DocumentTypeId  openapi_types.UUID  `json:"document_type_id"`
-	IdentifierValue string              `json:"identifier_value"`
-	Notes           string              `json:"notes"`
-	OwnerProfileId  openapi_types.UUID  `json:"owner_profile_id"`
-	RecordState     DocumentRecordState `json:"record_state"`
+	DocumentDate    string             `json:"document_date"`
+	DocumentTypeId  openapi_types.UUID `json:"document_type_id"`
+	IdentifierValue string             `json:"identifier_value"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody    *IdleCustody       `json:"idle_custody,omitempty"`
+	Medium         DocumentMedium     `json:"medium"`
+	Notes          string             `json:"notes"`
+	OwnerProfileId openapi_types.UUID `json:"owner_profile_id"`
+	ValidUntil     *string            `json:"valid_until,omitempty"`
 }
 
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
-	Error struct {
+	// Candidates Present when creating a bill and owner_name matches more than one Profile.
+	Candidates *[]OwnerCandidate `json:"candidates,omitempty"`
+	Error      struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 	} `json:"error"`
@@ -975,20 +1087,72 @@ type HealthResponse struct {
 // HealthResponseStatus defines model for HealthResponse.Status.
 type HealthResponseStatus string
 
+// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+type IdleCustody string
+
+// OwnerCandidate defines model for OwnerCandidate.
+type OwnerCandidate struct {
+	FullName string             `json:"full_name"`
+	Id       openapi_types.UUID `json:"id"`
+}
+
 // Profile defines model for Profile.
 type Profile struct {
-	Address       ProfileAddress     `json:"address"`
-	Cpf           string             `json:"cpf"`
-	CreatedAt     time.Time          `json:"created_at"`
-	Email         string             `json:"email"`
-	FullName      string             `json:"full_name"`
-	Id            openapi_types.UUID `json:"id"`
-	LandlinePhone string             `json:"landline_phone"`
-	MobilePhone   string             `json:"mobile_phone"`
-	Notes         string             `json:"notes"`
-	SocialName    string             `json:"social_name"`
-	UpdatedAt     time.Time          `json:"updated_at"`
-	Version       int64              `json:"version"`
+	Address        ProfileAddress      `json:"address"`
+	BirthCity      *string             `json:"birth_city,omitempty"`
+	BirthCountry   *string             `json:"birth_country,omitempty"`
+	BirthDate      *openapi_types.Date `json:"birth_date,omitempty"`
+	BloodDonor     *bool               `json:"blood_donor,omitempty"`
+	BloodType      *string             `json:"blood_type,omitempty"`
+	CardBank       *string             `json:"card_bank,omitempty"`
+	CardBrand      *string             `json:"card_brand,omitempty"`
+	ClubMembership *string             `json:"club_membership,omitempty"`
+	Collections    *string             `json:"collections,omitempty"`
+	Cpf            string              `json:"cpf"`
+	CreatedAt      time.Time           `json:"created_at"`
+
+	// CustomValues Custom field technical_key to display value for this person on the current page.
+	CustomValues *map[string]string `json:"custom_values,omitempty"`
+
+	// DocumentBadges Positive document-type badges for the current people-listing page. Loaded with WHERE profile_id = ANY($ids); absence and unspecified are omitted.
+	DocumentBadges *[]ProfileDocumentBadge `json:"document_badges,omitempty"`
+
+	// DocumentIdentifiers Latest informed identifier_value per document type technical_key for this person, including cpf.
+	DocumentIdentifiers *map[string]string `json:"document_identifiers,omitempty"`
+
+	// DocumentPresences Sparse persisted claims for this person, including absence. Unspecified types are omitted.
+	DocumentPresences  *[]ProfileDocumentPresence `json:"document_presences,omitempty"`
+	Email              string                     `json:"email"`
+	FatherBirthDate    *openapi_types.Date        `json:"father_birth_date,omitempty"`
+	FatherName         *string                    `json:"father_name,omitempty"`
+	FullName           string                     `json:"full_name"`
+	Gender             *string                    `json:"gender,omitempty"`
+	HealthPlan         *string                    `json:"health_plan,omitempty"`
+	Id                 openapi_types.UUID         `json:"id"`
+	LandlinePhone      string                     `json:"landline_phone"`
+	MaritalStatus      *string                    `json:"marital_status,omitempty"`
+	MembershipType     *string                    `json:"membership_type,omitempty"`
+	MobilePhone        string                     `json:"mobile_phone"`
+	MotherBirthDate    *openapi_types.Date        `json:"mother_birth_date,omitempty"`
+	MotherName         *string                    `json:"mother_name,omitempty"`
+	Nationality        *string                    `json:"nationality,omitempty"`
+	Notes              string                     `json:"notes"`
+	OrganDonor         *bool                      `json:"organ_donor,omitempty"`
+	ParentsWeddingDate *openapi_types.Date        `json:"parents_wedding_date,omitempty"`
+	Pet                *string                    `json:"pet,omitempty"`
+	PlaceOfOrigin      *string                    `json:"place_of_origin,omitempty"`
+	Sector             *string                    `json:"sector,omitempty"`
+	SocialName         string                     `json:"social_name"`
+	SupermarketClub    *string                    `json:"supermarket_club,omitempty"`
+	Team               *string                    `json:"team,omitempty"`
+	TravelCountries    *string                    `json:"travel_countries,omitempty"`
+	UpdatedAt          time.Time                  `json:"updated_at"`
+	VehicleColor       *string                    `json:"vehicle_color,omitempty"`
+	VehicleModel       *string                    `json:"vehicle_model,omitempty"`
+	VehiclePlate       *string                    `json:"vehicle_plate,omitempty"`
+	VehicleYear        *int                       `json:"vehicle_year,omitempty"`
+	Version            int64                      `json:"version"`
+	WeddingDate        *openapi_types.Date        `json:"wedding_date,omitempty"`
 }
 
 // ProfileAddress defines model for ProfileAddress.
@@ -1000,6 +1164,43 @@ type ProfileAddress struct {
 	PostalCode   string `json:"postal_code"`
 	State        string `json:"state"`
 	Street       string `json:"street"`
+}
+
+// ProfileDocumentBadge JSON contract for people-listing document badges per type. Frontend renders chips later; this payload is the source of truth.
+type ProfileDocumentBadge struct {
+	// Badge Positive people-listing badge kind for one document type. Absence and unspecified emit no badge.
+	Badge DocumentBadgeKind `json:"badge"`
+
+	// Claim Persisted presence claim for a document type on a person. Absence is never invented.
+	Claim          DocumentPresenceClaim `json:"claim"`
+	DocumentTypeId openapi_types.UUID    `json:"document_type_id"`
+	HasDigital     bool                  `json:"has_digital"`
+	HasPhysical    bool                  `json:"has_physical"`
+
+	// IdentifierValue Present only when claim is informed_number.
+	IdentifierValue *string `json:"identifier_value,omitempty"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody *IdleCustody `json:"idle_custody,omitempty"`
+
+	// InHands Physical exemplar with ORGANIZATION idle custody or a current use.
+	InHands bool `json:"in_hands"`
+
+	// Label Type label for display; the grid cell uses the type acronym, not this state name.
+	Label        string `json:"label"`
+	TechnicalKey string `json:"technical_key"`
+}
+
+// ProfileDocumentPresence Persisted presence claim for one document type on a person. Absence is included; unspecified types are omitted.
+type ProfileDocumentPresence struct {
+	// Claim Persisted presence claim for a document type on a person. Absence is never invented.
+	Claim           DocumentPresenceClaim `json:"claim"`
+	DocumentTypeId  openapi_types.UUID    `json:"document_type_id"`
+	HasDigital      bool                  `json:"has_digital"`
+	HasPhysical     bool                  `json:"has_physical"`
+	IdentifierValue *string               `json:"identifier_value,omitempty"`
+	Label           string                `json:"label"`
+	TechnicalKey    string                `json:"technical_key"`
 }
 
 // ProfilePageMeta defines model for ProfilePageMeta.
@@ -1022,14 +1223,45 @@ type ProfileSortField string
 
 // ProfileValuesRequest defines model for ProfileValuesRequest.
 type ProfileValuesRequest struct {
-	Address       ProfileAddress `json:"address"`
-	Cpf           string         `json:"cpf"`
-	Email         string         `json:"email"`
-	FullName      string         `json:"full_name"`
-	LandlinePhone string         `json:"landline_phone"`
-	MobilePhone   string         `json:"mobile_phone"`
-	Notes         string         `json:"notes"`
-	SocialName    string         `json:"social_name"`
+	Address            ProfileAddress      `json:"address"`
+	BirthCity          *string             `json:"birth_city,omitempty"`
+	BirthCountry       *string             `json:"birth_country,omitempty"`
+	BirthDate          *openapi_types.Date `json:"birth_date,omitempty"`
+	BloodDonor         *bool               `json:"blood_donor,omitempty"`
+	BloodType          *string             `json:"blood_type,omitempty"`
+	CardBank           *string             `json:"card_bank,omitempty"`
+	CardBrand          *string             `json:"card_brand,omitempty"`
+	ClubMembership     *string             `json:"club_membership,omitempty"`
+	Collections        *string             `json:"collections,omitempty"`
+	Cpf                string              `json:"cpf"`
+	Email              string              `json:"email"`
+	FatherBirthDate    *openapi_types.Date `json:"father_birth_date,omitempty"`
+	FatherName         *string             `json:"father_name,omitempty"`
+	FullName           string              `json:"full_name"`
+	Gender             *string             `json:"gender,omitempty"`
+	HealthPlan         *string             `json:"health_plan,omitempty"`
+	LandlinePhone      string              `json:"landline_phone"`
+	MaritalStatus      *string             `json:"marital_status,omitempty"`
+	MembershipType     *string             `json:"membership_type,omitempty"`
+	MobilePhone        string              `json:"mobile_phone"`
+	MotherBirthDate    *openapi_types.Date `json:"mother_birth_date,omitempty"`
+	MotherName         *string             `json:"mother_name,omitempty"`
+	Nationality        *string             `json:"nationality,omitempty"`
+	Notes              string              `json:"notes"`
+	OrganDonor         *bool               `json:"organ_donor,omitempty"`
+	ParentsWeddingDate *openapi_types.Date `json:"parents_wedding_date,omitempty"`
+	Pet                *string             `json:"pet,omitempty"`
+	PlaceOfOrigin      *string             `json:"place_of_origin,omitempty"`
+	Sector             *string             `json:"sector,omitempty"`
+	SocialName         string              `json:"social_name"`
+	SupermarketClub    *string             `json:"supermarket_club,omitempty"`
+	Team               *string             `json:"team,omitempty"`
+	TravelCountries    *string             `json:"travel_countries,omitempty"`
+	VehicleColor       *string             `json:"vehicle_color,omitempty"`
+	VehicleModel       *string             `json:"vehicle_model,omitempty"`
+	VehiclePlate       *string             `json:"vehicle_plate,omitempty"`
+	VehicleYear        *int                `json:"vehicle_year,omitempty"`
+	WeddingDate        *openapi_types.Date `json:"wedding_date,omitempty"`
 }
 
 // ReplaceCustomValuesRequest defines model for ReplaceCustomValuesRequest.
@@ -1043,26 +1275,28 @@ type SortOrder string
 
 // UpdateBillRequest defines model for UpdateBillRequest.
 type UpdateBillRequest struct {
-	Amount            string             `json:"amount"`
-	BillTypeId        openapi_types.UUID `json:"bill_type_id"`
-	Competence        string             `json:"competence"`
-	Currency          string             `json:"currency"`
+	Amount     string             `json:"amount"`
+	BillTypeId openapi_types.UUID `json:"bill_type_id"`
+	Competence string             `json:"competence"`
+	Currency   string             `json:"currency"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody       *IdleCustody       `json:"idle_custody,omitempty"`
+	Medium            BillMedium         `json:"medium"`
 	Notes             string             `json:"notes"`
 	OwnerProfileId    openapi_types.UUID `json:"owner_profile_id"`
 	PrintedAddress    string             `json:"printed_address"`
 	PrintedHolderName string             `json:"printed_holder_name"`
-	RecordState       BillRecordState    `json:"record_state"`
 	ReferenceValue    string             `json:"reference_value"`
 	Version           int64              `json:"version"`
 }
 
 // UpdateBillTypeRequest defines model for UpdateBillTypeRequest.
 type UpdateBillTypeRequest struct {
-	Active             bool   `json:"active"`
-	Label              string `json:"label"`
-	SupportsCurrentUse bool   `json:"supports_current_use"`
-	TechnicalKey       string `json:"technical_key"`
-	Version            int64  `json:"version"`
+	Active       bool   `json:"active"`
+	Label        string `json:"label"`
+	TechnicalKey string `json:"technical_key"`
+	Version      int64  `json:"version"`
 }
 
 // UpdateCustomEntityRequest defines model for UpdateCustomEntityRequest.
@@ -1108,13 +1342,17 @@ type UpdateCustomOptionRequest struct {
 
 // UpdateDocumentRequest defines model for UpdateDocumentRequest.
 type UpdateDocumentRequest struct {
-	DocumentDate    string              `json:"document_date"`
-	DocumentTypeId  openapi_types.UUID  `json:"document_type_id"`
-	IdentifierValue string              `json:"identifier_value"`
-	Notes           string              `json:"notes"`
-	OwnerProfileId  openapi_types.UUID  `json:"owner_profile_id"`
-	RecordState     DocumentRecordState `json:"record_state"`
-	Version         int64               `json:"version"`
+	DocumentDate    string             `json:"document_date"`
+	DocumentTypeId  openapi_types.UUID `json:"document_type_id"`
+	IdentifierValue string             `json:"identifier_value"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody    *IdleCustody       `json:"idle_custody,omitempty"`
+	Medium         DocumentMedium     `json:"medium"`
+	Notes          string             `json:"notes"`
+	OwnerProfileId openapi_types.UUID `json:"owner_profile_id"`
+	ValidUntil     *string            `json:"valid_until,omitempty"`
+	Version        int64              `json:"version"`
 }
 
 // UpdateDocumentTypeRequest defines model for UpdateDocumentTypeRequest.
@@ -1130,15 +1368,46 @@ type UpdateDocumentTypeRequest struct {
 
 // UpdateProfileRequest defines model for UpdateProfileRequest.
 type UpdateProfileRequest struct {
-	Address       ProfileAddress `json:"address"`
-	Cpf           string         `json:"cpf"`
-	Email         string         `json:"email"`
-	FullName      string         `json:"full_name"`
-	LandlinePhone string         `json:"landline_phone"`
-	MobilePhone   string         `json:"mobile_phone"`
-	Notes         string         `json:"notes"`
-	SocialName    string         `json:"social_name"`
-	Version       int64          `json:"version"`
+	Address            ProfileAddress      `json:"address"`
+	BirthCity          *string             `json:"birth_city,omitempty"`
+	BirthCountry       *string             `json:"birth_country,omitempty"`
+	BirthDate          *openapi_types.Date `json:"birth_date,omitempty"`
+	BloodDonor         *bool               `json:"blood_donor,omitempty"`
+	BloodType          *string             `json:"blood_type,omitempty"`
+	CardBank           *string             `json:"card_bank,omitempty"`
+	CardBrand          *string             `json:"card_brand,omitempty"`
+	ClubMembership     *string             `json:"club_membership,omitempty"`
+	Collections        *string             `json:"collections,omitempty"`
+	Cpf                string              `json:"cpf"`
+	Email              string              `json:"email"`
+	FatherBirthDate    *openapi_types.Date `json:"father_birth_date,omitempty"`
+	FatherName         *string             `json:"father_name,omitempty"`
+	FullName           string              `json:"full_name"`
+	Gender             *string             `json:"gender,omitempty"`
+	HealthPlan         *string             `json:"health_plan,omitempty"`
+	LandlinePhone      string              `json:"landline_phone"`
+	MaritalStatus      *string             `json:"marital_status,omitempty"`
+	MembershipType     *string             `json:"membership_type,omitempty"`
+	MobilePhone        string              `json:"mobile_phone"`
+	MotherBirthDate    *openapi_types.Date `json:"mother_birth_date,omitempty"`
+	MotherName         *string             `json:"mother_name,omitempty"`
+	Nationality        *string             `json:"nationality,omitempty"`
+	Notes              string              `json:"notes"`
+	OrganDonor         *bool               `json:"organ_donor,omitempty"`
+	ParentsWeddingDate *openapi_types.Date `json:"parents_wedding_date,omitempty"`
+	Pet                *string             `json:"pet,omitempty"`
+	PlaceOfOrigin      *string             `json:"place_of_origin,omitempty"`
+	Sector             *string             `json:"sector,omitempty"`
+	SocialName         string              `json:"social_name"`
+	SupermarketClub    *string             `json:"supermarket_club,omitempty"`
+	Team               *string             `json:"team,omitempty"`
+	TravelCountries    *string             `json:"travel_countries,omitempty"`
+	VehicleColor       *string             `json:"vehicle_color,omitempty"`
+	VehicleModel       *string             `json:"vehicle_model,omitempty"`
+	VehiclePlate       *string             `json:"vehicle_plate,omitempty"`
+	VehicleYear        *int                `json:"vehicle_year,omitempty"`
+	Version            int64               `json:"version"`
+	WeddingDate        *openapi_types.Date `json:"wedding_date,omitempty"`
 }
 
 // UpdateUserAccessRequest defines model for UpdateUserAccessRequest.
@@ -1146,6 +1415,17 @@ type UpdateUserAccessRequest struct {
 	Active  bool     `json:"active"`
 	Role    UserRole `json:"role"`
 	Version int64    `json:"version"`
+}
+
+// UpsertDocumentPresenceRequest defines model for UpsertDocumentPresenceRequest.
+type UpsertDocumentPresenceRequest struct {
+	// Claim Persisted presence claim for a document type on a person. Absence is never invented.
+	Claim          DocumentPresenceClaim `json:"claim"`
+	DocumentTypeId openapi_types.UUID    `json:"document_type_id"`
+
+	// IdentifierValue Required when claim is informed_number; forbidden for absence and indication.
+	IdentifierValue *string            `json:"identifier_value,omitempty"`
+	ProfileId       openapi_types.UUID `json:"profile_id"`
 }
 
 // UserRole defines model for UserRole.
@@ -1204,7 +1484,7 @@ type ListBillsParams struct {
 	BillTypeId      *openapi_types.UUID `form:"bill_type_id,omitempty" json:"bill_type_id,omitempty"`
 	Reference       *string             `form:"reference,omitempty" json:"reference,omitempty"`
 	Competence      *string             `form:"competence,omitempty" json:"competence,omitempty"`
-	RecordState     *BillRecordState    `form:"record_state,omitempty" json:"record_state,omitempty"`
+	Medium          *BillMedium         `form:"medium,omitempty" json:"medium,omitempty"`
 	Status          *BillStatus         `form:"status,omitempty" json:"status,omitempty"`
 	HolderProfileId *openapi_types.UUID `form:"holder_profile_id,omitempty" json:"holder_profile_id,omitempty"`
 }
@@ -1257,16 +1537,16 @@ type ListDocumentTypesParams struct {
 
 // ListDocumentsParams defines parameters for ListDocuments.
 type ListDocumentsParams struct {
-	Limit           *int32               `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset          *int32               `form:"offset,omitempty" json:"offset,omitempty"`
-	Sort            *DocumentSortField   `form:"sort,omitempty" json:"sort,omitempty"`
-	Order           *SortOrder           `form:"order,omitempty" json:"order,omitempty"`
-	OwnerProfileId  *openapi_types.UUID  `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
-	DocumentTypeId  *openapi_types.UUID  `form:"document_type_id,omitempty" json:"document_type_id,omitempty"`
-	Identifier      *string              `form:"identifier,omitempty" json:"identifier,omitempty"`
-	RecordState     *DocumentRecordState `form:"record_state,omitempty" json:"record_state,omitempty"`
-	Status          *DocumentStatus      `form:"status,omitempty" json:"status,omitempty"`
-	HolderProfileId *openapi_types.UUID  `form:"holder_profile_id,omitempty" json:"holder_profile_id,omitempty"`
+	Limit           *int32              `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset          *int32              `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort            *DocumentSortField  `form:"sort,omitempty" json:"sort,omitempty"`
+	Order           *SortOrder          `form:"order,omitempty" json:"order,omitempty"`
+	OwnerProfileId  *openapi_types.UUID `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
+	DocumentTypeId  *openapi_types.UUID `form:"document_type_id,omitempty" json:"document_type_id,omitempty"`
+	Identifier      *string             `form:"identifier,omitempty" json:"identifier,omitempty"`
+	Medium          *DocumentMedium     `form:"medium,omitempty" json:"medium,omitempty"`
+	Status          *DocumentStatus     `form:"status,omitempty" json:"status,omitempty"`
+	HolderProfileId *openapi_types.UUID `form:"holder_profile_id,omitempty" json:"holder_profile_id,omitempty"`
 }
 
 // ListProfilesParams defines parameters for ListProfiles.
@@ -1350,6 +1630,9 @@ type UpdateCustomOptionJSONRequestBody = UpdateCustomOptionRequest
 
 // ReplaceCustomValuesJSONRequestBody defines body for ReplaceCustomValues for application/json ContentType.
 type ReplaceCustomValuesJSONRequestBody = ReplaceCustomValuesRequest
+
+// UpsertDocumentPresenceJSONRequestBody defines body for UpsertDocumentPresence for application/json ContentType.
+type UpsertDocumentPresenceJSONRequestBody = UpsertDocumentPresenceRequest
 
 // CreateDocumentTypeJSONRequestBody defines body for CreateDocumentType for application/json ContentType.
 type CreateDocumentTypeJSONRequestBody = DocumentTypeValuesRequest
@@ -1497,6 +1780,9 @@ type ServerInterface interface {
 	// Replace custom values using optimistic concurrency
 	// (PUT /api/v1/custom-values/{target_kind}/{target_id})
 	ReplaceCustomValues(w http.ResponseWriter, r *http.Request, targetKind string, targetId openapi_types.UUID)
+	// Declare absence, indication, or an informed number for a person and document type
+	// (PUT /api/v1/document-presences)
+	UpsertDocumentPresence(w http.ResponseWriter, r *http.Request)
 	// List administrable document types
 	// (GET /api/v1/document-types)
 	ListDocumentTypes(w http.ResponseWriter, r *http.Request, params ListDocumentTypesParams)
@@ -1554,10 +1840,10 @@ type ServerInterface interface {
 	// Duplicate a profile into an independent profile for review
 	// (POST /api/v1/profiles/{profile_id}/duplicate)
 	DuplicateProfile(w http.ResponseWriter, r *http.Request, profileId openapi_types.UUID)
-	// Complete GitHub OAuth authentication
+	// Complete Google OAuth authentication
 	// (GET /auth/callback)
 	CompleteGitHubLogin(w http.ResponseWriter, r *http.Request, params CompleteGitHubLoginParams)
-	// Begin GitHub OAuth authentication
+	// Begin Google OAuth authentication
 	// (GET /auth/login)
 	BeginGitHubLogin(w http.ResponseWriter, r *http.Request)
 	// Check whether the API process is alive
@@ -2040,15 +2326,15 @@ func (siw *ServerInterfaceWrapper) ListBills(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// ------------- Optional query parameter "record_state" -------------
+	// ------------- Optional query parameter "medium" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_state", r.URL.Query(), &params.RecordState, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "medium", r.URL.Query(), &params.Medium, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_state"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "medium"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_state", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "medium", Err: err})
 		}
 		return
 	}
@@ -3190,6 +3476,26 @@ func (siw *ServerInterfaceWrapper) ReplaceCustomValues(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// UpsertDocumentPresence operation middleware
+func (siw *ServerInterfaceWrapper) UpsertDocumentPresence(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpsertDocumentPresence(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDocumentTypes operation middleware
 func (siw *ServerInterfaceWrapper) ListDocumentTypes(w http.ResponseWriter, r *http.Request) {
 
@@ -3516,15 +3822,15 @@ func (siw *ServerInterfaceWrapper) ListDocuments(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// ------------- Optional query parameter "record_state" -------------
+	// ------------- Optional query parameter "medium" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_state", r.URL.Query(), &params.RecordState, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "medium", r.URL.Query(), &params.Medium, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_state"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "medium"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_state", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "medium", Err: err})
 		}
 		return
 	}
@@ -4315,6 +4621,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/custom-fields/{field_id}/options/{option_id}", wrapper.UpdateCustomOption)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/custom-values/{target_kind}/{target_id}", wrapper.GetCustomValues)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/custom-values/{target_kind}/{target_id}", wrapper.ReplaceCustomValues)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/document-presences", wrapper.UpsertDocumentPresence)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/document-types", wrapper.ListDocumentTypes)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/document-types", wrapper.CreateDocumentType)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/document-types/{document_type_id}", wrapper.DeleteDocumentType)
@@ -8454,6 +8761,126 @@ func (response ReplaceCustomValues503JSONResponse) VisitReplaceCustomValuesRespo
 	return err
 }
 
+type UpsertDocumentPresenceRequestObject struct {
+	Body *UpsertDocumentPresenceJSONRequestBody
+}
+
+type UpsertDocumentPresenceResponseObject interface {
+	VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error
+}
+
+type UpsertDocumentPresence200JSONResponse DocumentPresence
+
+func (response UpsertDocumentPresence200JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpsertDocumentPresence400JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpsertDocumentPresence401JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpsertDocumentPresence403JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpsertDocumentPresence404JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpsertDocumentPresence409JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UpsertDocumentPresence422JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response UpsertDocumentPresence503JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListDocumentTypesRequestObject struct {
 	Params ListDocumentTypesParams
 }
@@ -10626,6 +11053,9 @@ type StrictServerInterface interface {
 	// Replace custom values using optimistic concurrency
 	// (PUT /api/v1/custom-values/{target_kind}/{target_id})
 	ReplaceCustomValues(ctx context.Context, request ReplaceCustomValuesRequestObject) (ReplaceCustomValuesResponseObject, error)
+	// Declare absence, indication, or an informed number for a person and document type
+	// (PUT /api/v1/document-presences)
+	UpsertDocumentPresence(ctx context.Context, request UpsertDocumentPresenceRequestObject) (UpsertDocumentPresenceResponseObject, error)
 	// List administrable document types
 	// (GET /api/v1/document-types)
 	ListDocumentTypes(ctx context.Context, request ListDocumentTypesRequestObject) (ListDocumentTypesResponseObject, error)
@@ -10683,10 +11113,10 @@ type StrictServerInterface interface {
 	// Duplicate a profile into an independent profile for review
 	// (POST /api/v1/profiles/{profile_id}/duplicate)
 	DuplicateProfile(ctx context.Context, request DuplicateProfileRequestObject) (DuplicateProfileResponseObject, error)
-	// Complete GitHub OAuth authentication
+	// Complete Google OAuth authentication
 	// (GET /auth/callback)
 	CompleteGitHubLogin(ctx context.Context, request CompleteGitHubLoginRequestObject) (CompleteGitHubLoginResponseObject, error)
-	// Begin GitHub OAuth authentication
+	// Begin Google OAuth authentication
 	// (GET /auth/login)
 	BeginGitHubLogin(ctx context.Context, request BeginGitHubLoginRequestObject) (BeginGitHubLoginResponseObject, error)
 	// Check whether the API process is alive
@@ -11844,6 +12274,37 @@ func (sh *strictHandler) ReplaceCustomValues(w http.ResponseWriter, r *http.Requ
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ReplaceCustomValuesResponseObject); ok {
 		if err := validResponse.VisitReplaceCustomValuesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpsertDocumentPresence operation middleware
+func (sh *strictHandler) UpsertDocumentPresence(w http.ResponseWriter, r *http.Request) {
+	var request UpsertDocumentPresenceRequestObject
+
+	var body UpsertDocumentPresenceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpsertDocumentPresence(ctx, request.(UpsertDocumentPresenceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpsertDocumentPresence")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpsertDocumentPresenceResponseObject); ok {
+		if err := validResponse.VisitUpsertDocumentPresenceResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

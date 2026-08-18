@@ -1,8 +1,12 @@
+import { ConfigProvider, theme as antdTheme } from "antd";
+import { Moon, Sun } from "lucide-react";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
+  useMemo,
+  useRef,
   useState,
   type PropsWithChildren,
 } from "react";
@@ -10,11 +14,153 @@ import {
 type Theme = "light" | "dark";
 
 const STORAGE_KEY = "gymkhana-theme";
+const THEME_SWITCH_MS = 240;
+
+/*
+ * Ant derives variants from these seeds with FastColor, which cannot read a CSS
+ * variable — it resolves one to black. So every mixable seed is a literal here
+ * and the same literal is what `shell.css` declares for the matching `--md-*`
+ * role. Non-mixable tokens keep pointing at the variable so they follow the
+ * theme without a second source of truth.
+ */
+const PRIMARY = "#ffc53d";
+const ON_PRIMARY = "#141414";
+const SEEDS = {
+  light: {
+    primaryText: "#8b5500",
+    error: "#b91c1e",
+    warning: "#a24100",
+    success: "#007742",
+    info: "#065da0",
+  },
+  dark: {
+    primaryText: "#ecd59f",
+    error: "#f66d62",
+    warning: "#f3ad6d",
+    success: "#59d38c",
+    info: "#73b6fa",
+  },
+} as const;
 
 const ThemeContext = createContext<{
   theme: Theme;
   toggleTheme: () => void;
 } | null>(null);
+
+function gymkhanaAntdTheme(mode: Theme) {
+  const dark = mode === "dark";
+  const seed = dark ? SEEDS.dark : SEEDS.light;
+  const primaryText = seed.primaryText;
+  // Surfaces follow html.dark via --ant-* in shell.css.
+  return {
+    cssVar: { key: "gymkhana" },
+    hashed: false,
+    algorithm: dark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+    token: {
+      colorPrimary: PRIMARY,
+      colorTextLightSolid: ON_PRIMARY,
+      colorLink: primaryText,
+      colorLinkHover: primaryText,
+      colorLinkActive: primaryText,
+      colorError: seed.error,
+      colorWarning: seed.warning,
+      colorSuccess: seed.success,
+      colorInfo: seed.info,
+      controlOutline: "var(--md-focus-ring)",
+      colorBgTextHover: "var(--md-state-hover)",
+      controlItemBgHover: "var(--md-state-hover)",
+      colorPrimaryBg: "var(--md-state-hover)",
+      colorPrimaryBgHover: "var(--md-state-pressed)",
+      colorFillTertiary: "var(--md-state-hover)",
+      borderRadius: 8,
+      fontSize: 14,
+    },
+    components: {
+      Button: {
+        primaryColor: ON_PRIMARY,
+        defaultColor: "var(--md-on-surface)",
+        defaultBorderColor: "var(--md-outline)",
+        defaultHoverColor: "var(--md-primary-text)",
+        defaultHoverBorderColor: "var(--md-primary-text)",
+        defaultActiveColor: "var(--md-primary-text)",
+        defaultActiveBorderColor: "var(--md-primary-text)",
+        defaultGhostColor: "var(--md-primary-text)",
+        defaultGhostBorderColor: "var(--md-primary-text)",
+        textTextColor: "var(--md-on-surface)",
+        textTextHoverColor: "var(--md-primary-text)",
+        textTextActiveColor: "var(--md-primary-text)",
+      },
+      Input: {
+        hoverBorderColor: "var(--md-primary-text)",
+        activeBorderColor: "var(--md-primary-text)",
+        activeShadow: "0 0 0 2px var(--md-focus-ring)",
+      },
+      Select: {
+        hoverBorderColor: "var(--md-primary-text)",
+        activeBorderColor: "var(--md-primary-text)",
+        optionSelectedBg: "var(--md-state-selected)",
+      },
+      DatePicker: {
+        hoverBorderColor: "var(--md-primary-text)",
+        activeBorderColor: "var(--md-primary-text)",
+      },
+      Tag: {
+        defaultColor: "var(--md-on-surface)",
+      },
+      Menu: {
+        itemSelectedColor: "var(--md-primary-text)",
+        itemHoverColor: "var(--md-primary-text)",
+        itemHoverBg: "var(--md-state-hover)",
+        itemSelectedBg: "var(--md-state-selected)",
+        subMenuItemSelectedColor: "var(--md-primary-text)",
+        horizontalItemSelectedColor: "var(--md-primary-text)",
+        horizontalItemHoverColor: "var(--md-primary-text)",
+      },
+      Tabs: {
+        inkBarColor: "var(--md-primary-text)",
+        itemSelectedColor: "var(--md-primary-text)",
+        itemHoverColor: "var(--md-primary-text)",
+        itemActiveColor: "var(--md-primary-text)",
+      },
+      Pagination: {
+        itemActiveColor: "var(--md-primary-text)",
+        itemActiveColorHover: "var(--md-primary-text)",
+      },
+      Radio: {
+        buttonSolidCheckedColor: ON_PRIMARY,
+        colorPrimary: "var(--md-primary-text)",
+      },
+      Table: {
+        headerBg: "var(--md-surface-container)",
+        headerSortActiveBg: "var(--md-surface-container)",
+        headerSortHoverBg: "var(--md-surface-container)",
+        headerColor: "var(--md-on-surface-variant)",
+        borderColor: "var(--md-outline-variant)",
+        rowHoverBg: "var(--md-state-hover)",
+        rowSelectedBg: "var(--md-state-selected)",
+        rowSelectedHoverBg: "var(--md-state-selected)",
+      },
+      Tooltip: {
+        colorBgSpotlight: "var(--md-on-surface)",
+        colorTextLightSolid: "var(--md-surface)",
+      },
+      Checkbox: {
+        colorPrimary: "var(--md-primary-text)",
+      },
+      Card: {
+        bodyPadding: 16,
+      },
+      Form: {
+        itemMarginBottom: 0,
+        verticalLabelPadding: "0 0 8px",
+      },
+    },
+  };
+}
+
+function applyThemeClass(theme: Theme) {
+  document.documentElement.classList.toggle("dark", theme === "dark");
+}
 
 function prefersDark(): boolean {
   if (typeof window.matchMedia !== "function") return false;
@@ -35,42 +181,58 @@ function readStoredTheme(): Theme {
   return prefersDark() ? "dark" : "light";
 }
 
-function applyTheme(theme: Theme) {
-  if (typeof document === "undefined") return;
-  const root = document.documentElement;
-  root.setAttribute("data-no-theme-transition", "");
-  void root.offsetHeight;
-  root.classList.toggle("dark", theme === "dark");
-  requestAnimationFrame(() => {
-    root.removeAttribute("data-no-theme-transition");
-  });
+function persistTheme(theme: Theme) {
+  try {
+    localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    /* ignore quota / private mode */
+  }
 }
 
 export function ThemeProvider({ children }: PropsWithChildren) {
   const [theme, setThemeState] = useState<Theme>(() =>
     typeof window === "undefined" ? "light" : readStoredTheme(),
   );
+  const switchTimer = useRef(0);
 
   useEffect(() => {
-    const initial = readStoredTheme();
-    setThemeState(initial);
-    applyTheme(initial);
+    applyThemeClass(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const frame = window.requestAnimationFrame(() => {
+      root.removeAttribute("data-theme-boot");
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(switchTimer.current);
+      root.classList.remove("theme-switching");
+    };
   }, []);
 
   const toggleTheme = useCallback(() => {
     setThemeState((prev) => {
       const next = prev === "dark" ? "light" : "dark";
-      try {
-        localStorage.setItem(STORAGE_KEY, next);
-      } catch {
-        /* ignore quota / private mode */
-      }
-      applyTheme(next);
+      persistTheme(next);
+      const root = document.documentElement;
+      root.classList.add("theme-switching");
+      applyThemeClass(next);
+      window.clearTimeout(switchTimer.current);
+      switchTimer.current = window.setTimeout(() => {
+        root.classList.remove("theme-switching");
+      }, THEME_SWITCH_MS);
       return next;
     });
   }, []);
 
-  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
+  const antdThemeConfig = useMemo(() => gymkhanaAntdTheme(theme), [theme]);
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      <ConfigProvider theme={antdThemeConfig}>{children}</ConfigProvider>
+    </ThemeContext.Provider>
+  );
 }
 
 export function useTheme() {
@@ -110,7 +272,7 @@ export function ThemeToggle({
         }}
         aria-hidden
       >
-        <SunIcon />
+        <Sun aria-hidden size={16} strokeWidth={1.75} />
       </span>
       <span
         className="login-theme-toggle__icon"
@@ -120,39 +282,8 @@ export function ThemeToggle({
         }}
         aria-hidden
       >
-        <MoonIcon />
+        <Moon aria-hidden size={16} strokeWidth={1.75} />
       </span>
     </button>
-  );
-}
-
-function SunIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
   );
 }
