@@ -1,5 +1,5 @@
 import type { CustomField } from "../api/client";
-import { badgesFromRow, DocumentBadges } from "./documentBadges";
+import { badgesFromRow, DocumentBadges, type BadgeMarksCopy } from "./documentBadges";
 import { SHEET_COLUMN_WIDTH } from "./sheetDefaults";
 import type { SpreadsheetColumn } from "./SpreadsheetTable";
 import { DETAILS_FIELD_KEYS, PEOPLE_SHEET_DOC_KEYS, type TableRow } from "./tableRows";
@@ -120,6 +120,7 @@ export function extraColumn(field: CustomField): SpreadsheetColumn<TableRow> {
 
 export function buildPeopleColumns(
   copy: ColumnCopy,
+  marks: BadgeMarksCopy,
   extraFields: CustomField[],
 ): SpreadsheetColumn<TableRow>[] {
   const text = (key: string, title: string, width: number, sortField?: string) =>
@@ -135,7 +136,7 @@ export function buildPeopleColumns(
       dataIndex: "document_badges",
       className: "spreadsheet-table__badges",
       render: (row) => (
-        <DocumentBadges badges={badgesFromRow(row)} withOwnerLabel={copy.withOwner} />
+        <DocumentBadges badges={badgesFromRow(row)} marks={marks} withOwnerLabel={copy.withOwner} />
       ),
     },
     dataColumn("cpf", copy.cpf, 140, "cpf"),

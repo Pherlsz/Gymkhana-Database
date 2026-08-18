@@ -50,14 +50,24 @@ function isDocumentBadge(value: unknown): value is ProfileDocumentBadge {
   );
 }
 
+export type BadgeMark = { glyph: string; label: string };
+
+export type BadgeMarksCopy = {
+  number: BadgeMark;
+  physical: BadgeMark;
+  digital: BadgeMark;
+};
+
 export const DocumentBadges = memo(function DocumentBadges({
   badges,
   empty = EMPTY_CELL,
   withOwnerLabel,
+  marks,
 }: {
   badges: ProfileDocumentBadge[];
   empty?: string;
   withOwnerLabel: string;
+  marks: BadgeMarksCopy;
 }) {
   if (badges.length === 0) return empty;
   return (
@@ -66,6 +76,7 @@ export const DocumentBadges = memo(function DocumentBadges({
         <DocumentBadgeChip
           key={badge.document_type_id}
           badge={badge}
+          marks={marks}
           withOwnerLabel={withOwnerLabel}
         />
       ))}
@@ -76,9 +87,11 @@ export const DocumentBadges = memo(function DocumentBadges({
 export function DocumentBadgeChip({
   badge,
   withOwnerLabel,
+  marks,
 }: {
   badge: ProfileDocumentBadge;
   withOwnerLabel: string;
+  marks: BadgeMarksCopy;
 }) {
   const acronym = documentTypeAcronym(badge.technical_key, badge.label);
   const kind = badge.badge;
@@ -95,14 +108,30 @@ export function DocumentBadgeChip({
   return (
     <span className={dashed ? "document-badge document-badge--indication" : "document-badge"}>
       <span className="document-badge__acronym">{acronym}</span>
+      {/* Each mark carries a title so "F" and "D" are not read out as letters. */}
       {showNumber ? (
-        <span className="document-badge__mark document-badge__mark--number">nº</span>
+        <span
+          className="document-badge__mark document-badge__mark--number"
+          title={marks.number.label}
+        >
+          {marks.number.glyph}
+        </span>
       ) : null}
       {showPhysical ? (
-        <span className="document-badge__mark document-badge__mark--physical">F</span>
+        <span
+          className="document-badge__mark document-badge__mark--physical"
+          title={marks.physical.label}
+        >
+          {marks.physical.glyph}
+        </span>
       ) : null}
       {showDigital ? (
-        <span className="document-badge__mark document-badge__mark--digital">D</span>
+        <span
+          className="document-badge__mark document-badge__mark--digital"
+          title={marks.digital.label}
+        >
+          {marks.digital.glyph}
+        </span>
       ) : null}
       {showOwner ? (
         <span aria-label={withOwnerLabel} className="document-badge__owner" title={withOwnerLabel}>

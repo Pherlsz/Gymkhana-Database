@@ -9,6 +9,7 @@ import {
 } from "antd";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo, type ReactNode } from "react";
+import { useI18n } from "./i18n";
 
 type GridColumn<TData> = ColumnDef<TData, any>;
 
@@ -59,6 +60,7 @@ export function DataGrid<TData>({
       }
     | undefined;
 }) {
+  const grid = useI18n().messages.tables.grid;
   const surfaceClassName = ["data-grid", className].filter(Boolean).join(" ");
   const shellClassName = ["data-grid__table-shell", tableWrapClassName].filter(Boolean).join(" ");
   const cardsClasses = ["data-grid__cards", cardsClassName].filter(Boolean).join(" ");
@@ -138,11 +140,11 @@ export function DataGrid<TData>({
                         selection.onChange(new Set(keys.map((key) => String(key)))),
                       columnTitle: (
                         <span className="visually-hidden">
-                          Selecionar todas as linhas de {caption}
+                          {grid.selectAll.replace("{caption}", caption)}
                         </span>
                       ),
                       getCheckboxProps: (row: TData) => ({
-                        "aria-label": `Selecionar ${selection.rowLabel(row)}`,
+                        "aria-label": grid.selectRow.replace("{label}", selection.rowLabel(row)),
                       }),
                     },
                   }
@@ -165,7 +167,10 @@ export function DataGrid<TData>({
                     {selection ? (
                       <div className="data-grid__card-selection">
                         <Checkbox
-                          aria-label={`Selecionar ${selection.rowLabel(row)} no cartão`}
+                          aria-label={grid.selectRowCard.replace(
+                            "{label}",
+                            selection.rowLabel(row),
+                          )}
                           checked={selection.selectedIds.has(id)}
                           onChange={(event) => {
                             const next = new Set(selection.selectedIds);
@@ -218,16 +223,21 @@ export function DataGridPagination({
   label: string;
   onPage: (page: number) => void;
 }) {
+  const grid = useI18n().messages.tables.grid;
   return (
     <Flex align="center" className="data-grid__pagination">
       <Button disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        Anterior
+        {grid.previousPage}
       </Button>
       <span aria-live="polite">
-        Página {page} de {totalPages} · {total} {label}
+        {grid.pageStatus
+          .replace("{page}", String(page))
+          .replace("{totalPages}", String(totalPages))
+          .replace("{total}", String(total))
+          .replace("{label}", label)}
       </span>
       <Button disabled={page >= totalPages} onClick={() => onPage(page + 1)}>
-        Próxima
+        {grid.nextPage}
       </Button>
     </Flex>
   );

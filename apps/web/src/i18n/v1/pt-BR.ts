@@ -354,6 +354,22 @@ export const ptBRV1 = {
       pageSize: "{n} / página",
       pageSizeAria: "Linhas por página",
     },
+    badges: {
+      number: { glyph: "nº", label: "Número informado" },
+      physical: { glyph: "F", label: "Exemplar físico" },
+      digital: { glyph: "D", label: "Exemplar digital" },
+    },
+    grid: {
+      selectAll: "Selecionar todas as linhas de {caption}",
+      selectRow: "Selecionar {label}",
+      selectRowCard: "Selecionar {label} no cartão",
+      previousPage: "Anterior",
+      nextPage: "Próxima",
+      pageStatus: "Página {page} de {totalPages} · {total} {label}",
+    },
+    notices: {
+      personDeleted: "Pessoa excluída permanentemente.",
+    },
     inspector: {
       eyebrow: "Perfil",
       newPerson: "Nova pessoa",

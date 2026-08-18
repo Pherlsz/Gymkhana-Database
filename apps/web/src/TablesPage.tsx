@@ -521,7 +521,7 @@ export function TablesPage() {
   const dataColumns = useMemo(() => {
     if (section === "documents") return buildDocumentColumns(copy, extraFields);
     if (section === "bills") return buildBillColumns(copy, extraFields);
-    return buildPeopleColumns(copy.columns, extraFields);
+    return buildPeopleColumns(copy.columns, copy.badges, extraFields);
   }, [copy, extraFields, section]);
 
   const columns = useMemo(
@@ -589,7 +589,7 @@ export function TablesPage() {
       deleteProfile(value.id, value.version, confirmation),
     onSuccess: async () => {
       await refreshPeople();
-      setNotice("Pessoa excluída permanentemente.");
+      setNotice(copy.notices.personDeleted);
       updateSearch({ selected: undefined, mode: undefined });
     },
   });

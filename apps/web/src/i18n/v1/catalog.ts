@@ -347,6 +347,27 @@ export type CatalogV1 = {
       pageSize: string;
       pageSizeAria: string;
     };
+    /**
+     * Document presence marks from Orchestration 12.1. `glyph` is what the
+     * badge draws; `label` is what a screen reader announces, because a bare
+     * "F" or "D" carries no meaning out loud.
+     */
+    badges: {
+      number: { glyph: string; label: string };
+      physical: { glyph: string; label: string };
+      digital: { glyph: string; label: string };
+    };
+    grid: {
+      selectAll: string;
+      selectRow: string;
+      selectRowCard: string;
+      previousPage: string;
+      nextPage: string;
+      pageStatus: string;
+    };
+    notices: {
+      personDeleted: string;
+    };
     inspector: {
       eyebrow: string;
       newPerson: string;

@@ -8,7 +8,7 @@ import {
   type Profile,
   type ProfileDocumentPresence,
 } from "../api/client";
-import { DocumentBadges, documentTypeAcronym } from "./documentBadges";
+import { DocumentBadges, documentTypeAcronym, type BadgeMarksCopy } from "./documentBadges";
 
 type PresenceCopy = {
   title: string;
@@ -28,10 +28,12 @@ export function DocumentPresenceSection({
   profile,
   editable,
   copy,
+  marks,
 }: {
   profile: Profile;
   editable: boolean;
   copy: PresenceCopy;
+  marks: BadgeMarksCopy;
 }) {
   const queryClient = useQueryClient();
   const types = useQuery({
@@ -84,7 +86,12 @@ export function DocumentPresenceSection({
     <section className="document-presence">
       <h3 className="document-presence__title">{copy.title}</h3>
       {visibleBadges.length ? (
-        <DocumentBadges badges={visibleBadges} empty="" withOwnerLabel={copy.withOwner} />
+        <DocumentBadges
+          badges={visibleBadges}
+          empty=""
+          marks={marks}
+          withOwnerLabel={copy.withOwner}
+        />
       ) : null}
       {error ? <p className="document-presence__error">{error}</p> : null}
       <ul className="document-presence__list">

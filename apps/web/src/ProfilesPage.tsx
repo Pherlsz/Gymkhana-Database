@@ -12,7 +12,7 @@ import {
   type ProfileValuesRequest,
   type UserRole,
 } from "./lib/api/client";
-import { DocumentBadges } from "./lib/tables/documentBadges";
+import { DocumentBadges, type BadgeMarksCopy } from "./lib/tables/documentBadges";
 import { DocumentPresenceSection } from "./lib/tables/DocumentPresenceSection";
 
 const emptyValues: ProfileValuesRequest = {
@@ -351,10 +351,12 @@ export function ProfilePanel(props: {
                 showLessLabel={copy.showLess}
                 showMoreLabel={copy.showMore}
                 withOwnerLabel={copy.presence.withOwner}
+                badgeMarks={messages.tables.badges}
                 documentPresence={
                   <DocumentPresenceSection
                     copy={copy.presence}
                     editable={false}
+                    marks={messages.tables.badges}
                     profile={props.profile}
                   />
                 }
@@ -418,7 +420,12 @@ export function ProfilePanel(props: {
               </Form>
             )}
             {props.profile && props.mode === "edit" ? (
-              <DocumentPresenceSection copy={copy.presence} editable profile={props.profile} />
+              <DocumentPresenceSection
+                copy={copy.presence}
+                editable
+                marks={messages.tables.badges}
+                profile={props.profile}
+              />
             ) : null}
           </>
         )}
@@ -525,6 +532,7 @@ function ProfileReadout({
   showMoreLabel,
   showLessLabel,
   withOwnerLabel,
+  badgeMarks,
 }: {
   profile: Profile;
   empty: string;
@@ -537,6 +545,7 @@ function ProfileReadout({
   showMoreLabel: string;
   showLessLabel: string;
   withOwnerLabel: string;
+  badgeMarks: BadgeMarksCopy;
 }) {
   const [expanded, setExpanded] = useState(false);
   useEffect(() => setExpanded(false), [profile.id]);
@@ -585,6 +594,7 @@ function ProfileReadout({
                 <DocumentBadges
                   badges={profile.document_badges}
                   empty={empty}
+                  marks={badgeMarks}
                   withOwnerLabel={withOwnerLabel}
                 />
               </dd>

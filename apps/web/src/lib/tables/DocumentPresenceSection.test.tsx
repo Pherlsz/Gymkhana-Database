@@ -50,6 +50,12 @@ const copy = {
   withOwner: "Com o dono",
 };
 
+const marks = {
+  number: { glyph: "nº", label: "Número informado" },
+  physical: { glyph: "F", label: "Exemplar físico" },
+  digital: { glyph: "D", label: "Exemplar digital" },
+};
+
 function jsonResponse(payload: unknown): Response {
   return new Response(JSON.stringify(payload), {
     status: 200,
@@ -104,7 +110,7 @@ describe("DocumentPresenceSection", () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={queryClient}>
-        <DocumentPresenceSection copy={copy} editable profile={profile} />
+        <DocumentPresenceSection copy={copy} editable marks={marks} profile={profile} />
       </QueryClientProvider>,
     );
     // The claim control is an Ant Select now, so the value changes by opening

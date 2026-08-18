@@ -92,7 +92,15 @@ describe("spreadsheet viewport vs legacy", () => {
   });
 
   it("people sheet stays in the ~50-column range of the legacy sheet", () => {
-    const columns = buildPeopleColumns(copy, []);
+    const columns = buildPeopleColumns(
+      copy,
+      {
+        number: { glyph: "nº", label: "Número informado" },
+        physical: { glyph: "F", label: "Exemplar físico" },
+        digital: { glyph: "D", label: "Exemplar digital" },
+      },
+      [],
+    );
     expect(columns.length).toBeGreaterThanOrEqual(50);
     expect(columns.length).toBeLessThan(70);
     expect(columns.filter((column) => column.render).map((column) => column.key)).toEqual([
