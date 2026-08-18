@@ -35,3 +35,6 @@ gha-creds-*.json
 Thumbs.db
 .idea/
 .vscode/
+apps/web/.hermes/mocks/
+apps/web/.hermes/plans/
+apps/web/.tanstack/tmp/
