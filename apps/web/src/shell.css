@@ -692,9 +692,54 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   position: relative;
 }
 
-.sidebar-account-menu.ant-dropdown-menu {
-  box-shadow: var(--shadow-overlay);
+.sidebar-account-menu {
   min-width: 220px;
+  padding: 0.3rem;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-md);
+  background: var(--md-surface-container);
+  box-shadow: var(--shadow-overlay);
+  color: var(--md-on-surface);
+}
+
+.sidebar-account-menu__item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.7rem;
+  border: 0;
+  border-radius: var(--gym-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.sidebar-account-menu__item:hover:not(:disabled) {
+  background: var(--md-state-hover);
+}
+
+.sidebar-account-menu__item:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.sidebar-account-menu__appearance {
+  cursor: default;
+}
+
+.sidebar-account-menu__appearance span {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-account-menu__divider {
+  height: 1px;
+  margin: 0.25rem 0.4rem;
+  background: var(--md-outline-variant);
 }
 
 .sidebar-account__trigger {
@@ -754,10 +799,6 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 
 .sidebar-account__status .ant-badge-dot {
   background: var(--md-success);
-}
-
-.sidebar-account-menu .ant-dropdown-menu-title-content {
-  width: 100%;
 }
 
 .app-shell__content {
@@ -1239,12 +1280,11 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 
 .home-attention {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas:
     "title action"
-    "value value"
-    "chips chips";
-  gap: 0.45rem 0.85rem;
+    "value chips";
+  gap: 0.55rem 0.85rem;
   align-items: start;
   min-width: 0;
   padding: 0.8rem 0.45rem;
@@ -1289,13 +1329,13 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
   line-height: 1;
-  color: var(--md-warning);
+  color: var(--md-on-surface);
 }
 
 .home-attention__chips {
   grid-area: chips;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
   gap: 0.4rem;
   max-height: 10rem;
   min-width: 0;
@@ -1303,17 +1343,42 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   padding-inline-end: 0.25rem;
 }
 
-.home-attention__chips a,
-.home-attention__chips .ant-tag {
-  min-width: 0;
-}
-
-.home-attention__chips .ant-tag {
+.home-attention__chip {
   display: flex;
-  width: 100%;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
-  margin: 0;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--md-outline);
+  border-radius: 999px;
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  text-decoration: none;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.home-attention__chip:hover {
+  background: var(--md-state-hover);
+}
+
+.home-attention__chip:focus-visible {
+  outline: 2px solid var(--md-primary-text);
+  outline-offset: 2px;
+}
+
+.home-attention__chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-attention__chip-count {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .home-attention__none {

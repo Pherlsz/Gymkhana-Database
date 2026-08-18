@@ -322,6 +322,8 @@ describe("App", () => {
     fireEvent.click(appearanceSwitch);
     await waitFor(() => expect(document.documentElement).toHaveClass("dark"));
     expect(window.localStorage.getItem("gymkhana-theme")).toBe("dark");
+    expect(screen.getByText("Aparência")).toBeInTheDocument();
+    expect(appearanceSwitch).toBeChecked();
 
     fireEvent.click(appearanceSwitch);
     await waitFor(() => expect(document.documentElement).not.toHaveClass("dark"));

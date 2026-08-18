@@ -1,4 +1,4 @@
-import { Avatar, Badge, Dropdown, Flex, Switch, Typography } from "antd";
+import { Avatar, Badge, Dropdown, Switch, Typography } from "antd";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ChevronDown,
@@ -311,7 +311,6 @@ function UserAccountCard({ rail }: { rail: boolean }) {
   const { theme, toggleTheme } = useTheme();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [open, setOpen] = useState(false);
-  const keepMenuOpen = useRef(false);
   const user = session.user;
   const isDark = theme === "dark";
   const copy = messages.shell;
@@ -324,69 +323,11 @@ function UserAccountCard({ rail }: { rail: boolean }) {
     <div className="sidebar-account">
       <div className="sidebar-account__anchor">
         <Dropdown
-          destroyOnHidden
           getPopupContainer={() => document.body}
-          menu={{
-            className: "sidebar-account-menu",
-            items: [
-              {
-                key: "settings",
-                icon: <Settings aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
-                label: copy.account.settings,
-              },
-              {
-                key: "appearance",
-                icon: isDark ? (
-                  <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                ) : (
-                  <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                ),
-                label: (
-                  <Flex align="center" gap={12} justify="space-between">
-                    <span>{copy.account.appearance}</span>
-                    <Switch
-                      checked={isDark}
-                      onChange={toggleTheme}
-                      onClick={(_, event) => event.stopPropagation()}
-                      size="small"
-                    />
-                  </Flex>
-                ),
-              },
-              { type: "divider" },
-              {
-                key: "logout",
-                disabled: signingOut,
-                icon: <LogOut aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
-                label: signingOut ? copy.signingOut : copy.signOut,
-              },
-            ],
-            onClick: ({ key, domEvent }) => {
-              if (key === "settings") {
-                void navigate({ to: "/settings" });
-                return;
-              }
-              if (key === "appearance") {
-                domEvent.preventDefault();
-                domEvent.stopPropagation();
-                if ((domEvent.target as HTMLElement | null)?.closest?.(".ant-switch")) return;
-                keepMenuOpen.current = true;
-                toggleTheme();
-                setOpen(true);
-                window.setTimeout(() => {
-                  keepMenuOpen.current = false;
-                }, 0);
-                return;
-              }
-              if (key === "logout") signOut();
-            },
-            style: { minWidth: 220 },
-          }}
-          onOpenChange={(next) => {
-            if (!next && keepMenuOpen.current) {
-              setOpen(true);
-              return;
-            }
+          onOpenChange={(next, info) => {
+            // Theme class changes remount overlay chrome. Clicks inside the
+            // panel (the appearance switch) must not close it.
+            if (!next && info.source === "menu") return;
             setOpen(next);
             if (next) return;
             const active = document.activeElement;
@@ -396,6 +337,57 @@ function UserAccountCard({ rail }: { rail: boolean }) {
           }}
           open={open}
           placement={rail ? "rightBottom" : "topLeft"}
+          popupRender={() => (
+            <div
+              className="sidebar-account-menu"
+              onMouseDown={(event) => {
+                if ((event.target as HTMLElement | null)?.closest(".ant-switch, button")) return;
+                event.preventDefault();
+              }}
+              role="menu"
+            >
+              <button
+                className="sidebar-account-menu__item"
+                onClick={() => {
+                  setOpen(false);
+                  void navigate({ to: "/settings" });
+                }}
+                role="menuitem"
+                type="button"
+              >
+                <Settings aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                {copy.account.settings}
+              </button>
+              <div className="sidebar-account-menu__item sidebar-account-menu__appearance">
+                {isDark ? (
+                  <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                ) : (
+                  <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                )}
+                <span>{copy.account.appearance}</span>
+                <Switch
+                  aria-label={copy.account.appearance}
+                  checked={isDark}
+                  onChange={toggleTheme}
+                  size="small"
+                />
+              </div>
+              <div className="sidebar-account-menu__divider" />
+              <button
+                className="sidebar-account-menu__item"
+                disabled={signingOut}
+                onClick={() => {
+                  setOpen(false);
+                  signOut();
+                }}
+                role="menuitem"
+                type="button"
+              >
+                <LogOut aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                {signingOut ? copy.signingOut : copy.signOut}
+              </button>
+            </div>
+          )}
           trigger={["click"]}
         >
           <button

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Alert, Button, Dropdown, Skeleton, Tag, Typography } from "antd";
+import { Alert, Button, Dropdown, Skeleton, Typography } from "antd";
 import {
   Baby,
   BadgeCheck,
@@ -447,10 +447,9 @@ function InUseTypeChip({ chip }: { chip: HomeInUseTypeChip }) {
           bill_status: "IN_USE",
         });
   return (
-    <Link {...tableLinkProps(search)}>
-      <Tag>
-        {chip.typeLabel} <strong>{chip.count}</strong>
-      </Tag>
+    <Link className="home-attention__chip" {...tableLinkProps(search)}>
+      <span className="home-attention__chip-label">{chip.typeLabel}</span>
+      <span className="home-attention__chip-count">{chip.count.toLocaleString("pt-BR")}</span>
     </Link>
   );
 }
