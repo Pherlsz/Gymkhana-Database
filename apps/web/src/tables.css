@@ -72,7 +72,6 @@
 .tables-page .page-header__title.ant-typography {
   margin: 0;
   font-size: 1.5rem;
-  letter-spacing: -0.03em;
 }
 
 .tables-page .page-header__description.ant-typography {
@@ -115,7 +114,7 @@
 }
 
 .toolbar-surface__trigger.ant-btn.is-active {
-  border-color: var(--md-primary-text);
+  border-color: var(--md-on-surface);
   background-color: var(--md-state-selected);
   color: var(--md-on-surface);
 }
@@ -264,7 +263,7 @@
   flex: 0 1 auto;
   max-width: 45%;
   overflow: hidden;
-  color: var(--md-primary-text);
+  color: var(--md-on-surface-variant);
   font-size: 0.75rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -396,7 +395,7 @@
   align-items: center;
   gap: 0.3rem;
   max-width: 100%;
-  border-color: color-mix(in oklch, var(--md-primary-text) 35%, var(--md-outline));
+  border-color: var(--md-outline);
   background: var(--md-state-selected);
   color: var(--md-on-surface);
 }
@@ -579,7 +578,7 @@
 }
 
 .spreadsheet-table .ant-spin-section {
-  color: var(--md-primary-text);
+  color: var(--md-on-surface);
 }
 
 .spreadsheet-table .ant-spin-description {
@@ -697,6 +696,10 @@
   font-weight: 600;
 }
 
+.spreadsheet-table__numeric {
+  font-variant-numeric: tabular-nums;
+}
+
 .spreadsheet-table .ant-table-cell.spreadsheet-table__badges {
   overflow: hidden;
   white-space: normal;
@@ -739,6 +742,19 @@
   color: var(--md-on-surface);
 }
 
+.document-badge__mark,
+.document-badge__owner {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.document-badge__mark svg,
+.document-badge__owner svg {
+  display: block;
+}
+
 .document-badge__mark--number {
   color: var(--md-on-surface-variant);
   font-weight: 700;
@@ -746,26 +762,18 @@
 
 .document-badge__mark--physical {
   color: var(--mark-physical);
-  font-weight: 800;
 }
 
 .document-badge__mark--digital {
   color: var(--mark-digital);
-  font-weight: 800;
 }
 
 .document-badge__owner {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0.95rem;
+  width: 0.95rem;
   height: 0.95rem;
-  padding: 0 0.12rem;
   border-radius: 999px;
   background: var(--md-primary);
   color: var(--md-on-primary);
-  font-size: 0.58rem;
-  font-weight: 800;
 }
 
 .spreadsheet-table__footer {
@@ -777,6 +785,7 @@
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
   border-top: 1px solid var(--md-outline-variant);
+  background: var(--md-surface);
 }
 
 .spreadsheet-table__pager {

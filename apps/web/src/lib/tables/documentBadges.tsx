@@ -1,4 +1,6 @@
+import { File, ScanLine, UserRound, type LucideIcon } from "lucide-react";
 import { memo } from "react";
+import { ICON, ICON_BADGE_STROKE } from "../../components/icons";
 import type { ProfileDocumentBadge } from "../api/client";
 import { EMPTY_CELL, type TableRow } from "./tableRows";
 
@@ -54,8 +56,8 @@ export type BadgeMark = { glyph: string; label: string };
 
 export type BadgeMarksCopy = {
   number: BadgeMark;
-  physical: BadgeMark;
-  digital: BadgeMark;
+  physical: { label: string };
+  digital: { label: string };
 };
 
 export const DocumentBadges = memo(function DocumentBadges({
@@ -84,6 +86,22 @@ export const DocumentBadges = memo(function DocumentBadges({
   );
 });
 
+function PresenceIcon({
+  className,
+  icon: Icon,
+  label,
+}: {
+  className: string;
+  icon: LucideIcon;
+  label: string;
+}) {
+  return (
+    <span aria-label={label} className={className} title={label}>
+      <Icon aria-hidden size={ICON.badge} strokeWidth={ICON_BADGE_STROKE} />
+    </span>
+  );
+}
+
 export function DocumentBadgeChip({
   badge,
   withOwnerLabel,
@@ -108,9 +126,9 @@ export function DocumentBadgeChip({
   return (
     <span className={dashed ? "document-badge document-badge--indication" : "document-badge"}>
       <span className="document-badge__acronym">{acronym}</span>
-      {/* Each mark carries a title so "F" and "D" are not read out as letters. */}
       {showNumber ? (
         <span
+          aria-label={marks.number.label}
           className="document-badge__mark document-badge__mark--number"
           title={marks.number.label}
         >
@@ -118,25 +136,21 @@ export function DocumentBadgeChip({
         </span>
       ) : null}
       {showPhysical ? (
-        <span
+        <PresenceIcon
           className="document-badge__mark document-badge__mark--physical"
-          title={marks.physical.label}
-        >
-          {marks.physical.glyph}
-        </span>
+          icon={File}
+          label={marks.physical.label}
+        />
       ) : null}
       {showDigital ? (
-        <span
+        <PresenceIcon
           className="document-badge__mark document-badge__mark--digital"
-          title={marks.digital.label}
-        >
-          {marks.digital.glyph}
-        </span>
+          icon={ScanLine}
+          label={marks.digital.label}
+        />
       ) : null}
       {showOwner ? (
-        <span aria-label={withOwnerLabel} className="document-badge__owner" title={withOwnerLabel}>
-          (i)
-        </span>
+        <PresenceIcon className="document-badge__owner" icon={UserRound} label={withOwnerLabel} />
       ) : null}
     </span>
   );

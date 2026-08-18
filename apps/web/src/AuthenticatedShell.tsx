@@ -408,8 +408,8 @@ function UserAccountCard({ rail }: { rail: boolean }) {
                 size={rail ? 28 : 36}
                 src={user.avatar_url}
                 style={{
-                  backgroundColor: "var(--md-primary-container)",
-                  color: "var(--md-primary-text)",
+                  backgroundColor: "var(--md-state-selected)",
+                  color: "var(--md-on-surface)",
                 }}
               >
                 {initials(user.display_name)}

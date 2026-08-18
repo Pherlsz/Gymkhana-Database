@@ -4,7 +4,10 @@
  * heights. `strokeWidth` is fixed here too so every glyph carries one weight.
  */
 export const ICON = {
-  /** Inline with body text: chips, badges, list affordances. */
+  /** Presence marks inside a 1.15rem document chip. Heavier stroke, so the
+   *  folded corner / scan line / person silhouette still read at this size. */
+  badge: 11,
+  /** Inline with body text: chips, list affordances. */
   sm: 14,
   /** Default: buttons, menu items, toolbar triggers. */
   md: 16,
@@ -13,3 +16,4 @@ export const ICON = {
 } as const;
 
 export const ICON_STROKE = 1.75;
+export const ICON_BADGE_STROKE = 2.25;

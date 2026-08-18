@@ -17,8 +17,11 @@
 
 .page-header__title.ant-typography {
   margin: 0;
+  font-family: var(--gym-font-display);
   font-size: 1.5rem;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
 }
 
 .page-header__description.ant-typography {

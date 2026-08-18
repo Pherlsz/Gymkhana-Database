@@ -79,6 +79,7 @@ export function identityColumn(
   key: string,
   title: string,
   sortField: string,
+  extraClassName?: string,
 ): SpreadsheetColumn<TableRow> {
   return {
     key,
@@ -87,7 +88,9 @@ export function identityColumn(
     width: SHEET_COLUMN_WIDTH.identity,
     sortField,
     dataIndex: key,
-    className: "spreadsheet-table__identity",
+    className: extraClassName
+      ? `spreadsheet-table__identity ${extraClassName}`
+      : "spreadsheet-table__identity",
   };
 }
 
@@ -108,6 +111,19 @@ export function dataColumn(
   };
 }
 
+export function numericColumn(
+  key: string,
+  title: string,
+  width: number,
+  sortField?: string,
+  dataIndex = key,
+): SpreadsheetColumn<TableRow> {
+  return {
+    ...dataColumn(key, title, width, sortField, dataIndex),
+    className: "spreadsheet-table__numeric",
+  };
+}
+
 export function extraColumn(field: CustomField): SpreadsheetColumn<TableRow> {
   return dataColumn(
     `custom:${field.technical_key}`,
@@ -125,6 +141,8 @@ export function buildPeopleColumns(
 ): SpreadsheetColumn<TableRow>[] {
   const text = (key: string, title: string, width: number, sortField?: string) =>
     dataColumn(key, title, width, sortField);
+  const numeric = (key: string, title: string, width: number, sortField?: string) =>
+    numericColumn(key, title, width, sortField);
 
   return [
     identityColumn("full_name", copy.fullName, "full_name"),
@@ -139,26 +157,26 @@ export function buildPeopleColumns(
         <DocumentBadges badges={badgesFromRow(row)} marks={marks} withOwnerLabel={copy.withOwner} />
       ),
     },
-    dataColumn("cpf", copy.cpf, 140, "cpf"),
-    text("rg", copy.rg, 140),
+    numericColumn("cpf", copy.cpf, 140, "cpf"),
+    numeric("rg", copy.rg, 140),
     text("street", copy.street, 180),
-    text("number", copy.number, 80),
+    numeric("number", copy.number, 80),
     text("city", copy.city, 160, "address_city"),
-    text("postal_code", copy.postalCode, 110),
+    numeric("postal_code", copy.postalCode, 110),
     text("email", copy.email, 200, "email"),
-    text("mobile", copy.mobile, 140),
+    numeric("mobile", copy.mobile, 140),
     text("birth_date", copy.birthDate, 150),
-    text("voter_id", copy.voterId, 150),
-    text("cnh", copy.cnh, 140),
-    text("ctps", copy.ctps, 140),
-    text("ctps_series", copy.ctpsSeries, 120),
-    text("pis", copy.pis, 140),
-    text("crea", copy.crea, 140),
-    text("oab", copy.oab, 140),
-    text("student_id", copy.studentId, 170),
-    text("sus_card", copy.susCard, 150),
-    text("citizen_card", copy.citizenCard, 150),
-    text("passport", copy.passport, 140),
+    numeric("voter_id", copy.voterId, 150),
+    numeric("cnh", copy.cnh, 140),
+    numeric("ctps", copy.ctps, 140),
+    numeric("ctps_series", copy.ctpsSeries, 120),
+    numeric("pis", copy.pis, 140),
+    numeric("crea", copy.crea, 140),
+    numeric("oab", copy.oab, 140),
+    numeric("student_id", copy.studentId, 170),
+    numeric("sus_card", copy.susCard, 150),
+    numeric("citizen_card", copy.citizenCard, 150),
+    numeric("passport", copy.passport, 140),
     text("team", copy.team, 140),
     text("sector", copy.sector, 140),
     text("club_membership", copy.clubMembership, 140),
@@ -168,7 +186,7 @@ export function buildPeopleColumns(
     text("complement", copy.complement, 140),
     text("neighborhood", copy.neighborhood, 140),
     text("state", copy.state, 72),
-    text("landline", copy.landline, 140),
+    numeric("landline", copy.landline, 140),
     text("marital_status", copy.maritalStatus, 140),
     text("nationality", copy.nationality, 140),
     text("birth_city", copy.birthCity, 160),
@@ -179,8 +197,8 @@ export function buildPeopleColumns(
     text("mother_birth_date", copy.motherBirthDate, SHEET_COLUMN_WIDTH.default),
     text("vehicle_model", copy.vehicleModel, 150),
     text("vehicle_color", copy.vehicleColor, 120),
-    text("vehicle_plate", copy.vehiclePlate, 120),
-    text("vehicle_year", copy.vehicleYear, 90),
+    numeric("vehicle_plate", copy.vehiclePlate, 120),
+    numeric("vehicle_year", copy.vehicleYear, 90),
     text("health_plan", copy.healthPlan, 160),
     text("blood_donor", copy.bloodDonor, SHEET_COLUMN_WIDTH.default),
     text("organ_donor", copy.organDonor, SHEET_COLUMN_WIDTH.default),

@@ -50,7 +50,6 @@ const ThemeContext = createContext<{
 function gymkhanaAntdTheme(mode: Theme) {
   const dark = mode === "dark";
   const seed = dark ? SEEDS.dark : SEEDS.light;
-  const primaryText = seed.primaryText;
   // Surfaces follow html.dark via --ant-* in shell.css.
   return {
     cssVar: { key: "gymkhana" },
@@ -59,9 +58,9 @@ function gymkhanaAntdTheme(mode: Theme) {
     token: {
       colorPrimary: PRIMARY,
       colorTextLightSolid: ON_PRIMARY,
-      colorLink: primaryText,
-      colorLinkHover: primaryText,
-      colorLinkActive: primaryText,
+      colorLink: "var(--md-on-surface)",
+      colorLinkHover: "var(--md-on-surface)",
+      colorLinkActive: "var(--md-on-surface)",
       colorError: seed.error,
       colorWarning: seed.warning,
       colorSuccess: seed.success,
@@ -77,32 +76,32 @@ function gymkhanaAntdTheme(mode: Theme) {
     },
     components: {
       Button: {
-        primaryColor: ON_PRIMARY,
+        primaryColor: "var(--md-surface)",
         defaultColor: "var(--md-on-surface)",
         defaultBorderColor: "var(--md-outline)",
-        defaultHoverColor: "var(--md-primary-text)",
-        defaultHoverBorderColor: "var(--md-primary-text)",
-        defaultActiveColor: "var(--md-primary-text)",
-        defaultActiveBorderColor: "var(--md-primary-text)",
-        defaultGhostColor: "var(--md-primary-text)",
-        defaultGhostBorderColor: "var(--md-primary-text)",
+        defaultHoverColor: "var(--md-on-surface)",
+        defaultHoverBorderColor: "var(--md-on-surface)",
+        defaultActiveColor: "var(--md-on-surface)",
+        defaultActiveBorderColor: "var(--md-on-surface)",
+        defaultGhostColor: "var(--md-on-surface)",
+        defaultGhostBorderColor: "var(--md-on-surface)",
         textTextColor: "var(--md-on-surface)",
-        textTextHoverColor: "var(--md-primary-text)",
-        textTextActiveColor: "var(--md-primary-text)",
+        textTextHoverColor: "var(--md-on-surface)",
+        textTextActiveColor: "var(--md-on-surface)",
       },
       Input: {
-        hoverBorderColor: "var(--md-primary-text)",
-        activeBorderColor: "var(--md-primary-text)",
+        hoverBorderColor: "var(--md-outline)",
+        activeBorderColor: "var(--md-on-surface)",
         activeShadow: "0 0 0 2px var(--md-focus-ring)",
       },
       Select: {
-        hoverBorderColor: "var(--md-primary-text)",
-        activeBorderColor: "var(--md-primary-text)",
+        hoverBorderColor: "var(--md-outline)",
+        activeBorderColor: "var(--md-on-surface)",
         optionSelectedBg: "var(--md-state-selected)",
       },
       DatePicker: {
-        hoverBorderColor: "var(--md-primary-text)",
-        activeBorderColor: "var(--md-primary-text)",
+        hoverBorderColor: "var(--md-outline)",
+        activeBorderColor: "var(--md-on-surface)",
       },
       Tag: {
         defaultColor: "var(--md-on-surface)",
@@ -123,12 +122,12 @@ function gymkhanaAntdTheme(mode: Theme) {
         itemActiveColor: "var(--md-primary-text)",
       },
       Pagination: {
-        itemActiveColor: "var(--md-primary-text)",
-        itemActiveColorHover: "var(--md-primary-text)",
+        itemActiveColor: "var(--md-on-surface)",
+        itemActiveColorHover: "var(--md-on-surface)",
       },
       Radio: {
-        buttonSolidCheckedColor: ON_PRIMARY,
-        colorPrimary: "var(--md-primary-text)",
+        buttonSolidCheckedColor: "var(--md-surface)",
+        colorPrimary: "var(--md-on-surface)",
       },
       Table: {
         headerBg: "var(--md-surface-container)",
@@ -145,7 +144,11 @@ function gymkhanaAntdTheme(mode: Theme) {
         colorTextLightSolid: "var(--md-surface)",
       },
       Checkbox: {
-        colorPrimary: "var(--md-primary-text)",
+        colorPrimary: "var(--md-on-surface)",
+        colorTextLightSolid: "var(--md-surface)",
+      },
+      Switch: {
+        colorPrimary: "var(--md-on-surface)",
       },
       Card: {
         bodyPadding: 16,

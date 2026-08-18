@@ -356,8 +356,8 @@ export const ptBRV1 = {
     },
     badges: {
       number: { glyph: "nº", label: "Número informado" },
-      physical: { glyph: "F", label: "Exemplar físico" },
-      digital: { glyph: "D", label: "Exemplar digital" },
+      physical: { label: "Exemplar físico" },
+      digital: { label: "Exemplar digital" },
     },
     grid: {
       selectAll: "Selecionar todas as linhas de {caption}",

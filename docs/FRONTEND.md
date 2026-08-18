@@ -8,20 +8,23 @@ Orchestration §12.3: Ant Design is the visual base. Visual composition stays in
 
 **Color:** every color literal lives in the token blocks of `apps/web/src/shell.css`; nothing else in the app declares one. The world is ink and paper — high-contrast neutrals at hue 85 with chroma ≤0.006, hairlines instead of gray fills, gold reserved for what was earned or for "you are here", red for destructive.
 
-Map Ant component colors in `ConfigProvider` (`cssVar`, `hashed: false`) and product wrappers (`.spreadsheet-table`, `.nav-item`). Do not restyle Ant internals with `.ant-*` color selectors or color `!important`; the virtual scrollbar thumb in `tables.css` is the single documented exception, because Ant paints it inline. Mixable seeds (`colorPrimary`, `colorError`, `colorWarning`, `colorSuccess`, `colorInfo`, `colorTextLightSolid`) stay hex literals in `theme.tsx` mirroring the matching `--md-*` role, because FastColor turns a CSS variable into black. Outlined primary buttons keep the `--ant-btn-*` exception so fill gold and amber-11 text can coexist.
+Map Ant component colors in `ConfigProvider` (`cssVar`, `hashed: false`) and product wrappers (`.spreadsheet-table`, `.nav-item`). Do not restyle Ant internals with `.ant-*` color selectors or color `!important`; the virtual scrollbar thumb in `tables.css` is the single documented exception, because Ant paints it inline. Mixable seeds (`colorPrimary`, `colorError`, `colorWarning`, `colorSuccess`, `colorInfo`, `colorTextLightSolid`) stay hex literals in `theme.tsx` mirroring the matching `--md-*` role, because FastColor turns a CSS variable into black.
 
 Roles:
 
-- `--md-primary` (`#ffc53d`) is **fill only**. Never put it on paper as text or as a 1px mark; it is ~1.5:1 there.
-- `--md-primary-text` carries gold text, icons, focus and the active nav rule. It clears 4.5:1 on paper, on the container tint and on `--md-state-selected`.
+- `--md-primary` (`#ffc53d`) is **fill only**, and only on the earned owner disc. Never put it on paper as text, as a 1px mark, as a checkbox, or as a button. It is ~1.5:1 on paper.
+- `--md-primary-text` is the "you are here" gold: the active nav inset rule, the matching nav icon, and the focus ring. It clears 4.5:1 on paper, on the container tint and on `--md-state-selected`. Do not use it for hover borders, chip outlines, filter values, or control fills.
 - `--md-state-hover` / `-pressed` / `-selected` are ink washes (5% / 9% / 12% of on-surface). States are never gold; that is what keeps gold meaningful.
 - `--md-nav-active` is the faint gold surface behind the active nav row. The signal is the `inset 2px` `--md-primary-text` rule plus the gold icon, not the wash.
-- Feedback: `--md-error`, `--md-warning`, `--md-info`, `--md-success`. Hues stay apart (27 / 45 / 250 / 155) and away from gold (68). Do not reuse gold for info.
+- Solid and outlined primary buttons are ink on paper, not gold slabs. Checkboxes and radios fill with `--md-on-surface`.
+- Feedback: `--md-error`, `--md-warning`, `--md-info`, `--md-success`. Hues stay apart (27 / 45 / 250 / 155) and away from gold (68). Do not reuse gold for info. Do not gold the presence marks: physical is `--mark-physical`, digital is `--mark-digital`.
 - Also available: `--md-scrim`, `--md-disabled`, `--md-surface-elevated`, `--shadow-card`, `--shadow-overlay`, `--mark-physical` / `--mark-digital` (Orchestration §12.1 presence marks), and `--gym-highlight` / `--gym-hairline` / `--gym-shadow-ambient` for the login glass.
+
+**Type:** Geist carries body, tables, forms and numbers. Page titles (`.page-header__title`) use Oswald condensed; never put the display face on a cell, chip, or identifier. Identifier and amount columns use `font-variant-numeric: tabular-nums`.
 
 Form pages use `.page-measure` (`--page-measure: 64rem`); the spreadsheet does not.
 
-**Icons:** product chrome uses Lucide (`lucide-react`), `strokeWidth={1.75}`. Do not import `@ant-design/icons` in app source. Ant Design may still render its own glyphs inside Select, DatePicker, and Pagination. Brand marks (Google) stay as local SVG.
+**Icons:** product chrome uses Lucide (`lucide-react`), `strokeWidth={1.75}`. Do not import `@ant-design/icons` in app source. Ant Design may still render its own glyphs inside Select, DatePicker, and Pagination. Brand marks (Google) stay as local SVG. Document presence marks (Orchestration §6.4) are Lucide `File` (physical), `ScanLine` (digital) and `UserRound` (with the owner), not the letters `F` / `D` / `(i)`. The number mark stays the `nº` glyph.
 
 Do not rebuild an Ant Design control in raw HTML only to restyle it. Pages compose Ant Design (`Table`, `Form`, `Select`, `Pagination`, overlays) plus module-owned wrappers under `apps/web/src/lib/<area>/`.
 

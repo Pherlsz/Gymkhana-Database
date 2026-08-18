@@ -1,5 +1,5 @@
 import type { CustomField } from "../api/client";
-import { dataColumn, extraColumn, identityColumn } from "./peopleColumns";
+import { dataColumn, extraColumn, identityColumn, numericColumn } from "./peopleColumns";
 import type { SpreadsheetColumn } from "./SpreadsheetTable";
 import type { TableRow } from "./tableRows";
 
@@ -33,7 +33,12 @@ export function buildDocumentColumns(
   extraFields: CustomField[],
 ): SpreadsheetColumn<TableRow>[] {
   return [
-    identityColumn("identifier", copy.columns.identifier, "identifier_value"),
+    identityColumn(
+      "identifier",
+      copy.columns.identifier,
+      "identifier_value",
+      "spreadsheet-table__numeric",
+    ),
     dataColumn("type", copy.columns.type, 160, "type_label"),
     dataColumn("owner", copy.columns.owner, 200),
     dataColumn("status", copy.columns.status, 120),
@@ -52,11 +57,16 @@ export function buildBillColumns(
   extraFields: CustomField[],
 ): SpreadsheetColumn<TableRow>[] {
   return [
-    identityColumn("reference", copy.columns.reference, "reference_value"),
+    identityColumn(
+      "reference",
+      copy.columns.reference,
+      "reference_value",
+      "spreadsheet-table__numeric",
+    ),
     dataColumn("type", copy.columns.type, 160, "type_label"),
     dataColumn("owner", copy.columns.owner, 200),
     dataColumn("competence", copy.columns.competence, 130, "competence"),
-    dataColumn("amount", copy.columns.amount, 120, "amount"),
+    numericColumn("amount", copy.columns.amount, 120, "amount"),
     dataColumn("status", copy.columns.status, 120),
     dataColumn("medium", copy.columns.medium, 120),
     dataColumn("idle_custody", copy.columns.idleCustody, 140),

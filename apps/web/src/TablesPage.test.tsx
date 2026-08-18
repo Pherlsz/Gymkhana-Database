@@ -404,7 +404,10 @@ describe("TablesPage", () => {
     expect(screen.getByText("***.***.***-25")).toBeInTheDocument();
     expect(screen.getByText("1122334455")).toBeInTheDocument();
     expect(document.querySelector(".document-badge__acronym")?.textContent).toBe("RG");
-    expect(document.querySelector(".document-badge__mark--physical")?.textContent).toBe("F");
+    expect(document.querySelector(".document-badge__mark--physical")?.getAttribute("title")).toBe(
+      "Exemplar físico",
+    );
+    expect(document.querySelector(".document-badge__mark--physical svg")).toBeTruthy();
     expect(screen.queryByText("Identidade")).not.toBeInTheDocument();
     const footer = document.querySelector(".spreadsheet-table__footer");
     expect(footer).toBeTruthy();

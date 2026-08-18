@@ -348,14 +348,14 @@ export type CatalogV1 = {
       pageSizeAria: string;
     };
     /**
-     * Document presence marks from Orchestration 12.1. `glyph` is what the
-     * badge draws; `label` is what a screen reader announces, because a bare
-     * "F" or "D" carries no meaning out loud.
+     * Document presence marks from Orchestration 6.4 / 12.1. Physical and
+     * digital draw Lucide icons; only `nº` still ships a glyph. `label` is
+     * the accessible name on every mark.
      */
     badges: {
       number: { glyph: string; label: string };
-      physical: { glyph: string; label: string };
-      digital: { glyph: string; label: string };
+      physical: { label: string };
+      digital: { label: string };
     };
     grid: {
       selectAll: string;

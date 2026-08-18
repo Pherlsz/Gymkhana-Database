@@ -563,16 +563,16 @@ Estados persistidos em `document_presences` (esparso: só existe linha se algué
 
 Exemplares em `documents`, `medium` `PHYSICAL` ou `DIGITAL`. No máximo um físico e um digital por (pessoa, tipo). O número do físico atualiza `informed_number`. Silêncio (nunca falou) não gera linha — na grade é indistinguível de ausência; filtro e ficha separam `unspecified` de `absence`.
 
-Na grade, badge só no **positivo**. Chip compacto de densidade de tabela (cabe vários tipos na célula, com quebra de linha se preciso — não inflar a altura da linha). O chip em si é neutro (cinza do produto). A atenção vai para as marcas saturadas, no idioma da paleta do site (cinza + âmbar `--md-primary` / `--amber-9`):
+Na grade, badge só no **positivo**. Chip compacto de densidade de tabela (cabe vários tipos na célula, com quebra de linha se preciso — não inflar a altura da linha). O chip em si é neutro (cinza do produto). A atenção vai para as marcas saturadas, no idioma da paleta do site (cinza + âmbar `--md-primary` / `--amber-9`). Ícones Lucide, não letras `F` / `D` / `(i)`: a forma carrega o significado quando a cor falha.
 
 - `indication` — contorno tracejado, só a sigla;
 - `informed_number` — marca `nº` em ardósia (não compete com inventário);
-- `physical` — `F` verde saturado (original na organização);
-- `digital` — `D` azul saturado (arquivo);
-- ambos — `F` e `D` no mesmo chip, cada um na sua cor;
-- `physical_with_owner` — o mesmo `F`, mais `(i)` em disco **âmbar primário** (o amarelo de foco do produto), texto contrastante. Hover e `aria-label`: **«Com o dono»**. O âmbar chama atenção porque o original **não** está na gaveta. Não usar `Fd` nem chamar a pessoa de user.
+- `physical` — ícone de folha (`File`) verde saturado (original na organização);
+- `digital` — ícone de leitura/scan (`ScanLine`) azul saturado (arquivo);
+- ambos — os dois ícones no mesmo chip, cada um na sua cor;
+- `physical_with_owner` — o mesmo ícone físico, mais o ícone de pessoa (`UserRound`) em disco **âmbar primário** (o amarelo de foco do produto), traço contrastante. Hover e `aria-label`: **«Com o dono»**. O âmbar chama atenção porque o original **não** está na gaveta. Não usar `Fd` nem chamar a pessoa de user.
 
-O `(i)` não aparece quando o original está na organização. Cor sozinha não basta: as letras `F` / `D` / `nº` e o `(i)` permanecem. Ausência não mostra tag. Coluna de CPF/RG na grade de pessoas, se existir, mostra só o identificador; validade fica na ficha/tabela de documentos.
+O ícone de pessoa não aparece quando o original está na organização. Cor sozinha não basta: folha, scan, pessoa e `nº` permanecem como formas distintas. Ausência não mostra tag. Coluna de CPF/RG na grade de pessoas, se existir, mostra só o identificador; validade fica na ficha/tabela de documentos.
 
 Transições (não inventar ausência):
 
@@ -614,8 +614,8 @@ Não usar `profiles.cpf`. Não materializar idade/soma. Não pré-criar presenç
 - `idle_custody` é do exemplar físico: `ORGANIZATION` ou `OWNER`. Não se infere da validade; o operador informa. Vencido deixado na organização por opção do dono usa `ORGANIZATION`.
 - Ao emprestar, grava-se o portador. O original continua no inventário enquanto o empréstimo dura.
 - Ao encerrar o empréstimo, o destino padrão é a guarda. A linha do exemplar **permanece**:
-  - `ORGANIZATION` — some o portador; o original fica **disponível** na organização (badge `F`).
-  - `OWNER` — some o portador; `idle_custody` fica `OWNER`; o original continua cadastrado. Badge `F` com `(i)` «Com o dono». Número, validade e demais dados do exemplar não se apagam.
+  - `ORGANIZATION` — some o portador; o original fica **disponível** na organização (badge de folha).
+  - `OWNER` — some o portador; `idle_custody` fica `OWNER`; o original continua cadastrado. Badge de folha com o ícone de pessoa «Com o dono». Número, validade e demais dados do exemplar não se apagam.
 - Apagar o exemplar físico é outra operação (sumiu, rasgou, cadastro errado). Aí vale a transição de 6.4: some o físico, permanece o número informado.
 - Na devolução o operador pode confirmar ou trocar o destino daquela vez, sem mudar a guarda gravada, salvo se editar a guarda explicitamente.
 - Mudanças de uso e de guarda são transacionais, autorizadas e auditadas.
@@ -701,7 +701,7 @@ Não existem como destino: `/chat`, `/query`, `/tasks`, `/ocr`, `/operations`, `
 - Mobile não permite edição direta estilo planilha.
 - Mobile mantém leitura e operações por formulários dedicados.
 - Filtros/ordenação genéricos não devem ser duplicados de maneira incompatível entre módulos.
-- Na grade de pessoas, documentos positivos aparecem como badges compactos do tipo (RG, CPF, …), segundo 6.4. Vários tipos na mesma célula; quebra de linha, sem crescer o chip. Chip cinza; `F` verde saturado, `D` azul saturado; `(i)` no âmbar primário do produto quando o original está com o dono.
+- Na grade de pessoas, documentos positivos aparecem como badges compactos do tipo (RG, CPF, …), segundo 6.4. Vários tipos na mesma célula; quebra de linha, sem crescer o chip. Chip cinza; folha (`File`) verde saturado, scan (`ScanLine`) azul saturado; pessoa (`UserRound`) no âmbar primário do produto quando o original está com o dono.
 
 ### 12.1.1 Funil do cabeçalho
 
