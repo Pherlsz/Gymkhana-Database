@@ -3,6 +3,7 @@ import {
   normalizeGlobalSearch,
   profileSearchForResult,
   searchErrorMessage,
+  SearchPage,
   termsFromSearch,
 } from "./SearchPage";
 import { APIRequestError, type SearchResult } from "./lib/api/client";
@@ -76,5 +77,12 @@ describe("global Search URL state", () => {
     const message = searchErrorMessage(error);
     expect(message).toContain(expected);
     expect(message).not.toContain("physical_table");
+  });
+});
+
+describe("/search route mount", () => {
+  it("mounts the SearchPage instead of the coming-soon placeholder", async () => {
+    const { Route } = await import("./routes/search");
+    expect(Route.options.component).toBe(SearchPage);
   });
 });
