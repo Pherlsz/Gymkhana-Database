@@ -1,44 +1,89 @@
-.search-controls {
-  padding: var(--gym-space-5);
+/* Global search page — flat toolbar, mobile-first, same vocabulary as the
+   rest of the shell (page-inline/block, gym tokens, no nested cards). */
+
+.search-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-4);
+  background: transparent;
+  padding: var(--page-block) var(--page-inline);
+  padding-bottom: max(var(--page-block), env(safe-area-inset-bottom));
 }
 
-.search-controls label,
-.search-modules {
-  color: var(--gym-color-text-muted);
-  font-size: var(--gym-font-size-sm);
+.search-page__header h1 {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
 }
 
-.search-controls label {
-  display: grid;
+/* --- Toolbar --------------------------------------------------------- */
+
+.search-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-3);
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
   gap: var(--gym-space-2);
-}
-
-.search-controls textarea {
-  min-block-size: 2.5rem;
-  padding: var(--gym-space-2) var(--gym-space-3);
+  min-block-size: 2.75rem;
+  padding: 0 var(--gym-space-2) 0 var(--gym-space-3);
   border: 1px solid var(--gym-color-border);
   border-radius: var(--gym-radius-md);
   background: var(--gym-color-surface);
+  color: var(--gym-color-text-muted);
+}
+
+.search-bar:focus-within {
+  border-color: var(--md-primary-text);
+  box-shadow: 0 0 0 3px var(--md-focus-ring);
+}
+
+.search-bar input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--gym-color-text);
+  font: inherit;
+}
+
+.search-bar input::placeholder {
+  color: var(--gym-color-text-muted);
+}
+
+.search-bar__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  flex: none;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gym-color-text-muted);
+  cursor: pointer;
+}
+
+.search-bar__clear:hover,
+.search-bar__clear:focus-visible {
+  background: var(--md-state-hover);
   color: var(--gym-color-text);
 }
 
-/* Same-scope controls share identical geometry (user rule): both action
-   buttons render at the same box regardless of label length. */
-.search-controls .ant-btn {
-  inline-size: 7rem;
+.search-bar__clear:focus-visible {
+  outline: 2px solid var(--md-primary-text);
+  outline-offset: 1px;
 }
 
-.search-controls__terms textarea {
-  resize: vertical;
+.search-bar .ant-btn {
+  flex: none;
 }
 
-.search-controls__help {
-  color: var(--gym-color-text-muted);
-  font-size: var(--gym-font-size-sm);
-}
-
-/* Module filter chips: neutral fill + gold text/rule signal. Never a gold-tinted
-   wash background (chroma collapse reads beige, not gold). */
+/* Module chips: neutral fill + gold rule signal (never a gold wash). */
 .search-modules {
   display: flex;
   flex-wrap: wrap;
@@ -46,7 +91,7 @@
 }
 
 .search-module-chip {
-  min-height: 2.25rem;
+  min-block-size: 2.25rem;
   padding: 0 var(--gym-space-4);
   border: 1px solid var(--gym-color-border);
   border-radius: 999px;
@@ -67,7 +112,6 @@
 }
 
 .search-module-chip[aria-pressed="true"] {
-  border-color: var(--gym-color-border);
   background: var(--md-state-selected);
   box-shadow: inset 0 -3px 0 var(--md-primary);
   color: var(--gym-color-text);
@@ -77,27 +121,42 @@
 /* Same-scope selects share identical geometry (user rule). */
 .search-options {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--gym-space-3);
-  align-items: end;
+}
+
+.search-options label {
+  display: grid;
+  gap: var(--gym-space-1);
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.search-options__hint {
+  color: var(--gym-color-text-muted);
+  font-size: 0.8125rem;
 }
 
 .search-options .ant-select {
   inline-size: 100%;
 }
 
-/* Option B results: one card per entity, evidence lines inside. */
-.search-cards {
-  display: grid;
-  gap: var(--gym-space-3);
+/* --- Results --------------------------------------------------------- */
+
+.search-results__status {
+  margin: 0;
+  color: var(--gym-color-text-muted);
 }
 
-.search-cards__status {
-  color: var(--gym-color-text-muted);
-  margin: 0;
+.search-grid {
+  display: grid;
+  gap: var(--gym-space-3);
+  grid-template-columns: 1fr;
 }
 
 .search-card {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--gym-color-border);
   border-radius: var(--gym-radius-md);
   background: var(--gym-color-surface);
@@ -107,7 +166,7 @@
 .search-card__head {
   display: flex;
   align-items: baseline;
-  gap: var(--gym-space-3);
+  gap: var(--gym-space-2);
   padding: var(--gym-space-3) var(--gym-space-4) var(--gym-space-2);
 }
 
@@ -134,6 +193,7 @@
 }
 
 .search-card__matches {
+  flex: 1 1 auto;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -142,7 +202,7 @@
 
 .search-card__match {
   display: grid;
-  grid-template-columns: minmax(9rem, 12rem) 1fr;
+  grid-template-columns: minmax(8rem, 11rem) 1fr;
   gap: var(--gym-space-3);
   padding: var(--gym-space-2) var(--gym-space-4);
   align-items: baseline;
@@ -195,13 +255,15 @@
   outline: none;
 }
 
-@media (max-width: 768px) {
+/* --- Wider screens --------------------------------------------------- */
+
+@media (min-width: 720px) {
   .search-options {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
   }
 
-  .search-card__match {
-    grid-template-columns: 1fr;
-    gap: var(--gym-space-1);
+  .search-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr));
+    align-items: start;
   }
 }

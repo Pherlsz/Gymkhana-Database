@@ -420,14 +420,8 @@ export const ptBRV1 = {
     error: "Não foi possível carregar a tabela.",
   },
   search: {
-    eyebrow: "M7 · Busca global",
     title: "Buscar dados autorizados",
-    description:
-      "Consulte campos lógicos de pessoas, documentos, contas, dados personalizados e metadados seguros de anexos. O conteúdo dos arquivos não faz parte desta busca.",
-    termsLabel: "Termos — um por linha",
-    termsPlaceholder: "Ex.: nome, CPF, endereço…",
-    termsHelp: ({ maximumTerms }) =>
-      `Até ${maximumTerms} sequências literais. Espaços, zeros à esquerda, letras, números e pontuação são preservados.`,
+    inputPlaceholder: "Buscar em todas as tabelas…",
     modulesLegend: "Módulos",
     fieldsLabel: "Campos específicos",
     fieldsSearchPlaceholder: "Filtrar campos…",

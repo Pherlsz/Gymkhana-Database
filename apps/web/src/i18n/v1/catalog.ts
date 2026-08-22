@@ -417,12 +417,8 @@ export type CatalogV1 = {
     error: string;
   };
   search: {
-    eyebrow: string;
     title: string;
-    description: string;
-    termsLabel: string;
-    termsPlaceholder: string;
-    termsHelp: (args: { maximumTerms: number }) => string;
+    inputPlaceholder: string;
     modulesLegend: string;
     fieldsLabel: string;
     fieldsSearchPlaceholder: string;

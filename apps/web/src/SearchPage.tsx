@@ -1,7 +1,8 @@
-import { Alert, Button, Card, Flex, Layout, Select, Typography } from "antd";
+import { Alert, Button, Flex, Layout, Select } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { Search, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DataGridPagination } from "./DataGrid";
 import { normalizeProfileSearch } from "./ProfilesPage";
 import { tableLinkProps } from "./lib/tables/tableRoutes";
@@ -136,6 +137,7 @@ export function SearchPage() {
   const { messages } = useI18n();
   const searchMessages = messages.search;
   const [draft, setDraft] = useState(search.q);
+  const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => setDraft(search.q), [search.q]);
 
   const catalog = useQuery({
@@ -209,7 +211,18 @@ export function SearchPage() {
       search: (current) => ({ ...current, ...patch }),
     });
   };
-  const submit = () => updateSearch({ q: draft, page: 1 });
+  const submit = () => {
+    if (draft.trim().length === 0) {
+      inputRef.current?.focus();
+      return;
+    }
+    updateSearch({ q: draft, page: 1 });
+  };
+  const clear = () => {
+    setDraft("");
+    inputRef.current?.focus();
+    updateSearch({ q: "", modules: "", fields: "", page: 1 });
+  };
   const toggleModule = (module: SearchModule) => {
     const allModules = catalog.data?.modules.map((item) => item.key) ?? moduleValues;
     const current = selectedModules.length === 0 ? [...allModules] : [...selectedModules];
@@ -232,152 +245,138 @@ export function SearchPage() {
   const sortValue = `${search.sort}:${search.order}` as const;
 
   return (
-    <Layout className="page-measure">
-      <header className="page-header">
-        <div className="page-eyebrow">{searchMessages.eyebrow}</div>
-        <Typography.Title level={1} className="page-title">
-          {searchMessages.title}
-        </Typography.Title>
-        <Typography.Paragraph className="page-description">
-          {searchMessages.description}
-        </Typography.Paragraph>
+    <Layout className="search-page">
+      <header className="search-page__header">
+        <h1 className="page-title">{searchMessages.title}</h1>
       </header>
-      <div className="page-content">
-        <Flex vertical gap="1.25rem">
-          <Card className="search-controls">
-            <Flex vertical gap="1rem">
-              <label className="search-controls__terms">
-                {searchMessages.termsLabel}
-                <textarea
-                  aria-describedby="search-terms-help"
-                  maxLength={650}
-                  placeholder={searchMessages.termsPlaceholder}
-                  rows={3}
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                />
-              </label>
-              <span className="search-controls__help" id="search-terms-help">
-                {searchMessages.termsHelp({
-                  maximumTerms: catalog.data?.limits.maximum_terms ?? 5,
-                })}
-              </span>
-              {catalog.isError ? (
-                <Alert
-                  message={searchMessages.catalogErrorTitle}
-                  type="error"
-                  description={<>{searchErrorMessage(catalog.error)}</>}
-                />
-              ) : null}
-              <div
-                className="search-modules"
-                role="group"
-                aria-label={searchMessages.modulesLegend}
-              >
-                {(catalog.data?.modules ?? []).map((module) => (
-                  <button
-                    key={module.key}
-                    aria-pressed={
-                      selectedModules.length === 0 || selectedModules.includes(module.key)
-                    }
-                    className="search-module-chip"
-                    type="button"
-                    onClick={() => toggleModule(module.key)}
-                  >
-                    {module.label}
-                  </button>
-                ))}
-              </div>
-              <div className="search-options">
-                <label>
-                  {searchMessages.fieldsLabel}
-                  <Select
-                    allowClear
-                    loading={catalog.isLoading}
-                    maxTagCount="responsive"
-                    notFoundContent={searchMessages.fieldsEmptyState}
-                    options={fieldOptions}
-                    placeholder={searchMessages.fieldsSearchPlaceholder}
-                    showSearch
-                    value={selectedFields}
-                    onChange={(values) =>
-                      updateSearch({
-                        fields: serializeList((values ?? []) as string[]),
-                        page: 1,
-                      })
-                    }
-                  />
-                  <span className="search-controls__help">{searchMessages.fieldsAllAllowed}</span>
-                </label>
-                <label>
-                  {searchMessages.sortLabel}
-                  <Select
-                    value={sortValue}
-                    onChange={(value) => {
-                      const [sort, order] = value.split(":") as [
-                        GlobalSearchState["sort"],
-                        GlobalSearchState["order"],
-                      ];
-                      updateSearch({ sort, order, page: 1 });
-                    }}
-                    options={[
-                      { value: "relevance:desc", label: searchMessages.sortRelevanceDesc },
-                      { value: "relevance:asc", label: searchMessages.sortRelevanceAsc },
-                      { value: "updated_at:desc", label: searchMessages.sortUpdatedDesc },
-                      { value: "updated_at:asc", label: searchMessages.sortUpdatedAsc },
-                    ]}
-                  />
-                </label>
-                <label>
-                  {searchMessages.perPageLabel}
-                  <Select
-                    value={search.limit}
-                    onChange={(value) => updateSearch({ limit: value as 25 | 50 | 100, page: 1 })}
-                    options={[
-                      { value: 25, label: "25" },
-                      { value: 50, label: "50" },
-                      { value: 100, label: "100" },
-                    ]}
-                  />
-                </label>
-              </div>
-              <Flex gap="0.75rem">
-                <Button disabled={draft.trim().length === 0 || !catalog.isSuccess} onClick={submit}>
-                  {searchMessages.submit}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setDraft("");
-                    updateSearch({ q: "", modules: "", fields: "", page: 1 });
-                  }}
-                >
-                  {searchMessages.clear}
-                </Button>
-              </Flex>
-            </Flex>
-          </Card>
+      <section className="search-toolbar">
+        <form
+          className="search-bar"
+          role="search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+        >
+          <Search aria-hidden size={16} strokeWidth={2} />
+          <input
+            aria-label={searchMessages.title}
+            autoComplete="off"
+            placeholder={searchMessages.inputPlaceholder}
+            ref={inputRef}
+            spellCheck={false}
+            type="text"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          {draft.length > 0 || search.q.length > 0 ? (
+            <button
+              aria-label={searchMessages.clear}
+              className="search-bar__clear"
+              type="button"
+              onClick={clear}
+            >
+              <X aria-hidden size={16} strokeWidth={2} />
+            </button>
+          ) : null}
+          <Button disabled={draft.trim().length === 0 || !catalog.isSuccess} htmlType="submit">
+            {searchMessages.submit}
+          </Button>
+        </form>
+        <div className="search-modules" role="group" aria-label={searchMessages.modulesLegend}>
+          {(catalog.data?.modules ?? []).map((module) => (
+            <button
+              key={module.key}
+              aria-pressed={selectedModules.length === 0 || selectedModules.includes(module.key)}
+              className="search-module-chip"
+              type="button"
+              onClick={() => toggleModule(module.key)}
+            >
+              {module.label}
+            </button>
+          ))}
+        </div>
+        <div className="search-options">
+          <label className="search-options__fields">
+            <span>{searchMessages.fieldsLabel}</span>
+            <Select
+              allowClear
+              loading={catalog.isLoading}
+              maxTagCount="responsive"
+              notFoundContent={searchMessages.fieldsEmptyState}
+              options={fieldOptions}
+              placeholder={searchMessages.fieldsSearchPlaceholder}
+              showSearch
+              value={selectedFields}
+              onChange={(values) =>
+                updateSearch({
+                  fields: serializeList((values ?? []) as string[]),
+                  page: 1,
+                })
+              }
+            />
+            <span className="search-options__hint">{searchMessages.fieldsAllAllowed}</span>
+          </label>
+          <label>
+            <span>{searchMessages.sortLabel}</span>
+            <Select
+              value={sortValue}
+              onChange={(value) => {
+                const [sort, order] = value.split(":") as [
+                  GlobalSearchState["sort"],
+                  GlobalSearchState["order"],
+                ];
+                updateSearch({ sort, order, page: 1 });
+              }}
+              options={[
+                { value: "relevance:desc", label: searchMessages.sortRelevanceDesc },
+                { value: "relevance:asc", label: searchMessages.sortRelevanceAsc },
+                { value: "updated_at:desc", label: searchMessages.sortUpdatedDesc },
+                { value: "updated_at:asc", label: searchMessages.sortUpdatedAsc },
+              ]}
+            />
+          </label>
+          <label>
+            <span>{searchMessages.perPageLabel}</span>
+            <Select
+              value={search.limit}
+              onChange={(value) => updateSearch({ limit: value as 25 | 50 | 100, page: 1 })}
+              options={[
+                { value: 25, label: "25" },
+                { value: 50, label: "50" },
+                { value: 100, label: "100" },
+              ]}
+            />
+          </label>
+        </div>
+      </section>
 
-          {results.isError ? (
-            <Alert
-              message={searchMessages.resultsErrorTitle}
-              type="error"
-              description={<>{searchErrorMessage(results.error)}</>}
-            />
-          ) : null}
-          {terms.length === 0 ? (
-            <Alert
-              message={searchMessages.emptyQueryTitle}
-              type="info"
-              description={searchMessages.emptyQueryDescription}
-            />
-          ) : null}
-          <section aria-label={searchMessages.resultsCaption} className="search-cards">
-            {results.isFetching ? (
-              <p className="search-cards__status">{searchMessages.loadingResults}</p>
-            ) : null}
-            {!results.isFetching && terms.length > 0 && groups.length === 0 && !results.isError ? (
-              <p className="search-cards__status">{searchMessages.noResults}</p>
-            ) : null}
+      {results.isError ? (
+        <Alert
+          message={searchMessages.resultsErrorTitle}
+          type="error"
+          showIcon
+          description={<>{searchErrorMessage(results.error)}</>}
+        />
+      ) : null}
+      {catalog.isError ? (
+        <Alert
+          message={searchMessages.catalogErrorTitle}
+          type="error"
+          showIcon
+          description={<>{searchErrorMessage(catalog.error)}</>}
+        />
+      ) : null}
+
+      <section aria-label={searchMessages.resultsCaption} className="search-results">
+        {results.isFetching ? (
+          <p className="search-results__status">{searchMessages.loadingResults}</p>
+        ) : null}
+        {!results.isFetching && terms.length > 0 && groups.length === 0 && !results.isError ? (
+          <p className="search-results__status">{searchMessages.noResults}</p>
+        ) : null}
+        {groups.length > 0 ? (
+          <div className="search-grid">
             {groups.map((group) => (
               <SearchResultCard
                 key={group.key}
@@ -385,18 +384,20 @@ export function SearchPage() {
                 moduleLabel={moduleLabels.get(group.module) ?? group.module}
               />
             ))}
-          </section>
-          {results.data ? (
-            <DataGridPagination
-              label={searchMessages.resultsUnit}
-              onPage={(page) => updateSearch({ page })}
-              page={search.page}
-              total={results.data.page.total}
-              totalPages={totalPages}
-            />
-          ) : null}
+          </div>
+        ) : null}
+      </section>
+      {results.data ? (
+        <Flex justify="center">
+          <DataGridPagination
+            label={searchMessages.resultsUnit}
+            onPage={(page) => updateSearch({ page })}
+            page={search.page}
+            total={results.data.page.total}
+            totalPages={totalPages}
+          />
         </Flex>
-      </div>
+      ) : null}
     </Layout>
   );
 }

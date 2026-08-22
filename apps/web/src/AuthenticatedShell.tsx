@@ -321,6 +321,7 @@ function ShellSearch({
 }) {
   const navigate = useNavigate();
   const { messages } = useI18n();
+  const [focused, setFocused] = useState(false);
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -334,7 +335,11 @@ function ShellSearch({
   };
 
   return (
-    <form className="shell-search" onSubmit={onSubmit} role="search">
+    <form
+      className={focused ? "shell-search shell-search--focused" : "shell-search"}
+      onSubmit={onSubmit}
+      role="search"
+    >
       <Search aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
       <input
         aria-label={messages.shell.navigation.searchPlaceholder}
@@ -344,8 +349,10 @@ function ShellSearch({
         ref={inputRef}
         spellCheck={false}
         type="text"
+        onBlur={() => setFocused(false)}
+        onFocus={() => setFocused(true)}
       />
-      {compact ? null : <kbd>Ctrl K</kbd>}
+      {compact || focused ? null : <kbd>Ctrl K</kbd>}
     </form>
   );
 }
