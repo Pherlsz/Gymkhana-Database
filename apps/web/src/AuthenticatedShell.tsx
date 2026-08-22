@@ -17,7 +17,7 @@ import {
   Sun,
   User,
 } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode, type RefObject } from "react";
 import { useI18n } from "./i18n";
 import { canManageUsers } from "./lib/roles";
 import { TABLE_SEARCH_DEFAULTS } from "./lib/tables/tableRoutes";
@@ -27,6 +27,7 @@ import { useTheme } from "./theme";
 import { ICON, ICON_STROKE } from "./components/icons";
 
 const NAV_COLLAPSED_KEY = "gymkhana-nav-collapsed";
+const NAV_TABLES_OPEN_KEY = "gymkhana-nav-tables-open";
 const SHELL_COMPACT_QUERY = "(width < 600px)";
 
 export function AuthenticatedShell() {
@@ -36,13 +37,17 @@ export function AuthenticatedShell() {
 function AuthenticatedShellLayout() {
   const { messages } = useI18n();
   const { session } = useApplicationContext();
+  const navigate = useNavigate();
   const copy = messages.shell;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [navOpen, setNavOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [compact, setCompact] = useState(false);
-  const [tablesOpen, setTablesOpen] = useState(true);
   const activeTable = pathname.startsWith("/tables/") ? pathname.slice("/tables/".length) : "";
+  const [tablesOpen, setTablesOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem(NAV_TABLES_OPEN_KEY) !== "0";
+  });
   const admin = canManageUsers(session.user.role);
 
   useEffect(() => {
@@ -61,7 +66,56 @@ function AuthenticatedShellLayout() {
     setNavOpen(false);
   }, [pathname]);
 
+  /* Keyboard escape route for the mobile drawer (mirrors the scrim click). */
+  useEffect(() => {
+    if (!navOpen) {
+      return;
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setNavOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navOpen]);
+
+  /*
+   * The group never hides the current location: landing on a table with the
+   * group collapsed (deep link, Home shortcut) reopens it so the "you are
+   * here" rule stays visible.
+   */
+  useEffect(() => {
+    if (activeTable) {
+      setTablesOpen(true);
+    }
+  }, [activeTable]);
+
   const rail = collapsed && !compact;
+
+  /*
+   * One Ctrl+K owner at the shell level. The two search inputs (topbar on
+   * mobile, sidebar on desktop) are mutually exclusive by breakpoint, so the
+   * visible one wins; when the rail hides both, the shortcut falls back to
+   * the global search page instead of focusing a display:none input.
+   */
+  const topbarSearchRef = useRef<HTMLInputElement>(null);
+  const sidebarSearchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        if (!rail) {
+          (compact ? topbarSearchRef : sidebarSearchRef).current?.focus();
+          return;
+        }
+        void navigate({ to: "/search", search: { ...GLOBAL_SEARCH_DEFAULTS } });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [compact, navigate, rail]);
 
   const toggleCollapsed = () => {
     setCollapsed((current) => {
@@ -78,7 +132,11 @@ function AuthenticatedShellLayout() {
       window.localStorage.setItem(NAV_COLLAPSED_KEY, "0");
       return;
     }
-    setTablesOpen((open) => !open);
+    setTablesOpen((open) => {
+      const next = !open;
+      window.localStorage.setItem(NAV_TABLES_OPEN_KEY, next ? "1" : "0");
+      return next;
+    });
   };
 
   const shellClass = [
@@ -107,15 +165,22 @@ function AuthenticatedShellLayout() {
         </button>
         {/* Theme lives in the account menu alone. The topbar carried a second
             control that was reachable at the same time on mobile. */}
-        <ShellSearch compact />
+        <ShellSearch compact inputRef={topbarSearchRef} />
       </header>
       <button
-        aria-label={copy.navigation.closeNavigation}
+        aria-hidden
         className="app-shell__scrim"
         onClick={() => setNavOpen(false)}
+        tabIndex={-1}
         type="button"
       />
-      <aside aria-label={copy.navigationLabel} className="app-shell__sidebar">
+      {/* Inert only while the off-canvas drawer is closed on mobile — the
+          desktop sidebar is a permanent fixture and must stay interactive. */}
+      <aside
+        aria-label={copy.navigationLabel}
+        className="app-shell__sidebar"
+        inert={!navOpen && compact}
+      >
         <div className="app-shell__brand">
           <Link className="app-shell__brand-link" title={copy.productName} to="/">
             <img alt="" className="app-shell__logo-img" height={32} src="/Gampa.png" width={32} />
@@ -146,35 +211,39 @@ function AuthenticatedShellLayout() {
             </button>
           )}
         </div>
-        {compact ? null : <ShellSearch />}
+        {compact ? null : <ShellSearch inputRef={sidebarSearchRef} />}
         <nav>
-          <Link
-            activeOptions={{ exact: true }}
-            activeProps={{ className: "nav-item--active" }}
-            className="nav-item"
-            title={copy.navigation.home}
-            to="/"
-          >
-            <Home aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-            <span className="nav-item__label">{copy.navigation.home}</span>
-          </Link>
+          <RailTip label={copy.navigation.home} rail={rail}>
+            <Link
+              activeOptions={{ exact: true }}
+              activeProps={{ "aria-current": "page", className: "nav-item--active" }}
+              className="nav-item"
+              title={copy.navigation.home}
+              to="/"
+            >
+              <Home aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+              <span className="nav-item__label">{copy.navigation.home}</span>
+            </Link>
+          </RailTip>
           <hr className="nav-divider" />
-          <button
-            aria-controls="shell-tables"
-            aria-expanded={tablesOpen}
-            className="nav-item nav-item--toggle"
-            onClick={toggleTables}
-            type="button"
-          >
-            <Folder aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-            <span className="nav-item__label">{copy.navigation.tables}</span>
-            <ChevronDown
-              aria-hidden
-              className="nav-item__chev"
-              size={ICON.md}
-              strokeWidth={ICON_STROKE}
-            />
-          </button>
+          <RailTip label={copy.navigation.tables} rail={rail}>
+            <button
+              aria-controls="shell-tables"
+              aria-expanded={tablesOpen}
+              className="nav-item nav-item--toggle"
+              onClick={toggleTables}
+              type="button"
+            >
+              <Folder aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+              <span className="nav-item__label">{copy.navigation.tables}</span>
+              <ChevronDown
+                aria-hidden
+                className="nav-item__chev"
+                size={ICON.md}
+                strokeWidth={ICON_STROKE}
+              />
+            </button>
+          </RailTip>
           <div
             aria-hidden={!tablesOpen || rail}
             className="nav-sub-wrap"
@@ -185,18 +254,21 @@ function AuthenticatedShellLayout() {
                 active={activeTable === "people"}
                 icon={<User aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
                 label={copy.navigation.profiles}
+                rail={rail}
                 table="people"
               />
               <TableLink
                 active={activeTable === "documents"}
                 icon={<FileText aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
                 label={copy.navigation.documents}
+                rail={rail}
                 table="documents"
               />
               <TableLink
                 active={activeTable === "bills"}
                 icon={<Receipt aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
                 label={copy.navigation.bills}
+                rail={rail}
                 table="bills"
               />
             </div>
@@ -204,26 +276,30 @@ function AuthenticatedShellLayout() {
           {admin ? (
             <>
               <hr className="nav-divider" />
-              <Link
-                activeOptions={{ exact: true }}
-                activeProps={{ className: "nav-item--active" }}
-                className="nav-item"
-                title={copy.navigation.forms}
-                to="/forms"
-              >
-                <ClipboardList aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                <span className="nav-item__label">{copy.navigation.forms}</span>
-              </Link>
-              <Link
-                activeOptions={{ exact: true }}
-                activeProps={{ className: "nav-item--active" }}
-                className="nav-item"
-                title={copy.navigation.admin}
-                to="/admin"
-              >
-                <SlidersHorizontal aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                <span className="nav-item__label">{copy.navigation.admin}</span>
-              </Link>
+              <RailTip label={copy.navigation.forms} rail={rail}>
+                <Link
+                  activeOptions={{ exact: true }}
+                  activeProps={{ "aria-current": "page", className: "nav-item--active" }}
+                  className="nav-item"
+                  title={copy.navigation.forms}
+                  to="/forms"
+                >
+                  <ClipboardList aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                  <span className="nav-item__label">{copy.navigation.forms}</span>
+                </Link>
+              </RailTip>
+              <RailTip label={copy.navigation.admin} rail={rail}>
+                <Link
+                  activeOptions={{ exact: true }}
+                  activeProps={{ "aria-current": "page", className: "nav-item--active" }}
+                  className="nav-item"
+                  title={copy.navigation.admin}
+                  to="/admin"
+                >
+                  <SlidersHorizontal aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                  <span className="nav-item__label">{copy.navigation.admin}</span>
+                </Link>
+              </RailTip>
             </>
           ) : null}
         </nav>
@@ -236,21 +312,15 @@ function AuthenticatedShellLayout() {
   );
 }
 
-function ShellSearch({ compact = false }: { compact?: boolean }) {
+function ShellSearch({
+  compact = false,
+  inputRef,
+}: {
+  compact?: boolean;
+  inputRef: RefObject<HTMLInputElement | null>;
+}) {
   const navigate = useNavigate();
   const { messages } = useI18n();
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        inputRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -272,10 +342,26 @@ function ShellSearch({ compact = false }: { compact?: boolean }) {
         name="q"
         placeholder={messages.shell.navigation.searchPlaceholder}
         ref={inputRef}
-        type="search"
+        spellCheck={false}
+        type="text"
       />
       {compact ? null : <kbd>Ctrl K</kbd>}
     </form>
+  );
+}
+
+/* Icon-only rail items get a CSS tooltip (see .rail-tip in shell.css): the
+   native `title` needs ~1s and never shows on touch, and antd Tooltip is
+   deliberately unused in this app. Expanded items already show their label,
+   so the wrapper only mounts in rail mode. */
+function RailTip({ label, rail, children }: { label: string; rail: boolean; children: ReactNode }) {
+  if (!rail) {
+    return <>{children}</>;
+  }
+  return (
+    <span className="rail-tip" data-tip={label}>
+      {children}
+    </span>
   );
 }
 
@@ -284,23 +370,28 @@ function TableLink({
   table,
   active,
   icon,
+  rail,
 }: {
   label: string;
   table: "people" | "documents" | "bills";
   active: boolean;
   icon: ReactNode;
+  rail: boolean;
 }) {
   return (
-    <Link
-      className={active ? "nav-sub__item nav-sub__item--active" : "nav-sub__item"}
-      params={{ table }}
-      search={TABLE_SEARCH_DEFAULTS}
-      title={label}
-      to="/tables/$table"
-    >
-      <span className="nav-sub__icon">{icon}</span>
-      <span className="nav-sub__label">{label}</span>
-    </Link>
+    <RailTip label={label} rail={rail}>
+      <Link
+        aria-current={active ? "page" : undefined}
+        className={active ? "nav-sub__item nav-sub__item--active" : "nav-sub__item"}
+        params={{ table }}
+        search={TABLE_SEARCH_DEFAULTS}
+        title={label}
+        to="/tables/$table"
+      >
+        <span className="nav-sub__icon">{icon}</span>
+        <span className="nav-sub__label">{label}</span>
+      </Link>
+    </RailTip>
   );
 }
 
@@ -335,19 +426,38 @@ function AccountMenuPanel({
         <Settings aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
         {copy.account.settings}
       </button>
-      <div className="sidebar-account-menu__item sidebar-account-menu__appearance">
+      {/* Whole-row toggle (menuitemcheckbox): clicking anywhere on the row
+          flips the theme. The Switch renders a <button role="switch"> (not a
+          checkbox), so a <label> would not forward clicks; instead the row
+          handles click/keyboard and the wrapper around the Switch stops the
+          event so a direct hit does not toggle twice (row + Switch onChange). */}
+      <div
+        aria-checked={isDark}
+        className="sidebar-account-menu__item sidebar-account-menu__appearance"
+        onClick={toggleTheme}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            toggleTheme();
+          }
+        }}
+        role="menuitemcheckbox"
+        tabIndex={0}
+      >
         {isDark ? (
           <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
         ) : (
           <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
         )}
         <span>{copy.account.appearance}</span>
-        <Switch
-          aria-label={copy.account.appearance}
-          checked={isDark}
-          onChange={toggleTheme}
-          size="small"
-        />
+        <span className="sidebar-account-menu__switch" onClick={(event) => event.stopPropagation()}>
+          <Switch
+            aria-label={copy.account.appearance}
+            checked={isDark}
+            onChange={toggleTheme}
+            size="small"
+          />
+        </span>
       </div>
       <div className="sidebar-account-menu__divider" />
       <button

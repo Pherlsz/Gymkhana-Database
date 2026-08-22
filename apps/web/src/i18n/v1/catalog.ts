@@ -11,25 +11,6 @@ export type CatalogV1 = {
       accessDenied: string;
       oauthError: string;
     };
-    public: {
-      privateAccess: string;
-      eyebrow: string;
-      description: string;
-      verifyApi: string;
-      apiUnavailable: string;
-      apiUnavailableDescription: string;
-      checkingAccess: string;
-      checkingAccessDescription: string;
-      authenticationRequired: string;
-      authenticationRequiredDescription: string;
-      googleButton: string;
-      authenticationDisabled: string;
-      authenticationDisabledDescription: string;
-      sessionUnavailable: string;
-      sessionUnavailableDescription: string;
-      retry: string;
-      sessionActive: string;
-    };
   };
   shell: {
     productName: string;
@@ -43,11 +24,6 @@ export type CatalogV1 = {
       tables: string;
       documents: string;
       bills: string;
-      export: string;
-      users: string;
-      principal: string;
-      tools: string;
-      adminGroup: string;
       searchPlaceholder: string;
       searchSubmit: string;
       openNavigation: string;
@@ -56,11 +32,7 @@ export type CatalogV1 = {
       expandMenu: string;
     };
     comingSoon: string;
-    roles: {
-      external: string;
-      admin: string;
-      superadmin: string;
-    };
+    roles: Record<string, never>;
     account: {
       openMenu: string;
       settings: string;
@@ -70,19 +42,13 @@ export type CatalogV1 = {
     signingOut: string;
   };
   home: {
-    eyebrow: string;
-    description: string;
-    sessionActive: string;
     userAdministrationTitle: string;
     userAdministrationDescription: string;
-    foundationTitle: string;
-    foundationDescription: string;
     adminForbidden: string;
     welcome: string;
     quickActions: {
       title: string;
       newRecord: string;
-      newPerson: string;
       newBill: string;
       batch: string;
       documents: string;
@@ -95,20 +61,11 @@ export type CatalogV1 = {
       title: string;
       subtitle: string;
       none: string;
-      showList: string;
-      hideList: string;
       openDocuments: string;
-      itemDocument: string;
-      itemBill: string;
-      today: string;
-      daysInUse: string;
-      tableType: string;
-      tableIdentifier: string;
-      tableDate: string;
-      tableDaysInUse: string;
-      tableNotes: string;
-      tableOpen: string;
-      tableEmpty: string;
+      openBills: string;
+      truncatedNote: string;
+      moreChips: string;
+      moreChipsCollapse: string;
     };
     hero: {
       people: string;
@@ -117,13 +74,8 @@ export type CatalogV1 = {
     };
     tables: {
       title: string;
-      viewAll: string;
       principal: string;
       personalRecord: string;
-      records: string;
-      inPossession: string;
-      empty: string;
-      noTypes: string;
       open: string;
       expandAll: string;
       collapseAll: string;
@@ -161,14 +113,7 @@ export type CatalogV1 = {
       };
     };
     overviewError: string;
-    taskStates: {
-      QUEUED: string;
-      RUNNING: string;
-      INCOMPLETE: string;
-      COMPLETED: string;
-      FAILED: string;
-      CANCELLED: string;
-    };
+    retry: string;
   };
   tables: {
     people: {
@@ -273,8 +218,6 @@ export type CatalogV1 = {
       digitSumCpf: string;
       digitSumPhone: string;
       digitSumName: string;
-      digitSumIdentifier: string;
-      digitSumReference: string;
       digitSumRg: string;
       digitSumCnh: string;
       age: string;
@@ -306,9 +249,6 @@ export type CatalogV1 = {
     filters: {
       search: string;
       searchAll: string;
-      searchPeople: string;
-      searchDocuments: string;
-      searchBills: string;
       byField: string;
       more: string;
       clear: string;
@@ -319,15 +259,41 @@ export type CatalogV1 = {
       allStatuses: string;
       allMedia: string;
       all: string;
-      searchFields: string;
       addFilter: string;
       chooseField: string;
       chooseValue: string;
       removeFilter: string;
       appliedFilters: string;
       moreChips: string;
+      moreChipsCollapse: string;
       noFields: string;
       localOnly: string;
+      localScopeBadge: string;
+    };
+    funnel: {
+      sortAsc: string;
+      sortDesc: string;
+      filterByCondition: string;
+      filterByValues: string;
+      conditionNone: string;
+      conditionOperators: string;
+      conditionEmpty: string;
+      conditionNotEmpty: string;
+      conditionContains: string;
+      conditionNotContains: string;
+      conditionStartsWith: string;
+      conditionEndsWith: string;
+      conditionIs: string;
+      conditionDateIs: string;
+      conditionBefore: string;
+      conditionAfter: string;
+      valueSearch: string;
+      valueSelectAll: string;
+      valueClear: string;
+      valueCount: string;
+      ok: string;
+      cancel: string;
+      localScopeHint: string;
     };
     boolean: {
       yes: string;
@@ -351,11 +317,6 @@ export type CatalogV1 = {
       pageSize: string;
       pageSizeAria: string;
     };
-    /**
-     * Document presence marks from Orchestration 6.4 / 12.1. Physical and
-     * digital draw Lucide icons; only `nº` still ships a glyph. `label` is
-     * the accessible name on every mark.
-     */
     badges: {
       number: { glyph: string; label: string };
       physical: { label: string };
@@ -454,6 +415,38 @@ export type CatalogV1 = {
       };
     };
     error: string;
+  };
+  search: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    termsLabel: string;
+    termsPlaceholder: string;
+    termsHelp: (args: { maximumTerms: number }) => string;
+    modulesLegend: string;
+    fieldsLabel: string;
+    fieldsSearchPlaceholder: string;
+    fieldsEmptyState: string;
+    fieldsAllAllowed: string;
+    sortLabel: string;
+    sortRelevanceDesc: string;
+    sortRelevanceAsc: string;
+    sortUpdatedDesc: string;
+    sortUpdatedAsc: string;
+    perPageLabel: string;
+    submit: string;
+    clear: string;
+    catalogErrorTitle: string;
+    resultsErrorTitle: string;
+    emptyQueryTitle: string;
+    emptyQueryDescription: string;
+    noResults: string;
+    loadingResults: string;
+    resultsCaption: string;
+    resultsUnit: string;
+    relevanceWord: string;
+    resultCount: (args: { count: number }) => string;
+    openRecord: string;
   };
   theme: {
     activateLight: string;

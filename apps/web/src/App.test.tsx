@@ -83,9 +83,66 @@ function billType(id: string, label: string, technicalKey: string) {
   };
 }
 
-function homeOverviewResponse(url: string, options?: { rgCount?: number }): Response | undefined {
+function documentInUse(id: string, typeLabel: string) {
+  return {
+    id,
+    identifier_value: `ident-${id}`,
+    document_type_id: `dt-${typeLabel}`,
+    type: { id: `dt-${typeLabel}`, label: typeLabel },
+    owner_profile_id: "019bf789-4400-7f12-9abc-123456789abc",
+    notes: "",
+    status: "IN_USE",
+    current_use: {
+      holder_profile_id: "019bf789-4400-7f12-9abc-123456789abc",
+      assigned_at: "2026-08-01T12:00:00Z",
+    },
+    version: 1,
+    created_at: "2026-08-01T12:00:00Z",
+    updated_at: "2026-08-01T12:00:00Z",
+  };
+}
+
+function billInUse(id: string, typeLabel: string) {
+  return {
+    id,
+    reference_value: `ref-${id}`,
+    bill_type_id: `bt-${typeLabel}`,
+    type: { id: `bt-${typeLabel}`, label: typeLabel },
+    owner_profile_id: "019bf789-4400-7f12-9abc-123456789abc",
+    notes: "",
+    status: "IN_USE",
+    current_use: {
+      holder_profile_id: "019bf789-4400-7f12-9abc-123456789abc",
+      assigned_at: "2026-08-01T12:00:00Z",
+    },
+    version: 1,
+    created_at: "2026-08-01T12:00:00Z",
+    updated_at: "2026-08-01T12:00:00Z",
+  };
+}
+
+function homeOverviewResponse(
+  url: string,
+  options?: { rgCount?: number; inUse?: { documents: unknown[]; bills: unknown[] } },
+): Response | undefined {
   if (url.includes("/api/v1/profiles?")) {
     return jsonResponse(profilePage());
+  }
+  if (url.includes("status=IN_USE") && url.includes("/api/v1/documents?")) {
+    const inUse = options?.inUse;
+    if (!inUse) return jsonResponse(emptyResourcePage());
+    return jsonResponse({
+      documents: inUse.documents,
+      page: { total: inUse.documents.length, limit: 50, offset: 0 },
+    });
+  }
+  if (url.includes("status=IN_USE") && url.includes("/api/v1/bills?")) {
+    const inUse = options?.inUse;
+    if (!inUse) return jsonResponse(emptyResourcePage());
+    return jsonResponse({
+      bills: inUse.bills,
+      page: { total: inUse.bills.length, limit: 50, offset: 0 },
+    });
   }
   if (url.includes("/api/v1/document-types")) {
     return jsonResponse({
@@ -141,7 +198,7 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: "Bem-vindo de volta, Member Name" }),
     ).toBeInTheDocument();
-    expect(await screen.findByText("Nenhum documento em uso")).toBeInTheDocument();
+    expect(await screen.findByText("Nenhum item em uso")).toBeInTheDocument();
     expect(screen.getByText("Tabelas · em posse")).toBeInTheDocument();
     expect(screen.queryByText("ver todas")).not.toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /Abrir pessoas/ })).toBeInTheDocument();
@@ -155,7 +212,7 @@ describe("App", () => {
     expect(screen.getByText("Conta de água")).toBeInTheDocument();
     expect(screen.getByText("Internet")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Documentos" })).toBeInTheDocument();
-    expect((await screen.findAllByText("em posse")).length).toBeGreaterThan(0);
+    expect(document.querySelectorAll(".home-catalog__row-count").length).toBe(0);
     expect((await screen.findAllByText("cadastros")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("RG").length).toBeGreaterThan(0);
     expect(screen.queryByText("56.401")).not.toBeInTheDocument();
@@ -183,7 +240,45 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Recolher menu" })).toBeInTheDocument();
     expect(screen.getByText("Gymkhana Database")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Novo cadastro/ })).toBeInTheDocument();
-    expect(screen.getByText("Documentos em uso")).toBeInTheDocument();
+    expect(screen.getByText("Itens em uso")).toBeInTheDocument();
+  });
+
+  it("splits in-use headline by kind and expands chips locally", async () => {
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/auth/session"))
+        return Promise.resolve(jsonResponse(authenticatedSession()));
+      const overview = homeOverviewResponse(url, {
+        inUse: {
+          documents: [
+            documentInUse("doc-1", "RG"),
+            documentInUse("doc-2", "RG"),
+            documentInUse("doc-3", "CNH"),
+            documentInUse("doc-4", "CTPS"),
+            documentInUse("doc-5", "Título Eleitoral"),
+            documentInUse("doc-6", "Cartão SUS"),
+            documentInUse("doc-7", "Passaporte"),
+            documentInUse("doc-8", "PIS"),
+            documentInUse("doc-9", "CRM"),
+          ],
+          bills: [billInUse("bill-1", "Energia")],
+        },
+      });
+      if (overview) return Promise.resolve(overview);
+      return Promise.resolve(jsonResponse({ status: "ok" }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    expect(await screen.findByText("Itens em uso")).toBeInTheDocument();
+    expect(await screen.findByText("10")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir documentos" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Abrir contas" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "+1 tipos" }));
+    expect(screen.getByRole("button", { name: "Mostrar menos" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar menos" }));
+    expect(screen.getByRole("button", { name: "+1 tipos" })).toBeInTheDocument();
   });
 
   it("shows exemplar counts on Home when types have physical or digital stock", async () => {
@@ -198,7 +293,8 @@ describe("App", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
     expect(await screen.findByText("56.401")).toBeInTheDocument();
-    expect(screen.getAllByText("em posse").length).toBeGreaterThan(0);
+    expect(screen.getByText("56.401")).toHaveClass("home-catalog__row-count");
+    expect(document.querySelectorAll(".home-catalog__row-count--empty").length).toBe(0);
     expect(screen.queryByText("Nenhum registro")).not.toBeInTheDocument();
   });
 
@@ -244,7 +340,7 @@ describe("App", () => {
     expect(screen.queryByText("A ser desenvolvido")).not.toBeInTheDocument();
   });
 
-  it("shows the search placeholder", async () => {
+  it("renders the global search page instead of the placeholder", async () => {
     window.history.replaceState(null, "", "/search?q=Ana");
     const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
@@ -273,7 +369,10 @@ describe("App", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
-    expect(await screen.findByRole("heading", { name: "Em desenvolvimento" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Buscar dados autorizados" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Em desenvolvimento")).not.toBeInTheDocument();
   });
 
   it("does not let an admin create tables from home", async () => {

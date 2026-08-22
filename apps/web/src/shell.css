@@ -49,17 +49,12 @@
 @property --md-focus-ring {
   syntax: "<color>";
   inherits: true;
-  initial-value: oklch(0.5 0.11 68 / 0.55);
+  initial-value: oklch(0.5 0.11 68 / 0.85);
 }
 @property --amber-11 {
   syntax: "<color>";
   inherits: true;
   initial-value: oklch(0.5 0.11 68);
-}
-@property --md-nav-active {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: #fdf2d6;
 }
 @property --md-search-bg {
   syntax: "<color>";
@@ -102,15 +97,15 @@
   /* Shared literal with `ON_PRIMARY` in theme.tsx. */
   --md-on-primary: #141414;
   --md-primary-text: var(--amber-11);
-  --md-primary-container: color-mix(in srgb, var(--md-primary) 20%, var(--md-surface));
+  --md-primary-container: color-mix(in oklch, var(--md-primary) 20%, var(--md-surface));
   /*
-   * "You are here" is a gold whisper plus a hard 2px gold rule, not a filled
-   * amber block. The wash sits ~1.1:1 from paper on purpose; the rule and the
-   * gold icon carry the signal.
+   * "You are here" is a gray-3 fill with a hard 3px gold rule and gold text,
+   * never a gold-tinted wash — gold mixed toward paper reads beige. The
+   * container tint carries the block, the rule and gold text carry the signal.
    */
-  --md-nav-active: var(--md-primary-container);
   --md-search-bg: var(--gray-1);
-  --md-focus-ring: color-mix(in oklch, var(--md-primary-text) 55%, transparent);
+  /* 85%: the lowest alpha that still clears WCAG 2.2 focus-appearance 3:1 on paper. */
+  --md-focus-ring: color-mix(in oklch, var(--md-primary-text) 85%, transparent);
   --md-nav-tree: color-mix(in oklch, var(--md-on-surface-variant) 38%, transparent);
   /*
    * States are washes of ink, never gold. This is what keeps gold rare enough
@@ -130,7 +125,6 @@
   --md-warning: oklch(0.5 0.14 45);
   --md-error: oklch(0.505 0.19 27);
   --md-info: oklch(0.47 0.13 250);
-  --md-disabled: color-mix(in oklch, var(--md-on-surface) 38%, transparent);
   --md-scrim: oklch(0.185 0.006 85 / 0.45);
   /* Document presence marks, per Orchestration 12.1: F green, D blue. */
   --mark-physical: oklch(0.47 0.16 145);
@@ -159,6 +153,10 @@
   --gym-radius-md: 8px;
   --gym-radius-lg: 12px;
   --gym-radius-pill: 999px;
+  --gym-z-topbar: 20;
+  --gym-z-inspector: 25;
+  --gym-z-scrim: 30;
+  --gym-z-sidebar: 40;
   --page-measure: 64rem;
   /* Shell 600px · content 768px · split 840px. Home catalog also 1100 / 1200. */
   --gym-font-size-xs: 0.75rem;
@@ -175,8 +173,8 @@
   --gym-hairline: oklch(0.85 0 0 / 0.5);
   --gym-shadow-ambient: oklch(0 0 0 / 0.1);
   --gym-scrollbar-size: 8px;
-  --gym-scrollbar-thumb: color-mix(in srgb, var(--md-on-surface) 24%, transparent);
-  --gym-scrollbar-thumb-hover: color-mix(in srgb, var(--md-on-surface) 42%, transparent);
+  --gym-scrollbar-thumb: color-mix(in oklch, var(--md-on-surface) 24%, transparent);
+  --gym-scrollbar-thumb-hover: color-mix(in oklch, var(--md-on-surface) 42%, transparent);
 }
 
 html.dark {
@@ -196,7 +194,7 @@ html.dark {
    */
   --amber-11: oklch(0.88 0.075 88);
   --md-surface-elevated: var(--gray-3);
-  --md-primary-container: color-mix(in srgb, var(--md-primary) 20%, var(--md-surface));
+  --md-primary-container: color-mix(in oklch, var(--md-primary) 20%, var(--md-surface));
   --md-search-bg: var(--gray-4);
   --md-focus-ring: color-mix(in oklch, var(--md-primary-text) 50%, transparent);
   --md-nav-tree: color-mix(in oklch, var(--md-on-surface-variant) 28%, transparent);
@@ -259,7 +257,6 @@ html {
     --gray-11 240ms ease,
     --gray-12 240ms ease,
     --amber-11 240ms ease,
-    --md-nav-active 240ms ease,
     --md-search-bg 240ms ease,
     --md-focus-ring 240ms ease,
     --md-nav-tree 240ms ease,
@@ -342,8 +339,8 @@ html .ant-btn.ant-btn-color-primary:not(.ant-btn-variant-solid) {
 
 html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   --ant-btn-color-base: var(--md-on-surface);
-  --ant-btn-color-hover: color-mix(in srgb, var(--md-on-surface) 86%, var(--md-surface));
-  --ant-btn-color-active: color-mix(in srgb, var(--md-on-surface) 76%, var(--md-surface));
+  --ant-btn-color-hover: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
+  --ant-btn-color-active: color-mix(in oklch, var(--md-on-surface) 76%, var(--md-surface));
   --ant-btn-text-color: var(--md-surface);
   --ant-btn-text-color-hover: var(--md-surface);
   --ant-btn-text-color-active: var(--md-surface);
@@ -367,7 +364,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   background: var(--md-surface);
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: var(--gym-z-topbar);
 }
 
 .app-shell__topbar .shell-search {
@@ -514,6 +511,21 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   width: 100%;
 }
 
+/* Native WebKit search decorations (blue clear ✕, magnifier glyph) clash with
+   the app's own icon + kbd hint; spellcheck squiggles are noise on names/CPF
+   fragments. */
+.shell-search input::-webkit-search-cancel-button,
+.shell-search input::-webkit-search-decoration,
+.shell-search input::-webkit-search-results-button {
+  appearance: none;
+  display: none;
+}
+
+.shell-search input {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .shell-search kbd {
   font-family: "Geist Mono", ui-monospace, monospace;
   font-size: 0.6875rem;
@@ -551,16 +563,21 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 }
 
 .nav-item--active {
-  background: var(--md-nav-active);
-  color: var(--md-on-surface);
+  background: var(--md-surface-container);
+  color: var(--md-primary-text);
   font-weight: 600;
-  box-shadow: inset 2px 0 0 var(--md-primary-text);
-  padding-inline-start: calc(0.7rem - 2px);
+  border-radius: 0 var(--gym-radius-md) var(--gym-radius-md) 0;
+  box-shadow: inset 3px 0 0 var(--md-primary-text);
+  padding-inline-start: calc(0.7rem - 3px);
 }
 
 .nav-item--active:hover {
-  background: var(--md-nav-active);
-  color: var(--md-on-surface);
+  background: var(--md-surface-container);
+  color: var(--md-primary-text);
+}
+
+.nav-item:active {
+  background: var(--md-state-pressed);
 }
 
 .nav-item--active svg {
@@ -600,6 +617,13 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   grid-template-rows: 0fr;
   visibility: hidden;
   pointer-events: none;
+}
+
+/* Margins on .nav-sub escape overflow:hidden on the element itself;
+   zero them when collapsed so the group fully disappears. */
+.nav-item--toggle[aria-expanded="false"] + .nav-sub-wrap .nav-sub {
+  margin: 0;
+  padding-block: 0;
 }
 
 .nav-sub-wrap > .nav-sub {
@@ -650,9 +674,10 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 }
 
 .nav-sub__item--active {
-  background: var(--md-nav-active);
-  color: var(--md-on-surface);
+  background: var(--md-surface-container);
+  color: var(--md-primary-text);
   font-weight: 600;
+  border-radius: 0 var(--gym-radius-md) var(--gym-radius-md) 0;
 }
 
 .nav-sub__item--active .nav-sub__icon {
@@ -724,14 +749,38 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 
 .sidebar-account-menu__item:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .sidebar-account-menu__appearance {
-  cursor: default;
+  cursor: pointer;
+  user-select: none;
 }
 
-.sidebar-account-menu__appearance span {
+/* The unchecked antd Switch track is colorTextQuaternary — nearly invisible on
+   the menu surface. antd re-declares its component token vars on the Switch's
+   own root node, so a --ant-* scope on this ancestor loses the cascade; the
+   override must target the concrete property on the component class. */
+.sidebar-account-menu__appearance .ant-switch:not(.ant-switch-checked) {
+  background: var(--md-state-selected);
+  box-shadow: inset 0 0 0 1px var(--md-outline);
+}
+
+.sidebar-account-menu__appearance:focus-visible {
+  outline: 2px solid var(--md-primary-text);
+  outline-offset: 2px;
+}
+
+.sidebar-account-menu__switch {
+  display: inline-flex;
+  flex: none;
+}
+
+.sidebar-account-menu__appearance:hover {
+  background: var(--md-state-hover);
+}
+
+.sidebar-account-menu__appearance > span:not(.sidebar-account-menu__switch) {
   flex: 1;
   min-width: 0;
 }
@@ -899,14 +948,19 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   }
   .app-shell--collapsed .brand-text,
   .app-shell--collapsed .nav-item__label,
-  .app-shell--collapsed .nav-item__chev,
-  .app-shell--collapsed .sidebar-account__meta,
-  .app-shell--collapsed .sidebar-account__chev {
+  .app-shell--collapsed .nav-item__chev {
     overflow: hidden;
     width: 0;
     min-width: 0;
     opacity: 0;
     pointer-events: none;
+  }
+  /* The account trigger is a centered grid tile; its extra children must
+     leave the flow entirely — a width:0 span would still claim an implicit
+     grid row and push the avatar off-center inside the 2.5rem tile. */
+  .app-shell--collapsed .sidebar-account__meta,
+  .app-shell--collapsed .sidebar-account__chev {
+    display: none;
   }
   .app-shell--collapsed .nav-item {
     display: grid;
@@ -984,7 +1038,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
     margin-inline: auto;
     overflow: hidden;
     border-color: transparent;
-    background: var(--md-nav-active);
+    background: var(--md-surface-container);
   }
   .app-shell--collapsed .sidebar-account__anchor {
     width: 2.5rem;
@@ -1021,7 +1075,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
     position: fixed;
     inset: 0;
     background: var(--md-scrim);
-    z-index: 30;
+    z-index: var(--gym-z-scrim);
     opacity: 0;
     pointer-events: none;
     transition: opacity 200ms ease;
@@ -1041,7 +1095,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
     border: none;
     border-inline-end: 1px solid var(--md-outline-variant);
     padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-    z-index: 40;
+    z-index: var(--gym-z-sidebar);
     transform: translateX(-100%);
     pointer-events: none;
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -1093,6 +1147,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 
 .home-section__title {
   display: block;
+  margin: 0;
   margin-bottom: 0.7rem;
   font-size: 0.75rem;
   font-weight: 600;
@@ -1166,8 +1221,8 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
  */
 .quick-actions .ant-btn.quick-action.ant-btn-primary {
   --ant-btn-bg-color: var(--md-on-surface);
-  --ant-btn-bg-color-hover: color-mix(in srgb, var(--md-on-surface) 86%, var(--md-surface));
-  --ant-btn-bg-color-active: color-mix(in srgb, var(--md-on-surface) 76%, var(--md-surface));
+  --ant-btn-bg-color-hover: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
+  --ant-btn-bg-color-active: color-mix(in oklch, var(--md-on-surface) 76%, var(--md-surface));
   --ant-btn-text-color: var(--md-surface);
   --ant-btn-text-color-hover: var(--md-surface);
   --ant-btn-text-color-active: var(--md-surface);
@@ -1188,7 +1243,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   }
 
   .quick-actions .ant-btn.quick-action.ant-btn-primary:not(:disabled):hover {
-    background-color: color-mix(in srgb, var(--md-on-surface) 86%, var(--md-surface));
+    background-color: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
     border-color: transparent;
     color: var(--md-surface);
   }
@@ -1200,7 +1255,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 }
 
 .quick-actions .ant-btn.quick-action.ant-btn-primary[aria-expanded="true"] {
-  background-color: color-mix(in srgb, var(--md-on-surface) 86%, var(--md-surface));
+  background-color: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
   color: var(--md-surface);
 }
 
@@ -1244,7 +1299,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 }
 
 .quick-action--primary .quick-action__hint {
-  color: color-mix(in srgb, var(--md-surface) 78%, var(--md-on-surface));
+  color: color-mix(in oklch, var(--md-surface) 78%, var(--md-on-surface));
 }
 
 .home-complement {
@@ -1317,10 +1372,29 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   font-size: 0.75rem;
 }
 
-.home-attention__open.ant-btn {
+.home-attention__open {
   grid-area: copy;
-  justify-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: flex-end;
   align-self: start;
+}
+
+.home-attention__chips .home-attention__more.ant-btn {
+  height: auto;
+  min-height: 0;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--md-outline);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  color: var(--md-on-surface-variant);
+}
+
+.home-attention__chips .home-attention__more.ant-btn:focus-visible {
+  outline: 2px solid var(--md-primary-text);
+  outline-offset: 2px;
 }
 
 .home-attention__value {
@@ -1336,13 +1410,10 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 
 .home-attention__chips {
   grid-area: chips;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.35rem;
-  max-height: 10rem;
   min-width: 0;
-  overflow: auto;
-  padding-inline-end: 0.25rem;
 }
 
 .home-attention__chip {
@@ -1471,9 +1542,15 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   color: var(--md-on-surface-variant);
 }
 
+/*
+ * Catalog = grouped cards. Column count follows the container (not the
+ * viewport): by the time this column renders, the rail already consumed
+ * ~40% of the screen. Badges-only counts keep 2-up cells truncation-free.
+ */
 .home-catalog {
+  container-type: inline-size;
   display: grid;
-  gap: 0.4rem;
+  gap: 0.75rem;
 }
 
 .home-catalog__group {
@@ -1481,6 +1558,12 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--gym-radius-md);
   background: var(--md-surface-low);
+}
+
+.home-catalog__heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 .home-catalog__trigger.ant-btn {
@@ -1580,7 +1663,8 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 
 @media (prefers-reduced-motion: reduce) {
   .home-hero,
-  .home-catalog__row {
+  .home-catalog__row,
+  .home-catalog__chevron {
     transition: none;
   }
 }
@@ -1600,14 +1684,34 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 }
 
 .home-catalog__row-count {
+  display: inline-flex;
   flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--gym-radius-pill);
   font-variant-numeric: tabular-nums;
-  font-size: 0.875rem;
-  color: var(--md-on-surface-variant);
-  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--md-on-surface);
 }
 
 .home-catalog__row-count--empty {
+  color: inherit;
+  border-color: transparent;
+}
+
+.home-catalog__row-count--none {
+  border: 0;
+}
+
+.home-attention__note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
   color: var(--md-on-surface-variant);
 }
 
@@ -1653,6 +1757,16 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
     transform 200ms ease;
 }
 
+/*
+ * Quick-action dropdown: antd gives the item-group list an 8px margin per
+ * side, so "Importação em lote" rendered narrower than the sibling items.
+ * Zero it so every clickable row shares the same width. (The popup renders
+ * inside .quick-actions via getPopupContainer, keeping the rule scoped.)
+ */
+.quick-actions .ant-dropdown .ant-dropdown-menu-item-group-list {
+  margin-inline: 0;
+}
+
 @media (min-width: 600px) {
   .home-page__header h1 {
     font-size: 1.5rem;
@@ -1689,7 +1803,9 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   }
 }
 
-@media (min-width: 1100px) {
+/* Columns follow the catalog's own width (rail already took ~40% of the
+ * viewport), not the viewport. Two cells need ~42rem to keep names whole. */
+@container (min-width: 42rem) {
   .home-catalog__rows {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1708,8 +1824,5 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   .home-catalog__row {
     flex-wrap: wrap;
     row-gap: 0.2rem;
-  }
-  .home-catalog__row-count {
-    margin-inline-start: 2.15rem;
   }
 }

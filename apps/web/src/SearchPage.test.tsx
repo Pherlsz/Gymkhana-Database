@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  groupSearchResults,
   normalizeGlobalSearch,
   profileSearchForResult,
   searchErrorMessage,
@@ -84,5 +85,45 @@ describe("/search route mount", () => {
   it("mounts the SearchPage instead of the coming-soon placeholder", async () => {
     const { Route } = await import("./routes/search");
     expect(Route.options.component).toBe(SearchPage);
+  });
+});
+
+describe("Option B result grouping", () => {
+  const rows: SearchResult[] = [
+    { ...result, field_key: "document.holder", score: 700 },
+    { ...result, field_key: "document.identifier", score: 775 },
+    {
+      ...result,
+      module: "profiles",
+      entity_id: "11111111-1111-1111-1111-111111111111",
+      profile_id: "11111111-1111-1111-1111-111111111111",
+      target_kind: "profile",
+      target_id: "11111111-1111-1111-1111-111111111111",
+      field_key: "profile.full_name",
+      score: 812,
+    },
+  ];
+
+  it("groups rows by entity and keeps the best score on top", () => {
+    const groups = groupSearchResults(rows);
+    expect(groups.map((group) => [group.module, group.entityLabel])).toEqual([
+      ["profiles", "RG · 001ABC"],
+      ["documents", "RG · 001ABC"],
+    ]);
+    expect(groups[0]?.topScore).toBe(812);
+  });
+
+  it("collects every matched field inside one group", () => {
+    const groups = groupSearchResults(rows);
+    expect(groups[1]?.matches.map((match) => match.fieldKey)).toEqual([
+      "document.holder",
+      "document.identifier",
+    ]);
+    expect(groups[1]?.topScore).toBe(775);
+  });
+
+  it("keeps API order for matches within a group", () => {
+    const groups = groupSearchResults(rows);
+    expect(groups[0]?.matches[0]?.fieldLabel).toBeDefined();
   });
 });

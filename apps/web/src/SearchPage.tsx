@@ -1,11 +1,11 @@
-import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
+import { Alert, Button, Card, Flex, Layout, Select, Typography } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
-import { DataGrid, DataGridPagination } from "./DataGrid";
+import { DataGridPagination } from "./DataGrid";
 import { normalizeProfileSearch } from "./ProfilesPage";
 import { tableLinkProps } from "./lib/tables/tableRoutes";
+import { useI18n } from "./i18n";
 import {
   APIRequestError,
   executeSearch,
@@ -36,7 +36,48 @@ const moduleValues: SearchModule[] = [
   "custom_data",
   "attachments",
 ];
-const resultColumn = createColumnHelper<SearchResult>();
+
+type ResultGroup = {
+  key: string;
+  module: SearchResult["module"];
+  entityId: string;
+  entityLabel: string;
+  updatedAt: string;
+  topScore: number;
+  matches: Array<{ fieldKey: string; fieldLabel: string; preview: string }>;
+};
+
+/** §13: the API returns one row per matched field; the surface groups them so
+ * the record is the unit of answer (Option B). Order inside the page is kept:
+ * groups appear by their best score, matches in API order. */
+export function groupSearchResults(results: SearchResult[]): ResultGroup[] {
+  const groups = new Map<string, ResultGroup>();
+  for (const result of results) {
+    const key = `${result.module}:${result.entity_id}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.matches.push({
+        fieldKey: result.field_key,
+        fieldLabel: result.field_label,
+        preview: result.preview,
+      });
+      existing.topScore = Math.max(existing.topScore, result.score);
+      continue;
+    }
+    groups.set(key, {
+      key,
+      module: result.module,
+      entityId: result.entity_id,
+      entityLabel: result.entity_label,
+      updatedAt: result.updated_at,
+      topScore: result.score,
+      matches: [
+        { fieldKey: result.field_key, fieldLabel: result.field_label, preview: result.preview },
+      ],
+    });
+  }
+  return [...groups.values()].toSorted((a, b) => b.topScore - a.topScore);
+}
 
 export function normalizeGlobalSearch(search: Record<string, unknown>): GlobalSearchState {
   const requestedLimit = Number(search.limit);
@@ -92,6 +133,8 @@ export function profileSearchForResult(result: SearchResult): ProfileListSearch 
 export function SearchPage() {
   const search = searchRoute.useSearch();
   const navigate = searchRoute.useNavigate();
+  const { messages } = useI18n();
+  const searchMessages = messages.search;
   const [draft, setDraft] = useState(search.q);
   useEffect(() => setDraft(search.q), [search.q]);
 
@@ -126,10 +169,33 @@ export function SearchPage() {
       !(error instanceof APIRequestError && [403, 422, 429].includes(error.status)) && attempt < 1,
   });
   const moduleLabels = useMemo(
-    () => new Map(catalog.data?.modules.map((module) => [module.key, module.label]) ?? []),
+    () =>
+      new Map<string, string>(
+        catalog.data?.modules.map((module) => [module.key, module.label] as const) ?? [],
+      ),
     [catalog.data?.modules],
   );
-  const columns = useMemo(() => createSearchColumns(moduleLabels), [moduleLabels]);
+  const groups = useMemo(
+    () => groupSearchResults(results.data?.results ?? []),
+    [results.data?.results],
+  );
+  const fieldOptions = useMemo(() => {
+    const visibleModules =
+      selectedModules.length > 0
+        ? new Set(selectedModules)
+        : new Set(catalog.data?.modules.map((module) => module.key));
+    const grouped = new Map<string, Array<{ value: string; label: string }>>();
+    for (const field of catalog.data?.fields ?? []) {
+      if (!visibleModules.has(field.module)) continue;
+      const bucket = grouped.get(field.module) ?? [];
+      bucket.push({ value: field.key, label: field.label });
+      grouped.set(field.module, bucket);
+    }
+    return [...grouped.entries()].map(([moduleKey, options]) => ({
+      label: moduleLabels.get(moduleKey) ?? moduleKey,
+      options,
+    }));
+  }, [catalog.data?.fields, catalog.data?.modules, moduleLabels, selectedModules]);
   const totalPages = Math.max(
     1,
     Math.min(
@@ -144,12 +210,12 @@ export function SearchPage() {
     });
   };
   const submit = () => updateSearch({ q: draft, page: 1 });
-  const toggleModule = (module: SearchModule, checked: boolean) => {
+  const toggleModule = (module: SearchModule) => {
     const allModules = catalog.data?.modules.map((item) => item.key) ?? moduleValues;
     const current = selectedModules.length === 0 ? [...allModules] : [...selectedModules];
-    const next = checked
-      ? [...new Set([...current, module])]
-      : current.filter((value) => value !== module);
+    const next = current.includes(module)
+      ? current.filter((value) => value !== module)
+      : [...new Set([...current, module])];
     const canonicalModules = next.length === allModules.length ? [] : next;
     const allowedFields = new Set(
       catalog.data?.fields
@@ -163,16 +229,17 @@ export function SearchPage() {
     });
   };
 
+  const sortValue = `${search.sort}:${search.order}` as const;
+
   return (
     <Layout className="page-measure">
       <header className="page-header">
-        <div className="page-eyebrow">M7 · Busca global</div>
+        <div className="page-eyebrow">{searchMessages.eyebrow}</div>
         <Typography.Title level={1} className="page-title">
-          Buscar dados autorizados
+          {searchMessages.title}
         </Typography.Title>
         <Typography.Paragraph className="page-description">
-          Consulte campos lógicos de pessoas, documentos, contas, dados personalizados e metadados
-          seguros de anexos. O conteúdo dos arquivos não faz parte desta busca.
+          {searchMessages.description}
         </Typography.Paragraph>
       </header>
       <div className="page-content">
@@ -180,109 +247,103 @@ export function SearchPage() {
           <Card className="search-controls">
             <Flex vertical gap="1rem">
               <label className="search-controls__terms">
-                Termos — um por linha
+                {searchMessages.termsLabel}
                 <textarea
                   aria-describedby="search-terms-help"
                   maxLength={650}
+                  placeholder={searchMessages.termsPlaceholder}
                   rows={3}
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
                 />
               </label>
               <span className="search-controls__help" id="search-terms-help">
-                Até {catalog.data?.limits.maximum_terms ?? 5} sequências literais. Espaços, zeros à
-                esquerda, letras, números e pontuação são preservados.
+                {searchMessages.termsHelp({
+                  maximumTerms: catalog.data?.limits.maximum_terms ?? 5,
+                })}
               </span>
               {catalog.isError ? (
                 <Alert
-                  message="Não foi possível carregar o catálogo"
+                  message={searchMessages.catalogErrorTitle}
                   type="error"
                   description={<>{searchErrorMessage(catalog.error)}</>}
                 />
               ) : null}
-              {catalog.data ? (
-                <fieldset className="search-modules">
-                  <legend>Módulos</legend>
-                  {catalog.data.modules.map((module) => (
-                    <label key={module.key}>
-                      <input
-                        checked={
-                          selectedModules.length === 0 || selectedModules.includes(module.key)
-                        }
-                        type="checkbox"
-                        onChange={(event) => toggleModule(module.key, event.target.checked)}
-                      />
-                      {module.label}
-                    </label>
-                  ))}
-                </fieldset>
-              ) : null}
+              <div
+                className="search-modules"
+                role="group"
+                aria-label={searchMessages.modulesLegend}
+              >
+                {(catalog.data?.modules ?? []).map((module) => (
+                  <button
+                    key={module.key}
+                    aria-pressed={
+                      selectedModules.length === 0 || selectedModules.includes(module.key)
+                    }
+                    className="search-module-chip"
+                    type="button"
+                    onClick={() => toggleModule(module.key)}
+                  >
+                    {module.label}
+                  </button>
+                ))}
+              </div>
               <div className="search-options">
                 <label>
-                  Campos específicos
-                  <select
-                    multiple
-                    size={8}
+                  {searchMessages.fieldsLabel}
+                  <Select
+                    allowClear
+                    loading={catalog.isLoading}
+                    maxTagCount="responsive"
+                    notFoundContent={searchMessages.fieldsEmptyState}
+                    options={fieldOptions}
+                    placeholder={searchMessages.fieldsSearchPlaceholder}
+                    showSearch
                     value={selectedFields}
-                    onChange={(event) =>
+                    onChange={(values) =>
                       updateSearch({
-                        fields: serializeList(
-                          [...event.currentTarget.selectedOptions].map((option) => option.value),
-                        ),
+                        fields: serializeList((values ?? []) as string[]),
                         page: 1,
                       })
                     }
-                  >
-                    {catalog.data?.fields
-                      .filter(
-                        (field) =>
-                          selectedModules.length === 0 || selectedModules.includes(field.module),
-                      )
-                      .map((field) => (
-                        <option key={field.key} value={field.key}>
-                          {moduleLabels.get(field.module)} · {field.label}
-                        </option>
-                      ))}
-                  </select>
-                  <span className="search-controls__help">
-                    Sem seleção, todos os campos permitidos.
-                  </span>
+                  />
+                  <span className="search-controls__help">{searchMessages.fieldsAllAllowed}</span>
                 </label>
                 <label>
-                  Ordenação
-                  <select
-                    value={`${search.sort}:${search.order}`}
-                    onChange={(event) => {
-                      const [sort, order] = event.target.value.split(":") as [
+                  {searchMessages.sortLabel}
+                  <Select
+                    value={sortValue}
+                    onChange={(value) => {
+                      const [sort, order] = value.split(":") as [
                         GlobalSearchState["sort"],
                         GlobalSearchState["order"],
                       ];
                       updateSearch({ sort, order, page: 1 });
                     }}
-                  >
-                    <option value="relevance:desc">Maior relevância</option>
-                    <option value="relevance:asc">Menor relevância</option>
-                    <option value="updated_at:desc">Atualizados recentemente</option>
-                    <option value="updated_at:asc">Atualizados há mais tempo</option>
-                  </select>
+                    options={[
+                      { value: "relevance:desc", label: searchMessages.sortRelevanceDesc },
+                      { value: "relevance:asc", label: searchMessages.sortRelevanceAsc },
+                      { value: "updated_at:desc", label: searchMessages.sortUpdatedDesc },
+                      { value: "updated_at:asc", label: searchMessages.sortUpdatedAsc },
+                    ]}
+                  />
                 </label>
                 <label>
-                  Por página
-                  <select
+                  {searchMessages.perPageLabel}
+                  <Select
                     value={search.limit}
-                    onChange={(event) =>
-                      updateSearch({ limit: Number(event.target.value) as 25 | 50 | 100, page: 1 })
-                    }
-                  >
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
+                    onChange={(value) => updateSearch({ limit: value as 25 | 50 | 100, page: 1 })}
+                    options={[
+                      { value: 25, label: "25" },
+                      { value: 50, label: "50" },
+                      { value: 100, label: "100" },
+                    ]}
+                  />
                 </label>
               </div>
-              <Flex>
+              <Flex gap="0.75rem">
                 <Button disabled={draft.trim().length === 0 || !catalog.isSuccess} onClick={submit}>
-                  Buscar
+                  {searchMessages.submit}
                 </Button>
                 <Button
                   onClick={() => {
@@ -290,7 +351,7 @@ export function SearchPage() {
                     updateSearch({ q: "", modules: "", fields: "", page: 1 });
                   }}
                 >
-                  Limpar
+                  {searchMessages.clear}
                 </Button>
               </Flex>
             </Flex>
@@ -298,39 +359,36 @@ export function SearchPage() {
 
           {results.isError ? (
             <Alert
-              message="Não foi possível executar a busca"
+              message={searchMessages.resultsErrorTitle}
               type="error"
               description={<>{searchErrorMessage(results.error)}</>}
             />
           ) : null}
           {terms.length === 0 ? (
             <Alert
-              message="Informe o que deseja encontrar"
+              message={searchMessages.emptyQueryTitle}
               type="info"
-              description="Use uma linha para cada parâmetro. Termos diferentes podem corresponder a campos e
-              relações diferentes da mesma pessoa."
+              description={searchMessages.emptyQueryDescription}
             />
           ) : null}
-          <DataGrid
-            caption="Resultados da busca global"
-            className="search-results"
-            columns={columns}
-            data={results.data?.results ?? []}
-            emptyLabel="Nenhum resultado autorizado corresponde aos termos informados."
-            getRowId={(result) => `${result.module}:${result.entity_id}:${result.field_key}`}
-            loading={results.isFetching}
-            loadingLabel="Buscando dados autorizados..."
-            renderCard={(result) => (
+          <section aria-label={searchMessages.resultsCaption} className="search-cards">
+            {results.isFetching ? (
+              <p className="search-cards__status">{searchMessages.loadingResults}</p>
+            ) : null}
+            {!results.isFetching && terms.length > 0 && groups.length === 0 && !results.isError ? (
+              <p className="search-cards__status">{searchMessages.noResults}</p>
+            ) : null}
+            {groups.map((group) => (
               <SearchResultCard
-                key={`${result.module}:${result.entity_id}:${result.field_key}`}
-                moduleLabel={moduleLabels.get(result.module) ?? result.module}
-                result={result}
+                key={group.key}
+                group={group}
+                moduleLabel={moduleLabels.get(group.module) ?? group.module}
               />
-            )}
-          />
+            ))}
+          </section>
           {results.data ? (
             <DataGridPagination
-              label="resultados"
+              label={searchMessages.resultsUnit}
               onPage={(page) => updateSearch({ page })}
               page={search.page}
               total={results.data.page.total}
@@ -343,59 +401,40 @@ export function SearchPage() {
   );
 }
 
-function createSearchColumns(moduleLabels: Map<string, string>) {
-  return [
-    resultColumn.accessor("score", { header: "Relevância" }),
-    resultColumn.accessor("entity_label", { header: "Entidade" }),
-    resultColumn.accessor("field_label", {
-      header: "Correspondência",
-      cell: ({ row }) => (
-        <Flex vertical gap="0.25rem">
-          <strong>{row.original.field_label}</strong>
-          <span className="search-result__preview">{row.original.preview}</span>
-        </Flex>
-      ),
-    }),
-    resultColumn.accessor("module", {
-      header: "Módulo",
-      cell: ({ getValue }) => <Tag color="info">{moduleLabels.get(getValue()) ?? getValue()}</Tag>,
-    }),
-    resultColumn.accessor("updated_at", {
-      header: "Atualizado",
-      cell: ({ getValue }) => formatDateTime(getValue()),
-    }),
-    resultColumn.display({
-      id: "actions",
-      header: "",
-      cell: ({ row }) => <SearchTargetLink result={row.original} />,
-    }),
-  ];
-}
-
-function SearchResultCard({ result, moduleLabel }: { result: SearchResult; moduleLabel: string }) {
+function SearchResultCard({ group, moduleLabel }: { group: ResultGroup; moduleLabel: string }) {
+  const { messages } = useI18n();
+  const searchMessages = messages.search;
+  const profileSearch = profileSearchForResult(group as unknown as SearchResult);
   return (
-    <Card className="search-result-card">
-      <Flex vertical gap="0.5rem">
-        <Flex align="center">
-          <Tag color="info">{moduleLabel}</Tag>
-          <span>Relevância {result.score}</span>
-        </Flex>
-        <strong>{result.entity_label}</strong>
-        <span>{result.field_label}</span>
-        <span className="search-result__preview">{result.preview}</span>
-        <SearchTargetLink result={result} />
-      </Flex>
-    </Card>
-  );
-}
-
-function SearchTargetLink({ result }: { result: SearchResult }) {
-  const profileSearch = profileSearchForResult(result);
-  if (!profileSearch) return null;
-  return (
-    <Link className="search-result__link" {...tableLinkProps(profileSearch)}>
-      Abrir registro
-    </Link>
+    <article className="search-card">
+      <header className="search-card__head">
+        <span className="search-card__kind">{moduleLabel}</span>
+        <span className="search-card__entity">{group.entityLabel}</span>
+        <span className="search-card__score">
+          {searchMessages.relevanceWord} {group.topScore}
+        </span>
+      </header>
+      <ul className="search-card__matches">
+        {group.matches.map((match) => (
+          <li key={match.fieldKey} className="search-card__match">
+            <span className="search-card__field">{match.fieldLabel}</span>
+            <span className="search-card__preview">{match.preview}</span>
+          </li>
+        ))}
+      </ul>
+      <footer className="search-card__foot">
+        {profileSearch ? (
+          <Link className="search-result__link" {...tableLinkProps(profileSearch)}>
+            {searchMessages.openRecord}
+          </Link>
+        ) : null}
+        <span className="search-card__updated">
+          {new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
+            new Date(group.updatedAt),
+          )}
+        </span>
+      </footer>
+    </article>
   );
 }
 
@@ -422,12 +461,6 @@ function serializeList(values: readonly string[]): string {
 function positiveInteger(value: unknown, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : fallback;
-}
-
-function formatDateTime(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
-    new Date(value),
-  );
 }
 
 export function searchErrorMessage(error: unknown): string {
