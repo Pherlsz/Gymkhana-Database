@@ -25,7 +25,7 @@
 
 .search-bar {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: var(--gym-space-2);
   min-block-size: 2.75rem;
   padding: 0 var(--gym-space-2) 0 var(--gym-space-3);
@@ -42,6 +42,7 @@
 
 .search-bar input {
   flex: 1 1 auto;
+  align-self: center;
   min-inline-size: 0;
   border: none;
   background: transparent;
@@ -83,27 +84,36 @@
   flex: none;
 }
 
-/* Module chips: neutral fill + gold rule signal (never a gold wash). */
+/* Module chips: same vocabulary as the home attention chips — surface fill,
+   outline border, state-layer hover. No gold underline (that signal is
+   reserved for navigation). */
 .search-modules {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--gym-space-2);
 }
 
 .search-module-chip {
-  min-block-size: 2.25rem;
-  padding: 0 var(--gym-space-4);
-  border: 1px solid var(--gym-color-border);
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 2rem;
+  padding: 0 var(--gym-space-3);
+  border: 1px solid var(--md-outline);
   border-radius: 999px;
-  background: var(--gym-color-surface);
-  color: var(--gym-color-text-muted);
-  font-size: var(--gym-font-size-sm);
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  font-size: 0.75rem;
+  line-height: 1.2;
   cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .search-module-chip:hover {
-  border-color: var(--gym-color-text);
-  color: var(--gym-color-text);
+  background: var(--md-state-hover);
 }
 
 .search-module-chip:focus-visible {
@@ -113,8 +123,7 @@
 
 .search-module-chip[aria-pressed="true"] {
   background: var(--md-state-selected);
-  box-shadow: inset 0 -3px 0 var(--md-primary);
-  color: var(--gym-color-text);
+  color: var(--md-on-surface);
   font-weight: 600;
 }
 

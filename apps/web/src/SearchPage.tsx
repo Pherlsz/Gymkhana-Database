@@ -279,7 +279,11 @@ export function SearchPage() {
               <X aria-hidden size={16} strokeWidth={2} />
             </button>
           ) : null}
-          <Button disabled={draft.trim().length === 0 || !catalog.isSuccess} htmlType="submit">
+          <Button
+            disabled={draft.trim().length === 0 || !catalog.isSuccess}
+            htmlType="submit"
+            type="primary"
+          >
             {searchMessages.submit}
           </Button>
         </form>

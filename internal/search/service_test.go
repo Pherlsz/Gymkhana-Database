@@ -129,7 +129,41 @@ func TestSearchRejectsUnknownLogicalIdentifiersBeforeReservation(t *testing.T) {
 	}
 }
 
-func TestSearchRequiresAnExplicitBoundedFieldSelectionForLargeCatalogs(t *testing.T) {
+func TestSearchWithoutExplicitSelectionSearchesEveryAuthorizedField(t *testing.T) {
+	store := &fakeStore{fields: oversizedFieldSet(t)}
+	service, _ := NewService(store, ServiceOptions{})
+	_, err := service.Search(context.Background(), searchActor(t, true), Query{Terms: []string{"value"}})
+	if err != nil || store.reservations != 1 {
+		t.Fatalf("Search() error = %v, reservations = %d", err, store.reservations)
+	}
+}
+
+func TestSearchRejectsExplicitFieldSelectionsBeyondTheLimit(t *testing.T) {
+	fields := oversizedFieldSet(t)
+	keys := make([]string, 0, len(fields)+len(staticFields))
+	for _, field := range fields {
+		keys = append(keys, field.Key)
+	}
+	for _, field := range staticFields {
+		keys = append(keys, field.Key)
+	}
+	if len(keys) <= MaxFields {
+		t.Fatalf("setup produced %d fields, need more than %d", len(keys), MaxFields)
+	}
+	store := &fakeStore{fields: fields}
+	service, _ := NewService(store, ServiceOptions{})
+	_, err := service.Search(context.Background(), searchActor(t, true), Query{
+		Terms:  []string{"value"},
+		Fields: keys,
+	})
+	var validation *ValidationError
+	if !errors.As(err, &validation) || store.reservations != 0 {
+		t.Fatalf("Search() error = %v, reservations = %d", err, store.reservations)
+	}
+}
+
+func oversizedFieldSet(t *testing.T) []FieldDefinition {
+	t.Helper()
 	dynamicCount := MaxFields - len(staticFields) + 1
 	if dynamicCount < 1 {
 		dynamicCount = 1
@@ -144,13 +178,7 @@ func TestSearchRequiresAnExplicitBoundedFieldSelectionForLargeCatalogs(t *testin
 			Key: "custom." + identifier.String(), Module: ModuleCustomData, Label: "Campo", Kind: "text",
 		})
 	}
-	store := &fakeStore{fields: fields}
-	service, _ := NewService(store, ServiceOptions{})
-	_, err := service.Search(context.Background(), searchActor(t, true), Query{Terms: []string{"value"}})
-	var validation *ValidationError
-	if !errors.As(err, &validation) || store.reservations != 0 {
-		t.Fatalf("Search() error = %v, reservations = %d", err, store.reservations)
-	}
+	return fields
 }
 
 func TestSearchRejectsStoreResultsOutsideAuthorizedCatalog(t *testing.T) {

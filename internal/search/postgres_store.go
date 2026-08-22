@@ -212,7 +212,15 @@ WITH search_values AS NOT MATERIALIZED (
     ('profile.card_brand', 'Bandeira do cartão', profile.card_brand, profile.card_brand, 15),
     ('profile.card_bank', 'Banco do cartão', profile.card_bank, profile.card_bank, 15)
   ) AS field(field_key, field_label, search_value, display_value, weight)
-  WHERE field.search_value IS NOT NULL AND field.search_value <> ''
+  WHERE
+    field.search_value IS NOT NULL AND field.search_value <> ''
+    AND (
+      -- §13 performance guard (profiles branch): only derive rows for
+      -- profiles whose name/social/cpf can match a term.
+      lower(profile.full_name) LIKE ANY ($2::text[])
+      OR lower(profile.social_name) LIKE ANY ($2::text[])
+      OR lower(cpf_presence.cpf) LIKE ANY ($2::text[])
+    )
 
   UNION ALL
 
@@ -236,6 +244,11 @@ WITH search_values AS NOT MATERIALIZED (
   WHERE presence.claim = 'informed_number'
     AND presence.identifier_value IS NOT NULL
     AND presence.identifier_value <> ''
+    AND (
+      -- §13 performance guard (presence branch): same term pre-filter.
+      lower(profile.full_name) LIKE ANY ($2::text[])
+      OR lower(presence.identifier_value) LIKE ANY ($2::text[])
+    )
 
   UNION ALL
 
@@ -439,24 +452,22 @@ filtered_values AS NOT MATERIALIZED (
   WHERE value.module = ANY($3::text[])
     AND (cardinality($4::text[]) = 0 OR value.field_key = ANY($4::text[]))
 ),
-eligible_scopes AS (
-  SELECT DISTINCT candidate.scope_id
-  FROM filtered_values AS candidate
-  WHERE NOT EXISTS (
-    SELECT 1
-    FROM unnest($1::text[], $2::text[]) AS required(term, pattern)
-    WHERE NOT EXISTS (
-      SELECT 1
-      FROM filtered_values AS related
-      WHERE related.scope_id = candidate.scope_id
-        AND lower(related.search_value) LIKE required.pattern ESCAPE '\'
-    )
-  )
+matched_values AS MATERIALIZED (
+  SELECT value.*, matched.term
+  FROM filtered_values AS value
+  JOIN unnest($2::text[], $1::text[]) AS matched(pattern, term)
+    ON lower(value.search_value) LIKE matched.pattern ESCAPE '\'
+),
+eligible_scopes AS NOT MATERIALIZED (
+  SELECT matched.scope_id
+  FROM matched_values AS matched
+  GROUP BY matched.scope_id
+  HAVING count(DISTINCT matched.term) = array_length($1::text[], 1)
 ),
 matches AS (
   SELECT value.*,
          ranking.score + value.weight AS score
-  FROM filtered_values AS value
+  FROM matched_values AS value
   JOIN eligible_scopes AS eligible ON eligible.scope_id = value.scope_id
   CROSS JOIN LATERAL (
     SELECT COALESCE(sum(CASE

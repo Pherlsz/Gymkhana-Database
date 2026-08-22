@@ -377,9 +377,10 @@ func normalizeQuery(query Query, catalog Catalog) (Query, *ValidationError) {
 	for _, field := range catalog.Fields {
 		availableFields[field.Key] = field.Module
 	}
-	if len(query.Fields) == 0 && selectedFieldCount(query, catalog) > MaxFields {
-		validation.add("fields", "selection_required")
-	} else if len(query.Fields) > MaxFields {
+	// §13: simple search must not require pre-configured selections. An empty
+	// field list searches every authorized field; explicit selections are still
+	// capped. Cost stays bounded by the service cost formula.
+	if len(query.Fields) > MaxFields {
 		validation.add("fields", "too_many")
 	} else {
 		query.Fields = uniqueFields(query.Fields, availableFields, query.Modules, validation)
