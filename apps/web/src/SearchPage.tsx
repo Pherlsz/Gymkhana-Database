@@ -1,9 +1,8 @@
-import { Alert, Button, Flex, Layout, Select } from "antd";
+import { Alert, Card, Flex, Input, Layout, Pagination, Select } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import { Search, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { DataGridPagination } from "./DataGrid";
+import { Check, ChevronDown } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { normalizeProfileSearch } from "./ProfilesPage";
 import { tableLinkProps } from "./lib/tables/tableRoutes";
 import { useI18n } from "./i18n";
@@ -38,19 +37,19 @@ const moduleValues: SearchModule[] = [
   "attachments",
 ];
 
-type ResultGroup = {
+type MatchRow = { fieldKey: string; fieldLabel: string; preview: string };
+
+/** One row per matched field, grouped so the record is the unit of answer. */
+export type ResultGroup = {
   key: string;
   module: SearchResult["module"];
   entityId: string;
   entityLabel: string;
   updatedAt: string;
   topScore: number;
-  matches: Array<{ fieldKey: string; fieldLabel: string; preview: string }>;
+  matches: MatchRow[];
 };
 
-/** §13: the API returns one row per matched field; the surface groups them so
- * the record is the unit of answer (Option B). Order inside the page is kept:
- * groups appear by their best score, matches in API order. */
 export function groupSearchResults(results: SearchResult[]): ResultGroup[] {
   const groups = new Map<string, ResultGroup>();
   for (const result of results) {
@@ -78,6 +77,67 @@ export function groupSearchResults(results: SearchResult[]): ResultGroup[] {
     });
   }
   return [...groups.values()].toSorted((a, b) => b.topScore - a.topScore);
+}
+
+/** Legacy-style cards: one card per profile; person fields emphasized and the
+ * document/bill/custom hits that belong to that profile listed inside. */
+export type ProfileCard = {
+  key: string;
+  profileId: string;
+  profileLabel: string;
+  updatedAt: string;
+  topScore: number;
+  profileMatches: MatchRow[];
+  relatedGroups: ResultGroup[];
+};
+
+export function buildProfileCards(results: SearchResult[]): ProfileCard[] {
+  const labelsByProfileId = new Map<string, { label: string; updatedAt: string }>();
+  for (const result of results) {
+    if (result.module === "profiles") {
+      const existing = labelsByProfileId.get(result.entity_id);
+      if (!existing || result.score > 0) {
+        labelsByProfileId.set(result.entity_id, {
+          label: result.entity_label,
+          updatedAt: result.updated_at,
+        });
+      }
+    }
+  }
+
+  const cards = new Map<string, ProfileCard>();
+  for (const group of groupSearchResults(results)) {
+    const anchorId =
+      group.module === "profiles"
+        ? group.entityId
+        : (results.find(
+            (result) => result.module !== "profiles" && result.entity_id === group.entityId,
+          )?.profile_id ?? "");
+    if (!anchorId) continue;
+    const anchorMeta =
+      labelsByProfileId.get(anchorId) ?? ({ label: anchorId, updatedAt: group.updatedAt } as const);
+    let card = cards.get(anchorId);
+    if (!card) {
+      card = {
+        key: anchorId,
+        profileId: anchorId,
+        profileLabel: anchorMeta.label,
+        updatedAt: anchorMeta.updatedAt,
+        topScore: group.topScore,
+        profileMatches: [],
+        relatedGroups: [],
+      };
+      cards.set(anchorId, card);
+    }
+    card.updatedAt = [card.updatedAt, anchorMeta.updatedAt].toSorted().at(-1) ?? card.updatedAt;
+    card.topScore = Math.max(card.topScore, group.topScore);
+    if (group.module === "profiles") {
+      card.profileMatches.push(...group.matches);
+    } else {
+      card.relatedGroups.push(group);
+    }
+  }
+  return [...cards.values()].toSorted((a, b) => b.topScore - a.topScore);
 }
 
 export function normalizeGlobalSearch(search: Record<string, unknown>): GlobalSearchState {
@@ -131,13 +191,37 @@ export function profileSearchForResult(result: SearchResult): ProfileListSearch 
   return normalizeProfileSearch({ selected: result.profile_id, mode: "view" });
 }
 
+function groupAsResult(group: ResultGroup): SearchResult {
+  const first = group.matches[0];
+  return {
+    module: group.module,
+    // The API's own kind is preserved by callers through profile_id routing in
+    // profileSearchForResult; this synthetic row only carries navigation data.
+    entity_kind:
+      group.module === "documents"
+        ? "document"
+        : group.module === "bills"
+          ? "bill"
+          : "custom_entity",
+    entity_id: group.entityId,
+    target_kind:
+      group.module === "documents" ? "document" : group.module === "bills" ? "bill" : "profile",
+    target_id: group.entityId,
+    entity_label: group.entityLabel,
+    field_key: first?.fieldKey ?? "",
+    field_label: first?.fieldLabel ?? "",
+    preview: first?.preview ?? "",
+    score: group.topScore,
+    updated_at: group.updatedAt,
+  };
+}
+
 export function SearchPage() {
   const search = searchRoute.useSearch();
   const navigate = searchRoute.useNavigate();
   const { messages } = useI18n();
   const searchMessages = messages.search;
   const [draft, setDraft] = useState(search.q);
-  const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => setDraft(search.q), [search.q]);
 
   const catalog = useQuery({
@@ -177,8 +261,8 @@ export function SearchPage() {
       ),
     [catalog.data?.modules],
   );
-  const groups = useMemo(
-    () => groupSearchResults(results.data?.results ?? []),
+  const cards = useMemo(
+    () => buildProfileCards(results.data?.results ?? []),
     [results.data?.results],
   );
   const fieldOptions = useMemo(() => {
@@ -198,31 +282,13 @@ export function SearchPage() {
       options,
     }));
   }, [catalog.data?.fields, catalog.data?.modules, moduleLabels, selectedModules]);
-  const totalPages = Math.max(
-    1,
-    Math.min(
-      Math.floor(10_000 / search.limit) + 1,
-      Math.ceil((results.data?.page.total ?? 0) / search.limit),
-    ),
-  );
 
   const updateSearch = (patch: Partial<GlobalSearchState>) => {
     void navigate({
       search: (current) => ({ ...current, ...patch }),
     });
   };
-  const submit = () => {
-    if (draft.trim().length === 0) {
-      inputRef.current?.focus();
-      return;
-    }
-    updateSearch({ q: draft, page: 1 });
-  };
-  const clear = () => {
-    setDraft("");
-    inputRef.current?.focus();
-    updateSearch({ q: "", modules: "", fields: "", page: 1 });
-  };
+  const submit = () => updateSearch({ q: draft, page: 1 });
   const toggleModule = (module: SearchModule) => {
     const allModules = catalog.data?.modules.map((item) => item.key) ?? moduleValues;
     const current = selectedModules.length === 0 ? [...allModules] : [...selectedModules];
@@ -250,58 +316,33 @@ export function SearchPage() {
         <h1 className="page-title">{searchMessages.title}</h1>
       </header>
       <section className="search-toolbar">
-        <form
-          className="search-bar"
-          role="search"
-          onSubmit={(event) => {
-            event.preventDefault();
-            submit();
-          }}
-        >
-          <Search aria-hidden size={16} strokeWidth={2} />
-          <input
-            aria-label={searchMessages.title}
-            autoComplete="off"
-            placeholder={searchMessages.inputPlaceholder}
-            ref={inputRef}
-            spellCheck={false}
-            type="text"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-          {draft.length > 0 || search.q.length > 0 ? (
-            <button
-              aria-label={searchMessages.clear}
-              className="search-bar__clear"
-              type="button"
-              onClick={clear}
-            >
-              <X aria-hidden size={16} strokeWidth={2} />
-            </button>
-          ) : null}
-          <Button
-            disabled={draft.trim().length === 0 || !catalog.isSuccess}
-            htmlType="submit"
-            type="primary"
-          >
-            {searchMessages.submit}
-          </Button>
-        </form>
-        <div className="search-modules" role="group" aria-label={searchMessages.modulesLegend}>
-          {(catalog.data?.modules ?? []).map((module) => (
-            <button
-              key={module.key}
-              aria-pressed={selectedModules.length === 0 || selectedModules.includes(module.key)}
-              className="search-module-chip"
-              type="button"
-              onClick={() => toggleModule(module.key)}
-            >
-              {module.label}
-            </button>
-          ))}
-        </div>
-        <div className="search-options">
-          <label className="search-options__fields">
+        <Input.Search
+          allowClear
+          enterButton={searchMessages.submit}
+          placeholder={searchMessages.inputPlaceholder}
+          size="large"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onSearch={() => submit()}
+        />
+        <div className="search-filters">
+          <div className="search-modules" role="group" aria-label={searchMessages.modulesLegend}>
+            {(catalog.data?.modules ?? []).map((module) => (
+              <button
+                key={module.key}
+                aria-pressed={selectedModules.length === 0 || selectedModules.includes(module.key)}
+                className="search-module-chip"
+                type="button"
+                onClick={() => toggleModule(module.key)}
+              >
+                {selectedModules.length === 0 || selectedModules.includes(module.key) ? (
+                  <Check aria-hidden size={12} strokeWidth={2.5} />
+                ) : null}
+                {module.label}
+              </button>
+            ))}
+          </div>
+          <label className="search-filter">
             <span>{searchMessages.fieldsLabel}</span>
             <Select
               allowClear
@@ -319,9 +360,8 @@ export function SearchPage() {
                 })
               }
             />
-            <span className="search-options__hint">{searchMessages.fieldsAllAllowed}</span>
           </label>
-          <label>
+          <label className="search-filter">
             <span>{searchMessages.sortLabel}</span>
             <Select
               value={sortValue}
@@ -337,18 +377,6 @@ export function SearchPage() {
                 { value: "relevance:asc", label: searchMessages.sortRelevanceAsc },
                 { value: "updated_at:desc", label: searchMessages.sortUpdatedDesc },
                 { value: "updated_at:asc", label: searchMessages.sortUpdatedAsc },
-              ]}
-            />
-          </label>
-          <label>
-            <span>{searchMessages.perPageLabel}</span>
-            <Select
-              value={search.limit}
-              onChange={(value) => updateSearch({ limit: value as 25 | 50 | 100, page: 1 })}
-              options={[
-                { value: 25, label: "25" },
-                { value: 50, label: "50" },
-                { value: 100, label: "100" },
               ]}
             />
           </label>
@@ -376,70 +404,111 @@ export function SearchPage() {
         {results.isFetching ? (
           <p className="search-results__status">{searchMessages.loadingResults}</p>
         ) : null}
-        {!results.isFetching && terms.length > 0 && groups.length === 0 && !results.isError ? (
+        {!results.isFetching && terms.length > 0 && cards.length === 0 && !results.isError ? (
           <p className="search-results__status">{searchMessages.noResults}</p>
         ) : null}
-        {groups.length > 0 ? (
-          <div className="search-grid">
-            {groups.map((group) => (
-              <SearchResultCard
-                key={group.key}
-                group={group}
-                moduleLabel={moduleLabels.get(group.module) ?? group.module}
-              />
-            ))}
-          </div>
-        ) : null}
+        <div className="search-list">
+          {cards.map((card) => (
+            <ProfileResultCard card={card} key={card.key} moduleLabels={moduleLabels} />
+          ))}
+        </div>
       </section>
-      {results.data ? (
-        <Flex justify="center">
-          <DataGridPagination
-            label={searchMessages.resultsUnit}
-            onPage={(page) => updateSearch({ page })}
-            page={search.page}
-            total={results.data.page.total}
-            totalPages={totalPages}
-          />
-        </Flex>
+      {results.data && results.data.page.total > 0 ? (
+        <Pagination
+          current={search.page}
+          pageSize={search.limit}
+          showLessItems
+          showSizeChanger={false}
+          size="small"
+          total={Math.min(
+            results.data.page.total,
+            totalPagesOf(results.data.page.total, search.limit) * search.limit,
+          )}
+          onChange={(page) => updateSearch({ page })}
+        />
       ) : null}
     </Layout>
   );
 }
 
-function SearchResultCard({ group, moduleLabel }: { group: ResultGroup; moduleLabel: string }) {
+const totalPagesOf = (total: number, limit: number) =>
+  Math.max(1, Math.min(Math.floor(10_000 / limit) + 1, Math.ceil(total / limit)));
+
+function ProfileResultCard({
+  card,
+  moduleLabels,
+}: {
+  card: ProfileCard;
+  moduleLabels: Map<string, string>;
+}) {
   const { messages } = useI18n();
   const searchMessages = messages.search;
-  const profileSearch = profileSearchForResult(group as unknown as SearchResult);
+  const [open, setOpen] = useState(false);
+  const hasRelated = card.relatedGroups.length > 0;
   return (
-    <article className="search-card">
-      <header className="search-card__head">
-        <span className="search-card__kind">{moduleLabel}</span>
-        <span className="search-card__entity">{group.entityLabel}</span>
-        <span className="search-card__score">
-          {searchMessages.relevanceWord} {group.topScore}
-        </span>
-      </header>
-      <ul className="search-card__matches">
-        {group.matches.map((match) => (
-          <li key={match.fieldKey} className="search-card__match">
-            <span className="search-card__field">{match.fieldLabel}</span>
-            <span className="search-card__preview">{match.preview}</span>
-          </li>
-        ))}
-      </ul>
-      <footer className="search-card__foot">
-        {profileSearch ? (
-          <Link className="search-result__link" {...tableLinkProps(profileSearch)}>
-            {searchMessages.openRecord}
-          </Link>
-        ) : null}
-        <span className="search-card__updated">
-          {new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
-            new Date(group.updatedAt),
+    <Card className="profile-card" size="small">
+      <Flex align="center" gap="0.5rem" wrap="wrap">
+        <span className="profile-card__kind">{moduleLabels.get("profiles") ?? "Pessoas"}</span>
+        <Link
+          className="profile-card__name"
+          {...tableLinkProps(normalizeProfileSearch({ selected: card.profileId, mode: "view" }))}
+        >
+          {card.profileLabel}
+        </Link>
+        <span className="profile-card__spacer" />
+        <time className="profile-card__updated" dateTime={card.updatedAt}>
+          {new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(
+            new Date(card.updatedAt),
           )}
-        </span>
-      </footer>
-    </article>
+        </time>
+      </Flex>
+      {card.profileMatches.slice(0, 3).map((match) => (
+        <p key={match.fieldKey} className="profile-card__match">
+          <span className="profile-card__match-label">{match.fieldLabel}</span>
+          <strong className="profile-card__match-value">{match.preview}</strong>
+        </p>
+      ))}
+      {hasRelated ? (
+        <>
+          <button
+            aria-expanded={open}
+            className="profile-card__toggle"
+            type="button"
+            onClick={() => setOpen(!open)}
+          >
+            <ChevronDown aria-hidden className="profile-card__chevron" size={14} strokeWidth={2} />
+            {open
+              ? searchMessages.hideRelated
+              : `${searchMessages.showRelated}: ${card.relatedGroups.length}`}
+          </button>
+          {open ? (
+            <ul className="profile-card__related">
+              {card.relatedGroups.map((group) => (
+                <li key={group.key} className="profile-card__related-row">
+                  <span className="profile-card__related-kind">
+                    {moduleLabels.get(group.module) ?? group.module}
+                  </span>
+                  <span className="profile-card__related-label">{group.entityLabel}</span>
+                  <span className="profile-card__related-preview">{group.matches[0]?.preview}</span>
+                  <ProfileSearchLink result={groupAsResult(group)} />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      ) : null}
+    </Card>
+  );
+}
+
+function ProfileSearchLink({ result }: { result: SearchResult }) {
+  const { messages } = useI18n();
+  const profileSearch = profileSearchForResult(result);
+  if (!profileSearch) return null;
+  return (
+    <Link className="profile-card__open" {...tableLinkProps(profileSearch)}>
+      {messages.search.openRecord}
+    </Link>
   );
 }
 

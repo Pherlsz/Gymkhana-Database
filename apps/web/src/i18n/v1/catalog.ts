@@ -443,6 +443,8 @@ export type CatalogV1 = {
     relevanceWord: string;
     resultCount: (args: { count: number }) => string;
     openRecord: string;
+    showRelated: string;
+    hideRelated: string;
   };
   theme: {
     activateLight: string;

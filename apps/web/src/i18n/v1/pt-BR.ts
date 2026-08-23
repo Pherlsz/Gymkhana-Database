@@ -447,6 +447,8 @@ export const ptBRV1 = {
     relevanceWord: "relevância",
     resultCount: ({ count }) => `${count} resultado${count === 1 ? "" : "s"}`,
     openRecord: "Abrir registro",
+    showRelated: "Ver registros vinculados",
+    hideRelated: "Ocultar registros vinculados",
   },
   theme: {
     activateLight: "Ativar tema claro",
