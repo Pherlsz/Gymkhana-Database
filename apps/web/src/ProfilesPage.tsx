@@ -1,7 +1,8 @@
-import { Alert, Button, Card, Flex, Form, Input, Skeleton } from "antd";
+import { Alert, Button, Flex, Form, Input, Skeleton } from "antd";
 import { ChevronDown, ChevronRight, FileText, Receipt } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import * as v from "valibot";
+import { ConfirmDelete } from "./components/ConfirmDelete";
 import { ProfileRecordsPanel } from "./ProfileRecordsPanel";
 import { useI18n } from "./i18n";
 import { DocumentPresenceSection } from "./lib/tables/DocumentPresenceSection";
@@ -181,7 +182,6 @@ export function ProfilePanel(props: {
   const copy = messages.tables.inspector;
   const fields = copy.fields;
   const [form] = Form.useForm<ProfileValuesRequest>();
-  const [confirmation, setConfirmation] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -192,7 +192,6 @@ export function ProfilePanel(props: {
     if (editable) {
       form.setFieldsValue(props.profile ? profileValues(props.profile) : emptyValues);
     }
-    setConfirmation("");
     setConfirmingDelete(false);
     setError(null);
   }, [editable, form, profileId, profileVersion, props.mode, props.profile]);
@@ -440,36 +439,19 @@ export function ProfilePanel(props: {
       {showRecords ? null : (
         <div className="profile-panel__footer">
           {props.profile && props.canDelete && confirmingDelete ? (
-            <Card className="profile-delete" size="small">
-              <Flex vertical gap="0.75rem">
-                <strong>{copy.deleteTitle}</strong>
-                <span>{copy.deleteHint}</span>
-                <Input
-                  autoComplete="off"
-                  placeholder={copy.confirmPlaceholder}
-                  value={confirmation}
-                  onChange={(event) => setConfirmation(event.target.value)}
-                />
-                <Flex gap="0.6rem" wrap>
-                  <Button
-                    danger
-                    disabled={confirmation !== "Confirmar" || props.pending}
-                    onClick={() => props.onDelete(props.profile!, confirmation)}
-                  >
-                    {copy.deleteConfirm}
-                  </Button>
-                  <Button
-                    disabled={props.pending}
-                    onClick={() => {
-                      setConfirmingDelete(false);
-                      setConfirmation("");
-                    }}
-                  >
-                    {copy.cancel}
-                  </Button>
-                </Flex>
-              </Flex>
-            </Card>
+            <ConfirmDelete
+              cancelLabel={copy.cancel}
+              confirmLabel={copy.deleteConfirm}
+              confirmationLabel={copy.deleteHint}
+              confirmationWord="Confirmar"
+              description="Esta ação exclui a pessoa permanentemente e não pode ser desfeita."
+              pending={props.pending}
+              title={copy.deleteTitle}
+              onCancel={() => {
+                setConfirmingDelete(false);
+              }}
+              onConfirm={(word) => props.onDelete(props.profile!, word)}
+            />
           ) : (
             <Flex className="profile-panel__actions">
               {editable ? (
@@ -497,14 +479,24 @@ export function ProfilePanel(props: {
   );
 }
 
-export function ProfileReadoutSkeleton() {
-  const bar = (width: string, height: string) => (
-    <Skeleton.Input active size="small" style={{ width, height, minWidth: 0 }} />
+function renderSkeletonBar(width: string, height: string) {
+  return <Skeleton.Input active size="small" style={{ width, height, minWidth: 0 }} />;
+}
+
+function renderProfileSection(title: string, content: ReactNode) {
+  return (
+    <section className="profile-view__section">
+      <h3>{title}</h3>
+      <dl className="profile-view__grid">{content}</dl>
+    </section>
   );
+}
+
+export function ProfileReadoutSkeleton() {
   const item = (labelWidth: string, valueWidth: string) => (
     <div className="profile-view__item">
-      {bar(labelWidth, "0.7rem")}
-      {bar(valueWidth, "1rem")}
+      {renderSkeletonBar(labelWidth, "0.7rem")}
+      {renderSkeletonBar(valueWidth, "1rem")}
     </div>
   );
   return (
@@ -574,20 +566,14 @@ export function ProfileReadout({
       </div>
     );
   };
-  const section = (title: string, content: ReactNode) => (
-    <section className="profile-view__section">
-      <h3>{title}</h3>
-      <dl className="profile-view__grid">{content}</dl>
-    </section>
-  );
-  const customValues = Object.entries(profile.custom_values ?? {}).sort(([left], [right]) =>
+  const customValues = Object.entries(profile.custom_values ?? {}).toSorted(([left], [right]) =>
     left.localeCompare(right, "pt-BR"),
   );
   const detailsId = `profile-details-${profile.id}`;
 
   return (
     <div className="profile-view">
-      {section(
+      {renderProfileSection(
         sections.identification,
         <>
           {item(fields.fullName, profile.full_name, { wide: true })}
@@ -618,7 +604,7 @@ export function ProfileReadout({
       </Button>
       {expanded ? (
         <div className="profile-view__details" id={detailsId}>
-          {section(
+          {renderProfileSection(
             sections.contact,
             <>
               {item(fields.email, profile.email)}
@@ -633,7 +619,7 @@ export function ProfileReadout({
               {item(fields.postalCode, profile.address.postal_code)}
             </>,
           )}
-          {section(
+          {renderProfileSection(
             sections.originFamily,
             <>
               {item(columns.nationality, profile.nationality)}
@@ -648,7 +634,7 @@ export function ProfileReadout({
               {item(columns.motherBirthDate, profile.mother_birth_date, { date: true })}
             </>,
           )}
-          {section(
+          {renderProfileSection(
             sections.healthCommunity,
             <>
               {item(columns.healthPlan, profile.health_plan)}
@@ -660,7 +646,7 @@ export function ProfileReadout({
               {item(columns.membershipType, profile.membership_type)}
             </>,
           )}
-          {section(
+          {renderProfileSection(
             sections.interests,
             <>
               {item(columns.collections, profile.collections)}
@@ -669,7 +655,7 @@ export function ProfileReadout({
               {item(columns.travelCountries, profile.travel_countries, { wide: true })}
             </>,
           )}
-          {section(
+          {renderProfileSection(
             sections.vehicleFinancial,
             <>
               {item(columns.vehicleModel, profile.vehicle_model)}
@@ -681,13 +667,16 @@ export function ProfileReadout({
             </>,
           )}
           {customValues.length > 0
-            ? section(
+            ? renderProfileSection(
                 sections.custom,
                 <>{customValues.map(([key, value]) => item(humanizeKey(key), value, { key }))}</>,
               )
             : null}
           {String(profile.notes ?? "").trim()
-            ? section(sections.notes, <>{item(fields.notes, profile.notes, { wide: true })}</>)
+            ? renderProfileSection(
+                sections.notes,
+                <>{item(fields.notes, profile.notes, { wide: true })}</>,
+              )
             : null}
         </div>
       ) : null}
