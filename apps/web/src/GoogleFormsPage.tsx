@@ -1,9 +1,17 @@
-import { Alert, Button, Card, Flex, Layout, Tag, Typography } from "antd";
+import { Alert, Button, Card, Flex, Tag, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { ArrowLeft, Link2Off } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { StateCard } from "./components/StateCard";
 import { useApplicationSession } from "./session";
+import { useI18n } from "./i18n";
 import { APIRequestError } from "./lib/api/client";
+import {
+  CADASTRO_SEARCH_DEFAULTS,
+  googleFormsReturnPath,
+  tableFromModule,
+} from "./lib/cadastro/cadastroSearch";
 import {
   beginGoogleFormsOAuth,
   cancelGoogleFormsSync,
@@ -23,7 +31,13 @@ import {
 } from "./lib/api/googleForms";
 import { getOperationsCatalog } from "./lib/api/operations";
 
-export function GoogleFormsPage() {
+export function GoogleFormsPage({
+  defaultModule,
+}: {
+  defaultModule?: GoogleFormsModule | undefined;
+} = {}) {
+  const { messages } = useI18n();
+  const cadastroCopy = messages.tables.cadastro;
   const session = useApplicationSession();
   const queryClient = useQueryClient();
   const initialSearch = new URLSearchParams(window.location.search);
@@ -80,37 +94,15 @@ export function GoogleFormsPage() {
 
   if (!canManage) {
     return (
-      <Layout className="page-measure">
-        <header className="page-header">
-          <div className="page-eyebrow">M9 · Integrações</div>
-          <Typography.Title level={1} className="page-title">
-            Google Forms
-          </Typography.Title>
-        </header>
-        <div className="page-content">
-          <Alert
-            message="Acesso administrativo necessário"
-            type="warning"
-            description="Somente administradores podem conectar contas e configurar fontes do Google Forms."
-          />
-        </div>
-      </Layout>
+      <Alert
+        message="Acesso administrativo necessário"
+        type="warning"
+        description="Somente administradores podem conectar contas e configurar fontes do Google Forms."
+      />
     );
   }
 
   return (
-    <Layout className="page-measure">
-      <header className="page-header">
-        <div className="page-eyebrow">M9 · Integrações</div>
-        <Typography.Title level={1} className="page-title">
-          Google Forms
-        </Typography.Title>
-        <Typography.Paragraph className="page-description">
-          Conecte somente leitura, mapeie perguntas para campos lógicos e revise cada lote no fluxo
-          de Operações antes de gravá-lo.
-        </Typography.Paragraph>
-      </header>
-      <div className="page-content">
         <Flex vertical gap="1.5rem">
           {oauthResult === "connected" ? (
             <Alert
@@ -133,10 +125,18 @@ export function GoogleFormsPage() {
             />
           ) : null}
           {status.data && !status.data.enabled ? (
-            <Alert
-              message="Integração desativada"
-              type="info"
-              description="As credenciais e a chave de criptografia ainda não foram habilitadas neste ambiente."
+            <StateCard
+              action={
+                <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
+                  <Button icon={<ArrowLeft size={14} />}>
+                    {cadastroCopy.formsBackToCadastro}
+                  </Button>
+                </Link>
+              }
+              description={cadastroCopy.formsIntegrationDisabledDesc}
+              icon={<Link2Off aria-hidden size={28} strokeWidth={1.75} />}
+              kind="warning"
+              title={cadastroCopy.formsIntegrationDisabledTitle}
             />
           ) : null}
           {status.data?.enabled && !status.data.connected ? (
@@ -168,6 +168,7 @@ export function GoogleFormsPage() {
           ) : null}
           {status.data?.connected && tab === "sources" && catalog.data ? (
             <SourceCreator
+              defaultModule={defaultModule}
               modules={catalog.data.modules.filter((value) => value.can_import)}
               onCreated={() => void refresh()}
             />
@@ -220,10 +221,11 @@ export function GoogleFormsPage() {
                   />
                 ))}
                 {!sources.isLoading && sources.data?.sources.length === 0 ? (
-                  <Alert
-                    message="Nenhuma fonte configurada"
-                    type="info"
+                  <StateCard
+                    compact
                     description="Informe um formulário para carregar o esquema de perguntas."
+                    kind="empty"
+                    title="Nenhuma fonte configurada"
                   />
                 ) : null}
               </Flex>
@@ -239,8 +241,6 @@ export function GoogleFormsPage() {
             />
           ) : null}
         </Flex>
-      </div>
-    </Layout>
   );
 }
 
@@ -321,13 +321,20 @@ function ConnectionSummary({
 
 function SourceCreator({
   modules,
+  defaultModule,
   onCreated,
 }: {
   modules: Awaited<ReturnType<typeof getOperationsCatalog>>["modules"];
+  defaultModule?: GoogleFormsModule | undefined;
   onCreated: () => void;
 }) {
   const [reference, setReference] = useState("");
-  const [module, setModule] = useState<GoogleFormsModule>(modules[0]?.id ?? "PROFILES");
+  const [module, setModule] = useState<GoogleFormsModule>(
+    defaultModule ?? modules[0]?.id ?? "PROFILES",
+  );
+  useEffect(() => {
+    if (defaultModule) setModule(defaultModule);
+  }, [defaultModule]);
   const mutation = useMutation({
     mutationFn: () => createGoogleFormsSource(reference, module),
     onSuccess: () => {
@@ -599,8 +606,7 @@ function SyncHistory({
     <section className="page-section">
       <Typography.Title level={2}>Histórico de sincronizações</Typography.Title>
       <Typography.Paragraph>
-        A sincronização apenas prepara uma importação; a execução final continua no módulo
-        Operações.
+        A sincronização prepara uma importação; revise e execute o cadastro em /cadastro.
       </Typography.Paragraph>
       {error ? (
         <Alert
@@ -610,22 +616,26 @@ function SyncHistory({
         />
       ) : null}
       {loading ? (
-        <Alert message="Carregando sincronizações" type="info" description="Aguarde…" />
+        <StateCard compact kind="loading" title="Carregando sincronizações" />
       ) : null}
       <Flex vertical gap="0.75rem">
-        {values.map((value) => (
+        {values.map((value) => {
+          const source = sources.find((item) => item.id === value.source_id);
+          return (
           <SyncRow
             key={value.id}
+            module={source?.module ?? "PROFILES"}
             name={names.get(value.source_id) ?? "Formulário"}
             onUpdated={onUpdated}
             value={value}
           />
-        ))}
+        );})}
         {!loading && values.length === 0 ? (
-          <Alert
-            message="Nenhuma sincronização solicitada"
-            type="info"
+          <StateCard
+            compact
             description="Ative uma fonte para começar."
+            kind="empty"
+            title="Nenhuma sincronização solicitada"
           />
         ) : null}
       </Flex>
@@ -636,10 +646,12 @@ function SyncHistory({
 function SyncRow({
   value,
   name,
+  module,
   onUpdated,
 }: {
   value: GoogleFormsSync;
   name: string;
+  module: GoogleFormsModule;
   onUpdated: () => void;
 }) {
   const mutation = useMutation({
@@ -660,11 +672,14 @@ function SyncRow({
           <FormsStatus value={value.state} />
           {value.operation_import_id ? (
             <Link
-              className="app-nav__link"
-              search={{ selected: value.operation_import_id }}
-              to="/admin"
+              search={{
+                table: tableFromModule(module),
+                mode: "xlsx",
+                import: value.operation_import_id,
+              }}
+              to="/cadastro"
             >
-              Abrir importação
+              Revisar cadastro
             </Link>
           ) : null}
           {value.state === "QUEUED" || value.state === "RUNNING" ? (
@@ -734,19 +749,9 @@ function formatDate(value: string) {
 function replaceGoogleFormsSearch(tab: "sources" | "history", sourceID: string) {
   const target = new URL(window.location.href);
   target.searchParams.delete("google_forms");
+  target.searchParams.set("mode", "forms");
   target.searchParams.set("tab", tab);
   if (sourceID) target.searchParams.set("source", sourceID);
   else target.searchParams.delete("source");
   window.history.replaceState({}, "", `${target.pathname}${target.search}${target.hash}`);
-}
-
-function googleFormsReturnPath() {
-  const current = new URL(window.location.href);
-  const parameters = new URLSearchParams();
-  const tab = current.searchParams.get("tab");
-  const source = current.searchParams.get("source");
-  if (tab === "sources" || tab === "history") parameters.set("tab", tab);
-  if (source && /^[0-9a-f-]{36}$/i.test(source)) parameters.set("source", source);
-  const query = parameters.toString();
-  return query ? `/forms?${query}` : "/forms";
 }

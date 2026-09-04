@@ -360,6 +360,15 @@
             }
           },
           {
+            "name": "q",
+            "in": "query",
+            "description": "Search query language applied as a row recorte of this module.",
+            "schema": {
+              "type": "string",
+              "maxLength": 512
+            }
+          },
+          {
             "name": "full_name",
             "in": "query",
             "schema": {
@@ -465,6 +474,87 @@
           },
           "422": {
             "$ref": "#/components/responses/ValidationError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/cities": {
+      "get": {
+        "operationId": "listDistinctCities",
+        "summary": "List distinct cities across profiles matching the given filters",
+        "tags": [
+          "Profiles"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "full_name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cpf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Distinct city names",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DistinctCitiesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           },
           "503": {
             "$ref": "#/components/responses/ServiceUnavailable"
@@ -1083,6 +1173,15 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search query language applied as a row recorte of documents.",
+            "schema": {
+              "type": "string",
+              "maxLength": 512
             }
           },
           {
@@ -1874,6 +1973,15 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search query language applied as a row recorte of bills.",
+            "schema": {
+              "type": "string",
+              "maxLength": 512
             }
           },
           {
@@ -3888,6 +3996,20 @@
           }
         }
       },
+      "DistinctCitiesResponse": {
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "properties": {
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "ProfileSortField": {
         "type": "string",
         "enum": [
@@ -3895,6 +4017,10 @@
           "cpf",
           "email",
           "address_city",
+          "address_street",
+          "address_neighborhood",
+          "mobile_phone",
+          "birth_date",
           "created_at",
           "updated_at"
         ],

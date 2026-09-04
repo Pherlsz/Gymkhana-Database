@@ -86,7 +86,7 @@ func NewToolGateway(search SearchPort, query QueryPort, references ResultReferen
 func (gateway *ToolGateway) Schemas() []ToolSchema {
 	return []ToolSchema{
 		{Name: "catalog", Description: "Lista apenas entidades, campos, operadores e relações lógicas autorizadas.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false}`)},
-		{Name: "search", Description: "Busca termos literais nos campos lógicos autorizados. Não aceita SQL.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["terms"],"properties":{"terms":{"type":"array","minItems":1,"maxItems":5,"items":{"type":"string","maxLength":128}},"modules":{"type":"array","maxItems":5,"items":{"type":"string"}},"fields":{"type":"array","maxItems":40,"items":{"type":"string"}},"limit":{"type":"integer","minimum":1,"maximum":100},"offset":{"type":"integer","minimum":0,"maximum":10000},"context_reference_id":{"type":"string","format":"uuid"}}}`)},
+		{Name: "search", Description: "Busca literais nos campos lógicos autorizados. Prefira q com operadores em português (tipo:, cidade:, OU). Não aceita SQL.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"properties":{"q":{"type":"string","maxLength":512},"terms":{"type":"array","maxItems":16,"items":{"type":"string","maxLength":128}},"modules":{"type":"array","maxItems":5,"items":{"type":"string"}},"fields":{"type":"array","maxItems":40,"items":{"type":"string"}},"limit":{"type":"integer","minimum":1,"maximum":100},"offset":{"type":"integer","minimum":0,"maximum":10000},"context_reference_id":{"type":"string","format":"uuid"}}}`)},
 		{Name: "query", Description: "Executa um QueryPlan v1 lógico, tipado e somente leitura.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["plan"],"properties":{"plan":{"type":"object"},"context_reference_id":{"type":"string","format":"uuid"}}}`)},
 		{Name: "result", Description: "Reabre uma referência de resultado da própria conversa com reautorização.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["reference_id"],"properties":{"reference_id":{"type":"string","format":"uuid"},"limit":{"type":"integer","minimum":1,"maximum":100},"offset":{"type":"integer","minimum":0,"maximum":10000}}}`)},
 	}
@@ -123,6 +123,7 @@ func (gateway *ToolGateway) Execute(ctx context.Context, actor auth.Session, act
 }
 
 type searchToolRequest struct {
+	Q                  string                `json:"q"`
 	Terms              []string              `json:"terms"`
 	Modules            []searchdomain.Module `json:"modules,omitempty"`
 	Fields             []string              `json:"fields,omitempty"`
@@ -132,6 +133,7 @@ type searchToolRequest struct {
 }
 
 type storedSearchRequest struct {
+	Q       string                 `json:"q,omitempty"`
 	Terms   []string               `json:"terms"`
 	Modules []searchdomain.Module  `json:"modules,omitempty"`
 	Fields  []string               `json:"fields,omitempty"`
@@ -240,7 +242,7 @@ func (gateway *ToolGateway) searchData(ctx context.Context, actor auth.Session, 
 	if err := decodeToolArguments(raw, &request); err != nil {
 		return ToolOutput{}, err
 	}
-	query := searchdomain.Query{Terms: request.Terms, Modules: request.Modules, Fields: request.Fields, Limit: request.Limit, Offset: request.Offset,
+	query := searchdomain.Query{Q: request.Q, Terms: request.Terms, Modules: request.Modules, Fields: request.Fields, Limit: request.Limit, Offset: request.Offset,
 		Sort: searchdomain.SortRelevance, Order: searchdomain.SortDescending}
 	if request.ContextReferenceID != "" {
 		base, err := gateway.explicitContext(ctx, actor, active, request.ContextReferenceID, ResultReferenceSearch, requestID)
@@ -256,6 +258,11 @@ func (gateway *ToolGateway) searchData(ctx context.Context, actor auth.Session, 
 		}
 		query.Terms = append(append([]string(nil), previous.Terms...), query.Terms...)
 		query.Terms = uniqueStrings(query.Terms)
+		if query.Q == "" {
+			query.Q = previous.Q
+		} else if previous.Q != "" {
+			query.Q = strings.TrimSpace(previous.Q + " " + query.Q)
+		}
 		if len(query.Modules) == 0 {
 			query.Modules = previous.Modules
 		}
@@ -285,12 +292,16 @@ func (gateway *ToolGateway) searchData(ctx context.Context, actor auth.Session, 
 	if err != nil {
 		return ToolOutput{}, err
 	}
-	stored := storedSearchRequest{Terms: query.Terms, Modules: query.Modules, Fields: query.Fields, Limit: page.Limit, Offset: page.Offset, Sort: page.Sort, Order: page.Order}
+	stored := storedSearchRequest{Q: query.Q, Terms: query.Terms, Modules: query.Modules, Fields: query.Fields, Limit: page.Limit, Offset: page.Offset, Sort: page.Sort, Order: page.Order}
 	logical, err := json.Marshal(stored)
 	if err != nil {
 		return ToolOutput{}, fmt.Errorf("encode AI Chat Search reference: %w", err)
 	}
-	draft := resultDraft(ResultReferenceSearch, nil, logical, fmt.Sprintf("Busca: %s", strings.Join(query.Terms, " · ")), len(results), 1, expiresAt)
+	label := query.Q
+	if label == "" {
+		label = strings.Join(query.Terms, " · ")
+	}
+	draft := resultDraft(ResultReferenceSearch, nil, logical, fmt.Sprintf("Busca: %s", label), len(results), 1, expiresAt)
 	return ToolOutput{Kind: ToolSearch, Payload: payload, RowCount: len(results), FieldCount: 1, ByteCount: len(payload), Reference: &draft}, nil
 }
 

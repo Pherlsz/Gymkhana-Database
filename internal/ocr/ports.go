@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	coreocr "github.com/Pherlsz/Gymkhana-Core/ocr"
 	"github.com/Pherlsz/Gymkhana-Database/internal/attachment"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 )
@@ -30,37 +31,22 @@ type TargetGateway interface {
 	ApplyTarget(context.Context, auth.Session, TargetReference, int64, []ApprovedChange, string) (int64, error)
 }
 
-type ProviderField struct {
-	Key      string
-	Label    string
-	Kind     ValueKind
-	Required bool
+// ExtractionInput is the host-owned extractor call. Request is the Core OCR
+// contract (no bytes). Source bytes stay on the Database side of the port.
+type ExtractionInput struct {
+	Request coreocr.ExtractionRequest
+	Fields  []FieldSchema
+	Source  io.Reader
 }
 
-type ExtractionRequest struct {
-	SchemaVersion string
-	MIME          string
-	ByteSize      int64
-	SHA256        [32]byte
-	PageCount     int
-	PixelCount    int64
-	Fields        []ProviderField
-	Source        io.Reader
-}
-
-type ProviderSuggestion struct {
-	FieldKey string
-	Value    string
-	Evidence Evidence
-}
-
-type ExtractionResponse struct {
-	Suggestions []ProviderSuggestion
-	Usage       int64
+// ExtractionOutput is provider-produced Core OCR plus Database-owned usage.
+type ExtractionOutput struct {
+	Result coreocr.ExtractionResult
+	Usage  int64
 }
 
 type Extractor interface {
-	Extract(context.Context, ExtractionRequest) (ExtractionResponse, error)
+	Extract(context.Context, ExtractionInput) (ExtractionOutput, error)
 }
 
 type Jobs interface {

@@ -29,7 +29,7 @@ const SEEDS = {
   light: {
     primaryText: "#8b5500",
     error: "#b91c1e",
-    warning: "#a24100",
+    warning: "#a14206",
     success: "#007742",
     info: "#065da0",
   },
@@ -149,7 +149,13 @@ function gymkhanaAntdTheme(mode: Theme) {
         colorTextLightSolid: "var(--md-surface)",
       },
       Switch: {
-        colorPrimary: "var(--md-on-surface)",
+        /*
+         * Checked = the crest star gold, as a literal: antd derives hover
+         * colors with FastColor, which resolves a var() to black and falls
+         * back to the seed — an ink var() read white-on-white in dark mode
+         * and flipped gold on hover. A literal derives cleanly instead.
+         */
+        colorPrimary: PRIMARY,
       },
       Card: {
         bodyPadding: 16,

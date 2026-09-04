@@ -18,6 +18,7 @@ import {
   listBills,
   listCustomFields,
   listCustomOptions,
+  listDistinctCities,
   listDocumentTypes,
   listDocuments,
   listProfiles,
@@ -28,10 +29,10 @@ import {
 } from "./lib/api/client";
 import { useI18n } from "./i18n";
 import { PageHeader } from "./components/PageHeader";
-import { StateBlock } from "./components/StateBlock";
+import { StateCard } from "./components/StateCard";
 import { SpreadsheetTable } from "./lib/tables/SpreadsheetTable";
 import { TablesToolbar } from "./lib/tables/TablesToolbar";
-import { cellKeyForFilter, distinctValues } from "./lib/tables/tableFilters";
+import { cellKeyForFilter, distinctValues, localDateMatches } from "./lib/tables/tableFilters";
 import {
   columnGroup,
   columnLabel,
@@ -73,6 +74,7 @@ import {
 import { groupedTypeFilterOptions } from "./lib/tables/typeFilterOptions";
 import { DEFAULT_SHEET_PREFERENCES } from "./lib/tables/sheetPreferences";
 import { clampSpreadsheetPageSize } from "./lib/tables/spreadsheetViewport";
+import { TableRecordEditorPanel } from "./lib/tables/TableRecordEditorPanel";
 
 const tablesRoute = getRouteApi("/tables/$table");
 
@@ -139,33 +141,29 @@ export function TablesPage() {
     [search],
   );
 
-  const primaryKey =
-    section === "documents"
-      ? "document_identifier"
-      : section === "bills"
-        ? "bill_reference"
-        : "full_name";
-  const primaryValue =
-    section === "documents"
-      ? search.document_identifier
-      : section === "bills"
-        ? search.bill_reference
-        : search.full_name;
-  const [drafts, setDrafts] = useState({
-    full_name: search.full_name,
-    document_identifier: search.document_identifier,
-    bill_reference: search.bill_reference,
-  });
-  const searchInput = drafts[primaryKey];
+  const [searchInput, setSearchInput] = useState(search.q);
   useEffect(() => {
-    setDrafts((current) =>
-      current[primaryKey] === primaryValue ? current : { ...current, [primaryKey]: primaryValue },
-    );
-  }, [primaryKey, primaryValue]);
+    setSearchInput((current) => (current === search.q ? current : search.q));
+  }, [search.q]);
   const peopleQuery = useQuery({
     queryKey: ["tables", "profiles", profileListKey(tableSearch)],
     queryFn: ({ signal }) => listProfiles(tableSearch, signal),
     enabled: section === "profile",
+  });
+  const citiesQuery = useQuery({
+    queryKey: ["profile-city-options", search.full_name, search.cpf, search.email, search.state],
+    queryFn: ({ signal }) =>
+      listDistinctCities(
+        {
+          full_name: search.full_name,
+          cpf: search.cpf,
+          email: search.email,
+          state: search.state,
+        },
+        signal,
+      ),
+    enabled: section === "profile",
+    staleTime: 5 * 60 * 1000,
   });
   const documentQuery = useQuery({
     queryKey: ["tables", "documents", documentSearch(tableSearch), tableSearch.records_owner],
@@ -367,6 +365,15 @@ export function TablesPage() {
     setLocalFilters((current) => ({ ...current, [key]: value }));
   }, []);
 
+  const cityOptions = useMemo(
+    () =>
+      (citiesQuery.data?.values ?? []).map((city) => ({
+        value: city,
+        label: city,
+      })),
+    [citiesQuery.data],
+  );
+
   const allFilters = useMemo(
     () =>
       buildSheetFilters({
@@ -379,10 +386,12 @@ export function TablesPage() {
         distinctByKey,
         typeGroups,
         identifierTypes,
+        cityOptions,
         setLocal,
         updateSearch,
       }),
     [
+      cityOptions,
       copy,
       distinctByKey,
       extraFields,
@@ -559,6 +568,13 @@ export function TablesPage() {
       ),
     [allFilters],
   );
+  const localDateKeys = useMemo(
+    () =>
+      new Set(
+        allFilters.filter((field) => field.local && field.kind === "date").map(cellKeyForFilter),
+      ),
+    [allFilters],
+  );
   const rows = useMemo(() => {
     return baseRows.filter((row) =>
       Object.entries(localFilters).every(([key, value]) => {
@@ -566,10 +582,11 @@ export function TablesPage() {
         const text = cellText(row.cells[key]).toLowerCase();
         const needle = value.toLowerCase();
         if (localExactKeys.has(key)) return text === needle;
+        if (localDateKeys.has(key)) return localDateMatches(cellText(row.cells[key]), value);
         return text.includes(needle);
       }),
     );
-  }, [baseRows, localExactKeys, localFilters]);
+  }, [baseRows, localDateKeys, localExactKeys, localFilters]);
   const canDelete = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN";
   const selectedProfile =
     peopleQuery.data?.profiles.find((value) => value.id === search.selected) ??
@@ -687,6 +704,19 @@ export function TablesPage() {
     )
   ) : null;
 
+  const recordFormOpen =
+    (section === "documents" && search.document_mode && search.document_mode !== "view") ||
+    (section === "bills" && search.bill_mode && search.bill_mode !== "view");
+  const recordForm = recordFormOpen ? (
+    <TableRecordEditorPanel
+      role={session.user.role}
+      search={search}
+      section={section === "bills" ? "bills" : "documents"}
+      onNotice={setNotice}
+      onSearch={updateSearch}
+    />
+  ) : null;
+
   const inspector = search.mode ? (
     <ProfilePanel
       key={search.mode === "create" ? "create" : "inspector"}
@@ -748,21 +778,20 @@ export function TablesPage() {
 
       {notice ? <Alert showIcon type="success" title={notice} /> : null}
       {errorDescription ? (
-        <StateBlock description={errorDescription} kind="error" title={copy.error} />
+        <StateCard description={errorDescription} kind="error" title={copy.error} />
       ) : null}
 
       <TablesToolbar
         searchLabel={copy.filters.search}
         searchPlaceholder={copy.filters.searchAll}
         searchValue={searchInput}
-        onSearchChange={(value) => setDrafts((current) => ({ ...current, [primaryKey]: value }))}
+        searchGrain={
+          section === "documents" ? "documents" : section === "bills" ? "bills" : "profiles"
+        }
+        onSearchChange={setSearchInput}
         onSearchSubmit={(value) => {
-          setDrafts((current) => ({ ...current, [primaryKey]: value }));
-          if (value === primaryValue) return;
-          updateSearch({
-            [primaryKey]: value,
-            ...resetPage(section),
-          } as Partial<ProfileListSearch>);
+          if (value === search.q) return;
+          updateSearch({ q: value, ...resetPage(section) });
         }}
         fieldFiltersLabel={copy.filters.byField}
         addFilterLabel={copy.filters.addFilter}
@@ -772,6 +801,7 @@ export function TablesPage() {
         appliedFiltersLabel={copy.filters.appliedFilters}
         noFieldsLabel={copy.filters.noFields}
         moreChipsLabel={(count) => copy.filters.moreChips.replace("{count}", String(count))}
+        moreChipsCollapseLabel={copy.filters.moreChipsCollapse}
         chips={activeChips}
         clearLabel={copy.filters.clear}
         onClearAll={() => {
@@ -779,6 +809,7 @@ export function TablesPage() {
           updateSearch(clearFilters(section));
         }}
         localHint={copy.filters.localOnly}
+        localScopeBadge={copy.filters.localScopeBadge}
         filters={allFilters}
         columnPicker={{
           label: copy.columnPicker.button,
@@ -788,10 +819,10 @@ export function TablesPage() {
           resetLabel: copy.columnPicker.reset,
           lockedLabel: copy.columnPicker.locked,
           emptyLabel: copy.columnPicker.empty,
-          visibleCountLabel: (visible, total) =>
+          visibleCountLabel: (visible, totalCount) =>
             copy.columnPicker.visibleCount
               .replace("{visible}", String(visible))
-              .replace("{total}", String(total)),
+              .replace("{total}", String(totalCount)),
           hiddenCount: columnMetadataLoading ? 0 : columns.length - visibleColumns.length,
           items: columns.map((column) => ({
             key: column.key,
@@ -847,18 +878,30 @@ export function TablesPage() {
             getContainer={false}
             size={DEFAULT_SHEET_PREFERENCES.inspectorSheetSize}
             mask={false}
-            open={Boolean(search.mode) || Boolean(recordInspector)}
+            open={Boolean(search.mode) || Boolean(recordInspector) || Boolean(recordForm)}
             placement="bottom"
             styles={{
               body: { display: "flex", height: "100%", overflow: "hidden", padding: 0 },
               wrapper: { pointerEvents: "auto" },
             }}
-            onClose={recordInspector ? closeRecord : closeInspector}
+            onClose={
+              recordForm
+                ? () =>
+                    updateSearch({
+                      document_selected: undefined,
+                      document_mode: undefined,
+                      bill_selected: undefined,
+                      bill_mode: undefined,
+                    })
+                : recordInspector
+                  ? closeRecord
+                  : closeInspector
+            }
           >
-            {recordInspector ?? inspector}
+            {recordForm ?? recordInspector ?? inspector}
           </Drawer>
         ) : (
-          (recordInspector ?? inspector)
+          (recordForm ?? recordInspector ?? inspector)
         )}
       </div>
     </div>

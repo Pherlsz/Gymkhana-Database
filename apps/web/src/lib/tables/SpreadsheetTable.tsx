@@ -288,9 +288,19 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
           listItemHeight={DEFAULT_SHEET_PREFERENCES.rowHeightPx}
           onRow={
             onRowClick
-              ? (row) => ({
+              ? (row, index) => ({
                   "aria-selected": row.id === selectedRowId,
+                  role: "button",
+                  // Roving tabindex: only the selected row (or the first row when
+                  // nothing is selected) is a tab stop. Arrow-key navigation in
+                  // useEffect moves selection; Enter/Space activates.
+                  tabIndex: row.id === selectedRowId || (!selectedRowId && index === 0) ? 0 : -1,
                   onClick: () => onRowClick(row),
+                  onKeyDown: (event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    onRowClick(row);
+                  },
                 })
               : (row) => ({ "aria-selected": row.id === selectedRowId })
           }

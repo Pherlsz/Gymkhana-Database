@@ -1,6 +1,7 @@
 import { Alert, Button, Card, Flex } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { SearchField } from "./components/SearchField";
 import {
   CustomFieldInputGrid,
   customDataError,
@@ -8,7 +9,6 @@ import {
   draftFromStoredValues,
   type CustomDraftValue,
 } from "./CustomValuesPanel";
-import { listProfilesForSelection } from "./lib/api/client";
 import {
   createCustomEntity,
   deleteCustomEntity,
@@ -26,12 +26,9 @@ export function CustomEntitiesAdmin() {
     queryKey: ["custom-entity-types"],
     queryFn: ({ signal }) => listCustomEntityTypes(signal),
   });
-  const profiles = useQuery({
-    queryKey: ["profiles", "selection"],
-    queryFn: ({ signal }) => listProfilesForSelection(signal),
-  });
   const [typeId, setTypeId] = useState("");
   const [ownerId, setOwnerId] = useState("");
+  const [ownerQuery, setOwnerQuery] = useState("");
   const [editing, setEditing] = useState<CustomEntity | null>(null);
   const [draft, setDraft] = useState<Record<string, CustomDraftValue>>({});
   const selectedType = types.data?.types.find((value) => value.id === typeId);
@@ -105,14 +102,18 @@ export function CustomEntitiesAdmin() {
           </label>
           <label>
             Pessoa vinculada
-            <select value={ownerId} onChange={(event) => setOwnerId(event.target.value)}>
-              <option value="">Sem vínculo / todas</option>
-              {profiles.data?.profiles.map((value) => (
-                <option key={value.id} value={value.id}>
-                  {value.full_name}
-                </option>
-              ))}
-            </select>
+            <SearchField
+              label="Pessoa vinculada"
+              lookup
+              mode="suggest"
+              placeholder="Buscar pessoa…"
+              value={ownerQuery}
+              onChange={setOwnerQuery}
+              onPick={(id, name) => {
+                setOwnerId(id);
+                setOwnerQuery(name);
+              }}
+            />
           </label>
         </div>
         {selectedType ? (
@@ -161,13 +162,7 @@ export function CustomEntitiesAdmin() {
               <strong>
                 {selectedType?.label ?? "Entidade"} #{index + 1}
               </strong>
-              <span>
-                {value.owner_profile_id
-                  ? (profiles.data?.profiles.find(
-                      (profile) => profile.id === value.owner_profile_id,
-                    )?.full_name ?? "Pessoa vinculada")
-                  : "Sem pessoa vinculada"}
-              </span>
+              <span>{value.owner_profile_id ? "Pessoa vinculada" : "Sem pessoa vinculada"}</span>
               <Flex>
                 <Button
                   onClick={() => {

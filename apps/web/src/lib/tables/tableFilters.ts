@@ -79,6 +79,28 @@ export function cellKeyForFilter(field: ToolbarFilterField) {
   return field.key;
 }
 
+/** Normalizes a display date (pt-BR `dd/mm/yyyy` or ISO `yyyy-mm-dd`) to ISO. */
+function toIsoDate(text: string): string | null {
+  const ptBr = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
+  if (ptBr && ptBr[1] && ptBr[2] && ptBr[3]) return `${ptBr[3]}-${ptBr[2]}-${ptBr[1]}`;
+  const iso = /^(\d{4}-\d{2}-\d{2})/.exec(text);
+  return iso && iso[1] ? iso[1] : null;
+}
+
+/**
+ * Date filters commit ISO values from `<input type="date">`, but cells display
+ * as pt-BR (`dd/mm/yyyy`). Compare both sides canonically instead of doing a
+ * substring match, which would never hit.
+ */
+export function localDateMatches(cellValue: string, needle: string): boolean {
+  const cellIso = toIsoDate(cellValue.trim());
+  const needleIso = toIsoDate(needle.trim());
+  if (cellIso == null || needleIso == null) {
+    return cellValue.trim().toLowerCase().includes(needle.trim().toLowerCase());
+  }
+  return cellIso === needleIso;
+}
+
 export function distinctValues(
   rows: TableRow[],
   key: string,

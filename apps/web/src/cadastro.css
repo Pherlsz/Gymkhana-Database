@@ -1,0 +1,1022 @@
+.cadastro-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-4);
+  width: 100%;
+  max-width: min(100%, 76rem);
+  margin-inline: auto;
+}
+
+.cadastro-work {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-4);
+}
+
+.cadastro-manual,
+.cadastro-owner,
+.cadastro-ocr,
+.cadastro-ocr__records,
+.cadastro-ocr__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-3);
+}
+
+/* One surface treatment for every top-level cadastro work block. Hairline
+   border + soft shadow + raised paper: the card, not the canvas, is the unit
+   of the flow. Applied to the three outermost blocks only (.cadastro-catalog,
+   .cadastro-panel, and the manual .cadastro-work wrapper) so nested blocks
+   like .cadastro-owner read as content inside a card, never cards-in-cards. */
+.cadastro-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-4);
+  padding: clamp(1rem, 2.2vw, 1.5rem);
+  background: var(--md-surface-elevated);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+@media (max-width: 600px) {
+  .cadastro-panel {
+    padding: 0.875rem;
+    border-radius: var(--gym-radius-md);
+  }
+}
+
+.cadastro-manual__lead,
+.ocr-review-panel__lead {
+  color: var(--md-on-surface-variant);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.cadastro-owner__field,
+.ocr-review-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cadastro-owner__label,
+.cadastro-owner__status {
+  color: var(--md-on-surface-variant);
+  font-size: 0.875rem;
+}
+
+.cadastro-owner__status {
+  margin: 0;
+}
+
+.cadastro-catalog button.home-catalog__row,
+.cadastro-ocr button.home-catalog__row {
+  width: 100%;
+  background: transparent;
+  font: inherit;
+  text-align: start;
+}
+
+.cadastro-ocr__heading {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.ocr-review-panel,
+.ocr-review-panel__suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-3);
+}
+
+.ocr-review-panel__suggestions {
+  gap: var(--gym-space-2);
+}
+
+.cadastro-page .profile-panel,
+.cadastro-page .table-record-editor {
+  flex: none;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  height: auto;
+  overflow: visible;
+}
+
+/* The people flow renders the bare ProfilePanel, which ships with a flat
+   low-surface background and no shadow. Adopt the cadastro card surface so
+   the default view matches the documents/bills cards. */
+.cadastro-page .profile-panel {
+  background: var(--md-surface-elevated);
+  border-color: var(--md-outline-variant);
+  box-shadow: var(--shadow-card);
+}
+
+.cadastro-page .profile-panel__body {
+  overflow: visible;
+}
+
+.cadastro-page .record-editor__header {
+  display: none;
+}
+
+@media (min-width: 840px) {
+  .cadastro-page .profile-panel,
+  .cadastro-page .table-record-editor {
+    flex: none;
+    width: 100%;
+    max-height: none;
+  }
+}
+
+/* Minimum-requirement indicator: a thin text line under the step trail.
+   Never an Alert/banner. Warn state uses the amber-11 text token (contrast
+   level, not the star fill --amber-9); ok state is nearly invisible
+   (muted ink). Same font-size as catalog hints so it reads as a note. */
+.cadastro-minreq {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.cadastro-minreq--warn {
+  color: var(--amber-11);
+}
+
+.cadastro-minreq--ok {
+  color: var(--md-on-surface-variant);
+}
+
+/* Catalog groups sit inside the .cadastro-catalog card: drop their own
+   background so they read as sections of the card, not cards inside a card. */
+.cadastro-catalog .home-catalog__group {
+  background: var(--md-surface);
+}
+
+/* ===== Entry screen (mock 011): inventory line + three entry cards.
+   The bare /cadastro landing shows this; picking a card swaps to the
+   workspace. Colors/radii/spacing from shell.css tokens only. ===== */
+.cadastro-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-5);
+  width: 100%;
+}
+
+.cadastro-entry__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-3);
+}
+
+.cadastro-entry__section-title {
+  margin: 0;
+  font-size: var(--gym-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gym-color-text-muted);
+}
+
+.cadastro-entry__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: clamp(1rem, 2vw, 1.5rem);
+  width: 100%;
+}
+
+.cadastro-entry__cards--direct {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+.cadastro-entry__cards--automation {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+}
+
+.cadastro-entry__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-3);
+  padding: var(--gym-space-5);
+  background: radial-gradient(130% 130% at 0% 0%, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.008) 100%), var(--gym-color-surface-raised);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--gym-radius-lg);
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+
+.cadastro-entry__card:hover {
+  border-color: rgba(255, 197, 61, 0.38);
+  background: radial-gradient(130% 130% at 0% 0%, rgba(255, 197, 61, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%), var(--gym-color-surface-raised);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 24px rgba(255, 197, 61, 0.12);
+}
+
+.cadastro-entry__card:focus-visible {
+  outline: 2px solid var(--ant-color-primary, #ffc53d);
+  outline-offset: 2px;
+}
+
+.cadastro-entry__pill-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--gym-color-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cadastro-entry__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--gym-radius-md);
+  background: color-mix(in oklch, var(--gym-color-text) 12%, transparent);
+  color: var(--gym-color-text);
+  transition: transform 0.2s ease;
+}
+
+.cadastro-entry__card:hover .cadastro-entry__icon {
+  transform: scale(1.05);
+}
+
+.cadastro-entry__card--people .cadastro-entry__icon {
+  background: rgba(255, 197, 61, 0.14);
+  color: #ffc53d;
+  border: 1px solid rgba(255, 197, 61, 0.28);
+}
+
+.cadastro-entry__card--documents .cadastro-entry__icon {
+  background: rgba(56, 189, 248, 0.14);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+}
+
+.cadastro-entry__card--bills .cadastro-entry__icon {
+  background: rgba(52, 211, 153, 0.14);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.28);
+}
+
+.cadastro-entry__card--forms .cadastro-entry__icon {
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.cadastro-entry__card--bulk .cadastro-entry__icon {
+  background: rgba(168, 85, 247, 0.14);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.28);
+}
+
+.cadastro-entry__title {
+  font-size: var(--gym-font-size-lg);
+  font-weight: 600;
+  color: var(--gym-color-text);
+}
+
+.cadastro-entry__body {
+  font-size: var(--gym-font-size-sm);
+  line-height: 1.5;
+  color: var(--gym-color-text-muted);
+}
+
+.cadastro-entry__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-space-2);
+  margin-top: auto;
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text-muted);
+}
+
+.cadastro-entry__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--gym-radius-pill);
+  background: var(--md-success);
+}
+
+.cadastro-entry__dot--idle {
+  background: color-mix(in oklch, var(--gym-color-text) 35%, transparent);
+}
+
+.cadastro-entry__badge {
+  font-size: var(--gym-font-size-xs);
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: var(--gym-radius-pill);
+  background: color-mix(in oklch, var(--gym-color-text) 12%, transparent);
+  color: var(--gym-color-text);
+}
+
+.cadastro-entry__formsrow,
+.cadastro-entry__bulkrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gym-space-2);
+  align-items: center;
+}
+
+.cadastro-entry__linkbtn {
+  padding: 5px 11px;
+  font-size: var(--gym-font-size-xs);
+  font-weight: 500;
+  color: var(--gym-color-text);
+  background: transparent;
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.cadastro-entry__linkbtn:hover {
+  background: color-mix(in oklch, var(--gym-color-text) 6%, transparent);
+}
+
+.cadastro-entry__linkbtn:focus-visible {
+  outline: 2px solid var(--md-focus-ring);
+  outline-offset: 2px;
+}
+
+.cadastro-entry__disabled {
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text-muted);
+}
+
+/* ===== Single-Screen Unified Cadastro (Mock 011 + responsive-micro-ux) ===== */
+
+.cadastro-single {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-4);
+  padding-bottom: 90px;
+}
+
+.cadastro-crumb {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-space-2);
+  font-size: var(--gym-font-size-sm);
+  color: var(--gym-color-text-muted);
+}
+
+.cadastro-crumb__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gym-space-1);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gym-color-text-muted);
+  font: inherit;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.cadastro-crumb__btn:hover {
+  color: var(--gym-color-text);
+}
+
+.cadastro-crumb__sep {
+  color: var(--gym-hairline);
+}
+
+.cadastro-crumb__current {
+  color: var(--gym-color-text);
+  font-weight: 500;
+}
+
+/* Expandable Groups (Accordions) */
+.cadastro-group {
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-lg);
+  background: var(--md-surface-elevated);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: border-color 0.18s ease;
+}
+
+.cadastro-group:focus-within {
+  border-color: var(--gym-color-border);
+}
+
+.cadastro-group__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(0.875rem, 1.8vw, 1.25rem) clamp(1rem, 2vw, 1.5rem);
+  background: var(--gym-color-surface-raised);
+  border-bottom: 1px solid var(--gym-hairline);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.cadastro-group__header:hover {
+  background: color-mix(in oklch, var(--gym-color-surface-raised) 92%, var(--gym-color-text) 5%);
+}
+
+.cadastro-group__title-area {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-space-3);
+  flex-wrap: wrap;
+}
+
+.cadastro-group__icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--gym-radius-md);
+  background: color-mix(in oklch, var(--gym-color-text) 10%, transparent);
+  color: var(--gym-color-text);
+  flex: none;
+}
+
+.cadastro-group__title {
+  font-size: var(--gym-font-size-md);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--gym-color-text);
+  margin: 0;
+}
+
+.cadastro-group__badge {
+  font-size: var(--gym-font-size-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--gym-radius-pill);
+  background: color-mix(in oklch, var(--gym-color-text) 12%, transparent);
+  color: var(--gym-color-text);
+}
+
+.cadastro-group__chevron {
+  color: var(--gym-color-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.cadastro-group--collapsed .cadastro-group__chevron {
+  transform: rotate(-90deg);
+}
+
+.cadastro-group--collapsed .cadastro-group__header {
+  border-bottom-color: transparent;
+}
+
+.cadastro-group__body {
+  padding: clamp(1rem, 2.2vw, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-4);
+}
+
+.cadastro-group__hint {
+  font-size: var(--gym-font-size-sm);
+  color: var(--gym-color-text-muted);
+  margin: 0;
+}
+
+/* Compact Mobile-First Responsive Grid (Mobile 1 col, Tablet/Desktop 12 cols) */
+.cadastro-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gym-space-3);
+}
+
+.cadastro-col-12,
+.cadastro-col-8,
+.cadastro-col-6,
+.cadastro-col-4,
+.cadastro-col-3 {
+  grid-column: span 1;
+}
+
+@media (min-width: 768px) {
+  .cadastro-grid {
+    grid-template-columns: repeat(12, 1fr);
+  }
+
+  .cadastro-col-12 {
+    grid-column: span 12;
+  }
+  .cadastro-col-8 {
+    grid-column: span 8;
+  }
+  .cadastro-col-6 {
+    grid-column: span 6;
+  }
+  .cadastro-col-4 {
+    grid-column: span 4;
+  }
+  .cadastro-col-3 {
+    grid-column: span 3;
+  }
+}
+
+.cadastro-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cadastro-field__label {
+  font-size: var(--gym-font-size-xs);
+  font-weight: 500;
+  color: var(--gym-color-text-muted);
+}
+
+.cadastro-field__hint {
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text-muted);
+  margin-top: 2px;
+}
+
+.cadastro-field__hint--notice {
+  color: var(--amber-11);
+}
+
+.cadastro-field__hint--success {
+  color: var(--md-success);
+}
+
+/* Form input mobile iOS zoom prevention */
+.cadastro-field input,
+.cadastro-field select,
+.cadastro-field textarea,
+.cadastro-single .ant-input,
+.cadastro-single .ant-select-selector {
+  font-size: 16px !important;
+}
+
+@media (min-width: 768px) {
+  .cadastro-field input,
+  .cadastro-field select,
+  .cadastro-field textarea,
+  .cadastro-single .ant-input,
+  .cadastro-single .ant-select-selector {
+    font-size: 14px !important;
+  }
+}
+
+.cadastro-toggle-btn {
+  border: 0;
+  background: transparent;
+  color: var(--md-primary-text, var(--gym-color-text));
+  font-size: var(--gym-font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+  text-align: start;
+  align-self: flex-start;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cadastro-toggle-btn:hover {
+  opacity: 0.85;
+}
+
+/* Item Strips (Mock 011 .strip & .srow) */
+.strip {
+  border: 1px solid var(--gym-hairline);
+  border-radius: var(--gym-radius-md);
+  overflow: hidden;
+  background: var(--gym-color-surface-raised);
+}
+
+.srow {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-space-3);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--gym-hairline);
+  transition: background 0.13s ease;
+  font-size: var(--gym-font-size-sm);
+}
+
+.srow:last-child {
+  border-bottom: 0;
+}
+
+.srow:hover {
+  background: color-mix(in oklch, var(--gym-color-surface-raised) 92%, var(--gym-color-text) 5%);
+}
+
+.srow .mk {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--gym-radius-md);
+  background: color-mix(in oklch, var(--gym-color-text) 10%, transparent);
+  display: grid;
+  place-items: center;
+  color: var(--gym-color-text);
+  flex: none;
+}
+
+.srow .tx {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.srow .tx b {
+  font-weight: 600;
+  color: var(--gym-color-text);
+}
+
+.srow .tx span {
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.srow .grow {
+  flex: 1;
+}
+
+.srow .tag {
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text-muted);
+  border: 1px solid var(--gym-hairline);
+  border-radius: var(--gym-radius-pill);
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+
+.srow .tag.gold {
+  color: var(--amber-11);
+  border-color: color-mix(in oklch, var(--amber-11) 40%, transparent);
+}
+
+.srow .tag.ok {
+  color: var(--md-success);
+  border-color: color-mix(in oklch, var(--md-success) 40%, transparent);
+}
+
+.srow .acts {
+  display: flex;
+  gap: var(--gym-space-2);
+  align-items: center;
+}
+
+.srow .acts button {
+  border: 1px solid var(--gym-color-border);
+  background: transparent;
+  color: var(--gym-color-text-muted);
+  font:
+    500 var(--gym-font-size-xs) "Geist",
+    system-ui,
+    sans-serif;
+  padding: 4px 10px;
+  border-radius: var(--gym-radius-sm);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.srow .acts button:hover {
+  background: color-mix(in oklch, var(--gym-color-text) 10%, transparent);
+  color: var(--gym-color-text);
+}
+
+.srow .acts button.del-confirm {
+  color: var(--md-error, #f08c7a);
+  border-color: var(--md-error, #f08c7a);
+}
+
+.emptyrow {
+  padding: 24px;
+  text-align: center;
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+  font-style: italic;
+}
+
+/* 1-Click Inline Add Row and Form */
+.addrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gym-space-2);
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 1px dashed var(--gym-color-border);
+  border-radius: var(--gym-radius-md);
+  color: var(--gym-color-text-muted);
+  font:
+    500 var(--gym-font-size-sm) "Geist",
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.addrow:hover {
+  background: color-mix(in oklch, var(--gym-color-text) 5%, transparent);
+  color: var(--gym-color-text);
+  border-color: var(--gym-color-text);
+}
+
+.inline-addform {
+  border: 1px solid var(--gym-hairline);
+  border-radius: var(--gym-radius-md);
+  padding: clamp(1rem, 2vw, 1.25rem);
+  background: var(--gym-color-surface-raised);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-3);
+  animation: fadeIn 0.18s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropzone-inline {
+  border: 1px dashed var(--gym-color-border);
+  border-radius: var(--gym-radius-sm);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gym-space-2);
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text-muted);
+  background: color-mix(in oklch, var(--gym-color-text) 3%, transparent);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.dropzone-inline:hover {
+  border-color: var(--gym-color-text);
+  color: var(--gym-color-text);
+  background: color-mix(in oklch, var(--gym-color-text) 6%, transparent);
+}
+
+.inline-actions {
+  display: flex;
+  gap: var(--gym-space-2);
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+/* Positive Progress Pill for Requisito Mínimo */
+.minreq-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--gym-font-size-xs);
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: var(--gym-radius-pill);
+  transition: all 0.2s ease;
+}
+
+.minreq-pill--pending {
+  background: color-mix(in oklch, var(--amber-11) 12%, transparent);
+  color: var(--amber-11);
+  border: 1px solid color-mix(in oklch, var(--amber-11) 30%, transparent);
+}
+
+.minreq-pill--satisfied {
+  background: color-mix(in oklch, var(--md-success) 12%, transparent);
+  color: var(--md-success);
+  border: 1px solid color-mix(in oklch, var(--md-success) 30%, transparent);
+}
+
+/* Sticky Action Bar (Desktop standard, Mobile sticky with blur) */
+.sticky-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gym-space-3);
+  padding: var(--gym-space-4) 0;
+  margin-top: var(--gym-space-2);
+  border-top: 1px solid var(--gym-hairline);
+}
+
+.sticky-actions__summary {
+  font-size: var(--gym-font-size-sm);
+  color: var(--gym-color-text-muted);
+}
+
+.sticky-actions__buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-space-3);
+}
+
+@media (max-width: 768px) {
+  .sticky-actions {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    margin: 0 -1rem;
+    padding: var(--gym-space-3) 1rem max(14px, env(safe-area-inset-bottom));
+    background: rgba(14, 13, 11, 0.88);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--gym-hairline);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35);
+  }
+
+  .sticky-actions__buttons .ant-btn {
+    min-height: 44px;
+  }
+}
+
+/* Profile Search Option */
+.profile-select-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 0;
+}
+
+.profile-select-option__name {
+  font-weight: 500;
+  color: var(--gym-color-text);
+}
+
+.profile-select-option__meta {
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text-muted);
+}
+
+.profile-select-option--new {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--ant-color-primary, #ffc53d);
+  font-weight: 500;
+}
+
+.profile-select-option__new-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--gym-radius-pill);
+  background: rgba(255, 197, 61, 0.16);
+  color: var(--ant-color-primary, #ffc53d);
+  font-size: var(--gym-font-size-sm);
+  font-weight: bold;
+}
+
+/* Titular Selected Card */
+.holder-selected-card {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-space-3);
+  padding: clamp(0.75rem, 1.5vw, 1rem) clamp(0.875rem, 2vw, 1.25rem);
+  background: color-mix(in oklch, var(--gym-color-surface-raised) 92%, var(--gym-color-text) 5%);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-md);
+  margin-bottom: var(--gym-space-2);
+}
+
+.holder-selected-card__avatar {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--gym-radius-pill);
+  background: rgba(255, 197, 61, 0.12);
+  color: var(--ant-color-primary, #ffc53d);
+  flex-shrink: 0;
+}
+
+.holder-selected-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.holder-selected-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-space-2);
+  flex-wrap: wrap;
+}
+
+.holder-selected-card__badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--gym-radius-sm);
+  background: rgba(255, 197, 61, 0.16);
+  color: var(--ant-color-primary, #ffc53d);
+}
+
+.holder-selected-card__name {
+  font-size: var(--gym-font-size-md);
+  font-weight: 600;
+  color: var(--gym-color-text);
+}
+
+.holder-selected-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text-muted);
+}
+
+.holder-selected-card__meta-item {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.holder-selected-card__notice {
+  font-size: var(--gym-font-size-xs);
+  color: var(--md-success);
+  font-weight: 500;
+  margin: 0;
+}
+
+.holder-selected-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gym-space-1);
+  flex-shrink: 0;
+}
+
+/* Surface wrapping for external/batch intake modes (Forms, XLSX) */
+.cadastro-work-surface {
+  padding: clamp(1rem, 2vw, 1.5rem);
+  background: var(--md-surface-elevated);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+/* Mass Import Scope Switcher */
+.cadastro-import-flow {
+  display: flex;
+  flex-direction: column;
+}
+
+.cadastro-import-scope {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-2);
+  padding-bottom: var(--gym-space-3);
+  margin-bottom: var(--gym-space-3);
+  border-bottom: 1px solid var(--gym-hairline);
+}
+
+.cadastro-import-scope__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--gym-space-3);
+}
+
+.cadastro-import-scope__label {
+  font-weight: 600;
+  font-size: var(--gym-font-size-sm);
+  color: var(--gym-color-text);
+}
+
+.cadastro-import-scope__notice {
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text-muted);
+  margin: 0;
+}

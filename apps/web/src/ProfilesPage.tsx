@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import * as v from "valibot";
 import { ProfileRecordsPanel } from "./ProfileRecordsPanel";
 import { useI18n } from "./i18n";
+import { DocumentPresenceSection } from "./lib/tables/DocumentPresenceSection";
 import {
   createProfile,
   updateProfile,
@@ -12,7 +13,6 @@ import {
   type ProfileValuesRequest,
   type UserRole,
 } from "./lib/api/client";
-import { DocumentPresenceSection } from "./lib/tables/DocumentPresenceSection";
 
 const emptyValues: ProfileValuesRequest = {
   full_name: "",
@@ -63,6 +63,10 @@ export function normalizeProfileSearch(search: Record<string, unknown>): Profile
     "cpf",
     "email",
     "address_city",
+    "address_street",
+    "address_neighborhood",
+    "mobile_phone",
+    "birth_date",
     "created_at",
     "updated_at",
   ] as const;
@@ -74,6 +78,7 @@ export function normalizeProfileSearch(search: Record<string, unknown>): Profile
     limit: Math.min(1000, Math.max(50, positiveInteger(search.limit, 100))),
     sort,
     order: search.order === "desc" ? "desc" : "asc",
+    q: typeof search.q === "string" ? search.q : "",
     full_name: typeof search.full_name === "string" ? search.full_name : "",
     cpf: typeof search.cpf === "string" ? search.cpf : "",
     email: typeof search.email === "string" ? search.email : "",
@@ -159,6 +164,7 @@ export function ProfilePanel(props: {
   search: ProfileListSearch;
   role: UserRole;
   hideSections?: boolean;
+  embedded?: boolean | undefined;
   recordLinks?: boolean;
   loading?: boolean;
   onSearch: (patch: Partial<ProfileListSearch>) => void;
@@ -257,16 +263,21 @@ export function ProfilePanel(props: {
     props.mode !== "create" &&
     !props.hideSections;
   return (
-    <aside aria-label="Detalhes da pessoa" className="profile-panel">
-      <div className="profile-panel__header">
-        <div>
-          <span className="profile-panel__eyebrow">
-            {props.mode === "create" ? copy.newPerson : copy.eyebrow}
-          </span>
-          <h2>{props.profile?.full_name || copy.register}</h2>
+    <aside
+      aria-label="Detalhes da pessoa"
+      className={props.embedded ? "profile-panel profile-panel--embedded" : "profile-panel"}
+    >
+      {props.embedded ? null : (
+        <div className="profile-panel__header">
+          <div>
+            <span className="profile-panel__eyebrow">
+              {props.mode === "create" ? copy.newPerson : copy.eyebrow}
+            </span>
+            <h2>{props.profile?.full_name || copy.register}</h2>
+          </div>
+          <Button onClick={props.onClose}>{copy.close}</Button>
         </div>
-        <Button onClick={props.onClose}>{copy.close}</Button>
-      </div>
+      )}
       <div className="profile-panel__body">
         {props.profile && props.mode !== "create" && !props.hideSections ? (
           <nav aria-label="Seções da pessoa" className="profile-sections">
@@ -486,7 +497,7 @@ export function ProfilePanel(props: {
   );
 }
 
-function ProfileReadoutSkeleton() {
+export function ProfileReadoutSkeleton() {
   const bar = (width: string, height: string) => (
     <Skeleton.Input active size="small" style={{ width, height, minWidth: 0 }} />
   );
@@ -516,7 +527,7 @@ function ProfileReadoutSkeleton() {
   );
 }
 
-function ProfileReadout({
+export function ProfileReadout({
   profile,
   empty,
   fields,
@@ -610,10 +621,10 @@ function ProfileReadout({
           {section(
             sections.contact,
             <>
-              {item(fields.email, profile.email, { wide: true })}
+              {item(fields.email, profile.email)}
               {item(fields.mobile, profile.mobile_phone)}
               {item(fields.landline, profile.landline_phone)}
-              {item(fields.street, profile.address.street, { wide: true })}
+              {item(fields.street, profile.address.street)}
               {item(fields.number, profile.address.number)}
               {item(fields.complement, profile.address.complement)}
               {item(fields.neighborhood, profile.address.neighborhood)}
@@ -675,14 +686,9 @@ function ProfileReadout({
                 <>{customValues.map(([key, value]) => item(humanizeKey(key), value, { key }))}</>,
               )
             : null}
-          {section(
-            sections.notes,
-            <>
-              {item(fields.notes, profile.notes, { wide: true })}
-              {item(sections.createdAt, profile.created_at, { wide: true })}
-              {item(sections.updatedAt, profile.updated_at, { wide: true })}
-            </>,
-          )}
+          {String(profile.notes ?? "").trim()
+            ? section(sections.notes, <>{item(fields.notes, profile.notes, { wide: true })}</>)
+            : null}
         </div>
       ) : null}
     </div>

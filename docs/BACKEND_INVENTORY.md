@@ -226,7 +226,7 @@ The rebuild is **ahead of legacy** on Query Engine (typed plans, no client SQL),
 
 **Legacy:** **CSV import**, XLSX **export**. Promote into Profile/Document/Bill.
 
-**Orchestration §16.2:** bulk import (XLSX and `/forms`) must apply a versioned Database-owned catalog of column aliases and value maps automatically, using Core for fold/identifier canonicalization. Unknown headers/values and create/update/duplicate remain human decisions. Automatic mapping is not automatic merge.
+**Orchestration §16.2:** bulk import (XLSX and Google Forms in Cadastro) must apply a versioned Database-owned catalog of column aliases and value maps automatically, using Core for fold/identifier canonicalization. Unknown headers/values and create/update/duplicate remain human decisions. Automatic mapping is not automatic merge.
 
 **Still to do**
 
@@ -271,7 +271,7 @@ The rebuild is **ahead of legacy** on Query Engine (typed plans, no client SQL),
 
 ## 16. OCR
 
-**Rebuild: Partial** — job/review/apply matches Orchestration; model path is fake-only.
+**Rebuild: Partial** — job/review/apply matches Orchestration; extractor consumes Gymkhana-Core `ocr` (`schema_guided`); model path is fake-only.
 
 **Orchestration §19:** suggestions + human review. Use a model only when adequate. Optional Gemini-only flag requires the shared Administração model key.
 

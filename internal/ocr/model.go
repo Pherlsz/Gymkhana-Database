@@ -20,6 +20,8 @@ const (
 	MaximumPages                   = 20
 	MaximumPixels            int64 = 40_000_000
 	MaximumProviderUsage     int64 = 100_000_000
+	MaximumConfidence              = 10_000
+	MaximumRegionCoord             = 1_000_000
 	MaximumEventPage               = 200
 	MaximumJobPage                 = 100
 	MaximumAttempts                = 3
@@ -220,7 +222,9 @@ type Region struct {
 
 func (region Region) Valid() bool {
 	return region.X >= 0 && region.Y >= 0 && region.Width > 0 && region.Height > 0 &&
-		region.X+region.Width <= 10_000 && region.Y+region.Height <= 10_000
+		region.X <= MaximumRegionCoord && region.Y <= MaximumRegionCoord &&
+		region.Width <= MaximumRegionCoord && region.Height <= MaximumRegionCoord &&
+		region.X+region.Width <= MaximumRegionCoord && region.Y+region.Height <= MaximumRegionCoord
 }
 
 type Evidence struct {

@@ -441,18 +441,28 @@ func (e IdleCustody) Valid() bool {
 
 // Defines values for ProfileSortField.
 const (
-	ProfileSortFieldAddressCity ProfileSortField = "address_city"
-	ProfileSortFieldCpf         ProfileSortField = "cpf"
-	ProfileSortFieldCreatedAt   ProfileSortField = "created_at"
-	ProfileSortFieldEmail       ProfileSortField = "email"
-	ProfileSortFieldFullName    ProfileSortField = "full_name"
-	ProfileSortFieldUpdatedAt   ProfileSortField = "updated_at"
+	ProfileSortFieldAddressCity         ProfileSortField = "address_city"
+	ProfileSortFieldAddressNeighborhood ProfileSortField = "address_neighborhood"
+	ProfileSortFieldAddressStreet       ProfileSortField = "address_street"
+	ProfileSortFieldBirthDate           ProfileSortField = "birth_date"
+	ProfileSortFieldCpf                 ProfileSortField = "cpf"
+	ProfileSortFieldCreatedAt           ProfileSortField = "created_at"
+	ProfileSortFieldEmail               ProfileSortField = "email"
+	ProfileSortFieldFullName            ProfileSortField = "full_name"
+	ProfileSortFieldMobilePhone         ProfileSortField = "mobile_phone"
+	ProfileSortFieldUpdatedAt           ProfileSortField = "updated_at"
 )
 
 // Valid indicates whether the value is a known member of the ProfileSortField enum.
 func (e ProfileSortField) Valid() bool {
 	switch e {
 	case ProfileSortFieldAddressCity:
+		return true
+	case ProfileSortFieldAddressNeighborhood:
+		return true
+	case ProfileSortFieldAddressStreet:
+		return true
+	case ProfileSortFieldBirthDate:
 		return true
 	case ProfileSortFieldCpf:
 		return true
@@ -461,6 +471,8 @@ func (e ProfileSortField) Valid() bool {
 	case ProfileSortFieldEmail:
 		return true
 	case ProfileSortFieldFullName:
+		return true
+	case ProfileSortFieldMobilePhone:
 		return true
 	case ProfileSortFieldUpdatedAt:
 		return true
@@ -922,6 +934,11 @@ type DeleteDocumentResourceRequest struct {
 type DeleteProfileRequest struct {
 	Confirmation string `json:"confirmation"`
 	Version      int64  `json:"version"`
+}
+
+// DistinctCitiesResponse defines model for DistinctCitiesResponse.
+type DistinctCitiesResponse struct {
+	Values []string `json:"values"`
 }
 
 // Document defines model for Document.
@@ -1476,12 +1493,15 @@ type ListBillTypesParams struct {
 
 // ListBillsParams defines parameters for ListBills.
 type ListBillsParams struct {
-	Limit           *int32              `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset          *int32              `form:"offset,omitempty" json:"offset,omitempty"`
-	Sort            *BillSortField      `form:"sort,omitempty" json:"sort,omitempty"`
-	Order           *SortOrder          `form:"order,omitempty" json:"order,omitempty"`
-	OwnerProfileId  *openapi_types.UUID `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
-	BillTypeId      *openapi_types.UUID `form:"bill_type_id,omitempty" json:"bill_type_id,omitempty"`
+	Limit          *int32              `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset         *int32              `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort           *BillSortField      `form:"sort,omitempty" json:"sort,omitempty"`
+	Order          *SortOrder          `form:"order,omitempty" json:"order,omitempty"`
+	OwnerProfileId *openapi_types.UUID `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
+	BillTypeId     *openapi_types.UUID `form:"bill_type_id,omitempty" json:"bill_type_id,omitempty"`
+
+	// Q Search query language applied as a row recorte of bills.
+	Q               *string             `form:"q,omitempty" json:"q,omitempty"`
 	Reference       *string             `form:"reference,omitempty" json:"reference,omitempty"`
 	Competence      *string             `form:"competence,omitempty" json:"competence,omitempty"`
 	Medium          *BillMedium         `form:"medium,omitempty" json:"medium,omitempty"`
@@ -1537,12 +1557,15 @@ type ListDocumentTypesParams struct {
 
 // ListDocumentsParams defines parameters for ListDocuments.
 type ListDocumentsParams struct {
-	Limit           *int32              `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset          *int32              `form:"offset,omitempty" json:"offset,omitempty"`
-	Sort            *DocumentSortField  `form:"sort,omitempty" json:"sort,omitempty"`
-	Order           *SortOrder          `form:"order,omitempty" json:"order,omitempty"`
-	OwnerProfileId  *openapi_types.UUID `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
-	DocumentTypeId  *openapi_types.UUID `form:"document_type_id,omitempty" json:"document_type_id,omitempty"`
+	Limit          *int32              `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset         *int32              `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort           *DocumentSortField  `form:"sort,omitempty" json:"sort,omitempty"`
+	Order          *SortOrder          `form:"order,omitempty" json:"order,omitempty"`
+	OwnerProfileId *openapi_types.UUID `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
+	DocumentTypeId *openapi_types.UUID `form:"document_type_id,omitempty" json:"document_type_id,omitempty"`
+
+	// Q Search query language applied as a row recorte of documents.
+	Q               *string             `form:"q,omitempty" json:"q,omitempty"`
 	Identifier      *string             `form:"identifier,omitempty" json:"identifier,omitempty"`
 	Medium          *DocumentMedium     `form:"medium,omitempty" json:"medium,omitempty"`
 	Status          *DocumentStatus     `form:"status,omitempty" json:"status,omitempty"`
@@ -1551,15 +1574,27 @@ type ListDocumentsParams struct {
 
 // ListProfilesParams defines parameters for ListProfiles.
 type ListProfilesParams struct {
-	Limit    *int32            `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset   *int32            `form:"offset,omitempty" json:"offset,omitempty"`
-	Sort     *ProfileSortField `form:"sort,omitempty" json:"sort,omitempty"`
-	Order    *SortOrder        `form:"order,omitempty" json:"order,omitempty"`
-	FullName *string           `form:"full_name,omitempty" json:"full_name,omitempty"`
-	Cpf      *string           `form:"cpf,omitempty" json:"cpf,omitempty"`
-	Email    *string           `form:"email,omitempty" json:"email,omitempty"`
-	City     *string           `form:"city,omitempty" json:"city,omitempty"`
-	State    *string           `form:"state,omitempty" json:"state,omitempty"`
+	Limit  *int32            `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int32            `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort   *ProfileSortField `form:"sort,omitempty" json:"sort,omitempty"`
+	Order  *SortOrder        `form:"order,omitempty" json:"order,omitempty"`
+
+	// Q Search query language applied as a row recorte of this module.
+	Q        *string `form:"q,omitempty" json:"q,omitempty"`
+	FullName *string `form:"full_name,omitempty" json:"full_name,omitempty"`
+	Cpf      *string `form:"cpf,omitempty" json:"cpf,omitempty"`
+	Email    *string `form:"email,omitempty" json:"email,omitempty"`
+	City     *string `form:"city,omitempty" json:"city,omitempty"`
+	State    *string `form:"state,omitempty" json:"state,omitempty"`
+}
+
+// ListDistinctCitiesParams defines parameters for ListDistinctCities.
+type ListDistinctCitiesParams struct {
+	FullName *string `form:"full_name,omitempty" json:"full_name,omitempty"`
+	Cpf      *string `form:"cpf,omitempty" json:"cpf,omitempty"`
+	Email    *string `form:"email,omitempty" json:"email,omitempty"`
+	State    *string `form:"state,omitempty" json:"state,omitempty"`
+	Limit    *int32  `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // CompleteGitHubLoginParams defines parameters for CompleteGitHubLogin.
@@ -1828,6 +1863,9 @@ type ServerInterface interface {
 	// Create a physical-person profile
 	// (POST /api/v1/profiles)
 	CreateProfile(w http.ResponseWriter, r *http.Request)
+	// List distinct cities across profiles matching the given filters
+	// (GET /api/v1/profiles/cities)
+	ListDistinctCities(w http.ResponseWriter, r *http.Request, params ListDistinctCitiesParams)
 	// Permanently delete a profile with explicit confirmation
 	// (DELETE /api/v1/profiles/{profile_id})
 	DeleteProfile(w http.ResponseWriter, r *http.Request, profileId openapi_types.UUID)
@@ -2296,6 +2334,19 @@ func (siw *ServerInterfaceWrapper) ListBills(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "bill_type_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bill_type_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
 		}
 		return
 	}
@@ -3809,6 +3860,19 @@ func (siw *ServerInterfaceWrapper) ListDocuments(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "identifier" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "identifier", r.URL.Query(), &params.Identifier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -4151,6 +4215,19 @@ func (siw *ServerInterfaceWrapper) ListProfiles(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "full_name" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "full_name", r.URL.Query(), &params.FullName, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -4238,6 +4315,97 @@ func (siw *ServerInterfaceWrapper) CreateProfile(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDistinctCities operation middleware
+func (siw *ServerInterfaceWrapper) ListDistinctCities(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDistinctCitiesParams
+
+	// ------------- Optional query parameter "full_name" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "full_name", r.URL.Query(), &params.FullName, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "full_name"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "full_name", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cpf" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cpf", r.URL.Query(), &params.Cpf, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cpf"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cpf", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "email" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "email", r.URL.Query(), &params.Email, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "email"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "email", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDistinctCities(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4637,6 +4805,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/documents/{document_id}/duplicate", wrapper.DuplicateDocument)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/profiles", wrapper.ListProfiles)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/profiles", wrapper.CreateProfile)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/profiles/cities", wrapper.ListDistinctCities)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/profiles/{profile_id}", wrapper.DeleteProfile)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/profiles/{profile_id}", wrapper.GetProfile)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/profiles/{profile_id}", wrapper.UpdateProfile)
@@ -10374,6 +10543,84 @@ func (response CreateProfile503JSONResponse) VisitCreateProfileResponse(w http.R
 	return err
 }
 
+type ListDistinctCitiesRequestObject struct {
+	Params ListDistinctCitiesParams
+}
+
+type ListDistinctCitiesResponseObject interface {
+	VisitListDistinctCitiesResponse(w http.ResponseWriter) error
+}
+
+type ListDistinctCities200JSONResponse DistinctCitiesResponse
+
+func (response ListDistinctCities200JSONResponse) VisitListDistinctCitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDistinctCities400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListDistinctCities400JSONResponse) VisitListDistinctCitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDistinctCities401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListDistinctCities401JSONResponse) VisitListDistinctCitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDistinctCities403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListDistinctCities403JSONResponse) VisitListDistinctCitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDistinctCities503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListDistinctCities503JSONResponse) VisitListDistinctCitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteProfileRequestObject struct {
 	ProfileId openapi_types.UUID `json:"profile_id"`
 	Body      *DeleteProfileJSONRequestBody
@@ -11101,6 +11348,9 @@ type StrictServerInterface interface {
 	// Create a physical-person profile
 	// (POST /api/v1/profiles)
 	CreateProfile(ctx context.Context, request CreateProfileRequestObject) (CreateProfileResponseObject, error)
+	// List distinct cities across profiles matching the given filters
+	// (GET /api/v1/profiles/cities)
+	ListDistinctCities(ctx context.Context, request ListDistinctCitiesRequestObject) (ListDistinctCitiesResponseObject, error)
 	// Permanently delete a profile with explicit confirmation
 	// (DELETE /api/v1/profiles/{profile_id})
 	DeleteProfile(ctx context.Context, request DeleteProfileRequestObject) (DeleteProfileResponseObject, error)
@@ -12745,6 +12995,32 @@ func (sh *strictHandler) CreateProfile(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateProfileResponseObject); ok {
 		if err := validResponse.VisitCreateProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListDistinctCities operation middleware
+func (sh *strictHandler) ListDistinctCities(w http.ResponseWriter, r *http.Request, params ListDistinctCitiesParams) {
+	var request ListDistinctCitiesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDistinctCities(ctx, request.(ListDistinctCitiesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDistinctCities")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDistinctCitiesResponseObject); ok {
+		if err := validResponse.VisitListDistinctCitiesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

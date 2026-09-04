@@ -285,10 +285,10 @@ components:
       additionalProperties: false
       required: [x, y, width, height]
       properties:
-        x: { type: integer, minimum: 0, maximum: 9999 }
-        y: { type: integer, minimum: 0, maximum: 9999 }
-        width: { type: integer, minimum: 1, maximum: 10000 }
-        height: { type: integer, minimum: 1, maximum: 10000 }
+        x: { type: integer, minimum: 0, maximum: 1000000 }
+        y: { type: integer, minimum: 0, maximum: 1000000 }
+        width: { type: integer, minimum: 1, maximum: 1000000 }
+        height: { type: integer, minimum: 1, maximum: 1000000 }
     OCREvidence:
       type: object
       additionalProperties: false
@@ -297,7 +297,7 @@ components:
         page: { type: integer, minimum: 1, maximum: 20 }
         region: { $ref: "#/components/schemas/OCREvidenceRegion" }
         excerpt: { type: string, minLength: 1, maxLength: 500 }
-        confidence: { type: integer, minimum: 0, maximum: 1000 }
+        confidence: { type: integer, minimum: 0, maximum: 10000 }
     OCRSuggestion:
       type: object
       additionalProperties: false

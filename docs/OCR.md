@@ -12,7 +12,7 @@ Production activation requires an owner decision and reviewed implementation for
 
 1. select the provider, API, exact model, region, retention policy, and contractual privacy terms;
 2. confirm which private attachment classes may be transmitted outside the application boundary;
-3. implement a narrow adapter for the existing `Extractor` port using the fixed provider-neutral schema;
+3. implement a narrow adapter for the existing `Extractor` port using Gymkhana-Core `ocr` (`schema_guided` request/result; host still supplies authorized bytes);
 4. add credentials through lokeys locally or the deployment secret manager, never the repository or database;
 5. document provider deletion/incident procedures and validate them with the privacy owner;
 6. complete security, quota, timeout, malformed-output, cancellation, and staging smoke tests before enabling the switch.
@@ -58,9 +58,9 @@ The worker then enforces:
 - exact byte count and SHA-256, with at most 20 MiB;
 - unencrypted, structurally bounded PDF input with 1 through 20 pages;
 - decodable JPEG/PNG input with at most 40,000,000 pixels;
-- a second current-user, attachment, owner, and catalog authorization check immediately before provider execution;
-- a fixed field catalog containing logical keys, labels, required flags, and value kinds only;
-- at most 100 unique suggestions, closed field keys, typed normalized values, bounded evidence, and provider usage through 100,000,000.
+- a second current-user, attachment, owner, and catalog authorization check immediately before provider execution.
+
+The extractor sees a Gymkhana-Core `ExtractionRequest` (mode, source id/modality/media type, target schema, max candidates) and must return a Core `ExtractionResult`. Attachment bytes never enter the Core request object. Core validation failures become `ocr_malformed_provider` without embedding source text. After a valid result, Database keeps at most 100 unique suggestions, closed field keys, typed normalized values, bounded evidence (confidence `0..10000`, regions in millionths), and provider usage through 100,000,000.
 
 Attachment text, evidence, labels, and recognized values are untrusted data. Instruction-like content grants no permission, cannot expand the field catalog, and is rendered as text. Provider output cannot select a target, physical table/column, SQL, URL, tool, or mutation.
 

@@ -39,16 +39,6 @@
   gap: 0.5rem;
 }
 
-.state-block {
-  width: 100%;
-}
-
-.state-block--empty {
-  display: grid;
-  place-items: center;
-  padding: var(--gym-space-6) var(--gym-space-4);
-}
-
 .segmented-tabs.ant-segmented {
   max-width: 100%;
   overflow-x: auto;
@@ -71,4 +61,146 @@
   max-width: 24rem;
   color: var(--md-on-surface-variant);
   font-size: var(--gym-font-size-sm);
+}
+
+/* ==========================================================================
+   StateCard: Standardized Loading, Empty, Warning, and Error Screens
+   ========================================================================== */
+.state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  padding: clamp(3rem, 5vw, 4.5rem) 1.5rem;
+  background: radial-gradient(
+      120% 120% at 50% 0%,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0.005) 100%
+    ),
+    var(--gym-color-surface-raised, #1c1917);
+  border: 1px solid var(--gym-color-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--gym-radius-lg, 12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+}
+
+.state-card--compact {
+  padding: 2rem 1.25rem;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* Badge Circle with Glowing Halo */
+.state-card__badge {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  margin-bottom: 1.25rem;
+  flex: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.state-card--compact .state-card__badge {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 0.875rem;
+}
+
+/* Variant Accents */
+.state-card__badge--loading {
+  background: rgba(255, 197, 61, 0.12);
+  border: 1px solid rgba(255, 197, 61, 0.3);
+  color: var(--ant-color-primary, #ffc53d);
+  box-shadow: 0 0 28px rgba(255, 197, 61, 0.18);
+}
+
+.state-card__badge--loading .state-card__spinner {
+  color: var(--ant-color-primary, #ffc53d);
+}
+
+.state-card__badge--empty {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--gym-color-text-muted, #a8a29e);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.04);
+}
+
+.state-card__badge--warning {
+  background: rgba(255, 197, 61, 0.12);
+  border: 1px solid rgba(255, 197, 61, 0.3);
+  color: var(--ant-color-primary, #ffc53d);
+  box-shadow: 0 0 28px rgba(255, 197, 61, 0.18);
+}
+
+.state-card__badge--error {
+  background: rgba(240, 140, 122, 0.12);
+  border: 1px solid rgba(240, 140, 122, 0.35);
+  color: var(--md-error, #f08c7a);
+  box-shadow: 0 0 28px rgba(240, 140, 122, 0.18);
+}
+
+/* Typography */
+.state-card__title {
+  font-size: var(--gym-font-size-lg, 1.125rem);
+  font-weight: 600;
+  color: var(--gym-color-text, #fafaf9);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.state-card--compact .state-card__title {
+  font-size: var(--gym-font-size-base, 1rem);
+}
+
+.state-card__desc {
+  font-size: var(--gym-font-size-sm, 0.875rem);
+  color: var(--gym-color-text-muted, #a8a29e);
+  max-width: 480px;
+  line-height: 1.55;
+  margin: 0.5rem 0 0 0;
+}
+
+.state-card--compact .state-card__desc {
+  font-size: var(--gym-font-size-xs, 0.8125rem);
+  max-width: 360px;
+}
+
+/* Actions Slot */
+.state-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.state-card--compact .state-card__actions {
+  margin-top: 1rem;
+}
+
+/* ==========================================================================
+   InlineStatus: Lightweight loading / empty for panels and list sections
+   ========================================================================== */
+.inline-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: var(--gym-font-size-sm, 0.875rem);
+  color: var(--gym-color-text-muted, #a8a29e);
+  padding: 0.75rem 0;
+}
+
+.inline-status--loading {
+  font-style: italic;
+}
+
+.inline-status--empty {
+  font-style: normal;
 }

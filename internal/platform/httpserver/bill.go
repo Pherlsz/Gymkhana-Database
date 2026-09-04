@@ -9,6 +9,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/bill"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
+	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -132,7 +133,7 @@ type billPageResponse struct {
 	Page  billPageMeta   `json:"page"`
 }
 
-func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service billService, pool *pgxpool.Pool) {
+func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service billService, search searchService, pool *pgxpool.Pool) {
 	mux.HandleFunc("GET /api/v1/bill-types", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
@@ -256,6 +257,13 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			writeProblem(w, r, *problem)
 			return
 		}
+		restrict, ids, searchProblem := applySearchQ(r, actor, search, searchdomain.ModuleBills)
+		if searchProblem != nil {
+			writeProblem(w, r, *searchProblem)
+			return
+		}
+		options.Filters.RestrictIDs = restrict
+		options.Filters.IDFilter = billIDsFromSearch(ids)
 		page, err := service.List(r.Context(), actor, options)
 		if err != nil {
 			writeBillError(w, r, logger, "list bills", err)

@@ -35,15 +35,11 @@ Custom React markup and CSS remain appropriate for:
 - application-specific composition around Ant Design controls;
 - behavior that Ant Design does not provide and that has a demonstrated product requirement.
 
-## Column funnel
-
-Orchestration §12.1.1: the column header menu is a spreadsheet-style funnel (sort A→Z / Z→A, filter by condition, filter by values with search and checkboxes). Copy lives in the i18n catalog (`pt-BR`). Do not add sort/filter-by-color, spreadsheet data-validation filters, or a user formula inside the funnel. Distinct values come from the server recorte, not only the rendered page.
-
 ## File-based routing
 
 TanStack Router file-based routing is the frontend routing standard. Route declarations live under `apps/web/src/routes/`; `App.tsx` owns application bootstrap and authentication gating, not route registration.
 
-Approved SPA destinations (Orchestration §12.0): `/`, `/tables/people`, `/tables/documents`, `/tables/bills`, `/search`, `/admin`, `/settings`, `/forms`. `/tables` without a type redirects to `/tables/people`. `/profiles` may redirect for compatibility; it is not a destination.
+Approved SPA destinations: `/`, `/tables/people`, `/tables/documents`, `/tables/bills`, `/search`, `/admin`, `/settings`, `/cadastro`. `/tables` without a type redirects to `/tables/people`. `/profiles` may redirect for compatibility; it is not a destination. `/forms` redirects to `/cadastro?mode=forms` (Google Forms is a Cadastro submodule, not a nav destination).
 
 Do not add `/chat`, `/query`, `/tasks`, `/ocr`, `/operations`, `/matching`, `/custom-data`, or `/google-forms` as destinations.
 

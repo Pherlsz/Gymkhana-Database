@@ -3,7 +3,6 @@ package ocr
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +11,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/Pherlsz/Gymkhana-Core/fingerprint"
+	coreocr "github.com/Pherlsz/Gymkhana-Core/ocr"
 	"github.com/Pherlsz/Gymkhana-Database/internal/attachment"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 )
@@ -630,20 +631,24 @@ func (service *Service) RunJob(ctx context.Context, id Identifier) (resultErr er
 		currentSource.ByteSize != job.SourceBytes || currentSource.Owner != source.Owner {
 		return ErrUnsafeSource
 	}
-	providerFields := make([]ProviderField, 0, len(catalog.Fields))
-	for _, field := range catalog.Fields {
-		providerFields = append(providerFields, ProviderField{Key: field.Key, Label: field.Label, Kind: field.Kind, Required: field.Required})
+	coreRequest, err := coreExtractionRequest(job.AttachmentID, source.DetectedMIME, catalog)
+	if err != nil {
+		return err
+	}
+	if err := coreocr.ValidateExtractionRequest(coreRequest); err != nil {
+		return ErrInvalidSetup
 	}
 	providerStarted = true
-	response, err := service.extractor.Extract(runCtx, ExtractionRequest{
-		SchemaVersion: SchemaVersion, MIME: source.DetectedMIME, ByteSize: source.ByteSize, SHA256: source.SHA256,
-		PageCount: validated.PageCount, PixelCount: validated.PixelCount, Fields: providerFields, Source: bytes.NewReader(validated.Bytes),
+	output, err := service.extractor.Extract(runCtx, ExtractionInput{
+		Request: coreRequest,
+		Fields:  catalog.Fields,
+		Source:  bytes.NewReader(validated.Bytes),
 	})
 	validated.Bytes = nil
 	if err != nil {
 		return providerError(runCtx, err)
 	}
-	if response.Usage < 0 || response.Usage > MaximumProviderUsage {
+	if output.Usage < 0 || output.Usage > MaximumProviderUsage {
 		return ErrMalformedProvider
 	}
 	// A successful provider response has already consumed billable capacity. Use a
@@ -651,7 +656,7 @@ func (service *Service) RunJob(ctx context.Context, id Identifier) (resultErr er
 	// durable usage accounting. The cancellation is honored immediately below.
 	accountingCtx, accountingCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	accountedJob, exceeded, err := service.store.AddProviderUsage(
-		accountingCtx, id, user.ID, response.Usage, service.maximumProviderUsage, service.now().UTC(),
+		accountingCtx, id, user.ID, output.Usage, service.maximumProviderUsage, service.now().UTC(),
 	)
 	accountingCancel()
 	if err != nil {
@@ -666,7 +671,7 @@ func (service *Service) RunJob(ctx context.Context, id Identifier) (resultErr er
 	if exceeded {
 		return ErrQuotaExceeded
 	}
-	suggestions, err := normalizeProviderSuggestions(response, catalog, validated.PageCount)
+	suggestions, err := suggestionsFromCore(coreRequest, output, catalog, validated.PageCount)
 	if err != nil {
 		return err
 	}
@@ -726,7 +731,7 @@ func jobFingerprint(owner auth.Identifier, source attachment.Attachment, catalog
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return sha256.Sum256(encoded), nil
+	return [32]byte(fingerprint.Sum(encoded)), nil
 }
 
 func applyFingerprint(jobID Identifier, selections []ApplySelection) ([]ApplySelection, [32]byte, error) {
@@ -747,7 +752,7 @@ func applyFingerprint(jobID Identifier, selections []ApplySelection) ([]ApplySel
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
-	return normalized, sha256.Sum256(encoded), nil
+	return normalized, [32]byte(fingerprint.Sum(encoded)), nil
 }
 
 func catalogFields(catalog Catalog) map[string]FieldSchema {

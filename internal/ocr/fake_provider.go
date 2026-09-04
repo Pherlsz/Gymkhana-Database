@@ -2,19 +2,22 @@ package ocr
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
+
+	coreocr "github.com/Pherlsz/Gymkhana-Core/ocr"
 )
 
 type FakeExtractionStep struct {
-	Response ExtractionResponse
-	Err      error
+	Output ExtractionOutput
+	Err    error
 }
 
 type FakeExtractor struct {
 	mu       sync.Mutex
 	steps    []FakeExtractionStep
-	requests []ExtractionRequest
+	requests []coreocr.ExtractionRequest
 }
 
 func NewFakeExtractor(steps ...FakeExtractionStep) *FakeExtractor {
@@ -25,41 +28,107 @@ func NewDeterministicFakeExtractor() *FakeExtractor {
 	return &FakeExtractor{}
 }
 
-func (extractor *FakeExtractor) Extract(ctx context.Context, request ExtractionRequest) (ExtractionResponse, error) {
+func (extractor *FakeExtractor) Extract(ctx context.Context, input ExtractionInput) (ExtractionOutput, error) {
 	if err := ctx.Err(); err != nil {
-		return ExtractionResponse{}, err
+		return ExtractionOutput{}, err
 	}
 	extractor.mu.Lock()
 	defer extractor.mu.Unlock()
-	request.Source = nil
-	extractor.requests = append(extractor.requests, request)
+	extractor.requests = append(extractor.requests, input.Request)
 	if len(extractor.steps) > 0 {
 		step := extractor.steps[0]
 		extractor.steps = extractor.steps[1:]
-		return step.Response, step.Err
+		return step.Output, step.Err
 	}
-	if len(request.Fields) == 0 {
-		return ExtractionResponse{}, nil
+	result, err := deterministicCoreResult(input)
+	if err != nil {
+		return ExtractionOutput{}, err
 	}
-	field := request.Fields[0]
-	value := fakeValue(field.Kind)
-	if value == "" {
-		return ExtractionResponse{}, errors.New("fake OCR extractor has no value for field kind")
+	return ExtractionOutput{Result: result, Usage: 1}, nil
+}
+
+func (extractor *FakeExtractor) Requests() []coreocr.ExtractionRequest {
+	extractor.mu.Lock()
+	defer extractor.mu.Unlock()
+	return append([]coreocr.ExtractionRequest(nil), extractor.requests...)
+}
+
+func deterministicCoreResult(input ExtractionInput) (coreocr.ExtractionResult, error) {
+	if len(input.Request.Sources) == 0 {
+		return coreocr.ExtractionResult{}, errors.New("fake OCR extractor requires a Core source")
 	}
-	confidence := 900
-	return ExtractionResponse{
-		Suggestions: []ProviderSuggestion{{
-			FieldKey: field.Key, Value: value,
-			Evidence: Evidence{Page: 1, Excerpt: "Evidência sintética", Confidence: &confidence},
+	if len(input.Fields) == 0 {
+		return coreocr.ExtractionResult{
+			Mode:           coreocr.ModeSchemaGuided,
+			StructuredData: json.RawMessage(`{}`),
+			Validation:     coreocr.ValidationValid,
+			Review:         coreocr.ReviewUnreviewed,
+		}, nil
+	}
+	structured := make(map[string]any, len(input.Fields))
+	for _, field := range input.Fields {
+		value, err := fakeJSONValue(field.Kind)
+		if err != nil {
+			return coreocr.ExtractionResult{}, err
+		}
+		structured[field.Key] = value
+	}
+	encoded, err := json.Marshal(structured)
+	if err != nil {
+		return coreocr.ExtractionResult{}, err
+	}
+	field := input.Fields[0]
+	value, err := fakeJSONValue(field.Kind)
+	if err != nil {
+		return coreocr.ExtractionResult{}, err
+	}
+	rawValue, err := json.Marshal(value)
+	if err != nil {
+		return coreocr.ExtractionResult{}, err
+	}
+	confidence := coreocr.Confidence(9000)
+	source := input.Request.Sources[0]
+	evidence := coreocr.EvidenceRef{SourceID: source.ID}
+	if source.Modality == coreocr.SourceDocument {
+		evidence.Page = 1
+	}
+	return coreocr.ExtractionResult{
+		Mode: coreocr.ModeSchemaGuided,
+		Observations: []coreocr.Observation{{
+			ID:         "obs-1",
+			Evidence:   []coreocr.EvidenceRef{evidence},
+			RawText:    "Evidência sintética",
+			Confidence: &confidence,
 		}},
-		Usage: 1,
+		Candidates: []coreocr.FieldCandidate{{
+			Path:           fieldPointer(field.Key),
+			State:          coreocr.ValuePresent,
+			Value:          rawValue,
+			ObservationIDs: []string{"obs-1"},
+			Basis:          coreocr.BasisObserved,
+			Confidence:     &confidence,
+			Validation:     coreocr.ValidationValid,
+			Review:         coreocr.ReviewUnreviewed,
+		}},
+		StructuredData: encoded,
+		Validation:     coreocr.ValidationValid,
+		Review:         coreocr.ReviewUnreviewed,
 	}, nil
 }
 
-func (extractor *FakeExtractor) Requests() []ExtractionRequest {
-	extractor.mu.Lock()
-	defer extractor.mu.Unlock()
-	return append([]ExtractionRequest(nil), extractor.requests...)
+func fakeJSONValue(kind ValueKind) (any, error) {
+	value := fakeValue(kind)
+	if value == "" {
+		return nil, errors.New("fake OCR extractor has no value for field kind")
+	}
+	switch kind {
+	case ValueInteger:
+		return 1, nil
+	case ValueBoolean:
+		return true, nil
+	default:
+		return value, nil
+	}
 }
 
 func fakeValue(kind ValueKind) string {

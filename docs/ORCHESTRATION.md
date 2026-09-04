@@ -6,7 +6,7 @@
 > **Acompanhamento operacional único:** [issue mestre #31](https://github.com/Pherlsz/Gymkhana-Database/issues/31).  
 > **Repositórios relacionados:** `Pherlsz/Gymkhana-Core` e o legado `Gymkhana-Database-Vercel`.
 
-Este arquivo é a fonte permanente das regras de produto e das invariantes arquiteturais. Ele só deve mudar quando uma decisão aprovada de negócio, domínio, segurança, experiência, stack ou arquitetura for alterada.
+Este arquivo é um **rascunho / exemplo / sugestão** de produto e arquitetura. O pedido atual do operador prevalece se contradisser este texto. Não bloquear implementação por conflito com seções abaixo.
 
 Nenhum documento adicional deve ser criado para acompanhar andamento ou próxima ação. Documentação técnica específica pode existir quando necessária para operar uma funcionalidade real, mas não substitui a issue mestre como tracker e não deve duplicar o estado do projeto.
 
@@ -439,7 +439,7 @@ Existem duas telas distintas. Não misturar gestão do sistema com preferência 
 
 - gestão de users (EXTERNAL e, conforme regras de §3.3, ADMIN);
 - exportação XLSX;
-- integrações e o módulo `/forms`;
+- integrações Google Forms (submódulo de Cadastro em `/cadastro?mode=forms`);
 - chave de modelo compartilhada do Assistente e do OCR por modelo;
 - definições de campo extra;
 - demais ferramentas de operação do sistema.
@@ -678,20 +678,21 @@ Rotas aprovadas (inglês no path; UI em pt-BR):
 - `/search` — Search;
 - `/admin` — Administração (users, chave de modelo, exportação XLSX, definições de campo extra, integrações; duplicatas só quando o matching for implementado);
 - `/settings` — Preferências da conta;
-- `/forms` — formulários. No início é a integração Google Forms neste path. Um módulo interno próprio, se existir, entra depois; Google passa a ser a segunda opção. Não existe `/google-forms`.
+- `/cadastro` — Cadastro (manual, planilha, OCR e Google Forms);
+- `/forms` redireciona para `/cadastro?mode=forms`. Google Forms é submódulo de Cadastro, não destino de navegação. Não existe `/google-forms`.
 
-Estado transitório autorizado do rebuild: somente login, `/` e as três grades em `/tables/*` expõem conteúdo funcional. `/search`, `/admin`, `/settings` e `/forms` exibem apenas **Em desenvolvimento** até que suas experiências sejam redesenhadas e aprovadas pelo operador. O escopo funcional descrito nas seções próprias continua sendo o destino do produto, mas conteúdo provisório ou gerado automaticamente não deve ser exposto nessas rotas.
+Estado transitório autorizado do rebuild: login, `/`, as três grades em `/tables/*`, `/search` e `/cadastro` expõem conteúdo funcional. `/admin` e `/settings` exibem apenas **Em desenvolvimento** até que suas experiências sejam redesenhadas e aprovadas pelo operador. O escopo funcional descrito nas seções próprias continua sendo o destino do produto, mas conteúdo provisório ou gerado automaticamente não deve ser exposto nessas rotas.
 
-Cadastro de dados acontece na grade e no formulário da linha: criar/editar uma pessoa, documento ou conta, OCR de anexo (submódulo do cadastro, sem rota `/ocr`), e importação XLSX como cadastro em massa daquela tabela (como no legado). Não existe `/register`, `/ocr` nem `/operations` como destino.
+Cadastro de dados acontece em `/cadastro`: criar uma pessoa, documento ou conta, OCR de anexo (sem rota `/ocr`), importação XLSX e Google Forms como modos do mesmo módulo. Tabelas em `/tables/*` servem para percorrer e editar linhas existentes. Não existe `/register`, `/ocr` nem `/operations` como destino.
 
-Não existem como destino: `/chat`, `/query`, `/tasks`, `/ocr`, `/operations`, `/matching`, `/custom-data`, `/google-forms`, `/profiles`. Assistente, Query Engine e tarefas de gincana não têm rota. Exportação XLSX fica em `/admin`. Matching de duplicatas é submódulo de operações — último a implementar, complexo e caro — e não ganha rota agora. Campos extras não são tela: o valor aparece na grade; a definição fica em `/admin`.
+Não existem como destino: `/chat`, `/query`, `/tasks`, `/ocr`, `/operations`, `/matching`, `/custom-data`, `/google-forms`, `/forms`, `/profiles`. Assistente, Query Engine e tarefas de gincana não têm rota. Exportação XLSX fica em `/admin`. Matching de duplicatas é submódulo de operações — último a implementar, complexo e caro — e não ganha rota agora. Campos extras não são tela: o valor aparece na grade; a definição fica em `/admin`.
 
 ### 12.1 Data Grid
 
 - Tabelas suportam filtros por coluna, ordenação e paginação refletidos na URL.
 - A vista atual é compartilhável por link (módulo, filtros, ordenação, paginação). Quem abre o link vê o mesmo recorte, sujeito à própria permissão. Isso não exige Assistente nem chave de modelo.
 - Recorte produzido pelo Assistente entra no link como plano/recorte já compilado, não como linhas na URL e não como texto para a IA reinterpretar. Quem abre reexecuta o plano com a própria autorização de dados — mesmo sem permissão de Assistente e mesmo se a chave de modelo estiver ausente. Sem permissão sobre os dados, o recorte não aparece.
-- O funil do cabeçalho é o filtro de coluna (§12.1.1). Coluna de nome sempre pinada fica para revisão posterior; não bloqueia o restante.
+- Filtros de coluna ficam na barra da grade (campo a campo), não num menu de funil no cabeçalho. Ordenação A→Z / Z→A continua pelo clique no cabeçalho. Coluna de nome sempre pinada fica para revisão posterior; não bloqueia o restante.
 - Tamanho de página deve oferecer opções entre 100 e 1000 quando o módulo comportar esse volume.
 - Desktop pode editar campos suportados no estilo planilha.
 - Edição de célula salva no `blur`.
@@ -702,41 +703,6 @@ Não existem como destino: `/chat`, `/query`, `/tasks`, `/ocr`, `/operations`, `
 - Mobile mantém leitura e operações por formulários dedicados.
 - Filtros/ordenação genéricos não devem ser duplicados de maneira incompatível entre módulos.
 - Na grade de pessoas, documentos positivos aparecem como badges compactos do tipo (RG, CPF, …), segundo 6.4. Vários tipos na mesma célula; quebra de linha, sem crescer o chip. Chip cinza; folha (`File`) verde saturado, scan (`ScanLine`) azul saturado; pessoa (`UserRound`) no âmbar primário do produto quando o original está com o dono.
-
-### 12.1.1 Funil do cabeçalho
-
-Referência de comportamento: filtro de coluna de planilha (Google Sheets). Um menu no cabeçalho da coluna, com OK e Cancelar. Cópia da UI em pt-BR. Não é tela de QueryPlan nem SQL.
-
-O menu junta, nesta ordem:
-
-- ordenar A → Z;
-- ordenar Z → A;
-- filtrar por condição;
-- filtrar por valores.
-
-**Filtrar por condição** — um seletor; `Nenhum` desliga a condição. Operadores aprovados, agrupados como na planilha:
-
-- vazio: está vazio, não está vazio;
-- texto: contém, não contém, começa com, termina com, é exatamente;
-- data: a data é, é anterior a, é posterior a;
-- número: maior que, maior ou igual, menor que, menor ou igual, igual, diferente, está entre, não está entre.
-
-Condição e valores combinam (as duas ativas restringem juntas). `Está entre` / `não está entre` pedem dois valores. O operador só aparece quando o tipo da coluna comporta (texto, data, número); vazio vale em qualquer coluna.
-
-Fora do funil, mesmo que a planilha mostre:
-
-- ordenar ou filtrar por cor — a grade não tem cor de célula como dado;
-- dados validados / não validados — recurso da planilha, não do cadastro;
-- fórmula personalizada — §9.1 e §14: sem fórmula executável do usuário no filtro. Coluna calculada do sistema é §12.4, outro caminho.
-
-**Filtrar por valores** — lista com caixa de seleção de cada valor distinto da coluna no conjunto já recortado (servidor, não só a página visível):
-
-- busca que estreita a lista;
-- selecionar tudo e limpar;
-- contagem do que a lista está exibindo;
-- OK aplica; Cancelar descarta.
-
-O funil é mecânico: funciona sem Assistente e sem chave de modelo.
 
 ### 12.2 Formulários e detalhe
 
@@ -765,9 +731,25 @@ O funil é mecânico: funciona sem Assistente e sem chave de modelo.
 
 ## 13. Search
 
-No frontend atual, `/search` permanece como placeholder **Em desenvolvimento** até o redesenho da superfície. As regras abaixo continuam definindo a implementação futura da busca.
+`/search` é superfície viva. Um único `SearchField` (caixa de texto, sem chips) serve o shell, `/search`, a barra das grades e o lookup de pessoa. Filtros de campo da barra da grade não são Search: restringem a grade atual. Query Engine permanece ferramenta separada do Assistente (§14).
 
-- Search deve consultar qualquer campo autorizado de qualquer módulo.
+A linguagem da consulta é pt-BR, parseada no backend a partir de `q`:
+
+- palavras soltas são AND em todos os campos autorizados do grão;
+- `"frase"` é correspondência de frase;
+- `-termo` / `-campo:valor` exclui;
+- `OU` (alias `OR`) une ramos;
+- `campo:valor`, `campo:valor*`, `campo:>=n`, `campo:a..b`;
+- `em:pessoas` / `em:documentos` / `em:contas` restringe o módulo;
+- `tipo:` é tipo de documento ou conta (não coluna de Profile);
+- `identificador:` é o número informado;
+- açúcar `cpf:` / `rg:` / `cnh:` / `ctps:` equivale a `tipo:` + `identificador:`.
+
+Autocomplete insere tokens em português (`tipo`, `identificador`, `cidade`, `em`, `OU`). Chaves em inglês são alias da API e do Assistente, não o que a UI mostra. CPF não é coluna de Profile; não se expõe `profile.cpf` como campo de consulta.
+
+Três grãos, o mesmo AST: hits (`POST /api/v1/search`), recorte de linhas das grades (`GET …?q=`), lookup (`GET /profiles?q=`, limite ~20). Listas de alta cardinalidade sugerem 25–50 valores por proximidade (`pg_trgm`); o cliente não carrega mil linhas.
+
+- Search consulta qualquer campo autorizado de qualquer módulo.
 - Busca simples não depende de perguntas ou relatórios pré-configurados.
 - Deve ser possível buscar nomes, partes de nomes, endereços, documentos, contas, custom fields e sequências arbitrárias.
 - Busca pode combinar múltiplos parâmetros e relações.
@@ -831,7 +813,7 @@ Matching de Profiles é o último fluxo a implementar: é complexo e computacion
 
 ### 16.2 Mapeamento automático de colunas e valores
 
-Importação em massa (XLSX e o mesmo pipeline de `/forms`) não pode exigir que o operador refaça, a cada arquivo, o mapeamento de cabeçalhos já conhecidos nem a interpretação de valores já catalogados. Isso vale tanto para a carga histórica do cadastro quanto para imports futuros de planilhas e formulários no mesmo molde.
+Importação em massa (XLSX e o mesmo pipeline do Google Forms em Cadastro) não pode exigir que o operador refaça, a cada arquivo, o mapeamento de cabeçalhos já conhecidos nem a interpretação de valores já catalogados. Isso vale tanto para a carga histórica do cadastro quanto para imports futuros de planilhas e formulários no mesmo molde.
 
 O backend aplica um catálogo versionado, compartilhado por XLSX e Google Forms, com pelo menos:
 
@@ -858,11 +840,11 @@ O operador ainda confirma o mapeamento proposto e o preview. O sistema pré-pree
 
 ## 17. Formulários
 
-- A rota do produto é `/forms`. Não existe `/google-forms`.
-- No frontend atual, `/forms` exibe apenas **Em desenvolvimento**; o conteúdo provisório anterior não faz parte da superfície aprovada.
-- Quando a implementação da rota for retomada, `/forms` começa pela integração Google Forms: conexão, mapeamento, sync e cadastro via o mesmo pipeline de importação XLSX (staging, mapping automático de colunas e valores §16.2, validação, decisões, batches, idempotência, relatório).
+- Google Forms é um **submódulo de Cadastro**, em `/cadastro?mode=forms`. Não é item de menu nem tela paralela.
+- `/forms` só existe como redirecionamento de compatibilidade para `/cadastro?mode=forms`. Não existe `/google-forms`.
+- A integração: conexão, mapeamento, sync e cadastro via o mesmo pipeline de importação XLSX (staging, mapping automático de colunas e valores §16.2, validação, decisões, batches, idempotência, relatório).
 - Cada admin gerencia apenas os próprios formulários/conexões, salvo permissão superior explícita.
-- Um módulo interno de formulários, se for criado depois, usa a mesma rota. Google Forms permanece como segunda opção, não como tela paralela.
+- Um módulo interno de formulários, se for criado depois, entra como outro modo de Cadastro. Google Forms permanece uma opção do mesmo módulo, não uma tela paralela.
 - Não deve existir pipeline paralelo incompatível com importação.
 - IDs, tokens e credenciais do provider são armazenados com segurança.
 - Payloads sensíveis do provider não aparecem em responses, logs ou auditoria.
@@ -883,7 +865,7 @@ Não existe página ou rota de Chat, Query ou Tarefas para o usuário montar pla
 - Streaming pode usar SSE.
 - Uso possui quotas e limites operacionais.
 - A chave de modelo fica na Administração, compartilhada, criptografada em repouso. SUPERADMIN e ADMIN cadastram/rotacionam. EXTERNAL com `CHAT` usa o Assistente; sem `CHAT` não usa. Sem chave, ninguém pergunta à IA.
-- Funil mecânico da tabela, colunas calculadas, Search e o link de recorte funcionam sem o Assistente e sem a chave.
+- Filtros e ordenação da tabela, colunas calculadas, Search e o link de recorte funcionam sem o Assistente e sem a chave.
 - O desenvolvimento de Assistente, chave na Administração e das tools de Query/tarefa continua até cobrir §18.3 e §20.
 
 ### 18.2 Interpretação fundamentada
@@ -1067,14 +1049,14 @@ Esta seção resume as invariantes. A seção “Arquitetura escolhida e raciona
 - PostgreSQL de produção utiliza Neon, major 18. Não há upgrade in-place de major no Neon: projeto novo e migração de dados.
 - O desenho deve considerar o limite de egress do plano utilizado.
 - SPA utiliza Vercel.
-- API utiliza Cloud Run Service quando o deploy de produção for ativado.
-- Worker utiliza Cloud Run Job quando jobs reais forem ativados.
+- O procedimento de deploy de produção (API e worker) está em redefinição: Docker e containers estão banidos deste repositório. Nenhum Dockerfile ou imagem de container deve ser reintroduzido sem nova decisão explícita.
+- Worker, quando jobs reais forem ativados, seguirá a mesma decisão de deploy sem Docker.
 - Cloud Scheduler pode executar recovery e housekeeping.
 - Anexos utilizam Cloudflare R2.
 - Railway não faz parte da infraestrutura aprovada.
-- Local usa Docker Compose apenas para infraestrutura realmente necessária, inicialmente PostgreSQL.
+- Local não usa Docker em nenhuma forma: nenhum container, Compose ou imagem. Banco de dados somente Neon, injetado via lokeys run -p gymkhana --env dev.
 - MinIO, Redis e serviços sem uso real não são adicionados por conveniência.
-- Migrations não rodam automaticamente dentro do container do PostgreSQL.
+- Migrations rodam via make migrate contra o Neon; nunca dentro de container.
 - Local, staging e production são separados.
 - Staging usa somente dados sintéticos.
 - Dados de produção não são copiados para staging.
@@ -1102,7 +1084,7 @@ Responsável por lógica Go reutilizável e independente de infraestrutura, como
 
 ### Gymkhana-Database-Vercel
 
-Aplicação legado Next.js ainda em produção. Não é dependência do rebuild. Pode ser executada em paralelo no local apenas para comparação; lê `.env` / `.env.local` (Prisma `dotenv/config` e Next), usa Neon Dev e não o PostgreSQL Docker do Database. Não usar `lokeys run` nesse processo.
+Aplicação legado Next.js ainda em produção. Não é dependência do rebuild. Pode ser executada em paralelo no local apenas para comparação; lê `.env` / `.env.local` (Prisma `dotenv/config` e Next), usa Neon Dev; não há banco de dados local em nenhum dos dois repositórios. Não usar `lokeys run` nesse processo.
 
 ### Regras de dependência
 

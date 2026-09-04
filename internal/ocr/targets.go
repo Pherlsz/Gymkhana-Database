@@ -2,7 +2,6 @@ package ocr
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Pherlsz/Gymkhana-Core/fingerprint"
 	"github.com/Pherlsz/Gymkhana-Database/internal/attachment"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/bill"
@@ -108,7 +108,7 @@ func (gateway *DomainTargetGateway) Catalog(ctx context.Context, actor auth.Sess
 	if err != nil {
 		return Catalog{}, fmt.Errorf("fingerprint OCR target catalog: %w", err)
 	}
-	return Catalog{Fields: fields, Fingerprint: sha256.Sum256(payload)}, nil
+	return Catalog{Fields: fields, Fingerprint: [32]byte(fingerprint.Sum(payload))}, nil
 }
 
 func (gateway *DomainTargetGateway) CurrentField(ctx context.Context, actor auth.Session, field FieldSchema) (CurrentField, error) {

@@ -98,7 +98,8 @@ WHERE (sqlc.narg(owner_profile_id_filter)::uuid IS NULL OR bill.owner_profile_id
   AND (sqlc.arg(status_filter)::text = '' OR
     (sqlc.arg(status_filter)::text = 'IN_USE' AND bill.medium = 'PHYSICAL' AND bill_current_use.bill_id IS NOT NULL) OR
     (sqlc.arg(status_filter)::text = 'AVAILABLE' AND bill.medium = 'PHYSICAL' AND bill.idle_custody = 'ORGANIZATION' AND bill_current_use.bill_id IS NULL))
-  AND (sqlc.narg(holder_profile_id_filter)::uuid IS NULL OR bill_current_use.holder_profile_id = sqlc.narg(holder_profile_id_filter)::uuid);
+  AND (sqlc.narg(holder_profile_id_filter)::uuid IS NULL OR bill_current_use.holder_profile_id = sqlc.narg(holder_profile_id_filter)::uuid)
+  AND (NOT sqlc.arg(restrict_ids)::bool OR bill.id = ANY(sqlc.arg(id_filter)::uuid[]));
 
 -- name: ListBills :many
 SELECT
@@ -127,6 +128,7 @@ WHERE (sqlc.narg(owner_profile_id_filter)::uuid IS NULL OR bill.owner_profile_id
     (sqlc.arg(status_filter)::text = 'IN_USE' AND bill.medium = 'PHYSICAL' AND bill_current_use.bill_id IS NOT NULL) OR
     (sqlc.arg(status_filter)::text = 'AVAILABLE' AND bill.medium = 'PHYSICAL' AND bill.idle_custody = 'ORGANIZATION' AND bill_current_use.bill_id IS NULL))
   AND (sqlc.narg(holder_profile_id_filter)::uuid IS NULL OR bill_current_use.holder_profile_id = sqlc.narg(holder_profile_id_filter)::uuid)
+  AND (NOT sqlc.arg(restrict_ids)::bool OR bill.id = ANY(sqlc.arg(id_filter)::uuid[]))
 ORDER BY
   CASE WHEN sqlc.arg(sort_field)::text = 'reference_value' AND sqlc.arg(sort_order)::text = 'asc' THEN lower(bill.reference_value) END ASC NULLS LAST,
   CASE WHEN sqlc.arg(sort_field)::text = 'reference_value' AND sqlc.arg(sort_order)::text = 'desc' THEN lower(bill.reference_value) END DESC NULLS LAST,

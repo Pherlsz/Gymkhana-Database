@@ -20,6 +20,32 @@ func TestReleasedCoreNormalizationContracts(t *testing.T) {
 	}
 }
 
+func TestReleasedCoreDocumentContracts(t *testing.T) {
+	canonical, err := normalize.CanonicalDocument(normalize.DocumentCPF, "529.982.247-25")
+	if err != nil {
+		t.Fatalf("CanonicalDocument() error = %v", err)
+	}
+	if got, want := canonical, "52998224725"; got != want {
+		t.Fatalf("CanonicalDocument() = %q, want %q", got, want)
+	}
+
+	match, err := normalize.IdentifyDocument("529.982.247-25")
+	if err != nil {
+		t.Fatalf("IdentifyDocument() error = %v", err)
+	}
+	if match.Kind != normalize.DocumentCPF || match.Canonical != "52998224725" {
+		t.Fatalf("IdentifyDocument() = %+v", match)
+	}
+
+	cep, err := normalize.CanonicalCEP("01310-100")
+	if err != nil {
+		t.Fatalf("CanonicalCEP() error = %v", err)
+	}
+	if got, want := cep, "01310100"; got != want {
+		t.Fatalf("CanonicalCEP() = %q, want %q", got, want)
+	}
+}
+
 func TestReleasedCoreCivilDateContracts(t *testing.T) {
 	date, err := civiltime.ParseCivilDate("2024-02-29")
 	if err != nil {

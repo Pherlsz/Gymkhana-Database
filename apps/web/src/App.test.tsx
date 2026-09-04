@@ -220,6 +220,13 @@ describe("App", () => {
     expect(screen.queryByText("Nova tabela")).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /Início/ }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: /Pessoas/ }).length).toBeGreaterThan(0);
+    const navSearch = screen.getAllByRole("searchbox", { name: "Buscar" })[0];
+    if (!navSearch) throw new Error("expected navbar search");
+    fireEvent.change(navSearch, { target: { value: "tipo:" } });
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some((call) => String(call[0]).includes("/api/v1/search/catalog")),
+    ).toBe(false);
     expect(screen.getAllByRole("button", { name: /Tabelas/ }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "Consultar" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Tarefas" })).not.toBeInTheDocument();
@@ -349,8 +356,14 @@ describe("App", () => {
       if (url.includes("/api/v1/search/catalog")) {
         return Promise.resolve(
           jsonResponse({
-            modules: [{ key: "profiles", label: "Pessoas" }],
-            fields: [],
+            modules: [
+              { key: "profiles", label: "Pessoas" },
+              { key: "documents", label: "Documentos" },
+            ],
+            fields: [
+              { key: "profile.full_name", module: "profiles", label: "Nome completo", kind: "text" },
+            ],
+            operators: [],
             limits: { maximum_terms: 5 },
           }),
         );
@@ -373,6 +386,37 @@ describe("App", () => {
       await screen.findByRole("heading", { name: "Buscar dados autorizados" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Em desenvolvimento")).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Pessoas" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Documentos" })).toBeInTheDocument();
+    expect(screen.getByText("Campos específicos")).toBeInTheDocument();
+
+    const searchPosts = () =>
+      fetchMock.mock.calls.filter(([input, init]) => {
+        const url = String(input);
+        return (
+          url.includes("/api/v1/search") &&
+          !url.includes("catalog") &&
+          (init as RequestInit | undefined)?.method === "POST"
+        );
+      });
+    const input = screen.getByRole("searchbox", { name: "Buscar dados autorizados" });
+    await waitFor(() => expect(searchPosts().length).toBeGreaterThan(0));
+    const postedBeforeTyping = searchPosts().length;
+    fireEvent.change(input, { target: { value: "Ana Maria" } });
+    expect(searchPosts()).toHaveLength(postedBeforeTyping);
+
+    fireEvent.blur(input);
+    await waitFor(() => expect(window.location.search).toContain("q=Ana+Maria"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Documentos" }));
+    await waitFor(() => {
+      const bodies = searchPosts().map(([, init]) =>
+        JSON.parse(String((init as RequestInit).body)),
+      );
+      expect(bodies.some((body: { modules?: string[] }) => body.modules?.includes("profiles"))).toBe(
+        true,
+      );
+    });
   });
 
   it("does not let an admin create tables from home", async () => {
@@ -427,5 +471,21 @@ describe("App", () => {
     fireEvent.click(appearanceSwitch);
     await waitFor(() => expect(document.documentElement).not.toHaveClass("dark"));
     expect(window.localStorage.getItem("gymkhana-theme")).toBe("light");
+  });
+
+  it("opens the people spreadsheet from the tables URL", async () => {
+    window.history.replaceState(null, "", "/tables/people");
+    const fetchMock = vi.fn().mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/auth/session"))
+        return Promise.resolve(jsonResponse(authenticatedSession()));
+      const overview = homeOverviewResponse(url);
+      if (overview) return Promise.resolve(overview);
+      return Promise.resolve(jsonResponse({ status: "ok" }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "Pessoas" })).toBeInTheDocument();
+    expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
   });
 });

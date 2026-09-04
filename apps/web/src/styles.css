@@ -1,6 +1,19 @@
 * {
   box-sizing: border-box;
 }
+/*
+ * Page titles speak in the brand's display voice. The legacy pages set class
+ * `page-title` with no rules anywhere; TablesPage is the lone PageHeader user.
+ * One shared rule puts Oswald (the crest's lettering face) on every screen.
+ */
+.page-title,
+.home-page__header h1 {
+  font-family: var(--gym-font-display);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -223,24 +236,23 @@ p {
 }
 .profile-view__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: 0.5rem;
   margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--gym-color-border);
-  border-radius: var(--gym-radius-md);
-  background: color-mix(in srgb, var(--md-surface) 72%, transparent);
+  border: 0;
+  background: transparent;
+  overflow: visible;
 }
 .profile-view__item {
   display: grid;
-  grid-template-columns: minmax(7.5rem, 40%) minmax(0, 1fr);
-  gap: 0.75rem;
-  align-items: baseline;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.2rem;
+  align-items: start;
   min-width: 0;
-  padding: 0.7rem 0.8rem;
-  border-block-end: 1px solid var(--gym-color-border);
-}
-.profile-view__item:last-child {
-  border-block-end: 0;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-sm, 4px);
+  background: color-mix(in oklch, var(--md-surface) 72%, transparent);
 }
 .profile-view__item dt {
   color: var(--gym-color-text-muted);
@@ -252,7 +264,15 @@ p {
   line-height: 1.4;
 }
 .profile-view__item--wide {
-  grid-column: 1 / -1;
+  grid-column: span 2;
+}
+@media (max-width: 480px) {
+  .profile-view__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .profile-view__item--wide {
+    grid-column: 1 / -1;
+  }
 }
 .profile-view__details {
   display: grid;
@@ -344,15 +364,32 @@ p {
 }
 .document-presence__list {
   display: grid;
-  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
+.document-presence--editable .document-presence__list {
+  grid-template-columns: 1fr;
+}
+@media (min-width: 720px) {
+  .document-presence--editable .document-presence__list {
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  }
+}
 .document-presence__row {
   display: grid;
-  grid-template-columns: 3.2rem minmax(0, 1fr);
-  gap: 0.35rem 0.5rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.2rem 0.5rem;
+  align-items: start;
+  min-inline-size: 0;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--md-outline-variant, var(--gym-color-border));
+  border-radius: var(--gym-radius-sm, 4px);
+  background: color-mix(in oklch, var(--md-surface-container, var(--gym-color-surface-raised)) 65%, transparent);
+}
+.document-presence--editable .document-presence__row {
   align-items: center;
 }
 /* Ant now owns these controls, so they inherit the app-wide field height and
@@ -371,6 +408,7 @@ p {
   grid-column: 2;
   color: var(--gym-color-text-muted);
   font-size: var(--gym-font-size-sm);
+  overflow-wrap: anywhere;
 }
 .document-presence__row .ant-input {
   grid-column: 2;
@@ -388,19 +426,6 @@ p {
   gap: 0.75rem;
   padding: var(--gym-space-4);
   border: 1px solid var(--gym-color-danger, var(--gym-color-border));
-}
-
-@media (min-width: 600px) {
-  .profile-view__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .profile-view__item {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.25rem;
-  }
-  .profile-view__item:nth-last-child(2):not(.profile-view__item--wide) {
-    border-block-end: 0;
-  }
 }
 
 .profile-sections {

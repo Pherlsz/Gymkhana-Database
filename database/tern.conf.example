@@ -1,7 +1,8 @@
 [database]
-host = localhost
+# Point at the Neon compute for your environment (README "Neon only").
+# Never store credentials here: make migrate passes --conn-string from
+# $DATABASE_URL, which lokeys injects. This file only documents the shape.
+host = <neon-ep-name>.sa-east-1.aws.neon.tech
 port = 5432
 database = gymkhana
-user = gymkhana
-password = gymkhana
-sslmode = disable
+sslmode = require

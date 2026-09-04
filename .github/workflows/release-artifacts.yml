@@ -4,10 +4,6 @@ on:
   pull_request:
     types: [opened, ready_for_review, reopened, synchronize]
     paths:
-      - ".dockerignore"
-      - "Dockerfile.api"
-      - "Dockerfile.migrate"
-      - "Dockerfile.worker"
       - "deploy/**"
       - "go.mod"
       - "go.sum"
@@ -21,7 +17,6 @@ on:
       - "scripts/render-cloud-run.py"
       - "scripts/rollback-cloud-run.sh"
       - "vercel.json"
-      - ".github/workflows/deploy.yml"
       - ".github/workflows/release-artifacts.yml"
   workflow_dispatch:
 
@@ -88,45 +83,3 @@ jobs:
           test -s .tmp/cloud-run/migrate.job.yaml
           ! grep -R '__[A-Z0-9_]*__' .tmp/cloud-run
           ! grep -R 'key: latest' .tmp/cloud-run
-
-  images:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
-    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 30
-    env:
-      GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Resolve immutable release metadata
-        id: release
-        shell: bash
-        run: |
-          echo "version=sha-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
-          echo "commit=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
-          echo "built_at=$(git show -s --format=%cI "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
-
-      - name: Build release images
-        shell: bash
-        run: |
-          for target in api migrate worker; do
-            docker build \
-              --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN \
-              --build-arg RELEASE_VERSION=${{ steps.release.outputs.version }} \
-              --build-arg RELEASE_COMMIT=${{ steps.release.outputs.commit }} \
-              --build-arg RELEASE_BUILT_AT=${{ steps.release.outputs.built_at }} \
-              -f "Dockerfile.${target}" \
-              -t "gymkhana-database-${target}:${{ steps.release.outputs.commit }}" .
-          done
-
-      - name: Verify immutable metadata and runtime user
-        shell: bash
-        run: |
-          for target in api migrate worker; do
-            image="gymkhana-database-${target}:${{ steps.release.outputs.commit }}"
-            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "${{ steps.release.outputs.version }}"
-            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "${{ steps.release.outputs.commit }}"
-            test "$(docker image inspect "$image" --format '{{ index .Config.Labels "org.opencontainers.image.created" }}')" = "${{ steps.release.outputs.built_at }}"
-            test "$(docker image inspect "$image" --format '{{.Config.User}}')" = "nonroot:nonroot"
-          done

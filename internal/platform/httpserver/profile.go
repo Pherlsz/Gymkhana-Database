@@ -9,12 +9,14 @@ import (
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
+	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type profileService interface {
 	List(context.Context, auth.Session, profile.ListOptions) (profile.Page, error)
 	Get(context.Context, auth.Session, profile.Identifier) (profile.Profile, error)
+	DistinctCities(context.Context, auth.Session, profile.Filters, int32) ([]string, error)
 	Create(context.Context, auth.Session, profile.Values, string) (profile.Profile, error)
 	Update(context.Context, auth.Session, profile.Identifier, int64, profile.Values, string) (profile.Profile, error)
 	Duplicate(context.Context, auth.Session, profile.Identifier, string) (profile.Profile, error)
@@ -180,7 +182,11 @@ type profilePageMeta struct {
 	SortOrder string `json:"sort_order"`
 }
 
-func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service profileService, pool *pgxpool.Pool) {
+type distinctCitiesResponse struct {
+	Values []string `json:"values"`
+}
+
+func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service profileService, search searchService, pool *pgxpool.Pool) {
 	mux.HandleFunc("GET /api/v1/profiles", requireCapability(auth.CapProfiles, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
@@ -201,9 +207,14 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 			writeProblem(w, r, *parseProblem)
 			return
 		}
+		restrict, ids, searchProblem := applySearchQ(r, actor, search, searchdomain.ModuleProfiles)
+		if searchProblem != nil {
+			writeProblem(w, r, *searchProblem)
+			return
+		}
 		page, err := service.List(r.Context(), actor, profile.ListOptions{
 			Limit: limit, Offset: offset, SortField: profile.SortField(r.URL.Query().Get("sort")), SortOrder: profile.SortOrder(r.URL.Query().Get("order")),
-			Filters: profile.Filters{FullName: r.URL.Query().Get("full_name"), CPF: r.URL.Query().Get("cpf"), Email: r.URL.Query().Get("email"), City: r.URL.Query().Get("city"), State: r.URL.Query().Get("state")},
+			Filters: profile.Filters{FullName: r.URL.Query().Get("full_name"), CPF: r.URL.Query().Get("cpf"), Email: r.URL.Query().Get("email"), City: r.URL.Query().Get("city"), State: r.URL.Query().Get("state"), RestrictIDs: restrict, IDFilter: profileIDsFromSearch(ids)},
 		})
 		if err != nil {
 			writeProfileError(w, r, logger, "list profiles", err)
@@ -216,6 +227,36 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 		}
 		enrichProfileList(r.Context(), pool, logger, response.Profiles, reveal)
 		writeJSON(w, http.StatusOK, response)
+	}))
+	mux.HandleFunc("GET /api/v1/profiles/cities", requireCapability(auth.CapProfiles, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if service == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "O módulo de pessoas não está configurado"})
+			return
+		}
+		limit, parseProblem := parseBoundedInt32(r.URL.Query().Get("limit"), 500, 1, 1000)
+		if parseProblem != nil {
+			writeProblem(w, r, *parseProblem)
+			return
+		}
+		cities, err := service.DistinctCities(r.Context(), actor, profile.Filters{
+			FullName: r.URL.Query().Get("full_name"),
+			CPF:      r.URL.Query().Get("cpf"),
+			Email:    r.URL.Query().Get("email"),
+			State:    r.URL.Query().Get("state"),
+		}, limit)
+		if err != nil {
+			writeProfileError(w, r, logger, "list distinct cities", err)
+			return
+		}
+		if cities == nil {
+			cities = []string{}
+		}
+		writeJSON(w, http.StatusOK, distinctCitiesResponse{Values: cities})
 	}))
 	mux.HandleFunc("POST /api/v1/profiles", requireCapability(auth.CapProfiles, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)

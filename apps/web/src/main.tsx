@@ -10,6 +10,7 @@ import "./attachments.css";
 import "./search.css";
 import "./operations.css";
 import "./google-forms.css";
+import "./cadastro.css";
 import "./tables.css";
 
 const root = document.getElementById("root");

@@ -3,6 +3,7 @@ function toneToType(tone: string): "info" | "success" | "warning" | "error" {
 }
 
 import { Alert, Button, Card, Flex, Tag } from "antd";
+import { InlineStatus } from "./components/InlineStatus";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import {
@@ -161,11 +162,14 @@ export function AttachmentsPanel({
             </div>
           ) : null}
         </div>
-        {query.isLoading ? <p aria-live="polite">Carregando anexos...</p> : null}
+        {query.isLoading ? (
+          <InlineStatus kind="loading" label="Carregando anexos…" />
+        ) : null}
         {!query.isLoading && (query.data?.length ?? 0) === 0 ? (
-          <p className="attachments-panel__empty">
-            {showTrash ? "Nenhum anexo ativo ou recuperável." : "Nenhum anexo ativo."}
-          </p>
+          <InlineStatus
+            kind="empty"
+            label={showTrash ? "Nenhum anexo ativo ou recuperável." : "Nenhum anexo ativo."}
+          />
         ) : null}
         <div className="attachments-panel__list">
           {query.data?.map((value) => (

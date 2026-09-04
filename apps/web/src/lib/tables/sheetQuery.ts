@@ -19,6 +19,7 @@ export function pagePatch(
 export function clearFilters(section: ProfileListSearch["section"]): Partial<ProfileListSearch> {
   if (section === "documents") {
     return {
+      q: "",
       document_identifier: "",
       document_type: "",
       document_status: "",
@@ -29,6 +30,7 @@ export function clearFilters(section: ProfileListSearch["section"]): Partial<Pro
   }
   if (section === "bills") {
     return {
+      q: "",
       bill_reference: "",
       bill_type: "",
       bill_status: "",
@@ -38,7 +40,7 @@ export function clearFilters(section: ProfileListSearch["section"]): Partial<Pro
       records_owner: undefined,
     };
   }
-  return { full_name: "", cpf: "", email: "", city: "", state: "", page: 1 };
+  return { q: "", full_name: "", cpf: "", email: "", city: "", state: "", page: 1 };
 }
 
 export function profileListKey(search: ProfileListSearch) {
@@ -47,6 +49,7 @@ export function profileListKey(search: ProfileListSearch) {
     limit: search.limit,
     sort: search.sort,
     order: search.order,
+    q: search.q,
     full_name: search.full_name,
     cpf: search.cpf,
     email: search.email,
@@ -57,6 +60,7 @@ export function profileListKey(search: ProfileListSearch) {
 
 export function documentSearch(search: ProfileListSearch) {
   return {
+    q: search.q,
     document_page: search.document_page,
     document_limit: search.document_limit,
     document_sort: search.document_sort,
@@ -70,6 +74,7 @@ export function documentSearch(search: ProfileListSearch) {
 
 export function billSearch(search: ProfileListSearch) {
   return {
+    q: search.q,
     bill_page: search.bill_page,
     bill_limit: search.bill_limit,
     bill_sort: search.bill_sort,

@@ -115,6 +115,7 @@ type Store interface {
 	GetReport(context.Context, Identifier, auth.Identifier) (Report, error)
 	ListImports(context.Context, auth.Identifier, ListOptions) (ImportPage, error)
 	StageWorkbook(context.Context, Identifier, Workbook, time.Time) error
+	ApplySuggestedColumnMapping(context.Context, Identifier, Module, *int) error
 	SelectSheet(context.Context, Identifier, auth.Identifier, int64, int, time.Time) (Import, error)
 	SaveMapping(context.Context, Identifier, auth.Identifier, int64, []MappingInput, time.Time) (Import, error)
 	LoadMappedRows(context.Context, Identifier) ([]MappedRow, error)

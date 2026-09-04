@@ -75,6 +75,8 @@ type Filters struct {
 	Medium          Medium
 	Status          Status
 	HolderProfileID *profile.Identifier
+	RestrictIDs     bool
+	IDFilter        []Identifier
 }
 
 type ListOptions struct {
@@ -306,6 +308,7 @@ func (store *PostgresStore) Count(ctx context.Context, filters Filters) (int64, 
 		OwnerProfileIDFilter: optionalProfileUUID(filters.OwnerProfileID), DocumentTypeIDFilter: optionalDatabaseUUID(filters.TypeID),
 		IdentifierFilter: normalize.SearchText(filters.Identifier), MediumFilter: string(filters.Medium),
 		StatusFilter: string(filters.Status), HolderProfileIDFilter: optionalProfileUUID(filters.HolderProfileID),
+		RestrictIds: filters.RestrictIDs, IDFilter: documentUUIDList(filters.IDFilter),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("count documents: %w", err)
@@ -318,6 +321,7 @@ func (store *PostgresStore) List(ctx context.Context, options ListOptions) ([]Do
 		OwnerProfileIDFilter: optionalProfileUUID(options.Filters.OwnerProfileID), DocumentTypeIDFilter: optionalDatabaseUUID(options.Filters.TypeID),
 		IdentifierFilter: normalize.SearchText(options.Filters.Identifier), MediumFilter: string(options.Filters.Medium),
 		StatusFilter: string(options.Filters.Status), HolderProfileIDFilter: optionalProfileUUID(options.Filters.HolderProfileID),
+		RestrictIds: options.Filters.RestrictIDs, IDFilter: documentUUIDList(options.Filters.IDFilter),
 		SortField: string(options.SortField), SortOrder: string(options.SortOrder), PageOffset: options.Offset, PageLimit: options.Limit,
 	})
 	if err != nil {
@@ -698,6 +702,14 @@ func mapDocumentPersistenceError(operation string, err error) error {
 
 func databaseUUID(identifier Identifier) pgtype.UUID {
 	return pgtype.UUID{Bytes: identifier, Valid: true}
+}
+
+func documentUUIDList(ids []Identifier) []pgtype.UUID {
+	out := make([]pgtype.UUID, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, databaseUUID(id))
+	}
+	return out
 }
 
 func optionalDatabaseUUID(identifier *Identifier) pgtype.UUID {

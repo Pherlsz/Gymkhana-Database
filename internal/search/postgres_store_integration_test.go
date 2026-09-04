@@ -109,7 +109,7 @@ VALUES($1,'DOCUMENT',$2,$3,'application/pdf','application/pdf',128,$4,$5,'ACTIVE
 	}()
 
 	store := NewPostgresStore(pool)
-	service, err := NewService(store, ServiceOptions{RateLimit: 100})
+	service, err := NewService(store, ServiceOptions{RateLimit: 100, Timeout: 10 * time.Second})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -170,6 +170,29 @@ VALUES($1,'DOCUMENT',$2,$3,'application/pdf','application/pdf',128,$4,$5,'ACTIVE
 	repeatedPage, err := service.Search(ctx, actor, Query{Terms: []string{"Ana"}, Modules: []Module{ModuleProfiles}, Limit: 1})
 	if err != nil || firstPage.Results[0] != repeatedPage.Results[0] {
 		t.Fatalf("pagination is not deterministic: first=%#v repeated=%#v error=%v", firstPage, repeatedPage, err)
+	}
+
+	if _, err := pool.Exec(ctx, `
+INSERT INTO document_presences (id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value)
+SELECT gen_random_uuid(), $1, document_type.id, document_type.uniqueness_policy, 'informed_number', '52998224725'
+FROM document_types AS document_type
+WHERE document_type.technical_key = 'cpf'
+LIMIT 1`, profileID.String()); err != nil {
+		t.Fatalf("insert cpf presence: %v", err)
+	}
+	formattedCPF, err := service.Search(ctx, actor, Query{Q: "cpf:529.982.247-25", Limit: 20})
+	if err != nil {
+		t.Fatalf("formatted CPF Search() error = %v", err)
+	}
+	foundCPF := false
+	for _, result := range formattedCPF.Results {
+		if result.ProfileID == profileID.String() && (result.FieldKey == "profile.document_identifier" || result.FieldKey == "document.identifier" || result.FieldKey == "document.type") {
+			foundCPF = true
+			break
+		}
+	}
+	if !foundCPF {
+		t.Fatalf("formatted CPF search missed presence: %#v", formattedCPF)
 	}
 
 	if _, err := pool.Exec(ctx, "DELETE FROM search_rate_limits WHERE actor_user_id=$1", actorID.String()); err != nil {

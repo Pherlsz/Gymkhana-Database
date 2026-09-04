@@ -16,6 +16,7 @@ import (
 type fakeProfileService struct {
 	page         profile.Page
 	value        profile.Profile
+	cities       []string
 	listOptions  profile.ListOptions
 	createValues profile.Values
 	updateValues profile.Values
@@ -30,6 +31,9 @@ func (service *fakeProfileService) List(_ context.Context, _ auth.Session, optio
 }
 func (service *fakeProfileService) Get(context.Context, auth.Session, profile.Identifier) (profile.Profile, error) {
 	return service.value, service.err
+}
+func (service *fakeProfileService) DistinctCities(context.Context, auth.Session, profile.Filters, int32) ([]string, error) {
+	return service.cities, service.err
 }
 func (service *fakeProfileService) Create(_ context.Context, _ auth.Session, values profile.Values, _ string) (profile.Profile, error) {
 	service.createValues = values
@@ -59,6 +63,23 @@ func profileHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeProfileS
 	value := profile.Profile{ID: id, Values: profile.Values{FullName: "Ana", CPF: "52998224725"}, Version: 1, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
 	service := &fakeProfileService{value: value, page: profile.Page{Profiles: []profile.Profile{value}, Total: 1, Limit: 100, SortField: profile.SortFullName, SortOrder: profile.SortAscending}}
 	return authentication, service, id, New(authTestLogger(), nil, Options{Auth: authentication, Profile: service})
+}
+
+func TestProfileRoutesListDistinctCities(t *testing.T) {
+	_, service, _, handler := profileHTTPFixture(t)
+	service.cities = []string{"Butiá", "Canoas", "São Leopoldo"}
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/profiles/cities?state=RS&limit=100", nil)
+	request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	var payload distinctCitiesResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil || len(payload.Values) != 3 || payload.Values[0] != "Butiá" {
+		t.Fatalf("payload = %#v, error = %v", payload, err)
+	}
 }
 
 func TestProfileRoutesListCreateUpdateAndDelete(t *testing.T) {

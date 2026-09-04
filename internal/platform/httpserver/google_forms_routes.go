@@ -506,7 +506,7 @@ func googleFormsSyncFromDomain(value googleforms.SyncRun) googleFormsSyncRespons
 func googleFormsRedirect(applicationURL, returnPath, result string) string {
 	target, err := url.Parse(returnPath)
 	if err != nil {
-		target = &url.URL{Path: "/google-forms"}
+		target = &url.URL{Path: "/cadastro", RawQuery: "mode=forms"}
 	}
 	query := target.Query()
 	query.Set("google_forms", result)

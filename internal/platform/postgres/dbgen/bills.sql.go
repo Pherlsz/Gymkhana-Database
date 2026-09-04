@@ -76,16 +76,19 @@ WHERE ($1::uuid IS NULL OR bill.owner_profile_id = $1::uuid)
     ($6::text = 'IN_USE' AND bill.medium = 'PHYSICAL' AND bill_current_use.bill_id IS NOT NULL) OR
     ($6::text = 'AVAILABLE' AND bill.medium = 'PHYSICAL' AND bill.idle_custody = 'ORGANIZATION' AND bill_current_use.bill_id IS NULL))
   AND ($7::uuid IS NULL OR bill_current_use.holder_profile_id = $7::uuid)
+  AND (NOT $8::bool OR bill.id = ANY($9::uuid[]))
 `
 
 type CountBillsParams struct {
-	OwnerProfileIDFilter  pgtype.UUID `json:"owner_profile_id_filter"`
-	BillTypeIDFilter      pgtype.UUID `json:"bill_type_id_filter"`
-	ReferenceFilter       string      `json:"reference_filter"`
-	CompetenceFilter      string      `json:"competence_filter"`
-	MediumFilter          string      `json:"medium_filter"`
-	StatusFilter          string      `json:"status_filter"`
-	HolderProfileIDFilter pgtype.UUID `json:"holder_profile_id_filter"`
+	OwnerProfileIDFilter  pgtype.UUID   `json:"owner_profile_id_filter"`
+	BillTypeIDFilter      pgtype.UUID   `json:"bill_type_id_filter"`
+	ReferenceFilter       string        `json:"reference_filter"`
+	CompetenceFilter      string        `json:"competence_filter"`
+	MediumFilter          string        `json:"medium_filter"`
+	StatusFilter          string        `json:"status_filter"`
+	HolderProfileIDFilter pgtype.UUID   `json:"holder_profile_id_filter"`
+	RestrictIds           bool          `json:"restrict_ids"`
+	IDFilter              []pgtype.UUID `json:"id_filter"`
 }
 
 func (q *Queries) CountBills(ctx context.Context, arg CountBillsParams) (int64, error) {
@@ -97,6 +100,8 @@ func (q *Queries) CountBills(ctx context.Context, arg CountBillsParams) (int64, 
 		arg.MediumFilter,
 		arg.StatusFilter,
 		arg.HolderProfileIDFilter,
+		arg.RestrictIds,
+		arg.IDFilter,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -512,36 +517,39 @@ WHERE ($1::uuid IS NULL OR bill.owner_profile_id = $1::uuid)
     ($6::text = 'IN_USE' AND bill.medium = 'PHYSICAL' AND bill_current_use.bill_id IS NOT NULL) OR
     ($6::text = 'AVAILABLE' AND bill.medium = 'PHYSICAL' AND bill.idle_custody = 'ORGANIZATION' AND bill_current_use.bill_id IS NULL))
   AND ($7::uuid IS NULL OR bill_current_use.holder_profile_id = $7::uuid)
+  AND (NOT $8::bool OR bill.id = ANY($9::uuid[]))
 ORDER BY
-  CASE WHEN $8::text = 'reference_value' AND $9::text = 'asc' THEN lower(bill.reference_value) END ASC NULLS LAST,
-  CASE WHEN $8::text = 'reference_value' AND $9::text = 'desc' THEN lower(bill.reference_value) END DESC NULLS LAST,
-  CASE WHEN $8::text = 'type_label' AND $9::text = 'asc' THEN lower(bill_type.label) END ASC,
-  CASE WHEN $8::text = 'type_label' AND $9::text = 'desc' THEN lower(bill_type.label) END DESC,
-  CASE WHEN $8::text = 'competence' AND $9::text = 'asc' THEN bill.competence END ASC NULLS LAST,
-  CASE WHEN $8::text = 'competence' AND $9::text = 'desc' THEN bill.competence END DESC NULLS LAST,
-  CASE WHEN $8::text = 'amount' AND $9::text = 'asc' THEN bill.amount END ASC NULLS LAST,
-  CASE WHEN $8::text = 'amount' AND $9::text = 'desc' THEN bill.amount END DESC NULLS LAST,
-  CASE WHEN $8::text = 'created_at' AND $9::text = 'asc' THEN bill.created_at END ASC,
-  CASE WHEN $8::text = 'created_at' AND $9::text = 'desc' THEN bill.created_at END DESC,
-  CASE WHEN $8::text = 'updated_at' AND $9::text = 'asc' THEN bill.updated_at END ASC,
-  CASE WHEN $8::text = 'updated_at' AND $9::text = 'desc' THEN bill.updated_at END DESC,
+  CASE WHEN $10::text = 'reference_value' AND $11::text = 'asc' THEN lower(bill.reference_value) END ASC NULLS LAST,
+  CASE WHEN $10::text = 'reference_value' AND $11::text = 'desc' THEN lower(bill.reference_value) END DESC NULLS LAST,
+  CASE WHEN $10::text = 'type_label' AND $11::text = 'asc' THEN lower(bill_type.label) END ASC,
+  CASE WHEN $10::text = 'type_label' AND $11::text = 'desc' THEN lower(bill_type.label) END DESC,
+  CASE WHEN $10::text = 'competence' AND $11::text = 'asc' THEN bill.competence END ASC NULLS LAST,
+  CASE WHEN $10::text = 'competence' AND $11::text = 'desc' THEN bill.competence END DESC NULLS LAST,
+  CASE WHEN $10::text = 'amount' AND $11::text = 'asc' THEN bill.amount END ASC NULLS LAST,
+  CASE WHEN $10::text = 'amount' AND $11::text = 'desc' THEN bill.amount END DESC NULLS LAST,
+  CASE WHEN $10::text = 'created_at' AND $11::text = 'asc' THEN bill.created_at END ASC,
+  CASE WHEN $10::text = 'created_at' AND $11::text = 'desc' THEN bill.created_at END DESC,
+  CASE WHEN $10::text = 'updated_at' AND $11::text = 'asc' THEN bill.updated_at END ASC,
+  CASE WHEN $10::text = 'updated_at' AND $11::text = 'desc' THEN bill.updated_at END DESC,
   bill.id ASC
-LIMIT $11
-OFFSET $10
+LIMIT $13
+OFFSET $12
 `
 
 type ListBillsParams struct {
-	OwnerProfileIDFilter  pgtype.UUID `json:"owner_profile_id_filter"`
-	BillTypeIDFilter      pgtype.UUID `json:"bill_type_id_filter"`
-	ReferenceFilter       string      `json:"reference_filter"`
-	CompetenceFilter      string      `json:"competence_filter"`
-	MediumFilter          string      `json:"medium_filter"`
-	StatusFilter          string      `json:"status_filter"`
-	HolderProfileIDFilter pgtype.UUID `json:"holder_profile_id_filter"`
-	SortField             string      `json:"sort_field"`
-	SortOrder             string      `json:"sort_order"`
-	PageOffset            int32       `json:"page_offset"`
-	PageLimit             int32       `json:"page_limit"`
+	OwnerProfileIDFilter  pgtype.UUID   `json:"owner_profile_id_filter"`
+	BillTypeIDFilter      pgtype.UUID   `json:"bill_type_id_filter"`
+	ReferenceFilter       string        `json:"reference_filter"`
+	CompetenceFilter      string        `json:"competence_filter"`
+	MediumFilter          string        `json:"medium_filter"`
+	StatusFilter          string        `json:"status_filter"`
+	HolderProfileIDFilter pgtype.UUID   `json:"holder_profile_id_filter"`
+	RestrictIds           bool          `json:"restrict_ids"`
+	IDFilter              []pgtype.UUID `json:"id_filter"`
+	SortField             string        `json:"sort_field"`
+	SortOrder             string        `json:"sort_order"`
+	PageOffset            int32         `json:"page_offset"`
+	PageLimit             int32         `json:"page_limit"`
 }
 
 type ListBillsRow struct {
@@ -581,6 +589,8 @@ func (q *Queries) ListBills(ctx context.Context, arg ListBillsParams) ([]ListBil
 		arg.MediumFilter,
 		arg.StatusFilter,
 		arg.HolderProfileIDFilter,
+		arg.RestrictIds,
+		arg.IDFilter,
 		arg.SortField,
 		arg.SortOrder,
 		arg.PageOffset,

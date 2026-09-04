@@ -88,6 +88,7 @@ function billRecord(physical = true) {
       ? {
           current_use: {
             holder_profile_id: "019bf789-4400-7f12-9abc-123456789abd",
+            holder_full_name: "Bruno Atual",
             assigned_at: "2026-07-16T12:00:00Z",
           },
         }
@@ -124,7 +125,7 @@ function billFetchMock(physical = true) {
       );
     if (url.includes("/api/v1/attachments?"))
       return Promise.resolve(jsonResponse({ attachments: [] }));
-    if (url.includes("/api/v1/profiles?limit=1000"))
+    if (url.includes("/api/v1/profiles?"))
       return Promise.resolve(
         jsonResponse({
           profiles: [
@@ -203,9 +204,8 @@ describe("M4 Profile records acceptance", () => {
       screen.getAllByDisplayValue("123.40").filter((element) => element.hasAttribute("disabled")),
     ).toHaveLength(1);
 
-    const holder = screen.getByRole("combobox", { name: "Pessoa em uso" });
-    expect(holder.tagName).toBe("SELECT");
-    expect(holder).toHaveValue("019bf789-4400-7f12-9abc-123456789abd");
+    const holder = screen.getByRole("searchbox", { name: "Pessoa em uso" });
+    expect(holder).toHaveValue("Bruno Atual");
     const giveBack = screen.getByRole("button", { name: "Devolver" });
     expect(giveBack.tagName).toBe("BUTTON");
     expect(giveBack.tabIndex).toBe(0);

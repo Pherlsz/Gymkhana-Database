@@ -139,7 +139,8 @@ WHERE (sqlc.narg(owner_profile_id_filter)::uuid IS NULL OR presence.profile_id =
   AND (sqlc.arg(status_filter)::text = '' OR
     (sqlc.arg(status_filter)::text = 'IN_USE' AND document.medium = 'PHYSICAL' AND document_current_use.document_id IS NOT NULL) OR
     (sqlc.arg(status_filter)::text = 'AVAILABLE' AND document.medium = 'PHYSICAL' AND document.idle_custody = 'ORGANIZATION' AND document_current_use.document_id IS NULL))
-  AND (sqlc.narg(holder_profile_id_filter)::uuid IS NULL OR document_current_use.holder_profile_id = sqlc.narg(holder_profile_id_filter)::uuid);
+  AND (sqlc.narg(holder_profile_id_filter)::uuid IS NULL OR document_current_use.holder_profile_id = sqlc.narg(holder_profile_id_filter)::uuid)
+  AND (NOT sqlc.arg(restrict_ids)::bool OR document.id = ANY(sqlc.arg(id_filter)::uuid[]));
 
 -- name: ListDocuments :many
 SELECT
@@ -175,6 +176,7 @@ WHERE (sqlc.narg(owner_profile_id_filter)::uuid IS NULL OR presence.profile_id =
     (sqlc.arg(status_filter)::text = 'IN_USE' AND document.medium = 'PHYSICAL' AND document_current_use.document_id IS NOT NULL) OR
     (sqlc.arg(status_filter)::text = 'AVAILABLE' AND document.medium = 'PHYSICAL' AND document.idle_custody = 'ORGANIZATION' AND document_current_use.document_id IS NULL))
   AND (sqlc.narg(holder_profile_id_filter)::uuid IS NULL OR document_current_use.holder_profile_id = sqlc.narg(holder_profile_id_filter)::uuid)
+  AND (NOT sqlc.arg(restrict_ids)::bool OR document.id = ANY(sqlc.arg(id_filter)::uuid[]))
 ORDER BY
   CASE WHEN sqlc.arg(sort_field)::text = 'identifier_value' AND sqlc.arg(sort_order)::text = 'asc' THEN lower(presence.identifier_value) END ASC,
   CASE WHEN sqlc.arg(sort_field)::text = 'identifier_value' AND sqlc.arg(sort_order)::text = 'desc' THEN lower(presence.identifier_value) END DESC,

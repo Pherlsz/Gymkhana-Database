@@ -13,24 +13,27 @@ import (
 )
 
 type fakeProfileQueries struct {
-	createdParams    dbgen.CreateProfileParams
-	updatedParams    dbgen.UpdateProfileParams
-	duplicatedParams dbgen.DuplicateProfileParams
-	deletedParams    dbgen.DeleteProfileParams
-	countedParams    dbgen.CountProfilesParams
-	listedParams     dbgen.ListProfilesParams
-	auditParams      dbgen.RecordProfileAuditEventParams
-	profile          dbgen.Profile
-	profiles         []dbgen.Profile
-	count            int64
-	createErr        error
-	getErr           error
-	countErr         error
-	listErr          error
-	updateErr        error
-	duplicateErr     error
-	deleteErr        error
-	auditErr         error
+	createdParams        dbgen.CreateProfileParams
+	updatedParams        dbgen.UpdateProfileParams
+	duplicatedParams     dbgen.DuplicateProfileParams
+	deletedParams        dbgen.DeleteProfileParams
+	countedParams        dbgen.CountProfilesParams
+	listedParams         dbgen.ListProfilesParams
+	distinctCitiesParams dbgen.ListDistinctCitiesParams
+	auditParams          dbgen.RecordProfileAuditEventParams
+	profile              dbgen.Profile
+	profiles             []dbgen.Profile
+	cities               []*string
+	count                int64
+	createErr            error
+	getErr               error
+	countErr             error
+	listErr              error
+	distinctCitiesErr    error
+	updateErr            error
+	duplicateErr         error
+	deleteErr            error
+	auditErr             error
 }
 
 func (queries *fakeProfileQueries) CreateProfile(_ context.Context, params dbgen.CreateProfileParams) (dbgen.Profile, error) {
@@ -58,6 +61,10 @@ func (queries *fakeProfileQueries) DuplicateProfile(_ context.Context, params db
 }
 func (queries *fakeProfileQueries) ListProfilesByExactFullName(context.Context, string) ([]dbgen.Profile, error) {
 	return queries.profiles, queries.listErr
+}
+func (queries *fakeProfileQueries) ListDistinctCities(_ context.Context, params dbgen.ListDistinctCitiesParams) ([]*string, error) {
+	queries.distinctCitiesParams = params
+	return queries.cities, queries.distinctCitiesErr
 }
 func (queries *fakeProfileQueries) UpsertCPFPresence(context.Context, dbgen.UpsertCPFPresenceParams) (dbgen.DocumentPresence, error) {
 	return dbgen.DocumentPresence{}, nil

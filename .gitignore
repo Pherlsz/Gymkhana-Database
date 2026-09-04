@@ -38,3 +38,4 @@ Thumbs.db
 apps/web/.hermes/mocks/
 apps/web/.hermes/plans/
 apps/web/.tanstack/tmp/
+.cursor/

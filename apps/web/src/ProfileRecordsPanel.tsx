@@ -3,6 +3,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useState } from "react";
 import { AttachmentsPanel } from "./AttachmentsPanel";
+import {
+  RecordCustomFieldsSection,
+  recordCustomFieldError,
+  saveRecordCustomValues,
+  useSeedRecordDraft,
+  type CustomDraftValue,
+} from "./RecordCustomFields";
+import { CadastroOcrSection } from "./lib/cadastro/CadastroPanel";
+import { SearchField } from "./components/SearchField";
 import { DataGrid, DataGridPagination } from "./DataGrid";
 import {
   APIRequestError,
@@ -22,7 +31,6 @@ import {
   listBills,
   listDocumentTypes,
   listDocuments,
-  listProfilesForSelection,
   returnBillCurrentUse,
   returnDocumentCurrentUse,
   updateBill,
@@ -203,12 +211,15 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
         />
       ) : null}
       {selected && (search.document_mode === "view" || search.document_mode === "edit") ? (
-        <AttachmentsPanel
-          key={`document-attachments:${selected.id}`}
-          owner={{ owner_kind: "DOCUMENT", owner_id: selected.id }}
-          title="Anexos do documento"
-          description="Arquivos privados vinculados exclusivamente a este documento."
-        />
+        <>
+          <AttachmentsPanel
+            key={`document-attachments:${selected.id}`}
+            owner={{ owner_kind: "DOCUMENT", owner_id: selected.id }}
+            title="Anexos do documento"
+            description="Arquivos privados vinculados exclusivamente a este documento."
+          />
+          <CadastroOcrSection owner={{ owner_kind: "DOCUMENT", owner_id: selected.id }} />
+        </>
       ) : null}
     </Flex>
   );
@@ -358,12 +369,15 @@ function BillsSection({ profile, role, search, onSearch, onNotice }: Props) {
         />
       ) : null}
       {selected && (search.bill_mode === "view" || search.bill_mode === "edit") ? (
-        <AttachmentsPanel
-          key={`bill-attachments:${selected.id}`}
-          owner={{ owner_kind: "BILL", owner_id: selected.id }}
-          title="Anexos da conta ou comprovante"
-          description="Arquivos privados vinculados exclusivamente a este registro."
-        />
+        <>
+          <AttachmentsPanel
+            key={`bill-attachments:${selected.id}`}
+            owner={{ owner_kind: "BILL", owner_id: selected.id }}
+            title="Anexos da conta ou comprovante"
+            description="Arquivos privados vinculados exclusivamente a este registro."
+          />
+          <CadastroOcrSection owner={{ owner_kind: "BILL", owner_id: selected.id }} />
+        </>
       ) : null}
     </Flex>
   );
@@ -578,11 +592,13 @@ function BillFilters({
   );
 }
 
-function DocumentEditor(props: {
+export function DocumentEditor(props: {
   mode: "create" | "view" | "edit";
   profile: Profile;
   record: DocumentRecord | undefined;
   types: DocumentType[];
+  lockType?: boolean | undefined;
+  initialTypeId?: string | undefined;
   canDelete: boolean;
   pending: boolean;
   onClose: () => void;
@@ -596,7 +612,10 @@ function DocumentEditor(props: {
       ? documentValues(props.record)
       : {
           owner_profile_id: props.profile.id,
-          document_type_id: props.types.find((value) => value.active)?.id ?? "",
+          document_type_id:
+            props.initialTypeId && props.types.some((value) => value.id === props.initialTypeId)
+              ? props.initialTypeId
+              : (props.types.find((value) => value.active)?.id ?? ""),
           identifier_value: "",
           document_date: "",
           notes: "",
@@ -607,6 +626,9 @@ function DocumentEditor(props: {
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [customDraft, setCustomDraft] = useState<Record<string, CustomDraftValue>>({});
+  useSeedRecordDraft("document", props.record?.id, setCustomDraft);
+  const queryClient = useQueryClient();
   const editable = props.mode !== "view";
   const submit = async () => {
     setSaving(true);
@@ -615,9 +637,21 @@ function DocumentEditor(props: {
       const saved = props.record
         ? await updateDocument(props.record.id, { ...values, version: props.record.version })
         : await createDocument(values);
+      const updatedCustomValues = await saveRecordCustomValues({
+        valueTargetKind: "document",
+        definitionTargetKind: "DOCUMENT_TYPE",
+        definitionTargetId: saved.type.id,
+        recordId: saved.id,
+        recordVersion: saved.version,
+        draft: customDraft,
+        force: Boolean(props.record),
+      });
+      if (updatedCustomValues) {
+        queryClient.setQueryData(["custom-values", "document", saved.id], updatedCustomValues);
+      }
       await props.onSaved(saved, props.record ? "Documento atualizado." : "Documento criado.");
     } catch (caught) {
-      setError(errorMessage(caught));
+      setError(recordCustomFieldError(caught));
     } finally {
       setSaving(false);
     }
@@ -640,7 +674,7 @@ function DocumentEditor(props: {
         <label>
           Tipo
           <select
-            disabled={!editable}
+            disabled={!editable || Boolean(props.lockType)}
             value={values.document_type_id}
             onChange={(event) => setValues({ ...values, document_type_id: event.target.value })}
           >
@@ -725,6 +759,13 @@ function DocumentEditor(props: {
             onChange={(event) => setValues({ ...values, notes: event.target.value })}
           />
         </label>
+        <RecordCustomFieldsSection
+          definitionTargetKind="DOCUMENT_TYPE"
+          definitionTargetId={values.document_type_id || undefined}
+          disabled={!editable}
+          draft={customDraft}
+          onDraftChange={setCustomDraft}
+        />
       </div>
       <EditorActions
         editable={editable}
@@ -756,11 +797,13 @@ function DocumentEditor(props: {
   );
 }
 
-function BillEditor(props: {
+export function BillEditor(props: {
   mode: "create" | "view" | "edit";
   profile: Profile;
   record: BillRecord | undefined;
   types: BillType[];
+  lockType?: boolean | undefined;
+  initialTypeId?: string | undefined;
   canDelete: boolean;
   pending: boolean;
   onClose: () => void;
@@ -774,7 +817,10 @@ function BillEditor(props: {
       ? billValues(props.record)
       : {
           owner_profile_id: props.profile.id,
-          bill_type_id: props.types.find((value) => value.active)?.id ?? "",
+          bill_type_id:
+            props.initialTypeId && props.types.some((value) => value.id === props.initialTypeId)
+              ? props.initialTypeId
+              : (props.types.find((value) => value.active)?.id ?? ""),
           printed_holder_name: props.profile.full_name,
           printed_address: profileAddress(props.profile),
           reference_value: "",
@@ -789,6 +835,9 @@ function BillEditor(props: {
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [customDraft, setCustomDraft] = useState<Record<string, CustomDraftValue>>({});
+  useSeedRecordDraft("bill", props.record?.id, setCustomDraft);
+  const queryClient = useQueryClient();
   const editable = props.mode !== "view";
   const submit = async () => {
     setSaving(true);
@@ -801,12 +850,24 @@ function BillEditor(props: {
             version: props.record.version,
           })
         : await createBill(values);
+      const updatedCustomValues = await saveRecordCustomValues({
+        valueTargetKind: "bill",
+        definitionTargetKind: "BILL_TYPE",
+        definitionTargetId: saved.type.id,
+        recordId: saved.id,
+        recordVersion: saved.version,
+        draft: customDraft,
+        force: Boolean(props.record),
+      });
+      if (updatedCustomValues) {
+        queryClient.setQueryData(["custom-values", "bill", saved.id], updatedCustomValues);
+      }
       await props.onSaved(
         saved,
         props.record ? "Conta/comprovante atualizado." : "Conta/comprovante criado.",
       );
     } catch (caught) {
-      setError(errorMessage(caught));
+      setError(recordCustomFieldError(caught));
     } finally {
       setSaving(false);
     }
@@ -829,7 +890,7 @@ function BillEditor(props: {
         <label>
           Tipo
           <select
-            disabled={!editable}
+            disabled={!editable || Boolean(props.lockType)}
             value={values.bill_type_id}
             onChange={(event) => setValues({ ...values, bill_type_id: event.target.value })}
           >
@@ -941,6 +1002,13 @@ function BillEditor(props: {
             onChange={(event) => setValues({ ...values, notes: event.target.value })}
           />
         </label>
+        <RecordCustomFieldsSection
+          definitionTargetKind="BILL_TYPE"
+          definitionTargetId={values.bill_type_id || undefined}
+          disabled={!editable}
+          draft={customDraft}
+          onDraftChange={setCustomDraft}
+        />
       </div>
       <EditorActions
         editable={editable}
@@ -977,12 +1045,8 @@ function CurrentUseControls(
     | { kind: "document"; record: DocumentRecord; onChanged: (message: string) => Promise<void> }
     | { kind: "bill"; record: BillRecord; onChanged: (message: string) => Promise<void> },
 ) {
-  const holders = useQuery({
-    queryKey: ["profiles", "selection"],
-    queryFn: ({ signal }) => listProfilesForSelection(signal),
-  });
+  const [query, setQuery] = useState(props.record.current_use?.holder_full_name ?? "");
   const [holder, setHolder] = useState(props.record.current_use?.holder_profile_id ?? "");
-  const holderAvailable = holders.data?.profiles.some((value) => value.id === holder) ?? false;
   const [error, setError] = useState<string | null>(null);
   const assign = useMutation({
     mutationFn: () =>
@@ -1012,15 +1076,18 @@ function CurrentUseControls(
         ) : null}
         <label>
           Pessoa em uso
-          <select value={holder} onChange={(event) => setHolder(event.target.value)}>
-            <option value="">Selecione</option>
-            {holder && !holderAvailable ? <option value={holder}>Pessoa atual</option> : null}
-            {holders.data?.profiles.map((value) => (
-              <option key={value.id} value={value.id}>
-                {value.full_name}
-              </option>
-            ))}
-          </select>
+          <SearchField
+            label="Pessoa em uso"
+            lookup
+            mode="suggest"
+            placeholder="Buscar pessoa…"
+            value={query}
+            onChange={setQuery}
+            onPick={(id, name) => {
+              setHolder(id);
+              setQuery(name);
+            }}
+          />
         </label>
         <Flex>
           <Button disabled={!holder || assign.isPending} onClick={() => assign.mutate()}>
@@ -1655,6 +1722,7 @@ function billValues(value: BillRecord): BillValuesRequest {
 }
 function documentSearch(search: ProfileListSearch) {
   return {
+    q: search.q,
     document_page: search.document_page,
     document_limit: search.document_limit,
     document_sort: search.document_sort,
@@ -1667,6 +1735,7 @@ function documentSearch(search: ProfileListSearch) {
 }
 function billSearch(search: ProfileListSearch) {
   return {
+    q: search.q,
     bill_page: search.bill_page,
     bill_limit: search.bill_limit,
     bill_sort: search.bill_sort,

@@ -1,4 +1,10 @@
-import type { HomeCatalogType } from "./loadHomeOverview";
+export type HomeCatalogType = {
+  id: string;
+  label: string;
+  technicalKey: string;
+  count: number | null;
+  loading: boolean;
+};
 
 export type HomeCatalogGroupKey =
   | "personal"

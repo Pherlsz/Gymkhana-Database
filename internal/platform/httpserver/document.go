@@ -9,6 +9,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
+	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -154,7 +155,7 @@ type documentPageResponse struct {
 	Page      documentPageMeta   `json:"page"`
 }
 
-func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service documentService, pool *pgxpool.Pool) {
+func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service documentService, search searchService, pool *pgxpool.Pool) {
 	mux.HandleFunc("GET /api/v1/document-types", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
@@ -278,6 +279,13 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			writeProblem(w, r, *problem)
 			return
 		}
+		restrict, ids, searchProblem := applySearchQ(r, actor, search, searchdomain.ModuleDocuments)
+		if searchProblem != nil {
+			writeProblem(w, r, *searchProblem)
+			return
+		}
+		options.Filters.RestrictIDs = restrict
+		options.Filters.IDFilter = documentIDsFromSearch(ids)
 		page, err := service.List(r.Context(), actor, options)
 		if err != nil {
 			writeDocumentError(w, r, logger, "list documents", err)

@@ -26,11 +26,55 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+  /api/v1/search/suggest:
+    get:
+      operationId: suggestSearchValues
+      summary: Suggest nearby values for the current Search token
+      tags: [Search]
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: field
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: grain
+          in: query
+          schema:
+            $ref: "#/components/schemas/SearchModule"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 50
+            default: 50
+      responses:
+        "200":
+          description: Proximity-ranked value suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchSuggestResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/search:
     post:
       operationId: executeSearch
       summary: Execute a bounded Search using logical identifiers
-      description: Terms are treated as literal character sequences. Results and catalog are permission-filtered.
+      description: Parse q as the Search query language. terms is a compatibility alias of bare AND words.
       tags: [Search]
       security:
         - sessionCookie: []
@@ -132,13 +176,17 @@ components:
     SearchCatalogField:
       type: object
       additionalProperties: false
-      required: [key, module, label, kind]
+      required: [key, module, group, label, kind]
       properties:
         key:
           type: string
           description: Opaque logical identifier from the authorized catalog.
         module:
           $ref: "#/components/schemas/SearchModule"
+          description: Search result module used for authorization and hit shape.
+        group:
+          $ref: "#/components/schemas/SearchModule"
+          description: UI bucket for the fields filter (owner of the field).
         label:
           type: string
         kind:
@@ -172,7 +220,7 @@ components:
     SearchCatalogResponse:
       type: object
       additionalProperties: false
-      required: [modules, fields, limits]
+      required: [modules, fields, operators, limits]
       properties:
         modules:
           type: array
@@ -182,17 +230,55 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SearchCatalogField"
+        operators:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchOperator"
         limits:
           $ref: "#/components/schemas/SearchCatalogLimits"
+    SearchOperator:
+      type: object
+      additionalProperties: false
+      required: [token, insert, kind, description]
+      properties:
+        token:
+          type: string
+        insert:
+          type: string
+        kind:
+          type: string
+        description:
+          type: string
+    SearchSuggestResponse:
+      type: object
+      additionalProperties: false
+      required: [suggestions]
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchSuggestHit"
+    SearchSuggestHit:
+      type: object
+      additionalProperties: false
+      required: [value, label]
+      properties:
+        value:
+          type: string
+        label:
+          type: string
     SearchRequest:
       type: object
       additionalProperties: false
-      required: [terms]
       properties:
+        q:
+          type: string
+          maxLength: 512
+          description: Search query language. Portuguese tokens (tipo, cidade, OU, cpf:).
         terms:
           type: array
           minItems: 1
-          maxItems: 5
+          maxItems: 16
           uniqueItems: true
           items:
             type: string

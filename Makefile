@@ -19,10 +19,12 @@ setup:
 	@$(GO) mod download
 
 services-up:
-	@docker compose up -d db
+	@echo "services-up is retired: the rebuild uses Neon, not local containers. Inject DATABASE_URL with lokeys."
+	@exit 1
 
 services-down:
-	@docker compose down
+	@echo "services-down is retired: the rebuild uses Neon, not local containers."
+	@exit 1
 
 require-database-url:
 	@if [ -z "$$DATABASE_URL" ]; then \
@@ -42,7 +44,7 @@ migrate-status: require-database-url
 	@$(GO) run ./cmd/river-migrate -action validate
 
 reset-db:
-	@echo "reset-db is retired: the rebuild uses Neon, not Compose PostgreSQL."
+	@echo "reset-db is retired: the rebuild uses Neon only. There is no local database to reset."
 	@echo "Do not drop Gymkhana-Database-Dev-18 from Make."
 	@exit 1
 

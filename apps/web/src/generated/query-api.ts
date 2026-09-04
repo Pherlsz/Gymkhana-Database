@@ -4,490 +4,468 @@
  */
 
 export interface paths {
-  "/api/v1/query/catalog": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/query/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the authorized logical Query catalog */
+        get: operations["getQueryCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Read the authorized logical Query catalog */
-    get: operations["getQueryCatalog"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/query/validate": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/query/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate and estimate a logical QueryPlan without executing it */
+        post: operations["validateQueryPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Validate and estimate a logical QueryPlan without executing it */
-    post: operations["validateQueryPlan"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/query/executions": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/query/executions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute a bounded logical QueryPlan in a read-only transaction
+         * @description The owner-scoped idempotency key replays the same execution and conflicts if reused for a different plan.
+         */
+        post: operations["executeQueryPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Execute a bounded logical QueryPlan in a read-only transaction
-     * @description The owner-scoped idempotency key replays the same execution and conflicts if reused for a different plan.
-     */
-    post: operations["executeQueryPlan"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/query/executions/{execution_id}/result": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/api/v1/query/executions/{execution_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one owner-scoped, permission-revalidated result page */
+        get: operations["getQueryResult"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Read one owner-scoped, permission-revalidated result page */
-    get: operations["getQueryResult"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    LogicalKey: string;
-    CatalogVersion: string;
-    Fingerprint: string;
-    /** @enum {string} */
-    ValueKind:
-      | "text"
-      | "long_text"
-      | "identifier"
-      | "integer"
-      | "decimal"
-      | "boolean"
-      | "civil_date"
-      | "civil_month"
-      | "timestamp"
-      | "enum";
-    /** @enum {string} */
-    QueryOperator:
-      | "eq"
-      | "neq"
-      | "contains"
-      | "starts_with"
-      | "gt"
-      | "gte"
-      | "lt"
-      | "lte"
-      | "between"
-      | "in"
-      | "is_null"
-      | "not_null";
-    EntityDefinition: {
-      key: components["schemas"]["LogicalKey"];
-      label: string;
-      kind: components["schemas"]["LogicalKey"];
-      navigable: boolean;
-      default_sort: components["schemas"]["LogicalKey"];
+    schemas: {
+        LogicalKey: string;
+        CatalogVersion: string;
+        Fingerprint: string;
+        /** @enum {string} */
+        ValueKind: "text" | "long_text" | "identifier" | "integer" | "decimal" | "boolean" | "civil_date" | "civil_month" | "timestamp" | "enum";
+        /** @enum {string} */
+        QueryOperator: "eq" | "neq" | "contains" | "starts_with" | "gt" | "gte" | "lt" | "lte" | "between" | "in" | "is_null" | "not_null";
+        EntityDefinition: {
+            key: components["schemas"]["LogicalKey"];
+            label: string;
+            kind: components["schemas"]["LogicalKey"];
+            navigable: boolean;
+            default_sort: components["schemas"]["LogicalKey"];
+        };
+        OptionDefinition: {
+            key: string;
+            label: string;
+        };
+        FieldDefinition: {
+            key: components["schemas"]["LogicalKey"];
+            entity: components["schemas"]["LogicalKey"];
+            label: string;
+            kind: components["schemas"]["ValueKind"];
+            nullable: boolean;
+            projectable: boolean;
+            filterable: boolean;
+            sortable: boolean;
+            operators: components["schemas"]["QueryOperator"][];
+            options?: components["schemas"]["OptionDefinition"][];
+        };
+        RelationDefinition: {
+            key: components["schemas"]["LogicalKey"];
+            from_entity: components["schemas"]["LogicalKey"];
+            to_entity: components["schemas"]["LogicalKey"];
+            label: string;
+            /** @enum {string} */
+            cardinality: "ONE" | "MANY";
+        };
+        OperatorDefinition: {
+            key: components["schemas"]["QueryOperator"];
+            label: string;
+            minimum_values: number;
+            maximum_values: number;
+        };
+        CatalogLimits: {
+            maximum_projections: number;
+            maximum_filter_nodes: number;
+            maximum_filter_depth: number;
+            maximum_relation_depth: number;
+            maximum_predicate_values: number;
+            maximum_sort_fields: number;
+            maximum_rows: number;
+            maximum_page_size: number;
+        };
+        QueryCatalog: {
+            version: components["schemas"]["CatalogVersion"];
+            entities: components["schemas"]["EntityDefinition"][];
+            fields: components["schemas"]["FieldDefinition"][];
+            relations: components["schemas"]["RelationDefinition"][];
+            operators: components["schemas"]["OperatorDefinition"][];
+            limits: components["schemas"]["CatalogLimits"];
+        };
+        /** @enum {string} */
+        FilterKind: "predicate" | "group" | "relation" | "not";
+        /** @enum {string} */
+        Conjunction: "AND" | "OR";
+        FilterNode: {
+            kind: components["schemas"]["FilterKind"];
+            conjunction?: components["schemas"]["Conjunction"];
+            field?: components["schemas"]["LogicalKey"];
+            operator?: components["schemas"]["QueryOperator"];
+            values?: string[];
+            relation?: components["schemas"]["LogicalKey"];
+            children?: components["schemas"]["FilterNode"][];
+        };
+        /** @enum {string} */
+        SortDirection: "asc" | "desc";
+        QuerySort: {
+            field: components["schemas"]["LogicalKey"];
+            direction: components["schemas"]["SortDirection"];
+        };
+        QueryPlan: {
+            /** @enum {string} */
+            version: "v1";
+            catalog_version: components["schemas"]["CatalogVersion"];
+            root_entity: components["schemas"]["LogicalKey"];
+            projections: components["schemas"]["LogicalKey"][];
+            filter?: components["schemas"]["FilterNode"];
+            sort?: components["schemas"]["QuerySort"][];
+            maximum_rows: number;
+        };
+        ResultColumn: {
+            position: number;
+            field_key: components["schemas"]["LogicalKey"];
+            label: string;
+            kind: components["schemas"]["ValueKind"];
+        };
+        PlanEstimate: {
+            /** @constant */
+            valid: true;
+            fingerprint: components["schemas"]["Fingerprint"];
+            cost: number;
+            columns: components["schemas"]["ResultColumn"][];
+        };
+        ExecuteQueryRequest: {
+            idempotency_key: string;
+            plan: components["schemas"]["QueryPlan"];
+        };
+        /** @enum {string} */
+        ExecutionState: "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+        QueryExecution: {
+            /** Format: uuid */
+            id: string;
+            state: components["schemas"]["ExecutionState"];
+            catalog_version: components["schemas"]["CatalogVersion"];
+            root_entity: components["schemas"]["LogicalKey"];
+            maximum_rows: number;
+            row_count: number;
+            column_count: number;
+            error_code?: string;
+            /** Format: date-time */
+            started_at: string;
+            /** Format: date-time */
+            completed_at?: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: int64 */
+            version: number;
+        };
+        ResultCell: {
+            column_position: number;
+            kind: components["schemas"]["ValueKind"];
+            is_null: boolean;
+            text_value?: string;
+            /** Format: int64 */
+            integer_value?: number;
+            decimal_value?: string;
+            boolean_value?: boolean;
+            /** Format: date */
+            civil_date_value?: string;
+            /** Format: date-time */
+            timestamp_value?: string;
+        };
+        ResultRow: {
+            position: number;
+            entity_kind: components["schemas"]["LogicalKey"];
+            entity_id: string;
+            entity_label: string;
+            /** Format: date-time */
+            updated_at: string;
+            cells: components["schemas"]["ResultCell"][];
+        };
+        QueryResultPage: {
+            execution: components["schemas"]["QueryExecution"];
+            columns: components["schemas"]["ResultColumn"][];
+            rows: components["schemas"]["ResultRow"][];
+            total: number;
+            limit: number;
+            offset: number;
+        };
+        FieldError: {
+            field: string;
+            code: string;
+            message: string;
+        };
+        ErrorResponse: {
+            error: {
+                code: string;
+                message: string;
+            };
+            request_id?: string;
+            field_errors?: components["schemas"]["FieldError"][];
+        };
     };
-    OptionDefinition: {
-      key: string;
-      label: string;
+    responses: {
+        /** @description Invalid JSON, identifier, pagination, plan envelope, or idempotency key */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Authentication is required */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description The current user cannot access Query or the requested logical scope */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description The execution does not exist for this owner */
+        NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description The catalog is stale, the idempotency key conflicts, or another execution is active */
+        Conflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description The plan was built from an older authorized catalog */
+        CatalogStale: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description The owner-scoped materialized result has expired */
+        Expired: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Logical identifiers, shape, values, cardinality, or estimated cost exceed safe limits */
+        ValidationError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description The persistent per-user Query execution limit was reached */
+        RateLimited: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Query is unavailable or exceeded its safe read-only timeout */
+        ServiceUnavailable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
     };
-    FieldDefinition: {
-      key: components["schemas"]["LogicalKey"];
-      entity: components["schemas"]["LogicalKey"];
-      label: string;
-      kind: components["schemas"]["ValueKind"];
-      nullable: boolean;
-      projectable: boolean;
-      filterable: boolean;
-      sortable: boolean;
-      operators: components["schemas"]["QueryOperator"][];
-      options?: components["schemas"]["OptionDefinition"][];
-    };
-    RelationDefinition: {
-      key: components["schemas"]["LogicalKey"];
-      from_entity: components["schemas"]["LogicalKey"];
-      to_entity: components["schemas"]["LogicalKey"];
-      label: string;
-      /** @enum {string} */
-      cardinality: "ONE" | "MANY";
-    };
-    OperatorDefinition: {
-      key: components["schemas"]["QueryOperator"];
-      label: string;
-      minimum_values: number;
-      maximum_values: number;
-    };
-    CatalogLimits: {
-      maximum_projections: number;
-      maximum_filter_nodes: number;
-      maximum_filter_depth: number;
-      maximum_relation_depth: number;
-      maximum_predicate_values: number;
-      maximum_sort_fields: number;
-      maximum_rows: number;
-      maximum_page_size: number;
-    };
-    QueryCatalog: {
-      version: components["schemas"]["CatalogVersion"];
-      entities: components["schemas"]["EntityDefinition"][];
-      fields: components["schemas"]["FieldDefinition"][];
-      relations: components["schemas"]["RelationDefinition"][];
-      operators: components["schemas"]["OperatorDefinition"][];
-      limits: components["schemas"]["CatalogLimits"];
-    };
-    /** @enum {string} */
-    FilterKind: "predicate" | "group" | "relation" | "not";
-    /** @enum {string} */
-    Conjunction: "AND" | "OR";
-    FilterNode: {
-      kind: components["schemas"]["FilterKind"];
-      conjunction?: components["schemas"]["Conjunction"];
-      field?: components["schemas"]["LogicalKey"];
-      operator?: components["schemas"]["QueryOperator"];
-      values?: string[];
-      relation?: components["schemas"]["LogicalKey"];
-      children?: components["schemas"]["FilterNode"][];
-    };
-    /** @enum {string} */
-    SortDirection: "asc" | "desc";
-    QuerySort: {
-      field: components["schemas"]["LogicalKey"];
-      direction: components["schemas"]["SortDirection"];
-    };
-    QueryPlan: {
-      /** @enum {string} */
-      version: "v1";
-      catalog_version: components["schemas"]["CatalogVersion"];
-      root_entity: components["schemas"]["LogicalKey"];
-      projections: components["schemas"]["LogicalKey"][];
-      filter?: components["schemas"]["FilterNode"];
-      sort?: components["schemas"]["QuerySort"][];
-      maximum_rows: number;
-    };
-    ResultColumn: {
-      position: number;
-      field_key: components["schemas"]["LogicalKey"];
-      label: string;
-      kind: components["schemas"]["ValueKind"];
-    };
-    PlanEstimate: {
-      /** @constant */
-      valid: true;
-      fingerprint: components["schemas"]["Fingerprint"];
-      cost: number;
-      columns: components["schemas"]["ResultColumn"][];
-    };
-    ExecuteQueryRequest: {
-      idempotency_key: string;
-      plan: components["schemas"]["QueryPlan"];
-    };
-    /** @enum {string} */
-    ExecutionState: "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
-    QueryExecution: {
-      /** Format: uuid */
-      id: string;
-      state: components["schemas"]["ExecutionState"];
-      catalog_version: components["schemas"]["CatalogVersion"];
-      root_entity: components["schemas"]["LogicalKey"];
-      maximum_rows: number;
-      row_count: number;
-      column_count: number;
-      error_code?: string;
-      /** Format: date-time */
-      started_at: string;
-      /** Format: date-time */
-      completed_at?: string;
-      /** Format: date-time */
-      expires_at: string;
-      /** Format: int64 */
-      version: number;
-    };
-    ResultCell: {
-      column_position: number;
-      kind: components["schemas"]["ValueKind"];
-      is_null: boolean;
-      text_value?: string;
-      /** Format: int64 */
-      integer_value?: number;
-      decimal_value?: string;
-      boolean_value?: boolean;
-      /** Format: date */
-      civil_date_value?: string;
-      /** Format: date-time */
-      timestamp_value?: string;
-    };
-    ResultRow: {
-      position: number;
-      entity_kind: components["schemas"]["LogicalKey"];
-      entity_id: string;
-      entity_label: string;
-      /** Format: date-time */
-      updated_at: string;
-      cells: components["schemas"]["ResultCell"][];
-    };
-    QueryResultPage: {
-      execution: components["schemas"]["QueryExecution"];
-      columns: components["schemas"]["ResultColumn"][];
-      rows: components["schemas"]["ResultRow"][];
-      total: number;
-      limit: number;
-      offset: number;
-    };
-    FieldError: {
-      field: string;
-      code: string;
-      message: string;
-    };
-    ErrorResponse: {
-      error: {
-        code: string;
-        message: string;
-      };
-      request_id?: string;
-      field_errors?: components["schemas"]["FieldError"][];
-    };
-  };
-  responses: {
-    /** @description Invalid JSON, identifier, pagination, plan envelope, or idempotency key */
-    BadRequest: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["ErrorResponse"];
-      };
-    };
-    /** @description Authentication is required */
-    Unauthorized: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["ErrorResponse"];
-      };
-    };
-    /** @description The current user cannot access Query or the requested logical scope */
-    Forbidden: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["ErrorResponse"];
-      };
-    };
-    /** @description The execution does not exist for this owner */
-    NotFound: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["ErrorResponse"];
-      };
-    };
-    /** @description The catalog is stale, the idempotency key conflicts, or another execution is active */
-    Conflict: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["ErrorResponse"];
-      };
-    };
-    /** @description The plan was built from an older authorized catalog */
-    CatalogStale: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["ErrorResponse"];
-      };
-    };
-    /** @description The owner-scoped materialized result has expired */
-    Expired: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["ErrorResponse"];
-      };
-    };
-    /** @description Logical identifiers, shape, values, cardinality, or estimated cost exceed safe limits */
-    ValidationError: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["ErrorResponse"];
-      };
-    };
-    /** @description The persistent per-user Query execution limit was reached */
-    RateLimited: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["ErrorResponse"];
-      };
-    };
-    /** @description Query is unavailable or exceeded its safe read-only timeout */
-    ServiceUnavailable: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["ErrorResponse"];
-      };
-    };
-  };
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  getQueryCatalog: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Permission-filtered entities, fields, relations, operators, and limits */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    getQueryCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["QueryCatalog"];
+        requestBody?: never;
+        responses: {
+            /** @description Permission-filtered entities, fields, relations, operators, and limits */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryCatalog"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            503: components["responses"]["ServiceUnavailable"];
         };
-      };
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      503: components["responses"]["ServiceUnavailable"];
     };
-  };
-  validateQueryPlan: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["QueryPlan"];
-      };
-    };
-    responses: {
-      /** @description Validated plan fingerprint, cost, and result columns */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    validateQueryPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["PlanEstimate"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QueryPlan"];
+            };
         };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      409: components["responses"]["CatalogStale"];
-      422: components["responses"]["ValidationError"];
-      503: components["responses"]["ServiceUnavailable"];
-    };
-  };
-  executeQueryPlan: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["ExecuteQueryRequest"];
-      };
-    };
-    responses: {
-      /** @description New or idempotently replayed execution */
-      200: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Validated plan fingerprint, cost, and result columns */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanEstimate"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["CatalogStale"];
+            422: components["responses"]["ValidationError"];
+            503: components["responses"]["ServiceUnavailable"];
         };
-        content: {
-          "application/json": components["schemas"]["QueryExecution"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      409: components["responses"]["Conflict"];
-      422: components["responses"]["ValidationError"];
-      429: components["responses"]["RateLimited"];
-      503: components["responses"]["ServiceUnavailable"];
     };
-  };
-  getQueryResult: {
-    parameters: {
-      query?: {
-        limit?: number;
-        offset?: number;
-      };
-      header?: never;
-      path: {
-        execution_id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Typed relational result page */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    executeQueryPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          "application/json": components["schemas"]["QueryResultPage"];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecuteQueryRequest"];
+            };
         };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-      409: components["responses"]["Conflict"];
-      410: components["responses"]["Expired"];
-      503: components["responses"]["ServiceUnavailable"];
+        responses: {
+            /** @description New or idempotently replayed execution */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryExecution"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
     };
-  };
+    getQueryResult: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                execution_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Typed relational result page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryResultPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            410: components["responses"]["Expired"];
+            503: components["responses"]["ServiceUnavailable"];
+        };
+    };
 }

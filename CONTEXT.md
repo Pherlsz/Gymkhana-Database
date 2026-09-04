@@ -55,7 +55,3 @@ _Avoid_: Administração, Profile, chave de modelo
 **Coluna calculada**:
 Valor derivado na página atual da grade (idade, signo, soma de dígitos). Não é cadastro e não cobre a base inteira.
 _Avoid_: custom field, coluna persistida, fórmula no banco, cálculo em 88 mil linhas
-
-**Funil**:
-Menu de filtro no cabeçalho da coluna, no molde de planilha: ordenar A–Z/Z–A, condição (vazio, texto, data, número) e lista de valores com busca e caixa de seleção. OK aplica; o recorte vai na URL.
-_Avoid_: QueryPlan, SQL, fórmula personalizada, filtrar por cor, dados validados

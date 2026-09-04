@@ -3,6 +3,7 @@ import { Layout, Typography } from "antd";
 import { AdminUsersPanel } from "./AdminUsersPanel";
 import { CustomDataPage } from "./CustomDataPage";
 import { useI18n } from "./i18n";
+import { CADASTRO_SEARCH_DEFAULTS } from "./lib/cadastro/cadastroSearch";
 import { canManageUsers } from "./lib/roles";
 import { OperationsPage } from "./OperationsPage";
 import { useApplicationSession } from "./session";
@@ -40,10 +41,12 @@ export function AdminPage() {
       </header>
       <div className="page-content">
         <nav aria-label={nav.admin} className="admin-tools">
-          <Link to="/forms">{nav.forms}</Link>
+          <Link search={{ ...CADASTRO_SEARCH_DEFAULTS, mode: "forms" }} to="/cadastro">
+            {nav.forms}
+          </Link>
         </nav>
         <AdminUsersPanel currentLogin={session.user.login} />
-        <OperationsPage />
+        <OperationsPage includeImports={false} />
         <CustomDataPage />
       </div>
     </Layout>

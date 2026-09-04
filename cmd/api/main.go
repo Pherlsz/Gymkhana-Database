@@ -178,7 +178,9 @@ func run() error {
 				return fmt.Errorf("configure Google Forms service: %w", err)
 			}
 		}
-		searchService, err = search.NewService(search.NewPostgresStore(pool), search.ServiceOptions{})
+		searchService, err = search.NewService(search.NewPostgresStore(pool), search.ServiceOptions{
+			Timeout: 8 * time.Second,
+		})
 		if err != nil {
 			return fmt.Errorf("configure Search service: %w", err)
 		}

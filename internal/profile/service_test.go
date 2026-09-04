@@ -11,6 +11,7 @@ import (
 
 type fakeServiceStore struct {
 	profiles []Profile
+	cities   []string
 	total    int64
 	created  Profile
 	updated  Profile
@@ -42,6 +43,9 @@ func (store *fakeServiceStore) List(_ context.Context, options ListOptions) ([]P
 }
 func (store *fakeServiceStore) ListByExactFullName(context.Context, string) ([]Profile, error) {
 	return store.profiles, store.err
+}
+func (store *fakeServiceStore) DistinctCities(context.Context, Filters, int32) ([]string, error) {
+	return store.cities, store.err
 }
 func (store *fakeServiceStore) Update(_ context.Context, id Identifier, version int64, values Values) (Profile, error) {
 	if store.err != nil {

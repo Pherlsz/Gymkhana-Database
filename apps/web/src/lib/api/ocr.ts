@@ -1,16 +1,13 @@
 import type { components, paths } from "../../generated/ocr-api";
 import { APIRequestError, apiURL, jsonRequest, requestJSON, throwAPIError } from "./client";
 
-export type OCRCapability = components["schemas"]["OCRCapability"];
 export type OCRJob = components["schemas"]["OCRJob"];
-export type OCRJobPage = components["schemas"]["OCRJobPage"];
-export type OCRJobState = components["schemas"]["OCRJobState"];
 export type OCRSuggestion = components["schemas"]["OCRSuggestion"];
-export type OCRSuggestionView = components["schemas"]["OCRSuggestionView"];
-export type OCRSuggestionPage = components["schemas"]["OCRSuggestionPage"];
-export type OCRJobEvent = components["schemas"]["OCRJobEvent"];
-export type OCRJobEventKind = components["schemas"]["OCRJobEventKind"];
-export type OCRApplyReceipt = components["schemas"]["OCRApplyReceipt"];
+type OCRCapability = components["schemas"]["OCRCapability"];
+type OCRSuggestionPage = components["schemas"]["OCRSuggestionPage"];
+type OCRJobEvent = components["schemas"]["OCRJobEvent"];
+type OCRJobEventKind = components["schemas"]["OCRJobEventKind"];
+type OCRApplyReceipt = components["schemas"]["OCRApplyReceipt"];
 
 type StartRequest = paths["/api/v1/ocr/jobs"]["post"]["requestBody"]["content"]["application/json"];
 type ReviewRequest =
@@ -22,10 +19,6 @@ const terminalEvents = new Set<OCRJobEventKind>(["JOB_COMPLETED", "JOB_FAILED", 
 
 export function getOCRCapability(signal?: AbortSignal): Promise<OCRCapability> {
   return requestJSON("/api/v1/ocr/capability", signal ? { signal } : {});
-}
-
-export function listOCRJobs(signal?: AbortSignal): Promise<OCRJobPage> {
-  return requestJSON("/api/v1/ocr/jobs?limit=100&offset=0", signal ? { signal } : {});
 }
 
 export function getOCRJob(jobID: string, signal?: AbortSignal): Promise<OCRJob> {
@@ -43,10 +36,6 @@ export function startOCRJob(
     ...(retryOfJobID ? { retry_of_job_id: retryOfJobID } : {}),
   };
   return requestJSON("/api/v1/ocr/jobs", jsonRequest("POST", request));
-}
-
-export function cancelOCRJob(jobID: string): Promise<OCRJob> {
-  return requestJSON(`/api/v1/ocr/jobs/${encodeURIComponent(jobID)}/cancel`, { method: "POST" });
 }
 
 export function listOCRSuggestions(
@@ -91,10 +80,6 @@ export function applyOCRSuggestions(
     `/api/v1/ocr/jobs/${encodeURIComponent(jobID)}/apply`,
     jsonRequest("POST", request),
   );
-}
-
-export function isActiveOCRJob(job: OCRJob | null | undefined): boolean {
-  return job?.state === "QUEUED" || job?.state === "RUNNING";
 }
 
 export function newOCRIdempotencyKey(prefix: "job" | "apply" = "job"): string {

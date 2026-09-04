@@ -73,6 +73,8 @@ type Filters struct {
 	Medium          Medium
 	Status          Status
 	HolderProfileID *profile.Identifier
+	RestrictIDs     bool
+	IDFilter        []Identifier
 }
 
 type ListOptions struct {
@@ -292,6 +294,8 @@ func (store *PostgresStore) Count(ctx context.Context, filters Filters) (int64, 
 		ReferenceFilter: normalize.SearchText(filters.Reference), CompetenceFilter: strings.TrimSpace(filters.Competence),
 		MediumFilter: string(filters.Medium), StatusFilter: string(filters.Status),
 		HolderProfileIDFilter: optionalProfileUUID(filters.HolderProfileID),
+		RestrictIds:           filters.RestrictIDs,
+		IDFilter:              billUUIDList(filters.IDFilter),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("count bills: %w", err)
@@ -305,6 +309,8 @@ func (store *PostgresStore) List(ctx context.Context, options ListOptions) ([]Bi
 		ReferenceFilter: normalize.SearchText(options.Filters.Reference), CompetenceFilter: strings.TrimSpace(options.Filters.Competence),
 		MediumFilter: string(options.Filters.Medium), StatusFilter: string(options.Filters.Status),
 		HolderProfileIDFilter: optionalProfileUUID(options.Filters.HolderProfileID),
+		RestrictIds:           options.Filters.RestrictIDs,
+		IDFilter:              billUUIDList(options.Filters.IDFilter),
 		SortField:             string(options.SortField), SortOrder: string(options.SortOrder), PageOffset: options.Offset, PageLimit: options.Limit,
 	})
 	if err != nil {
@@ -611,6 +617,14 @@ func mapBillPersistenceError(operation string, err error) error {
 
 func databaseUUID(identifier Identifier) pgtype.UUID {
 	return pgtype.UUID{Bytes: identifier, Valid: true}
+}
+
+func billUUIDList(ids []Identifier) []pgtype.UUID {
+	out := make([]pgtype.UUID, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, databaseUUID(id))
+	}
+	return out
 }
 
 func optionalDatabaseUUID(identifier *Identifier) pgtype.UUID {

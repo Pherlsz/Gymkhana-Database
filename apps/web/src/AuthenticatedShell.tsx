@@ -2,7 +2,6 @@ import { Avatar, Badge, Dropdown, Switch, Typography } from "antd";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ChevronDown,
-  ClipboardList,
   FileText,
   Folder,
   Home,
@@ -11,20 +10,22 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Receipt,
-  Search,
   Settings,
   SlidersHorizontal,
   Sun,
   User,
+  UserPlus,
 } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useI18n } from "./i18n";
 import { canManageUsers } from "./lib/roles";
 import { TABLE_SEARCH_DEFAULTS } from "./lib/tables/tableRoutes";
+import { CADASTRO_SEARCH_DEFAULTS } from "./lib/cadastro/cadastroSearch";
 import { GLOBAL_SEARCH_DEFAULTS } from "./SearchPage";
 import { useApplicationContext } from "./session";
 import { useTheme } from "./theme";
 import { ICON, ICON_STROKE } from "./components/icons";
+import { SearchField } from "./components/SearchField";
 
 const NAV_COLLAPSED_KEY = "gymkhana-nav-collapsed";
 const NAV_TABLES_OPEN_KEY = "gymkhana-nav-tables-open";
@@ -273,34 +274,33 @@ function AuthenticatedShellLayout() {
               />
             </div>
           </div>
+          <hr className="nav-divider" />
+          <RailTip label={copy.navigation.cadastro} rail={rail}>
+            <Link
+              activeOptions={{ exact: true, includeSearch: false }}
+              activeProps={{ "aria-current": "page", className: "nav-item--active" }}
+              className="nav-item"
+              search={CADASTRO_SEARCH_DEFAULTS}
+              title={copy.navigation.cadastro}
+              to="/cadastro"
+            >
+              <UserPlus aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+              <span className="nav-item__label">{copy.navigation.cadastro}</span>
+            </Link>
+          </RailTip>
           {admin ? (
-            <>
-              <hr className="nav-divider" />
-              <RailTip label={copy.navigation.forms} rail={rail}>
-                <Link
-                  activeOptions={{ exact: true }}
-                  activeProps={{ "aria-current": "page", className: "nav-item--active" }}
-                  className="nav-item"
-                  title={copy.navigation.forms}
-                  to="/forms"
-                >
-                  <ClipboardList aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                  <span className="nav-item__label">{copy.navigation.forms}</span>
-                </Link>
-              </RailTip>
-              <RailTip label={copy.navigation.admin} rail={rail}>
-                <Link
-                  activeOptions={{ exact: true }}
-                  activeProps={{ "aria-current": "page", className: "nav-item--active" }}
-                  className="nav-item"
-                  title={copy.navigation.admin}
-                  to="/admin"
-                >
-                  <SlidersHorizontal aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                  <span className="nav-item__label">{copy.navigation.admin}</span>
-                </Link>
-              </RailTip>
-            </>
+            <RailTip label={copy.navigation.admin} rail={rail}>
+              <Link
+                activeOptions={{ exact: true }}
+                activeProps={{ "aria-current": "page", className: "nav-item--active" }}
+                className="nav-item"
+                title={copy.navigation.admin}
+                to="/admin"
+              >
+                <SlidersHorizontal aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                <span className="nav-item__label">{copy.navigation.admin}</span>
+              </Link>
+            </RailTip>
           ) : null}
         </nav>
         <UserAccountCard rail={rail} />
@@ -321,39 +321,26 @@ function ShellSearch({
 }) {
   const navigate = useNavigate();
   const { messages } = useI18n();
-  const [focused, setFocused] = useState(false);
-
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const value = String(new FormData(event.currentTarget).get("q") ?? "").trim();
-    if (!value) {
-      inputRef.current?.focus();
-      return;
-    }
-    void navigate({ search: { ...GLOBAL_SEARCH_DEFAULTS, q: value }, to: "/search" });
-    event.currentTarget.reset();
-  };
+  const [value, setValue] = useState("");
 
   return (
-    <form
-      className={focused ? "shell-search shell-search--focused" : "shell-search"}
-      onSubmit={onSubmit}
-      role="search"
-    >
-      <Search aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-      <input
-        aria-label={messages.shell.navigation.searchPlaceholder}
-        autoComplete="off"
-        name="q"
+    <div className="shell-search">
+      <SearchField
+        inputRef={inputRef}
+        label={messages.shell.navigation.searchPlaceholder}
+        mode="text"
         placeholder={messages.shell.navigation.searchPlaceholder}
-        ref={inputRef}
-        spellCheck={false}
-        type="text"
-        onBlur={() => setFocused(false)}
-        onFocus={() => setFocused(true)}
+        shortcutHint={compact ? undefined : "Ctrl K"}
+        value={value}
+        onChange={setValue}
+        onSubmit={(next) => {
+          const trimmed = next.trim();
+          if (!trimmed) return;
+          void navigate({ search: { ...GLOBAL_SEARCH_DEFAULTS, q: trimmed }, to: "/search" });
+          setValue("");
+        }}
       />
-      {compact || focused ? null : <kbd>Ctrl K</kbd>}
-    </form>
+    </div>
   );
 }
 

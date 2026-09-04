@@ -167,7 +167,7 @@
   border-radius: 999px;
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--md-primary) 30%, transparent) 0%,
+    color-mix(in oklch, var(--md-primary) 30%, transparent) 0%,
     transparent 70%
   );
   filter: blur(2px);
@@ -176,7 +176,7 @@
 .dark .login-glow-ring {
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--md-primary) 16%, transparent) 0%,
+    color-mix(in oklch, var(--md-primary) 16%, transparent) 0%,
     transparent 70%
   );
 }
@@ -192,7 +192,7 @@
 
 .dark .login-mascot-img {
   filter: drop-shadow(0 8px 32px var(--gym-shadow-ambient))
-    drop-shadow(0 0 60px color-mix(in srgb, var(--md-primary) 18%, transparent));
+    drop-shadow(0 0 60px color-mix(in oklch, var(--md-primary) 18%, transparent));
 }
 
 .login-card-enter {

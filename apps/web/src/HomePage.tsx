@@ -19,6 +19,7 @@ import {
   Plane,
   Plus,
   Receipt,
+  RefreshCw,
   Scale,
   Smile,
   Stethoscope,
@@ -29,6 +30,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { normalizeProfileSearch } from "./ProfilesPage";
+import { CADASTRO_SEARCH_DEFAULTS } from "./lib/cadastro/cadastroSearch";
 import { useI18n } from "./i18n";
 import {
   groupHomeCatalog,
@@ -36,14 +38,14 @@ import {
   normalizeCatalogToken,
   type HomeCatalogItem,
 } from "./lib/home/catalogTaxonomy";
-import type { HomeInUseTypeChip } from "./lib/home/loadHomeOverview";
+import type { HomeInUseTypeChip } from "./lib/home/useHomeOverview";
 import { useHomeOverview } from "./lib/home/useHomeOverview";
 import { canManageUsers } from "./lib/roles";
 import { tableLinkProps } from "./lib/tables/tableRoutes";
 import { useApplicationSession } from "./session";
 import { ICON, ICON_STROKE } from "./components/icons";
 
-type HomeCopy = ReturnType<typeof useI18n>["messages"]["home"];
+const CHIP_LIMIT = 8;
 
 export function HomePage() {
   const session = useApplicationSession();
@@ -53,7 +55,11 @@ export function HomePage() {
   const overview = useHomeOverview();
   const admin = canManageUsers(session.user.role);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const inUseTotal = sumTotals(overview.documentsInUse, overview.billsInUse);
+  const [showAllChips, setShowAllChips] = useState(false);
+  const documentsInUseTotal =
+    typeof overview.documentsInUse === "number" ? overview.documentsInUse : 0;
+  const billsInUseTotal = typeof overview.billsInUse === "number" ? overview.billsInUse : 0;
+  const inUseTotal = documentsInUseTotal + billsInUseTotal;
   const catalogGroups = useMemo(
     () =>
       groupHomeCatalog({
@@ -97,44 +103,78 @@ export function HomePage() {
     <div className="home-page">
       <header className="home-page__header">
         <Typography.Title level={1} style={{ margin: 0 }}>
-          {copy.welcome.replace("{name}", session.user.display_name)}
+          {copy.welcome.replace("{name}", session.user.display_name || session.user.login)}
         </Typography.Title>
       </header>
 
       {overview.failed || overview.inUseFailed ? (
-        <Alert showIcon title={copy.overviewError} type="warning" />
+        <Alert
+          action={
+            <Button
+              icon={<RefreshCw aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />}
+              onClick={() => void overview.refetch()}
+              size="small"
+            >
+              {copy.retry}
+            </Button>
+          }
+          role="alert"
+          showIcon
+          title={copy.overviewError}
+          type="warning"
+        />
       ) : null}
 
       <div className="home-page__rail">
         <section className="home-page__actions">
-          <Typography.Text className="home-section__title">
-            {copy.quickActions.title}
-          </Typography.Text>
+          <h2 className="home-section__title">{copy.quickActions.title}</h2>
           <div className="quick-actions">
             <Dropdown
               menu={{
+                onClick: ({ key }) => {
+                  if (key === "person") {
+                    void navigate({
+                      to: "/cadastro",
+                      search: { ...CADASTRO_SEARCH_DEFAULTS, table: "people", mode: "manual" },
+                    });
+                    return;
+                  }
+                  if (key === "document") {
+                    void navigate({
+                      to: "/cadastro",
+                      search: { ...CADASTRO_SEARCH_DEFAULTS, table: "documents" },
+                    });
+                    return;
+                  }
+                  if (key === "bill") {
+                    void navigate({
+                      to: "/cadastro",
+                      search: { ...CADASTRO_SEARCH_DEFAULTS, table: "bills" },
+                    });
+                    return;
+                  }
+                  if (key === "batch") {
+                    void navigate({
+                      to: "/cadastro",
+                      search: { ...CADASTRO_SEARCH_DEFAULTS, table: "people", mode: "xlsx" },
+                    });
+                  }
+                },
                 items: [
+                  {
+                    key: "person",
+                    icon: <User aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
+                    label: copy.quickActions.newRecord,
+                  },
                   {
                     key: "document",
                     icon: <FileText aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
                     label: copy.quickActions.documents,
-                    onClick: () =>
-                      void navigate(
-                        tableLinkProps(
-                          normalizeProfileSearch({ mode: "create", section: "documents" }),
-                        ),
-                      ),
                   },
                   {
                     key: "bill",
                     icon: <Receipt aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
                     label: copy.quickActions.newBill,
-                    onClick: () =>
-                      void navigate(
-                        tableLinkProps(
-                          normalizeProfileSearch({ mode: "create", section: "bills" }),
-                        ),
-                      ),
                   },
                   ...(admin
                     ? [
@@ -148,7 +188,6 @@ export function HomePage() {
                                 <Download aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
                               ),
                               label: copy.quickActions.batch,
-                              onClick: () => void navigate({ to: "/admin" }),
                             },
                           ],
                         },
@@ -157,6 +196,7 @@ export function HomePage() {
                 ],
               }}
               trigger={["click"]}
+              getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
             >
               <Button
                 aria-label={copy.quickActions.newRecord}
@@ -178,7 +218,12 @@ export function HomePage() {
                   aria-label={copy.quickActions.googleForm}
                   className="quick-action"
                   icon={<ClipboardList aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
-                  onClick={() => void navigate({ to: "/forms" })}
+                  onClick={() =>
+                    void navigate({
+                      search: { ...CADASTRO_SEARCH_DEFAULTS, mode: "forms" },
+                      to: "/cadastro",
+                    })
+                  }
                 >
                   <span className="quick-action__copy">
                     <span className="quick-action__label">{copy.quickActions.googleForm}</span>
@@ -207,23 +252,44 @@ export function HomePage() {
               <Typography.Text type="secondary">{copy.attention.subtitle}</Typography.Text>
             </div>
             {inUseTotal > 0 ? (
-              <Button
-                className="home-attention__open"
-                onClick={() =>
-                  void navigate(
-                    tableLinkProps(
-                      normalizeProfileSearch({
-                        section: "documents",
-                        document_status: "IN_USE",
-                      }),
-                    ),
-                  )
-                }
-                size="small"
-                type="text"
-              >
-                {copy.attention.openDocuments}
-              </Button>
+              <div className="home-attention__open">
+                {documentsInUseTotal > 0 ? (
+                  <Button
+                    onClick={() =>
+                      void navigate(
+                        tableLinkProps(
+                          normalizeProfileSearch({
+                            section: "documents",
+                            document_status: "IN_USE",
+                          }),
+                        ),
+                      )
+                    }
+                    size="small"
+                    type="text"
+                  >
+                    {copy.attention.openDocuments}
+                  </Button>
+                ) : null}
+                {billsInUseTotal > 0 ? (
+                  <Button
+                    onClick={() =>
+                      void navigate(
+                        tableLinkProps(
+                          normalizeProfileSearch({
+                            section: "bills",
+                            bill_status: "IN_USE",
+                          }),
+                        ),
+                      )
+                    }
+                    size="small"
+                    type="text"
+                  >
+                    {copy.attention.openBills}
+                  </Button>
+                ) : null}
+              </div>
             ) : null}
             {overview.loading.inUse ? (
               <Skeleton active paragraph={{ rows: 1 }} title={false} />
@@ -236,10 +302,36 @@ export function HomePage() {
                 <p className="home-attention__value">{inUseTotal.toLocaleString("pt-BR")}</p>
                 {overview.inUseTypeChips.length > 0 ? (
                   <div className="home-attention__chips">
-                    {overview.inUseTypeChips.map((chip) => (
+                    {(showAllChips
+                      ? overview.inUseTypeChips
+                      : overview.inUseTypeChips.slice(0, CHIP_LIMIT)
+                    ).map((chip) => (
                       <InUseTypeChip chip={chip} key={chip.key} />
                     ))}
+                    {overview.inUseTypeChips.length > CHIP_LIMIT ? (
+                      <Button
+                        aria-expanded={showAllChips}
+                        className="home-attention__more"
+                        onClick={() => setShowAllChips((current) => !current)}
+                        size="small"
+                        type="text"
+                      >
+                        {showAllChips
+                          ? copy.attention.moreChipsCollapse
+                          : copy.attention.moreChips.replace(
+                              "{n}",
+                              String(overview.inUseTypeChips.length - CHIP_LIMIT),
+                            )}
+                      </Button>
+                    ) : null}
                   </div>
+                ) : null}
+                {overview.inUseFetched < inUseTotal ? (
+                  <p className="home-attention__note">
+                    {copy.attention.truncatedNote
+                      .replace("{fetched}", overview.inUseFetched.toLocaleString("pt-BR"))
+                      .replace("{total}", inUseTotal.toLocaleString("pt-BR"))}
+                  </p>
                 ) : null}
               </>
             )}
@@ -256,7 +348,7 @@ export function HomePage() {
             <span className="home-hero__copy">
               <span className="home-hero__label">{copy.hero.people}</span>
               {overview.loading.profiles ? (
-                <Skeleton.Input active size="small" />
+                <Skeleton.Input active size="small" style={{ width: "4.5rem" }} />
               ) : typeof overview.profileTotal === "number" ? (
                 <span className="home-hero__value">
                   {overview.profileTotal.toLocaleString("pt-BR")}{" "}
@@ -275,9 +367,9 @@ export function HomePage() {
       <div className="home-complement">
         <section>
           <div className="home-section__head">
-            <Typography.Text className="home-section__title" style={{ marginBottom: 0 }}>
+            <h2 className="home-section__title" style={{ marginBottom: 0 }}>
               {copy.tables.title}
-            </Typography.Text>
+            </h2>
             <Button
               aria-label={allGroupsOpen ? copy.tables.collapseAll : copy.tables.expandAll}
               icon={
@@ -308,7 +400,7 @@ export function HomePage() {
               >
                 <div className="home-catalog__rows">
                   {group.items.map((item) => (
-                    <CatalogRow copy={copy} item={item} key={`${item.kind}-${item.id}`} />
+                    <CatalogRow item={item} key={`${item.kind}-${item.id}`} />
                   ))}
                 </div>
               </CatalogPanel>
@@ -335,31 +427,33 @@ function CatalogPanel({
 }) {
   return (
     <section className="home-catalog__group">
-      <Button
-        aria-expanded={open}
-        className="home-catalog__trigger"
-        icon={
-          <ChevronRight
-            aria-hidden
-            className={
-              open ? "home-catalog__chevron home-catalog__chevron--open" : "home-catalog__chevron"
-            }
-            size={ICON.md}
-            strokeWidth={ICON_STROKE}
-          />
-        }
-        onClick={onToggle}
-        type="text"
-      >
-        <span className="home-catalog__trigger-label">{label}</span>
-        <span className="home-catalog__trigger-extra">{extra}</span>
-      </Button>
+      <h3 className="home-catalog__heading">
+        <Button
+          aria-expanded={open}
+          className="home-catalog__trigger"
+          icon={
+            <ChevronRight
+              aria-hidden
+              className={
+                open ? "home-catalog__chevron home-catalog__chevron--open" : "home-catalog__chevron"
+              }
+              size={ICON.md}
+              strokeWidth={ICON_STROKE}
+            />
+          }
+          onClick={onToggle}
+          type="text"
+        >
+          <span className="home-catalog__trigger-label">{label}</span>
+          <span className="home-catalog__trigger-extra">{extra}</span>
+        </Button>
+      </h3>
       {open ? <div className="home-catalog__body">{children}</div> : null}
     </section>
   );
 }
 
-function CatalogRow({ copy, item }: { copy: HomeCopy; item: HomeCatalogItem }) {
+function CatalogRow({ item }: { item: HomeCatalogItem }) {
   const typedFilter = isCanonicalContextSlug(item.id)
     ? {}
     : item.kind === "document"
@@ -378,20 +472,14 @@ function CatalogRow({ copy, item }: { copy: HomeCopy; item: HomeCatalogItem }) {
       </span>
       <span className="home-catalog__row-name">{item.label}</span>
       {item.loading ? (
-        <Skeleton.Input active size="small" />
-      ) : typeof item.count === "number" ? (
-        <span
-          className={
-            item.count > 0
-              ? "home-catalog__row-count"
-              : "home-catalog__row-count home-catalog__row-count--empty"
-          }
-        >
-          {item.count.toLocaleString("pt-BR")} <span>{copy.tables.inPossession}</span>
+        <Skeleton.Input active size="small" style={{ width: "4.5rem" }} />
+      ) : typeof item.count !== "number" ? (
+        <span className="home-catalog__row-count home-catalog__row-count--empty home-catalog__row-count--none">
+          —
         </span>
-      ) : (
-        <span className="home-catalog__row-count home-catalog__row-count--empty">—</span>
-      )}
+      ) : item.count > 0 ? (
+        <span className="home-catalog__row-count">{item.count.toLocaleString("pt-BR")}</span>
+      ) : null}
       <ChevronRight
         aria-hidden
         className="home-catalog__row-open"
@@ -452,8 +540,4 @@ function InUseTypeChip({ chip }: { chip: HomeInUseTypeChip }) {
       <span className="home-attention__chip-count">{chip.count.toLocaleString("pt-BR")}</span>
     </Link>
   );
-}
-
-function sumTotals(...values: Array<number | null | undefined>): number {
-  return values.reduce<number>((sum, value) => sum + (typeof value === "number" ? value : 0), 0);
 }

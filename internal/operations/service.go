@@ -247,6 +247,9 @@ func (service *Service) ParseImport(ctx context.Context, id Identifier) error {
 		}
 		return service.failImport(ctx, value, ImportParsing, workbookErrorCode(err), workerRequestID("parse", id), err)
 	}
+	if err := service.applyImportCatalog(ctx, id, value.Module, nil); err != nil {
+		return service.failImport(ctx, value, ImportParsing, "catalog_mapping_failed", workerRequestID("parse", id), err)
+	}
 	service.audit(ctx, &value.ActorUserID, &id, nil, value.Module, AuditImportParsed, auth.AuditOutcomeSuccess, nil, workerRequestID("parse", id))
 	return nil
 }
@@ -283,11 +286,21 @@ func (service *Service) SelectSheet(ctx context.Context, actor auth.Session, id 
 	if !value.ExpiresAt.After(service.now().UTC()) {
 		return Import{}, ErrExpired
 	}
-	selected, err := service.store.SelectSheet(ctx, id, actor.User.ID, version, sheetIndex, service.now().UTC())
-	if err == nil {
-		service.audit(ctx, &actor.User.ID, &id, nil, value.Module, AuditImportMapped, auth.AuditOutcomeSuccess, nil, requestID)
+	if _, err := service.store.SelectSheet(ctx, id, actor.User.ID, version, sheetIndex, service.now().UTC()); err != nil {
+		return Import{}, err
 	}
-	return selected, err
+	if err := service.applyImportCatalog(ctx, id, value.Module, &sheetIndex); err != nil {
+		return Import{}, err
+	}
+	service.audit(ctx, &actor.User.ID, &id, nil, value.Module, AuditImportMapped, auth.AuditOutcomeSuccess, nil, requestID)
+	return service.store.GetImport(ctx, id, actor.User.ID)
+}
+
+func (service *Service) applyImportCatalog(ctx context.Context, id Identifier, module Module, sheetIndex *int) error {
+	if service == nil || service.store == nil {
+		return ErrInvalidServiceSetup
+	}
+	return service.store.ApplySuggestedColumnMapping(ctx, id, module, sheetIndex)
 }
 
 func (service *Service) SaveMapping(ctx context.Context, actor auth.Session, id Identifier, version int64, mapping []MappingInput, requestID string) (Import, error) {

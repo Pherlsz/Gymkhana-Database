@@ -2,7 +2,7 @@ import { Button, Checkbox, Empty } from "antd";
 import { LockKeyhole } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ICON, ICON_STROKE } from "../../components/icons";
-import { SheetSearch } from "./SheetSearch";
+import { SearchField } from "../../components/SearchField";
 
 export type ColumnPickerItem = {
   key: string;
@@ -60,8 +60,9 @@ export function ColumnPicker({
 
   return (
     <div className="column-picker">
-      <SheetSearch
+      <SearchField
         label={searchLabel}
+        mode="local"
         placeholder={searchLabel}
         value={query}
         onChange={setQuery}

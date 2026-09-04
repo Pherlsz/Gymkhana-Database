@@ -26,6 +26,7 @@ export function buildSheetFilters({
   distinctByKey,
   typeGroups,
   identifierTypes,
+  cityOptions,
   setLocal,
   updateSearch,
 }: {
@@ -38,6 +39,7 @@ export function buildSheetFilters({
   distinctByKey: Record<string, string[]>;
   typeGroups: TypeFilterGroup[];
   identifierTypes: { technical_key: string; label: string }[];
+  cityOptions: { value: string; label: string }[];
   setLocal: (key: string, value: string) => void;
   updateSearch: (patch: Partial<ProfileListSearch>) => void;
 }): ToolbarFilterField[] {
@@ -216,9 +218,18 @@ export function buildSheetFilters({
       (value) => setLocal("street", value),
       true,
     ),
-    textFilter("city", copy.columns.city, search.city, (value) =>
-      updateSearch({ city: value, page: 1 }),
-    ),
+    cityOptions.length > 0
+      ? selectFilter(
+          "city",
+          copy.columns.city,
+          search.city,
+          cityOptions,
+          copy.filters.all,
+          (value) => updateSearch({ city: value, page: 1 }),
+        )
+      : textFilter("city", copy.columns.city, search.city, (value) =>
+          updateSearch({ city: value, page: 1 }),
+        ),
     textFilter(
       "neighborhood",
       copy.columns.neighborhood,
@@ -282,6 +293,13 @@ export function buildSheetFilters({
       (value) => setLocal("landline", value),
       true,
     ),
+    dateFilter(
+      "birth_date",
+      copy.columns.birthDate,
+      localFilters.birth_date ?? "",
+      (value) => setLocal("birth_date", value),
+      true,
+    ),
     ...identifierTypes.map((type) =>
       textFilter(
         `doc:${type.technical_key}`,
@@ -299,12 +317,14 @@ export function buildSheetFilters({
  * Chips come straight from the filter fields, so a chip always carries the
  * column's own label and clears through the same `onChange` that set it. The
  * previous hand-maintained list had to restate every label and could drift from
- * the field it described.
+ * the field it described. `local` marks filters that only see the loaded page,
+ * so the toolbar can flag their scope.
  */
 export function activeFilterChips(fields: ToolbarFilterField[]): {
   key: string;
   field: string;
   value: string;
+  local: boolean;
   onClear: () => void;
 }[] {
   return fields
@@ -313,6 +333,7 @@ export function activeFilterChips(fields: ToolbarFilterField[]): {
       key: field.key,
       field: field.label,
       value: filterValuePreview(field),
+      local: field.local === true,
       onClear: () => field.onChange(""),
     }));
 }

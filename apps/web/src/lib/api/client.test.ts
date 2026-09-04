@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   APIRequestError,
+  executeSearch,
   getAuthSession,
   getLiveHealth,
   listBills,
@@ -88,6 +89,7 @@ describe("generated API client helpers", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     await listDocuments(undefined, {
+      q: "",
       document_page: 1,
       document_limit: 100,
       document_sort: "identifier_value",
@@ -118,6 +120,7 @@ describe("generated API client helpers", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     await listDocuments(undefined, {
+      q: "",
       document_page: 1,
       document_limit: 100,
       document_sort: "identifier_value",
@@ -142,6 +145,7 @@ describe("generated API client helpers", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     await listBills(undefined, {
+      q: "",
       bill_page: 1,
       bill_limit: 100,
       bill_sort: "reference_value",
@@ -156,5 +160,31 @@ describe("generated API client helpers", () => {
     expect(url).toContain("/api/v1/bills?");
     expect(url).toContain("bill_type_id=type-luz");
     expect(url).not.toContain("owner_profile_id=");
+  });
+
+  it("posts a Search body with numeric paging and no URL state", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ results: [], page: { total: 0, limit: 50, offset: 0, sort: "relevance", sort_order: "desc" } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await executeSearch({
+      q: "Ana",
+      limit: "50" as unknown as number,
+      offset: "0" as unknown as number,
+      sort: "relevance",
+      order: "desc",
+      page: 1,
+      modules: "",
+    } as unknown as Parameters<typeof executeSearch>[0]);
+
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(init.body))).toEqual({
+      q: "Ana",
+      limit: 50,
+      offset: 0,
+      sort: "relevance",
+      order: "desc",
+    });
   });
 });

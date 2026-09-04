@@ -43,14 +43,17 @@ WHERE ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
   AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%')
   AND ($4::text = '' OR lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%')
   AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
+  AND (NOT $6::bool OR id = ANY($7::uuid[]))
 `
 
 type CountProfilesParams struct {
-	FullNameFilter string `json:"full_name_filter"`
-	CpfFilter      string `json:"cpf_filter"`
-	EmailFilter    string `json:"email_filter"`
-	CityFilter     string `json:"city_filter"`
-	StateFilter    string `json:"state_filter"`
+	FullNameFilter string        `json:"full_name_filter"`
+	CpfFilter      string        `json:"cpf_filter"`
+	EmailFilter    string        `json:"email_filter"`
+	CityFilter     string        `json:"city_filter"`
+	StateFilter    string        `json:"state_filter"`
+	RestrictIds    bool          `json:"restrict_ids"`
+	IDFilter       []pgtype.UUID `json:"id_filter"`
 }
 
 func (q *Queries) CountProfiles(ctx context.Context, arg CountProfilesParams) (int64, error) {
@@ -60,6 +63,8 @@ func (q *Queries) CountProfiles(ctx context.Context, arg CountProfilesParams) (i
 		arg.EmailFilter,
 		arg.CityFilter,
 		arg.StateFilter,
+		arg.RestrictIds,
+		arg.IDFilter,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -428,6 +433,61 @@ func (q *Queries) GetProfileByID(ctx context.Context, id pgtype.UUID) (Profile, 
 	return i, err
 }
 
+const listDistinctCities = `-- name: ListDistinctCities :many
+SELECT DISTINCT address_city
+FROM profiles
+WHERE address_city IS NOT NULL
+  AND address_city <> ''
+  AND ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
+  AND ($2::text = '' OR EXISTS (
+    SELECT 1
+    FROM document_presences AS presence
+    JOIN document_types AS document_type ON document_type.id = presence.document_type_id
+    WHERE presence.profile_id = profiles.id
+      AND document_type.technical_key = 'cpf'
+      AND presence.claim = 'informed_number'
+      AND coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%'
+  ))
+  AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%')
+  AND ($4::text = '' OR coalesce(address_state, '') = $4::text)
+ORDER BY address_city COLLATE gymkhana_pt_br
+LIMIT $5
+`
+
+type ListDistinctCitiesParams struct {
+	FullNameFilter string `json:"full_name_filter"`
+	CpfFilter      string `json:"cpf_filter"`
+	EmailFilter    string `json:"email_filter"`
+	StateFilter    string `json:"state_filter"`
+	ValueLimit     int32  `json:"value_limit"`
+}
+
+func (q *Queries) ListDistinctCities(ctx context.Context, arg ListDistinctCitiesParams) ([]*string, error) {
+	rows, err := q.db.Query(ctx, listDistinctCities,
+		arg.FullNameFilter,
+		arg.CpfFilter,
+		arg.EmailFilter,
+		arg.StateFilter,
+		arg.ValueLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*string{}
+	for rows.Next() {
+		var address_city *string
+		if err := rows.Scan(&address_city); err != nil {
+			return nil, err
+		}
+		items = append(items, address_city)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProfiles = `-- name: ListProfiles :many
 SELECT id, full_name, social_name, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, birth_date, gender, blood_type, nationality, birth_city, marital_status, wedding_date, father_name, father_birth_date, mother_name, mother_birth_date, health_plan, blood_donor, organ_donor, team, sector, collections, vehicle_model, vehicle_color, vehicle_plate, vehicle_year, club_membership, membership_type, place_of_origin, birth_country, parents_wedding_date, supermarket_club, pet, travel_countries, card_brand, card_bank, version, created_at, updated_at
 FROM profiles
@@ -444,46 +504,57 @@ WHERE ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
   AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%')
   AND ($4::text = '' OR lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%')
   AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
+  AND (NOT $6::bool OR id = ANY($7::uuid[]))
 ORDER BY
-  (CASE WHEN $6::text = 'full_name' AND $7::text = 'asc' THEN full_name END) COLLATE gymkhana_pt_br ASC,
-  (CASE WHEN $6::text = 'full_name' AND $7::text = 'desc' THEN full_name END) COLLATE gymkhana_pt_br DESC,
-  CASE WHEN $6::text = 'cpf' AND $7::text = 'asc' THEN (
+  (CASE WHEN $8::text = 'full_name' AND $9::text = 'asc' THEN full_name END) COLLATE gymkhana_pt_br ASC,
+  (CASE WHEN $8::text = 'full_name' AND $9::text = 'desc' THEN full_name END) COLLATE gymkhana_pt_br DESC,
+  CASE WHEN $8::text = 'cpf' AND $9::text = 'asc' THEN (
     SELECT presence.identifier_digits
     FROM document_presences AS presence
     JOIN document_types AS document_type ON document_type.id = presence.document_type_id
     WHERE presence.profile_id = profiles.id AND document_type.technical_key = 'cpf'
     LIMIT 1
   ) END ASC NULLS LAST,
-  CASE WHEN $6::text = 'cpf' AND $7::text = 'desc' THEN (
+  CASE WHEN $8::text = 'cpf' AND $9::text = 'desc' THEN (
     SELECT presence.identifier_digits
     FROM document_presences AS presence
     JOIN document_types AS document_type ON document_type.id = presence.document_type_id
     WHERE presence.profile_id = profiles.id AND document_type.technical_key = 'cpf'
     LIMIT 1
   ) END DESC NULLS LAST,
-  CASE WHEN $6::text = 'email' AND $7::text = 'asc' THEN lower(email) END ASC NULLS LAST,
-  CASE WHEN $6::text = 'email' AND $7::text = 'desc' THEN lower(email) END DESC NULLS LAST,
-  CASE WHEN $6::text = 'address_city' AND $7::text = 'asc' THEN lower(address_city) END ASC NULLS LAST,
-  CASE WHEN $6::text = 'address_city' AND $7::text = 'desc' THEN lower(address_city) END DESC NULLS LAST,
-  CASE WHEN $6::text = 'created_at' AND $7::text = 'asc' THEN created_at END ASC,
-  CASE WHEN $6::text = 'created_at' AND $7::text = 'desc' THEN created_at END DESC,
-  CASE WHEN $6::text = 'updated_at' AND $7::text = 'asc' THEN updated_at END ASC,
-  CASE WHEN $6::text = 'updated_at' AND $7::text = 'desc' THEN updated_at END DESC,
+  CASE WHEN $8::text = 'email' AND $9::text = 'asc' THEN lower(email) END ASC NULLS LAST,
+  CASE WHEN $8::text = 'email' AND $9::text = 'desc' THEN lower(email) END DESC NULLS LAST,
+  CASE WHEN $8::text = 'address_city' AND $9::text = 'asc' THEN lower(address_city) END ASC NULLS LAST,
+  CASE WHEN $8::text = 'address_city' AND $9::text = 'desc' THEN lower(address_city) END DESC NULLS LAST,
+  CASE WHEN $8::text = 'address_street' AND $9::text = 'asc' THEN lower(coalesce(address_street, '')) END ASC NULLS LAST,
+  CASE WHEN $8::text = 'address_street' AND $9::text = 'desc' THEN lower(coalesce(address_street, '')) END DESC NULLS LAST,
+  CASE WHEN $8::text = 'address_neighborhood' AND $9::text = 'asc' THEN lower(coalesce(address_neighborhood, '')) END ASC NULLS LAST,
+  CASE WHEN $8::text = 'address_neighborhood' AND $9::text = 'desc' THEN lower(coalesce(address_neighborhood, '')) END DESC NULLS LAST,
+  CASE WHEN $8::text = 'mobile_phone' AND $9::text = 'asc' THEN mobile_phone END ASC NULLS LAST,
+  CASE WHEN $8::text = 'mobile_phone' AND $9::text = 'desc' THEN mobile_phone END DESC NULLS LAST,
+  CASE WHEN $8::text = 'birth_date' AND $9::text = 'asc' THEN birth_date END ASC NULLS LAST,
+  CASE WHEN $8::text = 'birth_date' AND $9::text = 'desc' THEN birth_date END DESC NULLS LAST,
+  CASE WHEN $8::text = 'created_at' AND $9::text = 'asc' THEN created_at END ASC,
+  CASE WHEN $8::text = 'created_at' AND $9::text = 'desc' THEN created_at END DESC,
+  CASE WHEN $8::text = 'updated_at' AND $9::text = 'asc' THEN updated_at END ASC,
+  CASE WHEN $8::text = 'updated_at' AND $9::text = 'desc' THEN updated_at END DESC,
   id ASC
-LIMIT $9
-OFFSET $8
+LIMIT $11
+OFFSET $10
 `
 
 type ListProfilesParams struct {
-	FullNameFilter string `json:"full_name_filter"`
-	CpfFilter      string `json:"cpf_filter"`
-	EmailFilter    string `json:"email_filter"`
-	CityFilter     string `json:"city_filter"`
-	StateFilter    string `json:"state_filter"`
-	SortField      string `json:"sort_field"`
-	SortOrder      string `json:"sort_order"`
-	PageOffset     int32  `json:"page_offset"`
-	PageLimit      int32  `json:"page_limit"`
+	FullNameFilter string        `json:"full_name_filter"`
+	CpfFilter      string        `json:"cpf_filter"`
+	EmailFilter    string        `json:"email_filter"`
+	CityFilter     string        `json:"city_filter"`
+	StateFilter    string        `json:"state_filter"`
+	RestrictIds    bool          `json:"restrict_ids"`
+	IDFilter       []pgtype.UUID `json:"id_filter"`
+	SortField      string        `json:"sort_field"`
+	SortOrder      string        `json:"sort_order"`
+	PageOffset     int32         `json:"page_offset"`
+	PageLimit      int32         `json:"page_limit"`
 }
 
 func (q *Queries) ListProfiles(ctx context.Context, arg ListProfilesParams) ([]Profile, error) {
@@ -493,6 +564,8 @@ func (q *Queries) ListProfiles(ctx context.Context, arg ListProfilesParams) ([]P
 		arg.EmailFilter,
 		arg.CityFilter,
 		arg.StateFilter,
+		arg.RestrictIds,
+		arg.IDFilter,
 		arg.SortField,
 		arg.SortOrder,
 		arg.PageOffset,

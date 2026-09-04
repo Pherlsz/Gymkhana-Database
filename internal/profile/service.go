@@ -24,23 +24,29 @@ type SortField string
 type SortOrder string
 
 const (
-	SortFullName  SortField = "full_name"
-	SortCPF       SortField = "cpf"
-	SortEmail     SortField = "email"
-	SortCity      SortField = "address_city"
-	SortCreatedAt SortField = "created_at"
-	SortUpdatedAt SortField = "updated_at"
+	SortFullName     SortField = "full_name"
+	SortCPF          SortField = "cpf"
+	SortEmail        SortField = "email"
+	SortCity         SortField = "address_city"
+	SortStreet       SortField = "address_street"
+	SortNeighborhood SortField = "address_neighborhood"
+	SortMobilePhone  SortField = "mobile_phone"
+	SortBirthDate    SortField = "birth_date"
+	SortCreatedAt    SortField = "created_at"
+	SortUpdatedAt    SortField = "updated_at"
 
 	SortAscending  SortOrder = "asc"
 	SortDescending SortOrder = "desc"
 )
 
 type Filters struct {
-	FullName string
-	CPF      string
-	Email    string
-	City     string
-	State    string
+	FullName    string
+	CPF         string
+	Email       string
+	City        string
+	State       string
+	RestrictIDs bool
+	IDFilter    []Identifier
 }
 
 type ListOptions struct {
@@ -139,6 +145,26 @@ func (service *Service) Get(ctx context.Context, actor auth.Session, id Identifi
 		return Profile{}, ErrForbidden
 	}
 	return service.store.Get(ctx, id)
+}
+
+// DistinctCities returns the distinct non-empty cities across the profile set
+// that matches the given filters, so the grid's filter-by-values menu can list
+// every city instead of only the ones on the loaded page.
+func (service *Service) DistinctCities(ctx context.Context, actor auth.Session, filters Filters, limit int32) ([]string, error) {
+	if !actor.User.Active || !actor.User.Role.CanReadProfiles() {
+		return nil, ErrForbidden
+	}
+	normalized, err := normalizeListOptions(ListOptions{Limit: 1, Filters: filters})
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 {
+		limit = 500
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+	return service.store.DistinctCities(ctx, normalized.Filters, limit)
 }
 
 func (service *Service) Create(ctx context.Context, actor auth.Session, values Values, requestID string) (Profile, error) {
@@ -258,7 +284,8 @@ func normalizeListOptions(options ListOptions) (ListOptions, error) {
 
 func (field SortField) Valid() bool {
 	switch field {
-	case SortFullName, SortCPF, SortEmail, SortCity, SortCreatedAt, SortUpdatedAt:
+	case SortFullName, SortCPF, SortEmail, SortCity, SortStreet, SortNeighborhood,
+		SortMobilePhone, SortBirthDate, SortCreatedAt, SortUpdatedAt:
 		return true
 	default:
 		return false

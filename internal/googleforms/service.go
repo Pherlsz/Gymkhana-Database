@@ -539,31 +539,60 @@ func refreshTokenAAD(ownerID auth.Identifier) string {
 func safeReturnPath(value string) (string, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return "/google-forms", nil
+		return "/cadastro?mode=forms", nil
 	}
 	if len(value) > 500 || !strings.HasPrefix(value, "/") || strings.HasPrefix(value, "//") {
 		return "", ErrInvalidInput
 	}
 	parsed, err := url.Parse(value)
-	if err != nil || parsed.IsAbs() || parsed.Host != "" || parsed.Fragment != "" || parsed.Path != "/google-forms" {
+	if err != nil || parsed.IsAbs() || parsed.Host != "" || parsed.Fragment != "" {
+		return "", ErrInvalidInput
+	}
+	switch parsed.Path {
+	case "/cadastro", "/forms", "/google-forms":
+	default:
 		return "", ErrInvalidInput
 	}
 	query := parsed.Query()
 	for key, values := range query {
-		if len(values) != 1 || values[0] == "" || (key != "tab" && key != "source") {
+		if len(values) != 1 || values[0] == "" {
+			return "", ErrInvalidInput
+		}
+		switch key {
+		case "mode", "tab", "source", "table":
+		default:
 			return "", ErrInvalidInput
 		}
 	}
-	if tab := query.Get("tab"); tab != "" && tab != "sources" && tab != "history" {
+	if mode := query.Get("mode"); mode != "" && mode != "forms" {
 		return "", ErrInvalidInput
 	}
-	if source := query.Get("source"); source != "" {
+	tab := query.Get("tab")
+	if tab != "" && tab != "sources" && tab != "history" {
+		return "", ErrInvalidInput
+	}
+	source := query.Get("source")
+	if source != "" {
 		if _, err := ParseIdentifier(source); err != nil {
 			return "", ErrInvalidInput
 		}
 	}
-	parsed.RawQuery = query.Encode()
-	return parsed.String(), nil
+	table := query.Get("table")
+	if table != "" && table != "people" && table != "documents" && table != "bills" {
+		return "", ErrInvalidInput
+	}
+	out := url.Values{}
+	out.Set("mode", "forms")
+	if tab != "" {
+		out.Set("tab", tab)
+	}
+	if source != "" {
+		out.Set("source", source)
+	}
+	if table != "" && table != "people" {
+		out.Set("table", table)
+	}
+	return "/cadastro?" + out.Encode(), nil
 }
 
 func providerFormID(reference string) (string, error) {

@@ -20,7 +20,6 @@ const (
 var staticFields = []FieldDefinition{
 	{Key: "profile.full_name", Module: ModuleProfiles, Label: "Nome completo", Kind: "text"},
 	{Key: "profile.social_name", Module: ModuleProfiles, Label: "Nome social", Kind: "text"},
-	{Key: "profile.cpf", Module: ModuleProfiles, Label: "CPF", Kind: "identifier"},
 	{Key: "profile.email", Module: ModuleProfiles, Label: "E-mail", Kind: "text"},
 	{Key: "profile.mobile_phone", Module: ModuleProfiles, Label: "Celular", Kind: "identifier"},
 	{Key: "profile.landline_phone", Module: ModuleProfiles, Label: "Telefone", Kind: "identifier"},
@@ -69,6 +68,8 @@ type Store interface {
 	ListDynamicFields(context.Context) ([]FieldDefinition, error)
 	ReserveRateLimit(context.Context, auth.Identifier, time.Time, int) error
 	Execute(context.Context, Plan) ([]Result, int64, error)
+	MatchIDs(context.Context, Plan, Module) ([]string, error)
+	Suggest(context.Context, SuggestQuery) ([]SuggestHit, error)
 }
 
 type ServiceOptions struct {
@@ -128,19 +129,16 @@ func (service *Service) Catalog(ctx context.Context, actor auth.Session) (Catalo
 }
 
 func (service *Service) Search(ctx context.Context, actor auth.Session, query Query) (Page, error) {
-	if !actor.User.Active || !actor.User.Role.CanSearch() {
-		return Page{}, ErrForbidden
-	}
-	catalog, err := service.catalog(ctx, actor.User.Role)
+	normalized, catalog, err := service.prepare(ctx, actor, query)
 	if err != nil {
 		return Page{}, err
 	}
-	normalized, validation := normalizeQuery(query, catalog)
-	if validation != nil {
-		return Page{}, validation
+	plans, err := service.plans(normalized, catalog)
+	if err != nil {
+		return Page{}, err
 	}
 	fieldCount := selectedFieldCount(normalized, catalog)
-	cost := int64(len(normalized.Terms)) * int64(maximum(1, fieldCount)) * int64(normalized.Limit+normalized.Offset)
+	cost := int64(maximum(1, len(normalized.Terms))) * int64(maximum(1, fieldCount)) * int64(normalized.Limit+normalized.Offset) * int64(len(plans))
 	if cost > int64(service.maximumCost) {
 		return Page{}, ErrCostLimit
 	}
@@ -148,46 +146,252 @@ func (service *Service) Search(ctx context.Context, actor auth.Session, query Qu
 	if err := service.store.ReserveRateLimit(ctx, actor.User.ID, window, service.rateLimit); err != nil {
 		return Page{}, err
 	}
-
-	patterns := make([]string, 0, len(normalized.Terms))
-	for _, term := range normalized.Terms {
-		patterns = append(patterns, literalContainsPattern(term))
-	}
-	plan := Plan{
-		Terms:            normalized.Terms,
-		LiteralPatterns:  patterns,
-		Modules:          normalized.Modules,
-		Fields:           normalized.Fields,
-		Limit:            normalized.Limit,
-		Offset:           normalized.Offset,
-		Sort:             normalized.Sort,
-		Order:            normalized.Order,
-		StatementTimeout: service.timeout,
-		CandidateLimit:   MaxResultCardinality + 1,
-	}
 	queryContext, cancel := context.WithTimeout(ctx, service.timeout)
 	defer cancel()
-	results, total, err := service.store.Execute(queryContext, plan)
-	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(queryContext.Err(), context.DeadlineExceeded) {
-			return Page{}, ErrQueryTimeout
+	merged := make([]Result, 0)
+	var total int64
+	for _, plan := range plans {
+		results, count, execErr := service.store.Execute(queryContext, plan)
+		if execErr != nil {
+			if errors.Is(execErr, context.DeadlineExceeded) || errors.Is(queryContext.Err(), context.DeadlineExceeded) {
+				return Page{}, ErrQueryTimeout
+			}
+			return Page{}, execErr
 		}
-		return Page{}, err
+		total += count
+		merged = append(merged, results...)
 	}
 	if total > MaxResultCardinality {
 		return Page{}, ErrCardinalityLimit
 	}
-	if !resultsAreAuthorized(results, normalized, catalog) {
+	if len(plans) > 1 {
+		merged = dedupeResults(merged)
+		total = int64(len(merged))
+		merged = paginateResults(merged, normalized)
+	}
+	if !resultsAreAuthorized(merged, normalized, catalog) {
 		return Page{}, ErrUnsafeResult
 	}
 	return Page{
-		Results: results,
+		Results: merged,
 		Total:   total,
 		Limit:   normalized.Limit,
 		Offset:  normalized.Offset,
 		Sort:    normalized.Sort,
 		Order:   normalized.Order,
 	}, nil
+}
+
+func (service *Service) MatchIDs(ctx context.Context, actor auth.Session, query Query, grain Module) ([]string, error) {
+	if grain == ModuleProfiles {
+		query = queryWithLookup(query)
+	}
+	query.Modules = []Module{grain}
+	if grain == ModuleProfiles {
+		query.Modules = []Module{ModuleProfiles, ModuleDocuments, ModuleBills}
+	}
+	normalized, catalog, err := service.prepare(ctx, actor, query)
+	if err != nil {
+		return nil, err
+	}
+	plans, err := service.plans(normalized, catalog)
+	if err != nil {
+		return nil, err
+	}
+	queryContext, cancel := context.WithTimeout(ctx, service.timeout)
+	defer cancel()
+	seen := map[string]struct{}{}
+	ids := make([]string, 0)
+	for _, plan := range plans {
+		matched, matchErr := service.store.MatchIDs(queryContext, plan, grain)
+		if matchErr != nil {
+			if errors.Is(matchErr, context.DeadlineExceeded) || errors.Is(queryContext.Err(), context.DeadlineExceeded) {
+				return nil, ErrQueryTimeout
+			}
+			return nil, matchErr
+		}
+		for _, id := range matched {
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			seen[id] = struct{}{}
+			ids = append(ids, id)
+		}
+	}
+	if int64(len(ids)) > MaxResultCardinality {
+		return nil, ErrCardinalityLimit
+	}
+	return ids, nil
+}
+
+func (service *Service) Suggest(ctx context.Context, actor auth.Session, query SuggestQuery) ([]SuggestHit, error) {
+	if !actor.User.Active || !actor.User.Role.CanSearch() {
+		return nil, ErrForbidden
+	}
+	if query.Limit <= 0 || query.Limit > MaxSuggest {
+		query.Limit = MaxSuggest
+	}
+	query.Q = strings.TrimSpace(query.Q)
+	if utf8.RuneCountInString(query.Q) > MaxTermLength {
+		return nil, &ValidationError{Fields: []FieldError{{Field: "q", Code: "too_long"}}}
+	}
+	return service.store.Suggest(ctx, query)
+}
+
+func queryWithLookup(query Query) Query {
+	if strings.TrimSpace(query.Q) == "" {
+		return query
+	}
+	parsed, err := ParseQuery(query.Q)
+	if err != nil {
+		return query
+	}
+	simplified := simplifyLookup(parsed)
+	query.Q = renderParsed(simplified)
+	return query
+}
+
+func renderParsed(parsed ParsedQuery) string {
+	parts := make([]string, 0)
+	for i, branch := range parsed.Branches {
+		if i > 0 {
+			parts = append(parts, "OU")
+		}
+		for _, atom := range branch.Atoms {
+			text := atom.Value
+			if atom.FieldToken != "" {
+				text = atom.FieldToken + ":" + atom.Value
+			}
+			if atom.Exclude {
+				text = "-" + text
+			}
+			parts = append(parts, text)
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
+func (service *Service) prepare(ctx context.Context, actor auth.Session, query Query) (Query, Catalog, error) {
+	if !actor.User.Active || !actor.User.Role.CanSearch() {
+		return Query{}, Catalog{}, ErrForbidden
+	}
+	catalog, err := service.catalog(ctx, actor.User.Role)
+	if err != nil {
+		return Query{}, Catalog{}, err
+	}
+	if strings.TrimSpace(query.Q) != "" {
+		parsed, parseErr := ParseQuery(query.Q)
+		if parseErr != nil {
+			return Query{}, Catalog{}, parseErr
+		}
+		if len(parsed.Modules) > 0 && len(query.Modules) == 0 {
+			query.Modules = parsed.Modules
+		} else if len(parsed.Modules) > 0 {
+			query.Modules = intersectModules(query.Modules, parsed.Modules)
+		}
+		resolved, resolveErr := resolveParsed(parsed, catalog)
+		if resolveErr != nil {
+			return Query{}, Catalog{}, resolveErr
+		}
+		terms := make([]string, 0)
+		for _, branch := range resolved.Branches {
+			_, _, branchTerms := compileBranch(branch)
+			terms = append(terms, branchTerms...)
+		}
+		query.Terms = uniqueStrings(terms)
+	}
+	normalized, validation := normalizeQuery(query, catalog)
+	if validation != nil {
+		return Query{}, Catalog{}, validation
+	}
+	return normalized, catalog, nil
+}
+
+func (service *Service) plans(query Query, catalog Catalog) ([]Plan, error) {
+	base := Plan{
+		Terms:            query.Terms,
+		Modules:          query.Modules,
+		Fields:           query.Fields,
+		Limit:            query.Limit,
+		Offset:           query.Offset,
+		Sort:             query.Sort,
+		Order:            query.Order,
+		StatementTimeout: service.timeout,
+		CandidateLimit:   MaxResultCardinality + 1,
+	}
+	if strings.TrimSpace(query.Q) == "" {
+		for _, term := range query.Terms {
+			patterns := textSearchPatterns(term)
+			base.Includes = append(base.Includes, TermSpec{Term: term, Pattern: patterns[0], Patterns: patterns, FieldKeys: []string{}})
+		}
+		return []Plan{base}, nil
+	}
+	parsed, err := ParseQuery(query.Q)
+	if err != nil {
+		return nil, err
+	}
+	resolved, err := resolveParsed(parsed, catalog)
+	if err != nil {
+		return nil, err
+	}
+	plans := make([]Plan, 0, len(resolved.Branches))
+	for _, branch := range resolved.Branches {
+		includes, excludes, terms := compileBranch(branch)
+		plan := base
+		plan.Includes = includes
+		plan.Excludes = excludes
+		if len(terms) > 0 {
+			plan.Terms = terms
+		}
+		plans = append(plans, plan)
+	}
+	if len(plans) == 0 {
+		return []Plan{base}, nil
+	}
+	return plans, nil
+}
+
+func intersectModules(left, right []Module) []Module {
+	allowed := make(map[Module]struct{}, len(right))
+	for _, module := range right {
+		allowed[module] = struct{}{}
+	}
+	out := make([]Module, 0, len(left))
+	for _, module := range left {
+		if _, ok := allowed[module]; ok {
+			out = append(out, module)
+		}
+	}
+	return out
+}
+
+func dedupeResults(results []Result) []Result {
+	seen := make(map[string]int, len(results))
+	out := make([]Result, 0, len(results))
+	for _, result := range results {
+		key := string(result.Module) + ":" + result.EntityID + ":" + result.FieldKey
+		if index, ok := seen[key]; ok {
+			if result.Score > out[index].Score {
+				out[index] = result
+			}
+			continue
+		}
+		seen[key] = len(out)
+		out = append(out, result)
+	}
+	return out
+}
+
+func paginateResults(results []Result, query Query) []Result {
+	start := int(query.Offset)
+	if start > len(results) {
+		return []Result{}
+	}
+	end := start + int(query.Limit)
+	if end > len(results) {
+		end = len(results)
+	}
+	return results[start:end]
 }
 
 func resultsAreAuthorized(results []Result, query Query, catalog Catalog) bool {
@@ -262,6 +466,9 @@ func (service *Service) catalog(ctx context.Context, role auth.Role) (Catalog, e
 	seenFields := make(map[string]struct{}, len(staticFields))
 	for _, field := range staticFields {
 		if _, ok := allowed[field.Module]; ok {
+			if field.Group == "" {
+				field.Group = field.Module
+			}
 			fields = append(fields, field)
 			seenFields[field.Key] = struct{}{}
 		}
@@ -274,6 +481,12 @@ func (service *Service) catalog(ctx context.Context, role auth.Role) (Catalog, e
 		if _, ok := allowed[field.Module]; !ok || !validDynamicField(field) {
 			continue
 		}
+		if field.Group == "" {
+			field.Group = ModuleCustomData
+		}
+		if _, ok := allowed[field.Group]; !ok {
+			continue
+		}
 		if _, duplicate := seenFields[field.Key]; duplicate {
 			continue
 		}
@@ -281,8 +494,15 @@ func (service *Service) catalog(ctx context.Context, role auth.Role) (Catalog, e
 		seenFields[field.Key] = struct{}{}
 	}
 	sort.SliceStable(fields, func(left, right int) bool {
-		if fields[left].Module != fields[right].Module {
-			return fields[left].Module < fields[right].Module
+		leftGroup, rightGroup := fields[left].Group, fields[right].Group
+		if leftGroup == "" {
+			leftGroup = fields[left].Module
+		}
+		if rightGroup == "" {
+			rightGroup = fields[right].Module
+		}
+		if leftGroup != rightGroup {
+			return leftGroup < rightGroup
 		}
 		if fields[left].Label != fields[right].Label {
 			return fields[left].Label < fields[right].Label
@@ -290,8 +510,9 @@ func (service *Service) catalog(ctx context.Context, role auth.Role) (Catalog, e
 		return fields[left].Key < fields[right].Key
 	})
 	return Catalog{
-		Modules: modules,
-		Fields:  fields,
+		Modules:   modules,
+		Fields:    fields,
+		Operators: QueryTokens(),
 		Limits: CatalogLimits{
 			MaximumTerms:             MaxTerms,
 			MaximumTermLength:        MaxTermLength,
@@ -305,6 +526,9 @@ func (service *Service) catalog(ctx context.Context, role auth.Role) (Catalog, e
 
 func validDynamicField(field FieldDefinition) bool {
 	if field.Module != ModuleCustomData || field.Label == "" {
+		return false
+	}
+	if field.Group != "" && !oneOf(string(field.Group), string(ModuleProfiles), string(ModuleDocuments), string(ModuleBills), string(ModuleCustomData)) {
 		return false
 	}
 	identifier, found := strings.CutPrefix(field.Key, "custom.")
@@ -393,7 +617,7 @@ func normalizeQuery(query Query, catalog Catalog) (Query, *ValidationError) {
 
 func normalizeTerms(terms []string, validation *ValidationError) []string {
 	if len(terms) == 0 {
-		validation.add("terms", "required")
+		validation.add("q", "required")
 		return nil
 	}
 	if len(terms) > MaxTerms {
@@ -496,9 +720,12 @@ func selectedFieldCount(query Query, catalog Catalog) int {
 	return count
 }
 
-func literalContainsPattern(term string) string {
-	replacer := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
-	return "%" + replacer.Replace(strings.ToLower(term)) + "%"
+func textSearchPatterns(term string) []string {
+	patterns := []string{"%" + escapeLike(term) + "%"}
+	if folded := foldValue(term); folded != "" {
+		patterns = append(patterns, "%"+escapeLike(folded)+"%")
+	}
+	return uniqueStrings(patterns)
 }
 
 func (validation *ValidationError) add(field, code string) {

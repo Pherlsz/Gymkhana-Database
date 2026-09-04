@@ -35,6 +35,14 @@ func (service *fakeSearchService) Search(_ context.Context, actor auth.Session, 
 	return service.page, service.err
 }
 
+func (service *fakeSearchService) MatchIDs(context.Context, auth.Session, searchdomain.Query, searchdomain.Module) ([]string, error) {
+	return nil, service.err
+}
+
+func (service *fakeSearchService) Suggest(context.Context, auth.Session, searchdomain.SuggestQuery) ([]searchdomain.SuggestHit, error) {
+	return nil, service.err
+}
+
 func searchHTTPFixture(t *testing.T, service *fakeSearchService, logger *slog.Logger) http.Handler {
 	t.Helper()
 	actorID, err := auth.NewIdentifier()
@@ -97,6 +105,25 @@ func TestSearchCatalogAndExecutionUseProtectedLogicalContracts(t *testing.T) {
 	}
 	if strings.Contains(logs.String(), "secret-value") {
 		t.Fatal("raw Search term was written to logs")
+	}
+}
+
+func TestSearchAcceptsQueryLanguageBody(t *testing.T) {
+	service := &fakeSearchService{
+		page: searchdomain.Page{Limit: 50, Sort: searchdomain.SortRelevance, Order: searchdomain.SortDescending},
+	}
+	handler := searchHTTPFixture(t, service, authTestLogger())
+	body := `{"q":"Ana","limit":50,"offset":0,"sort":"relevance","order":"desc"}`
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/search", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("search response = %d, %s", response.Code, response.Body.String())
+	}
+	if service.query.Q != "Ana" || service.query.Limit != 50 || service.query.Offset != 0 {
+		t.Fatalf("query = %#v", service.query)
 	}
 }
 

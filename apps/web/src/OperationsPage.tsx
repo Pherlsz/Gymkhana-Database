@@ -47,7 +47,7 @@ export function normalizeOperationsSearch(search: Record<string, unknown>): Oper
 
 const adminRoute = getRouteApi("/admin");
 
-export function OperationsPage() {
+export function OperationsPage({ includeImports = true }: { includeImports?: boolean }) {
   const queryClient = useQueryClient();
   const search = adminRoute.useSearch();
   const navigate = adminRoute.useNavigate();
@@ -63,6 +63,7 @@ export function OperationsPage() {
   const imports = useQuery({
     queryKey: ["operation-imports"],
     queryFn: ({ signal }) => listOperationImports(signal),
+    enabled: includeImports,
     refetchInterval: (query) =>
       query.state.data?.imports.some((value) => operationActive(value.state)) ? 2_000 : false,
   });
@@ -141,11 +142,12 @@ export function OperationsPage() {
       <header className="page-header">
         <div className="page-eyebrow">M8 · Operações</div>
         <Typography.Title level={1} className="page-title">
-          Importações e exportações XLSX
+          {includeImports ? "Importações e exportações XLSX" : "Exportações e exclusão em massa"}
         </Typography.Title>
         <Typography.Paragraph className="page-description">
-          Envie planilhas privadas, revise o mapeamento e as alterações antes da execução e gere
-          exportações completas conforme suas permissões.
+          {includeImports
+            ? "Envie planilhas privadas, revise o mapeamento e as alterações antes da execução e gere exportações completas conforme suas permissões."
+            : "Gere exportações completas e execute exclusões em massa conforme suas permissões. Importações ficam em Cadastro."}
         </Typography.Paragraph>
       </header>
       <div className="page-content">
@@ -157,7 +159,7 @@ export function OperationsPage() {
               description={<>{operationError(catalog.error)}</>}
             />
           ) : null}
-          {catalog.data ? (
+          {includeImports && catalog.data ? (
             <ImportCreator
               catalog={catalog.data}
               onCreated={(value) => {
@@ -166,6 +168,7 @@ export function OperationsPage() {
               }}
             />
           ) : null}
+          {includeImports ? (
           <section className="page-section">
             <Typography.Title level={2}>Importações</Typography.Title>
             <Typography.Paragraph>
@@ -199,7 +202,8 @@ export function OperationsPage() {
               selectedRowId={selectedImportID}
             />
           </section>
-          {selectedImportID ? (
+          ) : null}
+          {includeImports && selectedImportID ? (
             <ImportWorkspace
               catalog={catalog.data?.modules ?? []}
               loading={selectedImport.isLoading}
@@ -233,7 +237,7 @@ export function OperationsPage() {
   );
 }
 
-function ImportCreator({
+export function ImportCreator({
   catalog,
   onCreated,
 }: {
@@ -319,7 +323,7 @@ function ImportCreator({
   );
 }
 
-function ImportWorkspace({
+export function ImportWorkspace({
   value,
   catalog,
   loading,

@@ -11,9 +11,5 @@ echo "=== versions ==="
 go version
 node -v
 pnpm -v || true
-docker --version
-docker compose version
-echo "=== compose ==="
-docker compose ps
 echo "=== listening ==="
-ss -tln | grep -E ':8080|:5173|:5432' || true
+ss -tln | grep -E ':8080|:5173' || true

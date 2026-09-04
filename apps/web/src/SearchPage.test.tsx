@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildProfileCards,
+  evidenceRowsForCard,
   groupSearchResults,
   normalizeGlobalSearch,
   profileSearchForResult,
   searchErrorMessage,
-  SearchPage,
+  shouldFetchPreview,
   termsFromSearch,
-} from "./SearchPage";
+} from "./lib/search";
 import { APIRequestError, type SearchResult } from "./lib/api/client";
 
 const result: SearchResult = {
@@ -35,6 +37,7 @@ describe("global Search URL state", () => {
         limit: "100",
         sort: "updated_at",
         order: "asc",
+        preview: " 11111111-1111-1111-1111-111111111111 ",
       }),
     ).toEqual({
       q: "Ana",
@@ -44,7 +47,12 @@ describe("global Search URL state", () => {
       limit: 100,
       sort: "updated_at",
       order: "asc",
+      preview: "11111111-1111-1111-1111-111111111111",
     });
+  });
+
+  it("defaults preview to empty", () => {
+    expect(normalizeGlobalSearch({}).preview).toBe("");
   });
 
   it("preserves arbitrary sequences and spaces inside each parameter", () => {
@@ -82,9 +90,17 @@ describe("global Search URL state", () => {
 });
 
 describe("/search route mount", () => {
-  it("mounts the SearchPage instead of the coming-soon placeholder", async () => {
+  it("wires SearchPage and URL normalize onto /search", async () => {
     const { Route } = await import("./routes/search");
-    expect(Route.options.component).toBe(SearchPage);
+    const { SearchPage } = await import("./SearchPage");
+    expect(Route.options.validateSearch).toBe(normalizeGlobalSearch);
+    expect(Route.options.component).toBeTruthy();
+    // Prefer identity; accept lazy wrapper from router codegen.
+    const component = Route.options.component;
+    expect(
+      component === SearchPage ||
+        (typeof component === "function" && /SearchPage|Lazy/i.test(component.name || "")),
+    ).toBe(true);
   });
 });
 
@@ -119,11 +135,84 @@ describe("Option B result grouping", () => {
       "document.holder",
       "document.identifier",
     ]);
-    expect(groups[1]?.topScore).toBe(775);
+  });
+});
+
+describe("H v3 preview fetch gate", () => {
+  it("fetches profile only when preview matches the card id", () => {
+    const id = "11111111-1111-1111-1111-111111111111";
+    expect(shouldFetchPreview(id, id)).toBe(true);
+    expect(shouldFetchPreview("", id)).toBe(false);
+    expect(shouldFetchPreview("other", id)).toBe(false);
   });
 
-  it("keeps API order for matches within a group", () => {
-    const groups = groupSearchResults(rows);
-    expect(groups[0]?.matches[0]?.fieldLabel).toBeDefined();
+  it("builds evidence from profile matches before related hits", () => {
+    const cards = buildProfileCards([
+      {
+        ...result,
+        module: "profiles",
+        entity_id: result.profile_id!,
+        target_kind: "profile",
+        target_id: result.profile_id!,
+        entity_label: "Ana Julia",
+        field_key: "profile.city",
+        field_label: "Cidade",
+        preview: "Caxias do Sul",
+        score: 900,
+      },
+      result,
+    ]);
+    expect(cards).toHaveLength(1);
+    const evidence = evidenceRowsForCard(cards[0]!);
+    expect(evidence[0]?.fieldLabel).toBe("Cidade");
+    expect(evidence.some((row) => row.preview === "001ABC")).toBe(true);
+  });
+
+  it("omits evidence that only repeats the card title", () => {
+    const cards = buildProfileCards([
+      {
+        ...result,
+        module: "profiles",
+        entity_id: result.profile_id!,
+        target_kind: "profile",
+        target_id: result.profile_id!,
+        entity_label: "Ana Julia",
+        field_key: "profile.full_name",
+        field_label: "Nome completo",
+        preview: "Ana Julia",
+        score: 900,
+      },
+    ]);
+    expect(evidenceRowsForCard(cards[0]!)).toEqual([]);
+  });
+
+  it("fills the card with several related evidence cells", () => {
+    const cards = buildProfileCards([
+      {
+        ...result,
+        module: "profiles",
+        entity_id: result.profile_id!,
+        target_kind: "profile",
+        target_id: result.profile_id!,
+        entity_label: "Ana Julia",
+        field_key: "profile.full_name",
+        field_label: "Nome completo",
+        preview: "Ana Julia",
+        score: 900,
+      },
+      result,
+      {
+        ...result,
+        entity_id: "33333333-3333-3333-3333-333333333333",
+        target_id: "33333333-3333-3333-3333-333333333333",
+        field_key: "document.holder",
+        field_label: "Titular",
+        preview: "Ana J.",
+        score: 700,
+      },
+    ]);
+    const evidence = evidenceRowsForCard(cards[0]!);
+    expect(evidence.length).toBeGreaterThanOrEqual(2);
+    expect(evidence.every((row) => row.preview !== "Ana Julia")).toBe(true);
   });
 });

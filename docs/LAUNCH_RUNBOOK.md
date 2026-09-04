@@ -2,9 +2,11 @@
 
 This runbook prepares and executes a controlled launch of Gymkhana Database. It does not contain production identifiers, credentials, personal data, or database dumps.
 
+> **Deployment status:** the container-image deployment described below is **retired**. Docker and container images are banned in this repository. Steps that build, push, or promote images are kept for historical reference only until a new deployment story is decided. Recovery, reconciliation, and data-migration steps remain valid.
+
 ## Principles
 
-- Build once and promote immutable image digests.
+- Build once and promote immutable release artifacts. (The container-image procedure is retired; its replacement is undecided.)
 - Run database migrations as a separate job before API and worker promotion.
 - Never run a destructive restore as an automatic rollback.
 - Export and reconcile the legacy database before any write to the new database.
@@ -32,12 +34,9 @@ Do not place any real value in this file or in a committed `.env` file. Local se
 
 1. Select a commit on `main` whose required checks are green.
 2. Use a release version derived from that commit, for example `sha-<12 characters>`.
-3. Build API, worker, and migration images with `Dockerfile.api`, `Dockerfile.worker`, and `Dockerfile.migrate`.
-4. Verify the OCI version, revision, and creation labels and the `nonroot:nonroot` runtime user.
-5. Push the images to Artifact Registry, then resolve their immutable `@sha256:` references.
-6. Record the full commit and all three image digests in the launch ticket.
+3. Retired: steps 3–6 built and promoted Docker images (`Dockerfile.api`, `Dockerfile.worker`, `Dockerfile.migrate`), which are banned in this repository. A replacement release-artifact and promotion procedure has not been selected.
 
-The deployment build and `Release artifacts` workflow verify these rules before promotion.
+The `Release artifacts` workflow verifies deployment scripts and contracts before promotion.
 
 ## 2. Rehearse the legacy export
 
@@ -228,7 +227,7 @@ In Vercel Project Settings, configure `VITE_API_BASE_URL` to the production API 
 All items must be true:
 
 - [ ] Required PR checks are green on the selected commit.
-- [ ] Three images are recorded by digest and share the expected commit label.
+- [ ] Release artifacts for the selected commit are recorded per the replacement deployment procedure (container images retired).
 - [ ] Legacy bundle fingerprint is recorded.
 - [ ] Strict legacy reconciliation is clean.
 - [ ] Field mapping and duplicate decisions are approved.

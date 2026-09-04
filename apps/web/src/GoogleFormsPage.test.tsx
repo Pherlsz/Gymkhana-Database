@@ -16,9 +16,16 @@ vi.mock("@tanstack/react-router", () => ({
     to,
   }: {
     children: ReactNode;
-    search?: Record<string, string>;
+    search?: Record<string, string | undefined>;
     to: string;
-  }) => <a href={`${to}${search?.selected ? `?selected=${search.selected}` : ""}`}>{children}</a>,
+  }) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(search ?? {})) {
+      if (value) query.set(key, value);
+    }
+    const suffix = query.toString() ? `?${query}` : "";
+    return <a href={`${to}${suffix}`}>{children}</a>;
+  },
 }));
 
 vi.mock("./lib/api/googleForms", () => ({
@@ -99,7 +106,7 @@ describe("GoogleFormsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionState.role = "ADMIN";
-    window.history.replaceState({}, "", "/forms");
+    window.history.replaceState({}, "", "/cadastro?mode=forms");
     vi.mocked(listGoogleFormsSources).mockResolvedValue({
       sources: [source],
       total: 1,
@@ -161,13 +168,13 @@ describe("GoogleFormsPage", () => {
   });
 
   it("handles the OAuth return and starts a connection with safe URL state", async () => {
-    window.history.replaceState({}, "", "/forms?tab=history&google_forms=connected");
+    window.history.replaceState({}, "", "/cadastro?mode=forms&tab=history&google_forms=connected");
     vi.mocked(getGoogleFormsStatus).mockResolvedValue({ enabled: true, connected: false });
     vi.mocked(beginGoogleFormsOAuth).mockResolvedValue();
     renderPage();
     expect(await screen.findByText("Google Forms conectado")).toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "Conectar com Google" }));
-    await waitFor(() => expect(beginGoogleFormsOAuth).toHaveBeenCalledWith("/forms?tab=history"));
+    await waitFor(() => expect(beginGoogleFormsOAuth).toHaveBeenCalledWith("/cadastro?mode=forms&tab=history"));
   });
 
   it("adds an explicitly supplied form", async () => {
@@ -238,8 +245,8 @@ describe("GoogleFormsPage", () => {
     }
   });
 
-  it("keeps source/history URL state and links staged batches to Operations", async () => {
-    window.history.replaceState({}, "", `/forms?tab=history&source=${source.id}`);
+  it("keeps source/history URL state and links staged batches to Cadastro", async () => {
+    window.history.replaceState({}, "", `/cadastro?mode=forms&tab=history&source=${source.id}`);
     vi.mocked(getGoogleFormsStatus).mockResolvedValue(connectedStatus());
     vi.mocked(listGoogleFormsSyncs).mockResolvedValue({
       runs: [
@@ -263,9 +270,9 @@ describe("GoogleFormsPage", () => {
     });
     renderPage();
     expect(await screen.findByText("Sincronizando")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Abrir importação" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Revisar cadastro" })).toHaveAttribute(
       "href",
-      "/admin?selected=40000000-0000-4000-8000-000000000001",
+      "/cadastro?table=people&mode=xlsx&import=40000000-0000-4000-8000-000000000001",
     );
     expect(window.location.search).toContain("tab=history");
     fireEvent.click(screen.getByRole("tab", { name: "Fontes" }));

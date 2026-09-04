@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
+	"github.com/Pherlsz/Gymkhana-Database/internal/importcatalog"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -558,6 +559,49 @@ func workbookHeaders(sheet WorkbookSheet) ([]string, int, error) {
 		seen[folded] = struct{}{}
 	}
 	return headers, len(headers), nil
+}
+
+func (store *PostgresStore) ApplySuggestedColumnMapping(ctx context.Context, id Identifier, module Module, sheetIndex *int) error {
+	query := `SELECT sheet_index, source_column, source_header FROM operation_import_columns WHERE import_id=$1`
+	args := []any{databaseUUID(id)}
+	if sheetIndex != nil {
+		query += ` AND sheet_index=$2`
+		args = append(args, *sheetIndex)
+	}
+	rows, err := store.pool.Query(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("load import columns for catalog: %w", err)
+	}
+	defer rows.Close()
+	type columnKey struct {
+		sheet  int
+		source int
+	}
+	updates := make(map[columnKey]string)
+	for rows.Next() {
+		var sheet, source int
+		var header string
+		if err := rows.Scan(&sheet, &source, &header); err != nil {
+			return fmt.Errorf("scan import column: %w", err)
+		}
+		suggestion := importcatalog.SuggestColumn(importcatalog.Module(module), header)
+		target := suggestion.TargetField
+		if target == "" {
+			continue
+		}
+		updates[columnKey{sheet: sheet, source: source}] = target
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate import columns: %w", err)
+	}
+	for key, target := range updates {
+		if _, err := store.pool.Exec(ctx, `UPDATE operation_import_columns SET target_field=$4
+ WHERE import_id=$1 AND sheet_index=$2 AND source_column=$3`,
+			databaseUUID(id), key.sheet, key.source, target); err != nil {
+			return fmt.Errorf("apply catalog mapping: %w", err)
+		}
+	}
+	return nil
 }
 
 func (store *PostgresStore) SelectSheet(ctx context.Context, id Identifier, actorID auth.Identifier, version int64, sheetIndex int, now time.Time) (Import, error) {

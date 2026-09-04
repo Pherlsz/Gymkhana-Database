@@ -10,8 +10,8 @@ Live status lives only in the [master checklist issue #31](https://github.com/Ph
 
 The application consumes:
 
-- `github.com/Pherlsz/Gymkhana-Core v0.2.1` for deterministic normalization and civil-time values;
-- Lucide and in-repo UI primitives. Orchestration §12.3 rejects Ant Design, Material UI, and shadcn as the visual base; leftover `antd` in the tree is not the approved component layer and must not be expanded;
+- `github.com/Pherlsz/Gymkhana-Core v0.7.0` for deterministic normalization, civil-time values, and document identification;
+- Ant Design as the visual base (Orchestration §12.3, ADR 0002), composed in-repo with Lucide (`lucide-react`) for product-chrome icons. Material UI and shadcn are rejected as the visual base;
 - `openapi-typescript 7.13.0` for deterministic generated TypeScript contracts.
 
 ## Requirements
@@ -38,14 +38,14 @@ GitHub Actions uses the repository secret `GYMKHANA_REPOSITORY_TOKEN`, backed by
 
 `.env.example` is the catalog of environment names for the lokeys `gymkhana` profile. Do not copy it to `.env`. Store values with `lokeys ui`.
 
-The rebuild uses Neon only. The lokeys `gymkhana` profile scopes `DATABASE_URL` by `--env`:
+The rebuild uses Neon only. Docker is not used in this repository in any form: no local containers, no Compose, no Dockerfiles, no container images. The lokeys `gymkhana` profile scopes `DATABASE_URL` by `--env`:
 
 - `--env dev` → Neon `Gymkhana-Database-Dev-18`, database `gymkhana`, unpooled (direct) endpoint;
 - `--env prod` → Neon `Gymkhana-Database-Prod-18`, database `gymkhana`, unpooled.
 
 Do not store a PgBouncer `-pooler` URL: Tern and the Go `pgx` pool need the direct compute. Production PostgreSQL is Neon major 18 (Orchestration §24); there is no in-place major upgrade.
 
-`make migrate` and `make migrate-status` require `DATABASE_URL` and apply Tern plus River to that Neon database. `make reset-db` is retired so Compose cannot be mistaken for a Neon wipe.
+`make migrate` and `make migrate-status` require `DATABASE_URL` and apply Tern plus River to that Neon database. `make reset-db` is retired so a local reset cannot be mistaken for a Neon wipe.
 
 Run lokeys from Windows PowerShell. It uses Windows DPAPI; do not call Linux Python in WSL. If Make, Go, and pnpm live in WSL, pass the same command through `wsl`.
 
@@ -84,7 +84,7 @@ Start it only when the operator also asks to run the legacy. Default local work 
 
 Do not wrap the legacy with `lokeys run`. `npm run dev` is `prisma generate && next dev`. Prisma loads `prisma.config.ts`, which uses `dotenv/config` and therefore reads `.env`. Next.js also loads `.env` / `.env.local` and inlines those files into Edge middleware (`AUTH_SECRET`). lokeys `--env dev` overwrites `NODE_ENV` and `APP_ENV` in the child process, which fights Next. Run Next from WSL against the gitignored env files; lokeys itself is a Windows DPAPI CLI.
 
-The two apps do not share a database. Legacy local runs use the rotating Dev Neon `DATABASE_URL` in `.env`, never the Compose PostgreSQL on port 5432. Ports do not collide: legacy `http://localhost:3000`, rebuild API `8080`, rebuild web `5173`. `AUTH_URL` for local login is `http://localhost:3000`.
+The two apps do not share a database. Legacy local runs use the rotating Dev Neon `DATABASE_URL` in `.env`, never a local PostgreSQL. Ports do not collide: legacy `http://localhost:3000`, rebuild API `8080`, rebuild web `5173`. `AUTH_URL` for local login is `http://localhost:3000`.
 
 From the Vercel repository:
 
@@ -128,7 +128,7 @@ The complete setup, lifecycle, audit, smoke-test, incident, and recovery procedu
 
 ## Google Forms ingestion
 
-Owner-scoped Google Forms ingestion is disabled by default. It uses only the Forms body/response read-only scopes and feeds normalized responses into the existing Operations preview, decision, execution, and report flow. Production activation requires an owner-created Google Cloud OAuth client, the enabled Google Forms API, an exact callback URI, and secret-manager values.
+Owner-scoped Google Forms ingestion is a Cadastro submodule (`/cadastro?mode=forms`). It is disabled by default. It uses only the Forms body/response read-only scopes and feeds normalized responses into the existing Operations preview, decision, execution, and report flow. Production activation requires an owner-created Google Cloud OAuth client, the enabled Google Forms API, an exact callback URI, and secret-manager values.
 
 Configuration, key rotation, smoke testing, and recovery procedures are in [`docs/GOOGLE_FORMS.md`](docs/GOOGLE_FORMS.md).
 
@@ -180,7 +180,7 @@ Workflow behavior:
 - successful PR checks are not repeated after merge by `push` workflows on `main`;
 - backend Staticcheck and race tests run when a PR first becomes reviewable, when a ready PR is opened or reopened, or through an explicit full manual run;
 - Security runs for relevant non-draft PRs, manually, and on the 1st and 15th of each month;
-- deployment builds remain manual;
+- no Docker or container-image builds exist; production deployment is governed by `docs/LAUNCH_RUNBOOK.md`;
 - every job can be moved to a trusted Linux self-hosted runner by setting the repository variable `CI_RUNNER` to that runner's custom label. Without the variable, jobs use `ubuntu-latest`.
 
 Mandatory usage rules:
@@ -212,13 +212,6 @@ After GitHub Pro is active, configure one active branch ruleset targeting `main`
 - grant no routine bypass. Any emergency bypass must be followed by a normal PR that documents and validates the resulting state.
 
 Repository merge settings should allow squash merge only and automatically delete merged head branches. These controls protect `main` without forcing extra Actions executions.
-
-Container builds require the same private repository token as a BuildKit secret:
-
-```bash
-export GYMKHANA_REPOSITORY_TOKEN=<read-only-token>
-docker build --secret id=github_token,env=GYMKHANA_REPOSITORY_TOKEN -f Dockerfile.api .
-```
 
 ## Platform contracts
 

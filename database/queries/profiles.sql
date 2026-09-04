@@ -43,7 +43,8 @@ WHERE (sqlc.arg(full_name_filter)::text = '' OR lower(full_name) LIKE '%' || low
   ))
   AND (sqlc.arg(email_filter)::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower(sqlc.arg(email_filter)::text) || '%')
   AND (sqlc.arg(city_filter)::text = '' OR lower(coalesce(address_city, '')) LIKE '%' || lower(sqlc.arg(city_filter)::text) || '%')
-  AND (sqlc.arg(state_filter)::text = '' OR coalesce(address_state, '') = sqlc.arg(state_filter)::text);
+  AND (sqlc.arg(state_filter)::text = '' OR coalesce(address_state, '') = sqlc.arg(state_filter)::text)
+  AND (NOT sqlc.arg(restrict_ids)::bool OR id = ANY(sqlc.arg(id_filter)::uuid[]));
 
 -- name: ListProfiles :many
 SELECT *
@@ -61,6 +62,7 @@ WHERE (sqlc.arg(full_name_filter)::text = '' OR lower(full_name) LIKE '%' || low
   AND (sqlc.arg(email_filter)::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower(sqlc.arg(email_filter)::text) || '%')
   AND (sqlc.arg(city_filter)::text = '' OR lower(coalesce(address_city, '')) LIKE '%' || lower(sqlc.arg(city_filter)::text) || '%')
   AND (sqlc.arg(state_filter)::text = '' OR coalesce(address_state, '') = sqlc.arg(state_filter)::text)
+  AND (NOT sqlc.arg(restrict_ids)::bool OR id = ANY(sqlc.arg(id_filter)::uuid[]))
 ORDER BY
   (CASE WHEN sqlc.arg(sort_field)::text = 'full_name' AND sqlc.arg(sort_order)::text = 'asc' THEN full_name END) COLLATE gymkhana_pt_br ASC,
   (CASE WHEN sqlc.arg(sort_field)::text = 'full_name' AND sqlc.arg(sort_order)::text = 'desc' THEN full_name END) COLLATE gymkhana_pt_br DESC,
@@ -82,6 +84,14 @@ ORDER BY
   CASE WHEN sqlc.arg(sort_field)::text = 'email' AND sqlc.arg(sort_order)::text = 'desc' THEN lower(email) END DESC NULLS LAST,
   CASE WHEN sqlc.arg(sort_field)::text = 'address_city' AND sqlc.arg(sort_order)::text = 'asc' THEN lower(address_city) END ASC NULLS LAST,
   CASE WHEN sqlc.arg(sort_field)::text = 'address_city' AND sqlc.arg(sort_order)::text = 'desc' THEN lower(address_city) END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_field)::text = 'address_street' AND sqlc.arg(sort_order)::text = 'asc' THEN lower(coalesce(address_street, '')) END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_field)::text = 'address_street' AND sqlc.arg(sort_order)::text = 'desc' THEN lower(coalesce(address_street, '')) END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_field)::text = 'address_neighborhood' AND sqlc.arg(sort_order)::text = 'asc' THEN lower(coalesce(address_neighborhood, '')) END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_field)::text = 'address_neighborhood' AND sqlc.arg(sort_order)::text = 'desc' THEN lower(coalesce(address_neighborhood, '')) END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_field)::text = 'mobile_phone' AND sqlc.arg(sort_order)::text = 'asc' THEN mobile_phone END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_field)::text = 'mobile_phone' AND sqlc.arg(sort_order)::text = 'desc' THEN mobile_phone END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_field)::text = 'birth_date' AND sqlc.arg(sort_order)::text = 'asc' THEN birth_date END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_field)::text = 'birth_date' AND sqlc.arg(sort_order)::text = 'desc' THEN birth_date END DESC NULLS LAST,
   CASE WHEN sqlc.arg(sort_field)::text = 'created_at' AND sqlc.arg(sort_order)::text = 'asc' THEN created_at END ASC,
   CASE WHEN sqlc.arg(sort_field)::text = 'created_at' AND sqlc.arg(sort_order)::text = 'desc' THEN created_at END DESC,
   CASE WHEN sqlc.arg(sort_field)::text = 'updated_at' AND sqlc.arg(sort_order)::text = 'asc' THEN updated_at END ASC,
@@ -152,6 +162,26 @@ SELECT *
 FROM profiles
 WHERE lower(full_name) = lower(btrim(sqlc.arg(full_name)))
 ORDER BY id;
+
+-- name: ListDistinctCities :many
+SELECT DISTINCT address_city
+FROM profiles
+WHERE address_city IS NOT NULL
+  AND address_city <> ''
+  AND (sqlc.arg(full_name_filter)::text = '' OR lower(full_name) LIKE '%' || lower(sqlc.arg(full_name_filter)::text) || '%')
+  AND (sqlc.arg(cpf_filter)::text = '' OR EXISTS (
+    SELECT 1
+    FROM document_presences AS presence
+    JOIN document_types AS document_type ON document_type.id = presence.document_type_id
+    WHERE presence.profile_id = profiles.id
+      AND document_type.technical_key = 'cpf'
+      AND presence.claim = 'informed_number'
+      AND coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || sqlc.arg(cpf_filter)::text || '%'
+  ))
+  AND (sqlc.arg(email_filter)::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower(sqlc.arg(email_filter)::text) || '%')
+  AND (sqlc.arg(state_filter)::text = '' OR coalesce(address_state, '') = sqlc.arg(state_filter)::text)
+ORDER BY address_city COLLATE gymkhana_pt_br
+LIMIT sqlc.arg(value_limit);
 
 -- name: GetDocumentTypeByTechnicalKey :one
 SELECT * FROM document_types WHERE technical_key = sqlc.arg(technical_key);

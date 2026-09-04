@@ -1,9 +1,9 @@
 import { Button, Tag } from "antd";
 import { Columns3, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
+import { SearchField } from "../../components/SearchField";
 import { ColumnPicker, type ColumnPickerItem } from "./ColumnPicker";
 import { FilterSurface } from "./FilterSurface";
-import { SheetSearch } from "./SheetSearch";
 import { ToolbarSurface } from "./ToolbarSurface";
 import type { ToolbarFilterField } from "./FilterControl";
 import { ICON, ICON_STROKE } from "../../components/icons";
@@ -15,6 +15,8 @@ export type ToolbarChip = {
   /** The column name. Chips read "Campo: valor" so a screen reader hears both. */
   field: string;
   value: string;
+  /** True when the filter only sees the loaded page, so its scope is flagged. */
+  local?: boolean | undefined;
   onClear: () => void;
 };
 
@@ -25,6 +27,7 @@ export function TablesToolbar({
   searchLabel,
   searchPlaceholder,
   searchValue,
+  searchGrain,
   onSearchChange,
   onSearchSubmit,
   fieldFiltersLabel,
@@ -35,16 +38,19 @@ export function TablesToolbar({
   appliedFiltersLabel,
   noFieldsLabel,
   moreChipsLabel,
+  moreChipsCollapseLabel,
   chips,
   clearLabel,
   onClearAll,
   localHint,
+  localScopeBadge,
   filters,
   columnPicker,
 }: {
   searchLabel: string;
   searchPlaceholder: string;
   searchValue: string;
+  searchGrain: "profiles" | "documents" | "bills";
   onSearchChange: (value: string) => void;
   onSearchSubmit: (value: string) => void;
   fieldFiltersLabel: string;
@@ -55,10 +61,12 @@ export function TablesToolbar({
   appliedFiltersLabel: string;
   noFieldsLabel: string;
   moreChipsLabel: (count: number) => string;
+  moreChipsCollapseLabel: string;
   chips: ToolbarChip[];
   clearLabel: string;
   onClearAll: () => void;
   localHint: string;
+  localScopeBadge: string;
   filters: ToolbarFilterField[];
   columnPicker?:
     | {
@@ -87,8 +95,10 @@ export function TablesToolbar({
   return (
     <div className="tables-toolbar">
       <div className="tables-toolbar__row">
-        <SheetSearch
+        <SearchField
+          grain={searchGrain}
           label={searchLabel}
+          mode="suggest"
           placeholder={searchPlaceholder}
           value={searchValue}
           onChange={onSearchChange}
@@ -147,7 +157,7 @@ export function TablesToolbar({
         <div aria-label={appliedFiltersLabel} className="tables-toolbar__chips" role="group">
           {shownChips.map((chip) => (
             <Tag
-              className="tables-toolbar__chip"
+              className={chip.local ? "tables-toolbar__chip is-local" : "tables-toolbar__chip"}
               closable
               key={chip.key}
               onClose={(event) => {
@@ -159,11 +169,20 @@ export function TablesToolbar({
                   reliably exposed, which left the chip reading "PessoaAna". */}
               <span className="tables-toolbar__chip-field">{chip.field}:</span>{" "}
               <span className="tables-toolbar__chip-value">{chip.value}</span>
+              {chip.local ? (
+                <span className="tables-toolbar__chip-local" title={localHint}>
+                  {localScopeBadge}
+                </span>
+              ) : null}
             </Tag>
           ))}
           {hiddenChips > 0 ? (
             <Button size="small" type="text" onClick={() => setAllChips(true)}>
               {moreChipsLabel(hiddenChips)}
+            </Button>
+          ) : allChips && chips.length > CHIP_LIMIT ? (
+            <Button size="small" type="text" onClick={() => setAllChips(false)}>
+              {moreChipsCollapseLabel}
             </Button>
           ) : null}
           <Button size="small" type="link" onClick={onClearAll}>

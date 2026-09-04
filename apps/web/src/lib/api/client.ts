@@ -216,8 +216,19 @@ export async function updateApplicationUserAccess(
 export type ProfileListSearch = {
   page: number;
   limit: number;
-  sort: "full_name" | "cpf" | "email" | "address_city" | "created_at" | "updated_at";
+  sort:
+    | "full_name"
+    | "cpf"
+    | "email"
+    | "address_city"
+    | "address_street"
+    | "address_neighborhood"
+    | "mobile_phone"
+    | "birth_date"
+    | "created_at"
+    | "updated_at";
   order: "asc" | "desc";
+  q: string;
   full_name: string;
   cpf: string;
   email: string;
@@ -267,10 +278,25 @@ export async function listProfiles(
     sort: search.sort,
     order: search.order,
   });
+  if (search.q) query.set("q", search.q);
   for (const key of ["full_name", "cpf", "email", "city", "state"] as const) {
     if (search[key]) query.set(key, search[key]);
   }
   return requestJSON<ProfilePageResponse>(`/api/v1/profiles?${query}`, signal ? { signal } : {});
+}
+
+export async function listDistinctCities(
+  filters: Pick<ProfileListSearch, "full_name" | "cpf" | "email" | "state">,
+  signal?: AbortSignal,
+): Promise<{ values: string[] }> {
+  const query = new URLSearchParams({ limit: "500" });
+  for (const key of ["full_name", "cpf", "email", "state"] as const) {
+    if (filters[key]) query.set(key, filters[key]);
+  }
+  return requestJSON<{ values: string[] }>(
+    `/api/v1/profiles/cities?${query}`,
+    signal ? { signal } : {},
+  );
 }
 
 export async function getProfileListTotals(signal?: AbortSignal): Promise<ProfilePageResponse> {
@@ -338,11 +364,26 @@ export async function getCustomEntityListTotals(
   return requestJSON(`/api/v1/custom-entities?${query}`, signal ? { signal } : {});
 }
 
-export async function listProfilesForSelection(signal?: AbortSignal): Promise<ProfilePageResponse> {
-  return requestJSON<ProfilePageResponse>(
-    "/api/v1/profiles?limit=1000&offset=0&sort=full_name&order=asc",
-    signal ? { signal } : {},
-  );
+export async function listProfilesLookup(
+  q: string,
+  signal?: AbortSignal,
+): Promise<ProfilePageResponse> {
+  const trimmed = q.trim();
+  const query = new URLSearchParams({
+    limit: "20",
+    offset: "0",
+    sort: "full_name",
+    order: "asc",
+  });
+  if (trimmed) {
+    const cleanDigits = trimmed.replace(/\D/g, "");
+    if (cleanDigits.length >= 3 && cleanDigits.length === trimmed.length) {
+      query.set("cpf", cleanDigits);
+    } else {
+      query.set("full_name", trimmed);
+    }
+  }
+  return requestJSON<ProfilePageResponse>(`/api/v1/profiles?${query}`, signal ? { signal } : {});
 }
 
 export async function createProfile(request: ProfileValuesRequest): Promise<Profile> {
@@ -375,6 +416,7 @@ export async function deleteProfile(
 
 export type DocumentListSearch = Pick<
   ProfileListSearch,
+  | "q"
   | "document_page"
   | "document_limit"
   | "document_sort"
@@ -438,6 +480,7 @@ export async function listDocuments(
     order: search.document_order,
   });
   if (profileId) query.set("owner_profile_id", profileId);
+  if (search.q) query.set("q", search.q);
   if (search.document_identifier) query.set("identifier", search.document_identifier);
   if (search.document_status) query.set("status", search.document_status);
   if (search.document_medium) query.set("medium", search.document_medium);
@@ -500,6 +543,7 @@ export async function returnDocumentCurrentUse(id: string): Promise<void> {
 
 export type BillListSearch = Pick<
   ProfileListSearch,
+  | "q"
   | "bill_page"
   | "bill_limit"
   | "bill_sort"
@@ -555,6 +599,7 @@ export async function listBills(
     order: search.bill_order,
   });
   if (profileId) query.set("owner_profile_id", profileId);
+  if (search.q) query.set("q", search.q);
   if (search.bill_reference) query.set("reference", search.bill_reference);
   if (search.bill_competence) query.set("competence", search.bill_competence);
   if (search.bill_status) query.set("status", search.bill_status);
@@ -611,10 +656,29 @@ export async function executeSearch(
   request: SearchRequest,
   signal?: AbortSignal,
 ): Promise<SearchPageResponse> {
+  const body: SearchRequest = {
+    q: request.q ?? "",
+    limit: Math.trunc(Number(request.limit)) || 50,
+    offset: Math.max(0, Math.trunc(Number(request.offset)) || 0),
+    sort: request.sort === "updated_at" ? "updated_at" : "relevance",
+    order: request.order === "asc" ? "asc" : "desc",
+  };
+  if (request.terms?.length) body.terms = request.terms;
+  if (request.modules?.length) body.modules = request.modules;
+  if (request.fields?.length) body.fields = request.fields;
   return requestJSON<SearchPageResponse>("/api/v1/search", {
-    ...jsonRequest("POST", request),
+    ...jsonRequest("POST", body),
     ...(signal ? { signal } : {}),
   });
+}
+
+export async function suggestSearchValues(
+  input: { field: string; q: string; grain?: "profiles" | "documents" | "bills"; limit?: number },
+  signal?: AbortSignal,
+): Promise<{ suggestions: Array<{ value: string; label: string }> }> {
+  const query = new URLSearchParams({ field: input.field, q: input.q, limit: String(input.limit ?? 50) });
+  if (input.grain) query.set("grain", input.grain);
+  return requestJSON(`/api/v1/search/suggest?${query}`, signal ? { signal } : {});
 }
 
 export async function listCustomEntityTypes(

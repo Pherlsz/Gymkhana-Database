@@ -83,7 +83,7 @@ export function DocumentPresenceSection({
     return null;
   }
   return (
-    <section className="document-presence">
+    <section className={editable ? "document-presence document-presence--editable" : "document-presence"}>
       <h3 className="document-presence__title">{copy.title}</h3>
       {visibleBadges.length ? (
         <DocumentBadges

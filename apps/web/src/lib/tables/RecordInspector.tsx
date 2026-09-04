@@ -1,7 +1,7 @@
 import { Button } from "antd";
 import { ChevronRight } from "lucide-react";
 import { ICON, ICON_STROKE } from "../../components/icons";
-import { StateBlock } from "../../components/StateBlock";
+import { StateCard } from "../../components/StateCard";
 import { EMPTY_CELL, type TableRow } from "./tableRows";
 
 export type RecordInspectorField = {
@@ -115,7 +115,7 @@ export function RecordInspectorState({
         <Button onClick={onClose}>{closeLabel}</Button>
       </div>
       <div className="profile-panel__body">
-        <StateBlock description={description} kind={kind} title={title} />
+        <StateCard compact description={description} kind={kind} title={title} />
       </div>
     </aside>
   );

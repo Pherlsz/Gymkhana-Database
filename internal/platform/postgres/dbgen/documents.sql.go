@@ -65,15 +65,18 @@ WHERE ($1::uuid IS NULL OR presence.profile_id = $1::uuid)
     ($5::text = 'IN_USE' AND document.medium = 'PHYSICAL' AND document_current_use.document_id IS NOT NULL) OR
     ($5::text = 'AVAILABLE' AND document.medium = 'PHYSICAL' AND document.idle_custody = 'ORGANIZATION' AND document_current_use.document_id IS NULL))
   AND ($6::uuid IS NULL OR document_current_use.holder_profile_id = $6::uuid)
+  AND (NOT $7::bool OR document.id = ANY($8::uuid[]))
 `
 
 type CountDocumentsParams struct {
-	OwnerProfileIDFilter  pgtype.UUID `json:"owner_profile_id_filter"`
-	DocumentTypeIDFilter  pgtype.UUID `json:"document_type_id_filter"`
-	IdentifierFilter      string      `json:"identifier_filter"`
-	MediumFilter          string      `json:"medium_filter"`
-	StatusFilter          string      `json:"status_filter"`
-	HolderProfileIDFilter pgtype.UUID `json:"holder_profile_id_filter"`
+	OwnerProfileIDFilter  pgtype.UUID   `json:"owner_profile_id_filter"`
+	DocumentTypeIDFilter  pgtype.UUID   `json:"document_type_id_filter"`
+	IdentifierFilter      string        `json:"identifier_filter"`
+	MediumFilter          string        `json:"medium_filter"`
+	StatusFilter          string        `json:"status_filter"`
+	HolderProfileIDFilter pgtype.UUID   `json:"holder_profile_id_filter"`
+	RestrictIds           bool          `json:"restrict_ids"`
+	IDFilter              []pgtype.UUID `json:"id_filter"`
 }
 
 func (q *Queries) CountDocuments(ctx context.Context, arg CountDocumentsParams) (int64, error) {
@@ -84,6 +87,8 @@ func (q *Queries) CountDocuments(ctx context.Context, arg CountDocumentsParams) 
 		arg.MediumFilter,
 		arg.StatusFilter,
 		arg.HolderProfileIDFilter,
+		arg.RestrictIds,
+		arg.IDFilter,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -571,33 +576,36 @@ WHERE ($1::uuid IS NULL OR presence.profile_id = $1::uuid)
     ($5::text = 'IN_USE' AND document.medium = 'PHYSICAL' AND document_current_use.document_id IS NOT NULL) OR
     ($5::text = 'AVAILABLE' AND document.medium = 'PHYSICAL' AND document.idle_custody = 'ORGANIZATION' AND document_current_use.document_id IS NULL))
   AND ($6::uuid IS NULL OR document_current_use.holder_profile_id = $6::uuid)
+  AND (NOT $7::bool OR document.id = ANY($8::uuid[]))
 ORDER BY
-  CASE WHEN $7::text = 'identifier_value' AND $8::text = 'asc' THEN lower(presence.identifier_value) END ASC,
-  CASE WHEN $7::text = 'identifier_value' AND $8::text = 'desc' THEN lower(presence.identifier_value) END DESC,
-  CASE WHEN $7::text = 'type_label' AND $8::text = 'asc' THEN lower(document_type.label) END ASC,
-  CASE WHEN $7::text = 'type_label' AND $8::text = 'desc' THEN lower(document_type.label) END DESC,
-  CASE WHEN $7::text = 'document_date' AND $8::text = 'asc' THEN document.document_date END ASC NULLS LAST,
-  CASE WHEN $7::text = 'document_date' AND $8::text = 'desc' THEN document.document_date END DESC NULLS LAST,
-  CASE WHEN $7::text = 'created_at' AND $8::text = 'asc' THEN document.created_at END ASC,
-  CASE WHEN $7::text = 'created_at' AND $8::text = 'desc' THEN document.created_at END DESC,
-  CASE WHEN $7::text = 'updated_at' AND $8::text = 'asc' THEN document.updated_at END ASC,
-  CASE WHEN $7::text = 'updated_at' AND $8::text = 'desc' THEN document.updated_at END DESC,
+  CASE WHEN $9::text = 'identifier_value' AND $10::text = 'asc' THEN lower(presence.identifier_value) END ASC,
+  CASE WHEN $9::text = 'identifier_value' AND $10::text = 'desc' THEN lower(presence.identifier_value) END DESC,
+  CASE WHEN $9::text = 'type_label' AND $10::text = 'asc' THEN lower(document_type.label) END ASC,
+  CASE WHEN $9::text = 'type_label' AND $10::text = 'desc' THEN lower(document_type.label) END DESC,
+  CASE WHEN $9::text = 'document_date' AND $10::text = 'asc' THEN document.document_date END ASC NULLS LAST,
+  CASE WHEN $9::text = 'document_date' AND $10::text = 'desc' THEN document.document_date END DESC NULLS LAST,
+  CASE WHEN $9::text = 'created_at' AND $10::text = 'asc' THEN document.created_at END ASC,
+  CASE WHEN $9::text = 'created_at' AND $10::text = 'desc' THEN document.created_at END DESC,
+  CASE WHEN $9::text = 'updated_at' AND $10::text = 'asc' THEN document.updated_at END ASC,
+  CASE WHEN $9::text = 'updated_at' AND $10::text = 'desc' THEN document.updated_at END DESC,
   document.id ASC
-LIMIT $10
-OFFSET $9
+LIMIT $12
+OFFSET $11
 `
 
 type ListDocumentsParams struct {
-	OwnerProfileIDFilter  pgtype.UUID `json:"owner_profile_id_filter"`
-	DocumentTypeIDFilter  pgtype.UUID `json:"document_type_id_filter"`
-	IdentifierFilter      string      `json:"identifier_filter"`
-	MediumFilter          string      `json:"medium_filter"`
-	StatusFilter          string      `json:"status_filter"`
-	HolderProfileIDFilter pgtype.UUID `json:"holder_profile_id_filter"`
-	SortField             string      `json:"sort_field"`
-	SortOrder             string      `json:"sort_order"`
-	PageOffset            int32       `json:"page_offset"`
-	PageLimit             int32       `json:"page_limit"`
+	OwnerProfileIDFilter  pgtype.UUID   `json:"owner_profile_id_filter"`
+	DocumentTypeIDFilter  pgtype.UUID   `json:"document_type_id_filter"`
+	IdentifierFilter      string        `json:"identifier_filter"`
+	MediumFilter          string        `json:"medium_filter"`
+	StatusFilter          string        `json:"status_filter"`
+	HolderProfileIDFilter pgtype.UUID   `json:"holder_profile_id_filter"`
+	RestrictIds           bool          `json:"restrict_ids"`
+	IDFilter              []pgtype.UUID `json:"id_filter"`
+	SortField             string        `json:"sort_field"`
+	SortOrder             string        `json:"sort_order"`
+	PageOffset            int32         `json:"page_offset"`
+	PageLimit             int32         `json:"page_limit"`
 }
 
 type ListDocumentsRow struct {
@@ -638,6 +646,8 @@ func (q *Queries) ListDocuments(ctx context.Context, arg ListDocumentsParams) ([
 		arg.MediumFilter,
 		arg.StatusFilter,
 		arg.HolderProfileIDFilter,
+		arg.RestrictIds,
+		arg.IDFilter,
 		arg.SortField,
 		arg.SortOrder,
 		arg.PageOffset,

@@ -22,6 +22,7 @@ type Store interface {
 	Count(context.Context, Filters) (int64, error)
 	List(context.Context, ListOptions) ([]Profile, error)
 	ListByExactFullName(context.Context, string) ([]Profile, error)
+	DistinctCities(context.Context, Filters, int32) ([]string, error)
 	Update(context.Context, Identifier, int64, Values) (Profile, error)
 	Duplicate(context.Context, Identifier, Identifier) (Profile, error)
 	Delete(context.Context, Identifier, int64) error
@@ -37,6 +38,7 @@ type profileQueries interface {
 	DeleteProfile(context.Context, dbgen.DeleteProfileParams) (pgtype.UUID, error)
 	RecordProfileAuditEvent(context.Context, dbgen.RecordProfileAuditEventParams) error
 	ListProfilesByExactFullName(context.Context, string) ([]dbgen.Profile, error)
+	ListDistinctCities(context.Context, dbgen.ListDistinctCitiesParams) ([]*string, error)
 	UpsertCPFPresence(context.Context, dbgen.UpsertCPFPresenceParams) (dbgen.DocumentPresence, error)
 	ClearCPFPresenceNumber(context.Context, pgtype.UUID) error
 }
@@ -87,6 +89,8 @@ func (store *PostgresStore) Count(ctx context.Context, filters Filters) (int64, 
 		EmailFilter:    filters.Email,
 		CityFilter:     filters.City,
 		StateFilter:    filters.State,
+		RestrictIds:    filters.RestrictIDs,
+		IDFilter:       uuidList(filters.IDFilter),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("count profiles: %w", err)
@@ -101,6 +105,8 @@ func (store *PostgresStore) List(ctx context.Context, options ListOptions) ([]Pr
 		EmailFilter:    options.Filters.Email,
 		CityFilter:     options.Filters.City,
 		StateFilter:    options.Filters.State,
+		RestrictIds:    options.Filters.RestrictIDs,
+		IDFilter:       uuidList(options.Filters.IDFilter),
 		SortField:      string(options.SortField),
 		SortOrder:      string(options.SortOrder),
 		PageLimit:      options.Limit,
@@ -134,6 +140,27 @@ func (store *PostgresStore) ListByExactFullName(ctx context.Context, fullName st
 		profiles = append(profiles, mapped)
 	}
 	return profiles, nil
+}
+
+func (store *PostgresStore) DistinctCities(ctx context.Context, filters Filters, limit int32) ([]string, error) {
+	values, err := store.queries.ListDistinctCities(ctx, dbgen.ListDistinctCitiesParams{
+		FullNameFilter: filters.FullName,
+		CpfFilter:      filters.CPF,
+		EmailFilter:    filters.Email,
+		StateFilter:    filters.State,
+		ValueLimit:     limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list distinct cities: %w", err)
+	}
+	cities := make([]string, 0, len(values))
+	for _, value := range values {
+		if value == nil {
+			continue
+		}
+		cities = append(cities, *value)
+	}
+	return cities, nil
 }
 
 func (store *PostgresStore) Update(ctx context.Context, id Identifier, version int64, values Values) (Profile, error) {
@@ -398,6 +425,14 @@ func valuesFromDatabase(value dbgen.Profile) Values {
 
 func databaseUUID(identifier Identifier) pgtype.UUID {
 	return pgtype.UUID{Bytes: identifier, Valid: true}
+}
+
+func uuidList(ids []Identifier) []pgtype.UUID {
+	out := make([]pgtype.UUID, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, databaseUUID(id))
+	}
+	return out
 }
 
 func optionalDatabaseUUID(identifier *Identifier) pgtype.UUID {

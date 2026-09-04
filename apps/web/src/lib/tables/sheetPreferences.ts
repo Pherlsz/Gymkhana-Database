@@ -1,7 +1,6 @@
 import {
   SHEET_COLUMN_WIDTH,
   SHEET_DEFAULT_PAGE_SIZE,
-  SHEET_DISTINCT_VALUE_LIMIT,
   SHEET_FALLBACK_BODY_HEIGHT_PX,
   SHEET_HEADER_FALLBACK_HEIGHT_PX,
   SHEET_INSPECTOR_MAX_WIDTH_PX,
@@ -32,7 +31,6 @@ export type SheetPreferenceOverrides = {
   fallbackBodyHeightPx?: number;
   headerFallbackHeightPx?: number;
   rowHeightPx?: number;
-  distinctValueLimit?: number;
 };
 
 export type ResolvedSheetPreferences = {
@@ -49,7 +47,6 @@ export type ResolvedSheetPreferences = {
   fallbackBodyHeightPx: number;
   headerFallbackHeightPx: number;
   rowHeightPx: number;
-  distinctValueLimit: number;
 };
 
 function clampInt(value: number, min: number, max: number, fallback: number) {
@@ -82,7 +79,6 @@ export function resolveSheetPreferences(
     fallbackBodyHeightPx: overrides?.fallbackBodyHeightPx ?? SHEET_FALLBACK_BODY_HEIGHT_PX,
     headerFallbackHeightPx: overrides?.headerFallbackHeightPx ?? SHEET_HEADER_FALLBACK_HEIGHT_PX,
     rowHeightPx: overrides?.rowHeightPx ?? SHEET_ROW_HEIGHT_PX,
-    distinctValueLimit: overrides?.distinctValueLimit ?? SHEET_DISTINCT_VALUE_LIMIT,
   };
 }
 

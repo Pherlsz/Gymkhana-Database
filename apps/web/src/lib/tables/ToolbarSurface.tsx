@@ -113,7 +113,7 @@ export function ToolbarSurface({
           height={SHEET_INSPECTOR_SHEET_SIZE}
           open={open}
           placement="bottom"
-          title={title}
+          title={undefined}
           onClose={() => onOpenChange(false)}
         >
           {body}
