@@ -125,6 +125,10 @@
   --md-warning: oklch(0.5 0.14 45);
   --md-error: oklch(0.505 0.19 27);
   --md-info: oklch(0.47 0.13 250);
+  --md-success-container: color-mix(in oklch, var(--md-success) 10%, var(--md-surface));
+  --md-warning-container: color-mix(in oklch, var(--md-warning) 10%, var(--md-surface));
+  --md-error-container: color-mix(in oklch, var(--md-error) 8%, var(--md-surface));
+  --md-info-container: color-mix(in oklch, var(--md-info) 10%, var(--md-surface));
   --md-scrim: oklch(0.185 0.006 85 / 0.45);
   /* Document presence marks, per Orchestration 12.1: F green, D blue. */
   --mark-physical: oklch(0.47 0.16 145);
@@ -196,7 +200,7 @@ html.dark {
   --md-surface-elevated: var(--gray-3);
   --md-primary-container: color-mix(in oklch, var(--md-primary) 20%, var(--md-surface));
   --md-search-bg: var(--gray-4);
-  --md-focus-ring: color-mix(in oklch, var(--md-primary-text) 50%, transparent);
+  --md-focus-ring: color-mix(in oklch, var(--md-primary-text) 80%, transparent);
   --md-nav-tree: color-mix(in oklch, var(--md-on-surface-variant) 28%, transparent);
   --md-success: oklch(0.78 0.15 155);
   --md-warning: oklch(0.8 0.115 62);

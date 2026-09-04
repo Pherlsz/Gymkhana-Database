@@ -52,7 +52,7 @@
   padding: var(--gym-space-4);
   border: 1px solid color-mix(in oklch, var(--md-error) 40%, var(--md-outline));
   border-radius: var(--gym-radius-lg);
-  background: color-mix(in oklch, var(--md-error) 5%, transparent);
+  background: var(--md-error-container);
 }
 
 .confirm-delete__field {
