@@ -1,16 +1,6 @@
 import { Button, DatePicker, Input, Segmented, Select, message } from "antd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Car,
-  Check,
-  ChevronDown,
-  FileText,
-  Plus,
-  Trash2,
-  User,
-  Users,
-  Zap,
-} from "lucide-react";
+import { Car, Check, ChevronDown, FileText, Plus, Trash2, User, Users, Zap } from "lucide-react";
 import { type ChangeEvent, useId, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useI18n } from "../../i18n";
@@ -237,8 +227,9 @@ export function CadastroSingleScreen({
     if (p.parents_wedding_date) setParentsWeddingDate(p.parents_wedding_date);
     if (p.address?.street) {
       setAddress(
-        `${p.address.street}${p.address.number ? `, ${p.address.number}` : ""}${p.address.city ? ` — ${p.address.city}/${p.address.state || ""}` : ""
-          }`.trim(),
+        `${p.address.street}${p.address.number ? `, ${p.address.number}` : ""}${
+          p.address.city ? ` — ${p.address.city}/${p.address.state || ""}` : ""
+        }`.trim(),
       );
       if (p.address.postal_code) setPostalCode(p.address.postal_code);
     }
@@ -766,7 +757,8 @@ export function CadastroSingleScreen({
                   onChange={(patch) => {
                     if (patch.billTypeId !== undefined) setBillTypeId(patch.billTypeId);
                     if (patch.billProvider !== undefined) setBillProvider(patch.billProvider);
-                    if (patch.billInstallation !== undefined) setBillInstallation(patch.billInstallation);
+                    if (patch.billInstallation !== undefined)
+                      setBillInstallation(patch.billInstallation);
                     if (patch.billCompetence !== undefined) setBillCompetence(patch.billCompetence);
                     if (patch.billDueDate !== undefined) setBillDueDate(patch.billDueDate);
                     if (patch.billAmount !== undefined) setBillAmount(patch.billAmount);
@@ -774,7 +766,8 @@ export function CadastroSingleScreen({
                       setBillPrintedHolder(patch.billPrintedHolder);
                       if (!holderName) setHolderName(patch.billPrintedHolder);
                     }
-                    if (patch.billPrintedAddress !== undefined) setBillPrintedAddress(patch.billPrintedAddress);
+                    if (patch.billPrintedAddress !== undefined)
+                      setBillPrintedAddress(patch.billPrintedAddress);
                     if (patch.billMedium !== undefined) setBillMedium(patch.billMedium);
                     if (patch.billNotes !== undefined) setBillNotes(patch.billNotes);
                   }}
@@ -857,8 +850,9 @@ export function CadastroSingleScreen({
 
                 {/* Requisito Mínimo: Status Pill Positivo */}
                 <span
-                  className={`minreq-pill ${hasMinimumRequirement ? "minreq-pill--satisfied" : "minreq-pill--pending"
-                    }`}
+                  className={`minreq-pill ${
+                    hasMinimumRequirement ? "minreq-pill--satisfied" : "minreq-pill--pending"
+                  }`}
                 >
                   {hasMinimumRequirement ? (
                     <>
@@ -965,7 +959,10 @@ export function CadastroSingleScreen({
 
           {/* Seção Nova: Família e Filiação */}
           <section className={`cadastro-group ${openFamily ? "" : "cadastro-group--collapsed"}`}>
-            <header className="cadastro-group__header" onClick={() => setOpenFamily((prev) => !prev)}>
+            <header
+              className="cadastro-group__header"
+              onClick={() => setOpenFamily((prev) => !prev)}
+            >
               <div className="cadastro-group__title-area">
                 <span className="cadastro-group__icon">
                   <Users size={18} strokeWidth={1.75} />
@@ -983,11 +980,14 @@ export function CadastroSingleScreen({
                   disabled={Boolean(selectedProfile)}
                   onChange={(patch) => {
                     if (patch.fatherName !== undefined) setFatherName(patch.fatherName);
-                    if (patch.fatherBirthDate !== undefined) setFatherBirthDate(patch.fatherBirthDate);
+                    if (patch.fatherBirthDate !== undefined)
+                      setFatherBirthDate(patch.fatherBirthDate);
                     if (patch.motherName !== undefined) setMotherName(patch.motherName);
-                    if (patch.motherBirthDate !== undefined) setMotherBirthDate(patch.motherBirthDate);
+                    if (patch.motherBirthDate !== undefined)
+                      setMotherBirthDate(patch.motherBirthDate);
                     if (patch.weddingDate !== undefined) setWeddingDate(patch.weddingDate);
-                    if (patch.parentsWeddingDate !== undefined) setParentsWeddingDate(patch.parentsWeddingDate);
+                    if (patch.parentsWeddingDate !== undefined)
+                      setParentsWeddingDate(patch.parentsWeddingDate);
                   }}
                   state={{
                     fatherName,
@@ -1003,7 +1003,9 @@ export function CadastroSingleScreen({
           </section>
 
           {/* Seção Nova: Dados Complementares */}
-          <section className={`cadastro-group ${openComplementary ? "" : "cadastro-group--collapsed"}`}>
+          <section
+            className={`cadastro-group ${openComplementary ? "" : "cadastro-group--collapsed"}`}
+          >
             <header
               className="cadastro-group__header"
               onClick={() => setOpenComplementary((prev) => !prev)}
@@ -1029,16 +1031,20 @@ export function CadastroSingleScreen({
                     if (patch.vehiclePlate !== undefined) setVehiclePlate(patch.vehiclePlate);
                     if (patch.vehicleYear !== undefined) setVehicleYear(patch.vehicleYear);
                     if (patch.healthPlan !== undefined) setHealthPlan(patch.healthPlan);
-                    if (patch.bloodDonor !== undefined) setBloodDonor(patch.bloodDonor ?? undefined);
-                    if (patch.organDonor !== undefined) setOrganDonor(patch.organDonor ?? undefined);
+                    if (patch.bloodDonor !== undefined)
+                      setBloodDonor(patch.bloodDonor ?? undefined);
+                    if (patch.organDonor !== undefined)
+                      setOrganDonor(patch.organDonor ?? undefined);
                     if (patch.team !== undefined) setTeam(patch.team);
                     if (patch.sector !== undefined) setSector(patch.sector);
                     if (patch.clubMembership !== undefined) setClubMembership(patch.clubMembership);
                     if (patch.membershipType !== undefined) setMembershipType(patch.membershipType);
                     if (patch.collections !== undefined) setCollections(patch.collections);
                     if (patch.pet !== undefined) setPet(patch.pet);
-                    if (patch.supermarketClub !== undefined) setSupermarketClub(patch.supermarketClub);
-                    if (patch.travelCountries !== undefined) setTravelCountries(patch.travelCountries);
+                    if (patch.supermarketClub !== undefined)
+                      setSupermarketClub(patch.supermarketClub);
+                    if (patch.travelCountries !== undefined)
+                      setTravelCountries(patch.travelCountries);
                     if (patch.cardBrand !== undefined) setCardBrand(patch.cardBrand);
                     if (patch.cardBank !== undefined) setCardBank(patch.cardBank);
                   }}

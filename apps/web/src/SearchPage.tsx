@@ -66,7 +66,15 @@ export function SearchPage() {
       sort: search.sort,
       order: search.order,
     }),
-    [search.limit, search.order, search.page, search.q, search.sort, selectedFields, selectedModules],
+    [
+      search.limit,
+      search.order,
+      search.page,
+      search.q,
+      search.sort,
+      selectedFields,
+      selectedModules,
+    ],
   );
   const results = useQuery({
     queryKey: ["global-search", request],
@@ -168,11 +176,7 @@ export function SearchPage() {
           }}
         />
         <div className="search-filters-bar">
-          <div
-            className="search-modules"
-            role="group"
-            aria-label={searchMessages.modulesLegend}
-          >
+          <div className="search-modules" role="group" aria-label={searchMessages.modulesLegend}>
             <button
               aria-pressed={selectedModules.length === 0}
               className="search-module-chip"
@@ -210,9 +214,7 @@ export function SearchPage() {
                   return (
                     <span className="search-field-option">
                       <span className="search-field-option__title">{title}</span>
-                      {scope ? (
-                        <span className="search-field-option__scope">{scope}</span>
-                      ) : null}
+                      {scope ? <span className="search-field-option__scope">{scope}</span> : null}
                     </span>
                   );
                 }}

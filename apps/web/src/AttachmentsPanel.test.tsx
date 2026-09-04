@@ -72,7 +72,7 @@ describe("AttachmentsPanel", () => {
     );
     renderPanel();
 
-    expect(screen.getByText("Carregando anexos...")).toBeInTheDocument();
+    expect(screen.getByText("Carregando anexos…")).toBeInTheDocument();
     expect(await screen.findByText("Nenhum anexo ativo.")).toBeInTheDocument();
     expect(attachmentAPI.listAttachments).toHaveBeenCalledWith(
       owner,

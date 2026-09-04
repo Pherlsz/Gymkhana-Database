@@ -299,7 +299,9 @@ function RemoteSearchField({
       />
       {showList ? (
         <ul className="search-field__listbox" id={listId} role="listbox">
-          {fetching ? <li className="search-field__status">{messages.search.loadingSuggest}</li> : null}
+          {fetching ? (
+            <li className="search-field__status">{messages.search.loadingSuggest}</li>
+          ) : null}
           {items.length === 0 && !fetching ? (
             <li className="search-field__status">
               {lookup ? messages.search.lookupEmpty : messages.search.slashEmpty}
@@ -308,7 +310,9 @@ function RemoteSearchField({
           {items.map((item, index) => (
             <li
               aria-selected={index === active}
-              className={index === active ? "search-field__option is-active" : "search-field__option"}
+              className={
+                index === active ? "search-field__option is-active" : "search-field__option"
+              }
               id={`${listId}-${item.key}`}
               key={item.key}
               role="option"

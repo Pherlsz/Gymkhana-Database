@@ -361,7 +361,12 @@ describe("App", () => {
               { key: "documents", label: "Documentos" },
             ],
             fields: [
-              { key: "profile.full_name", module: "profiles", label: "Nome completo", kind: "text" },
+              {
+                key: "profile.full_name",
+                module: "profiles",
+                label: "Nome completo",
+                kind: "text",
+              },
             ],
             operators: [],
             limits: { maximum_terms: 5 },
@@ -413,9 +418,9 @@ describe("App", () => {
       const bodies = searchPosts().map(([, init]) =>
         JSON.parse(String((init as RequestInit).body)),
       );
-      expect(bodies.some((body: { modules?: string[] }) => body.modules?.includes("profiles"))).toBe(
-        true,
-      );
+      expect(
+        bodies.some((body: { modules?: string[] }) => body.modules?.includes("profiles")),
+      ).toBe(true);
     });
   });
 

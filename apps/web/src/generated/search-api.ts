@@ -4,338 +4,338 @@
  */
 
 export interface paths {
-    "/api/v1/search/catalog": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read the authorized logical Search catalog */
-        get: operations["getSearchCatalog"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/api/v1/search/catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/search/suggest": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Suggest nearby values for the current Search token */
-        get: operations["suggestSearchValues"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read the authorized logical Search catalog */
+    get: operations["getSearchCatalog"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/search/suggest": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Execute a bounded Search using logical identifiers
-         * @description Parse q as the Search query language. terms is a compatibility alias of bare AND words.
-         */
-        post: operations["executeSearch"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Suggest nearby values for the current Search token */
+    get: operations["suggestSearchValues"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    get?: never;
+    put?: never;
+    /**
+     * Execute a bounded Search using logical identifiers
+     * @description Parse q as the Search query language. terms is a compatibility alias of bare AND words.
+     */
+    post: operations["executeSearch"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        /** @enum {string} */
-        SearchModule: "profiles" | "documents" | "bills" | "custom_data" | "attachments";
-        /** @enum {string} */
-        SearchSortField: "relevance" | "updated_at";
-        /** @enum {string} */
-        SearchSortOrder: "asc" | "desc";
-        SearchCatalogModule: {
-            key: components["schemas"]["SearchModule"];
-            label: string;
-        };
-        SearchCatalogField: {
-            /** @description Opaque logical identifier from the authorized catalog. */
-            key: string;
-            /** @description Search result module used for authorization and hit shape. */
-            module: components["schemas"]["SearchModule"];
-            /** @description UI bucket for the fields filter (owner of the field). */
-            group: components["schemas"]["SearchModule"];
-            label: string;
-            kind: string;
-        };
-        SearchCatalogLimits: {
-            maximum_terms: number;
-            maximum_term_length: number;
-            maximum_fields: number;
-            /** Format: int32 */
-            maximum_page_size: number;
-            /** Format: int32 */
-            maximum_offset: number;
-            /** Format: int64 */
-            maximum_result_cardinality: number;
-        };
-        SearchCatalogResponse: {
-            modules: components["schemas"]["SearchCatalogModule"][];
-            fields: components["schemas"]["SearchCatalogField"][];
-            operators: components["schemas"]["SearchOperator"][];
-            limits: components["schemas"]["SearchCatalogLimits"];
-        };
-        SearchOperator: {
-            token: string;
-            insert: string;
-            kind: string;
-            description: string;
-        };
-        SearchSuggestResponse: {
-            suggestions: components["schemas"]["SearchSuggestHit"][];
-        };
-        SearchSuggestHit: {
-            value: string;
-            label: string;
-        };
-        SearchRequest: {
-            /** @description Search query language. Portuguese tokens (tipo, cidade, OU, cpf:). */
-            q?: string;
-            terms?: string[];
-            modules?: components["schemas"]["SearchModule"][];
-            fields?: string[];
-            /**
-             * Format: int32
-             * @default 50
-             */
-            limit: number;
-            /**
-             * Format: int32
-             * @default 0
-             */
-            offset: number;
-            /** @default relevance */
-            sort: components["schemas"]["SearchSortField"];
-            /** @default desc */
-            order: components["schemas"]["SearchSortOrder"];
-        };
-        SearchResult: {
-            module: components["schemas"]["SearchModule"];
-            /** @enum {string} */
-            entity_kind: "profile" | "document" | "bill" | "custom_entity" | "attachment";
-            /** Format: uuid */
-            entity_id: string;
-            /** Format: uuid */
-            profile_id?: string;
-            /** @enum {string} */
-            target_kind: "profile" | "document" | "bill" | "custom_entity";
-            /** Format: uuid */
-            target_id: string;
-            entity_label: string;
-            field_key: string;
-            field_label: string;
-            preview: string;
-            /** Format: int32 */
-            score: number;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        SearchPageMeta: {
-            /** Format: int64 */
-            total: number;
-            /** Format: int32 */
-            limit: number;
-            /** Format: int32 */
-            offset: number;
-            sort: components["schemas"]["SearchSortField"];
-            sort_order: components["schemas"]["SearchSortOrder"];
-        };
-        SearchPageResponse: {
-            results: components["schemas"]["SearchResult"][];
-            page: components["schemas"]["SearchPageMeta"];
-        };
-        ErrorDetail: {
-            code: string;
-            message: string;
-        };
-        FieldError: {
-            field: string;
-            code: string;
-            message: string;
-        };
-        ErrorResponse: {
-            error: components["schemas"]["ErrorDetail"];
-            request_id?: string;
-            field_errors?: components["schemas"]["FieldError"][];
-        };
+  schemas: {
+    /** @enum {string} */
+    SearchModule: "profiles" | "documents" | "bills" | "custom_data" | "attachments";
+    /** @enum {string} */
+    SearchSortField: "relevance" | "updated_at";
+    /** @enum {string} */
+    SearchSortOrder: "asc" | "desc";
+    SearchCatalogModule: {
+      key: components["schemas"]["SearchModule"];
+      label: string;
     };
-    responses: {
-        /** @description Invalid JSON or request shape */
-        BadRequest: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description Authentication is required */
-        Unauthorized: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description The authenticated user cannot access Search or the requested scope */
-        Forbidden: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description Logical identifiers, Search limits, cost, or result cardinality are invalid */
-        ValidationError: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description Persistent per-user Search rate limit was reached */
-        RateLimited: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description Search failed without exposing physical schema or SQL details */
-        InternalError: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description Search is unavailable or exceeded the safe execution timeout */
-        ServiceUnavailable: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
+    SearchCatalogField: {
+      /** @description Opaque logical identifier from the authorized catalog. */
+      key: string;
+      /** @description Search result module used for authorization and hit shape. */
+      module: components["schemas"]["SearchModule"];
+      /** @description UI bucket for the fields filter (owner of the field). */
+      group: components["schemas"]["SearchModule"];
+      label: string;
+      kind: string;
     };
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    SearchCatalogLimits: {
+      maximum_terms: number;
+      maximum_term_length: number;
+      maximum_fields: number;
+      /** Format: int32 */
+      maximum_page_size: number;
+      /** Format: int32 */
+      maximum_offset: number;
+      /** Format: int64 */
+      maximum_result_cardinality: number;
+    };
+    SearchCatalogResponse: {
+      modules: components["schemas"]["SearchCatalogModule"][];
+      fields: components["schemas"]["SearchCatalogField"][];
+      operators: components["schemas"]["SearchOperator"][];
+      limits: components["schemas"]["SearchCatalogLimits"];
+    };
+    SearchOperator: {
+      token: string;
+      insert: string;
+      kind: string;
+      description: string;
+    };
+    SearchSuggestResponse: {
+      suggestions: components["schemas"]["SearchSuggestHit"][];
+    };
+    SearchSuggestHit: {
+      value: string;
+      label: string;
+    };
+    SearchRequest: {
+      /** @description Search query language. Portuguese tokens (tipo, cidade, OU, cpf:). */
+      q?: string;
+      terms?: string[];
+      modules?: components["schemas"]["SearchModule"][];
+      fields?: string[];
+      /**
+       * Format: int32
+       * @default 50
+       */
+      limit: number;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      offset: number;
+      /** @default relevance */
+      sort: components["schemas"]["SearchSortField"];
+      /** @default desc */
+      order: components["schemas"]["SearchSortOrder"];
+    };
+    SearchResult: {
+      module: components["schemas"]["SearchModule"];
+      /** @enum {string} */
+      entity_kind: "profile" | "document" | "bill" | "custom_entity" | "attachment";
+      /** Format: uuid */
+      entity_id: string;
+      /** Format: uuid */
+      profile_id?: string;
+      /** @enum {string} */
+      target_kind: "profile" | "document" | "bill" | "custom_entity";
+      /** Format: uuid */
+      target_id: string;
+      entity_label: string;
+      field_key: string;
+      field_label: string;
+      preview: string;
+      /** Format: int32 */
+      score: number;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    SearchPageMeta: {
+      /** Format: int64 */
+      total: number;
+      /** Format: int32 */
+      limit: number;
+      /** Format: int32 */
+      offset: number;
+      sort: components["schemas"]["SearchSortField"];
+      sort_order: components["schemas"]["SearchSortOrder"];
+    };
+    SearchPageResponse: {
+      results: components["schemas"]["SearchResult"][];
+      page: components["schemas"]["SearchPageMeta"];
+    };
+    ErrorDetail: {
+      code: string;
+      message: string;
+    };
+    FieldError: {
+      field: string;
+      code: string;
+      message: string;
+    };
+    ErrorResponse: {
+      error: components["schemas"]["ErrorDetail"];
+      request_id?: string;
+      field_errors?: components["schemas"]["FieldError"][];
+    };
+  };
+  responses: {
+    /** @description Invalid JSON or request shape */
+    BadRequest: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Authentication is required */
+    Unauthorized: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The authenticated user cannot access Search or the requested scope */
+    Forbidden: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Logical identifiers, Search limits, cost, or result cardinality are invalid */
+    ValidationError: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Persistent per-user Search rate limit was reached */
+    RateLimited: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Search failed without exposing physical schema or SQL details */
+    InternalError: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Search is unavailable or exceeded the safe execution timeout */
+    ServiceUnavailable: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+  };
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    getSearchCatalog: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Permission-filtered Search catalog */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchCatalogResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
+  getSearchCatalog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    suggestSearchValues: {
-        parameters: {
-            query: {
-                field: string;
-                q?: string;
-                grain?: components["schemas"]["SearchModule"];
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Permission-filtered Search catalog */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Proximity-ranked value suggestions */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchSuggestResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
+        content: {
+          "application/json": components["schemas"]["SearchCatalogResponse"];
         };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
     };
-    executeSearch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SearchRequest"];
-            };
-        };
-        responses: {
-            /** @description Deterministic page of explained Search results */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchPageResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["RateLimited"];
-            500: components["responses"]["InternalError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
+  };
+  suggestSearchValues: {
+    parameters: {
+      query: {
+        field: string;
+        q?: string;
+        grain?: components["schemas"]["SearchModule"];
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    requestBody?: never;
+    responses: {
+      /** @description Proximity-ranked value suggestions */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SearchSuggestResponse"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  executeSearch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SearchRequest"];
+      };
+    };
+    responses: {
+      /** @description Deterministic page of explained Search results */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SearchPageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["RateLimited"];
+      500: components["responses"]["InternalError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
 }

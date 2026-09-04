@@ -676,7 +676,11 @@ export async function suggestSearchValues(
   input: { field: string; q: string; grain?: "profiles" | "documents" | "bills"; limit?: number },
   signal?: AbortSignal,
 ): Promise<{ suggestions: Array<{ value: string; label: string }> }> {
-  const query = new URLSearchParams({ field: input.field, q: input.q, limit: String(input.limit ?? 50) });
+  const query = new URLSearchParams({
+    field: input.field,
+    q: input.q,
+    limit: String(input.limit ?? 50),
+  });
   if (input.grain) query.set("grain", input.grain);
   return requestJSON(`/api/v1/search/suggest?${query}`, signal ? { signal } : {});
 }

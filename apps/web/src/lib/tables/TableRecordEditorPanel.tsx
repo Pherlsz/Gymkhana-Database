@@ -37,17 +37,10 @@ export function TableRecordEditorPanel({
 }) {
   if (section === "documents") {
     return (
-      <DocumentTableEditor
-        role={role}
-        search={search}
-        onNotice={onNotice}
-        onSearch={onSearch}
-      />
+      <DocumentTableEditor role={role} search={search} onNotice={onNotice} onSearch={onSearch} />
     );
   }
-  return (
-    <BillTableEditor role={role} search={search} onNotice={onNotice} onSearch={onSearch} />
-  );
+  return <BillTableEditor role={role} search={search} onNotice={onNotice} onSearch={onSearch} />;
 }
 
 function DocumentTableEditor({
@@ -68,8 +61,7 @@ function DocumentTableEditor({
 
   const recordsQuery = useQuery({
     queryKey: ["table-record-editor", "documents", search.records_owner, documentSearch(search)],
-    queryFn: ({ signal }) =>
-      listDocuments(search.records_owner, documentSearch(search), signal),
+    queryFn: ({ signal }) => listDocuments(search.records_owner, documentSearch(search), signal),
     enabled: Boolean(mode === "create" ? search.records_owner : selectedID || search.records_owner),
   });
   const selected = recordsQuery.data?.documents.find((value) => value.id === selectedID);

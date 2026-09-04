@@ -103,144 +103,134 @@ export function GoogleFormsPage({
   }
 
   return (
-        <Flex vertical gap="1.5rem">
-          {oauthResult === "connected" ? (
-            <Alert
-              message="Google Forms conectado"
-              type="success"
-              description="A autorização foi armazenada de forma criptografada."
-            />
-          ) : oauthResult === "denied" ? (
-            <Alert
-              message="Autorização não concedida"
-              type="warning"
-              description="Nenhuma conexão foi criada. Você pode tentar novamente quando quiser."
-            />
-          ) : null}
-          {status.isError ? (
-            <Alert
-              message="Não foi possível consultar a integração"
-              type="error"
-              description={<>{googleFormsError(status.error)}</>}
-            />
-          ) : null}
-          {status.data && !status.data.enabled ? (
-            <StateCard
-              action={
-                <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
-                  <Button icon={<ArrowLeft size={14} />}>
-                    {cadastroCopy.formsBackToCadastro}
-                  </Button>
-                </Link>
-              }
-              description={cadastroCopy.formsIntegrationDisabledDesc}
-              icon={<Link2Off aria-hidden size={28} strokeWidth={1.75} />}
-              kind="warning"
-              title={cadastroCopy.formsIntegrationDisabledTitle}
-            />
-          ) : null}
-          {status.data?.enabled && !status.data.connected ? (
-            <ConnectionSetup onConnected={() => void refresh()} />
-          ) : null}
-          {status.data?.connected && status.data.connection ? (
-            <ConnectionSummary
-              connection={status.data.connection}
-              onDisconnected={() => void refresh()}
-            />
-          ) : null}
-          {status.data?.connected ? (
-            <Flex aria-label="Seções do Google Forms" role="tablist">
-              <Button
-                aria-selected={tab === "sources"}
-                onClick={() => navigate("sources")}
-                role="tab"
-              >
-                Fontes
-              </Button>
-              <Button
-                aria-selected={tab === "history"}
-                onClick={() => navigate("history")}
-                role="tab"
-              >
-                Histórico
-              </Button>
-            </Flex>
-          ) : null}
-          {status.data?.connected && tab === "sources" && catalog.data ? (
-            <SourceCreator
-              defaultModule={defaultModule}
-              modules={catalog.data.modules.filter((value) => value.can_import)}
-              onCreated={() => void refresh()}
-            />
-          ) : null}
-          {status.data?.connected && tab === "sources" ? (
-            <section className="page-section">
-              <Typography.Title level={2}>Fontes configuradas</Typography.Title>
-              <Typography.Paragraph>
-                Cada fonte pertence ao administrador conectado; alterações de tipo ou
-                obrigatoriedade pausam a sincronização.
-              </Typography.Paragraph>
-              {sources.isError ? (
-                <Alert
-                  message="Não foi possível carregar as fontes"
-                  type="error"
-                  description={<>{googleFormsError(sources.error)}</>}
-                />
-              ) : null}
-              {(sources.data?.sources.length ?? 0) > 1 ? (
-                <label>
-                  Fonte selecionada
-                  <select
-                    aria-label="Fonte selecionada"
-                    value={selectedSourceID}
-                    onChange={(event) => navigate("sources", event.target.value)}
-                  >
-                    <option value="">Todas as fontes</option>
-                    {sources.data?.sources.map((source) => (
-                      <option key={source.id} value={source.id}>
-                        {source.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              {selectedSourceID && sources.data && !selectedSource ? (
-                <Alert
-                  message="Fonte não encontrada"
-                  type="warning"
-                  description="A fonte informada na URL não pertence a esta conexão ou não está mais disponível."
-                />
-              ) : null}
-              <Flex vertical gap="1rem">
-                {visibleSources.map((source) => (
-                  <SourceCard
-                    catalog={catalog.data?.modules.find((value) => value.id === source.module)}
-                    key={source.id}
-                    onUpdated={() => void refresh()}
-                    source={source}
-                  />
-                ))}
-                {!sources.isLoading && sources.data?.sources.length === 0 ? (
-                  <StateCard
-                    compact
-                    description="Informe um formulário para carregar o esquema de perguntas."
-                    kind="empty"
-                    title="Nenhuma fonte configurada"
-                  />
-                ) : null}
-              </Flex>
-            </section>
-          ) : null}
-          {status.data?.connected && tab === "history" ? (
-            <SyncHistory
-              error={syncs.error}
-              loading={syncs.isLoading}
-              onUpdated={() => void refresh()}
-              sources={sources.data?.sources ?? []}
-              values={syncs.data?.runs ?? []}
-            />
-          ) : null}
+    <Flex vertical gap="1.5rem">
+      {oauthResult === "connected" ? (
+        <Alert
+          message="Google Forms conectado"
+          type="success"
+          description="A autorização foi armazenada de forma criptografada."
+        />
+      ) : oauthResult === "denied" ? (
+        <Alert
+          message="Autorização não concedida"
+          type="warning"
+          description="Nenhuma conexão foi criada. Você pode tentar novamente quando quiser."
+        />
+      ) : null}
+      {status.isError ? (
+        <Alert
+          message="Não foi possível consultar a integração"
+          type="error"
+          description={<>{googleFormsError(status.error)}</>}
+        />
+      ) : null}
+      {status.data && !status.data.enabled ? (
+        <StateCard
+          action={
+            <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
+              <Button icon={<ArrowLeft size={14} />}>{cadastroCopy.formsBackToCadastro}</Button>
+            </Link>
+          }
+          description={cadastroCopy.formsIntegrationDisabledDesc}
+          icon={<Link2Off aria-hidden size={28} strokeWidth={1.75} />}
+          kind="warning"
+          title={cadastroCopy.formsIntegrationDisabledTitle}
+        />
+      ) : null}
+      {status.data?.enabled && !status.data.connected ? (
+        <ConnectionSetup onConnected={() => void refresh()} />
+      ) : null}
+      {status.data?.connected && status.data.connection ? (
+        <ConnectionSummary
+          connection={status.data.connection}
+          onDisconnected={() => void refresh()}
+        />
+      ) : null}
+      {status.data?.connected ? (
+        <Flex aria-label="Seções do Google Forms" role="tablist">
+          <Button aria-selected={tab === "sources"} onClick={() => navigate("sources")} role="tab">
+            Fontes
+          </Button>
+          <Button aria-selected={tab === "history"} onClick={() => navigate("history")} role="tab">
+            Histórico
+          </Button>
         </Flex>
+      ) : null}
+      {status.data?.connected && tab === "sources" && catalog.data ? (
+        <SourceCreator
+          defaultModule={defaultModule}
+          modules={catalog.data.modules.filter((value) => value.can_import)}
+          onCreated={() => void refresh()}
+        />
+      ) : null}
+      {status.data?.connected && tab === "sources" ? (
+        <section className="page-section">
+          <Typography.Title level={2}>Fontes configuradas</Typography.Title>
+          <Typography.Paragraph>
+            Cada fonte pertence ao administrador conectado; alterações de tipo ou obrigatoriedade
+            pausam a sincronização.
+          </Typography.Paragraph>
+          {sources.isError ? (
+            <Alert
+              message="Não foi possível carregar as fontes"
+              type="error"
+              description={<>{googleFormsError(sources.error)}</>}
+            />
+          ) : null}
+          {(sources.data?.sources.length ?? 0) > 1 ? (
+            <label>
+              Fonte selecionada
+              <select
+                aria-label="Fonte selecionada"
+                value={selectedSourceID}
+                onChange={(event) => navigate("sources", event.target.value)}
+              >
+                <option value="">Todas as fontes</option>
+                {sources.data?.sources.map((source) => (
+                  <option key={source.id} value={source.id}>
+                    {source.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {selectedSourceID && sources.data && !selectedSource ? (
+            <Alert
+              message="Fonte não encontrada"
+              type="warning"
+              description="A fonte informada na URL não pertence a esta conexão ou não está mais disponível."
+            />
+          ) : null}
+          <Flex vertical gap="1rem">
+            {visibleSources.map((source) => (
+              <SourceCard
+                catalog={catalog.data?.modules.find((value) => value.id === source.module)}
+                key={source.id}
+                onUpdated={() => void refresh()}
+                source={source}
+              />
+            ))}
+            {!sources.isLoading && sources.data?.sources.length === 0 ? (
+              <StateCard
+                compact
+                description="Informe um formulário para carregar o esquema de perguntas."
+                kind="empty"
+                title="Nenhuma fonte configurada"
+              />
+            ) : null}
+          </Flex>
+        </section>
+      ) : null}
+      {status.data?.connected && tab === "history" ? (
+        <SyncHistory
+          error={syncs.error}
+          loading={syncs.isLoading}
+          onUpdated={() => void refresh()}
+          sources={sources.data?.sources ?? []}
+          values={syncs.data?.runs ?? []}
+        />
+      ) : null}
+    </Flex>
   );
 }
 
@@ -615,21 +605,20 @@ function SyncHistory({
           description={<>{googleFormsError(error)}</>}
         />
       ) : null}
-      {loading ? (
-        <StateCard compact kind="loading" title="Carregando sincronizações" />
-      ) : null}
+      {loading ? <StateCard compact kind="loading" title="Carregando sincronizações" /> : null}
       <Flex vertical gap="0.75rem">
         {values.map((value) => {
           const source = sources.find((item) => item.id === value.source_id);
           return (
-          <SyncRow
-            key={value.id}
-            module={source?.module ?? "PROFILES"}
-            name={names.get(value.source_id) ?? "Formulário"}
-            onUpdated={onUpdated}
-            value={value}
-          />
-        );})}
+            <SyncRow
+              key={value.id}
+              module={source?.module ?? "PROFILES"}
+              name={names.get(value.source_id) ?? "Formulário"}
+              onUpdated={onUpdated}
+              value={value}
+            />
+          );
+        })}
         {!loading && values.length === 0 ? (
           <StateCard
             compact

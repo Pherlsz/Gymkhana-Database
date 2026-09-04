@@ -24,12 +24,7 @@ export interface PersonFamilyGroupProps {
   };
 }
 
-export function PersonFamilyGroup({
-  state,
-  onChange,
-  disabled,
-  copy,
-}: PersonFamilyGroupProps) {
+export function PersonFamilyGroup({ state, onChange, disabled, copy }: PersonFamilyGroupProps) {
   const isDisabled = Boolean(disabled);
 
   return (
@@ -61,9 +56,7 @@ export function PersonFamilyGroup({
             id="cad-fam-father-bdate"
             style={{ width: "100%" }}
             value={state.fatherBirthDate ? dayjs(state.fatherBirthDate) : null}
-            onChange={(d) =>
-              onChange({ fatherBirthDate: d ? d.format("YYYY-MM-DD") : undefined })
-            }
+            onChange={(d) => onChange({ fatherBirthDate: d ? d.format("YYYY-MM-DD") : undefined })}
           />
         </div>
       </div>
@@ -95,9 +88,7 @@ export function PersonFamilyGroup({
             id="cad-fam-mother-bdate"
             style={{ width: "100%" }}
             value={state.motherBirthDate ? dayjs(state.motherBirthDate) : null}
-            onChange={(d) =>
-              onChange({ motherBirthDate: d ? d.format("YYYY-MM-DD") : undefined })
-            }
+            onChange={(d) => onChange({ motherBirthDate: d ? d.format("YYYY-MM-DD") : undefined })}
           />
         </div>
       </div>
@@ -114,9 +105,7 @@ export function PersonFamilyGroup({
             id="cad-fam-wedding"
             style={{ width: "100%" }}
             value={state.weddingDate ? dayjs(state.weddingDate) : null}
-            onChange={(d) =>
-              onChange({ weddingDate: d ? d.format("YYYY-MM-DD") : undefined })
-            }
+            onChange={(d) => onChange({ weddingDate: d ? d.format("YYYY-MM-DD") : undefined })}
           />
         </div>
       </div>
@@ -141,4 +130,3 @@ export function PersonFamilyGroup({
     </div>
   );
 }
-

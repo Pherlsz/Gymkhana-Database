@@ -421,17 +421,21 @@ export const ptBRV1 = {
       ocrSuccessBill: "Dados da fatura extraídos com sucesso.",
       ocrExtractedNote: "Extraído via OCR · {filename}",
       entryPeopleTitle: "Pessoa",
-      entryPeopleBody: "Cadastrar novo titular com identidade, contatos, dados de família e anexos vinculados.",
+      entryPeopleBody:
+        "Cadastrar novo titular com identidade, contatos, dados de família e anexos vinculados.",
       entryDocsTitle: "Documento oficial",
-      entryDocsBody: "Cadastrar RG, CPF, CNH ou certidão com suporte a OCR e vínculo opcional a titular.",
+      entryDocsBody:
+        "Cadastrar RG, CPF, CNH ou certidão com suporte a OCR e vínculo opcional a titular.",
       entryBillsTitle: "Conta de consumo",
-      entryBillsBody: "Cadastrar fatura de energia, água, internet ou gás com suporte a OCR e titular opcional.",
+      entryBillsBody:
+        "Cadastrar fatura de energia, água, internet ou gás com suporte a OCR e titular opcional.",
       entryDirectSection: "Cadastro Direto por Tipo",
       entryAutomationSection: "Canais de Automação & Ingestão",
       holderSelectPlaceholder: "Buscar pessoa por nome ou CPF…",
-      holderCreateNewOption: "+ Cadastrar nova pessoa: \"{name}\"",
+      holderCreateNewOption: '+ Cadastrar nova pessoa: "{name}"',
       holderSelectedTitle: "Titular selecionado",
-      holderAutoFilledNotice: "Dados do titular preenchidos automaticamente a partir do perfil selecionado.",
+      holderAutoFilledNotice:
+        "Dados do titular preenchidos automaticamente a partir do perfil selecionado.",
       sectionFamilyTitle: "Família & Filiação",
       sectionFamilyHint: "Filiação, cônjuge e datas comemorativas da família.",
       fieldFatherName: "Nome do pai",
@@ -457,7 +461,8 @@ export const ptBRV1 = {
       fieldBirthCountry: "País de nascimento",
       fieldPlaceOfOrigin: "Local de procedência",
       sectionComplementaryTitle: "Informações complementares (Veículo, Saúde, Gincana)",
-      sectionComplementaryHint: "Dados adicionais de veículos, planos de saúde e histórico de gincana.",
+      sectionComplementaryHint:
+        "Dados adicionais de veículos, planos de saúde e histórico de gincana.",
       fieldPostalCode: "CEP",
       fieldVehicleModel: "Modelo do veículo",
       fieldVehicleColor: "Cor do veículo",
@@ -477,9 +482,11 @@ export const ptBRV1 = {
       fieldCardBrand: "Bandeira do cartão",
       fieldCardBank: "Banco do cartão",
       importTargetLabel: "Importar para a tabela",
-      importScopeNotice: "Os registros da planilha serão validados e inseridos na tabela selecionada.",
+      importScopeNotice:
+        "Os registros da planilha serão validados e inseridos na tabela selecionada.",
       formsIntegrationDisabledTitle: "Integração do Google Forms desativada",
-      formsIntegrationDisabledDesc: "As credenciais e a chave de criptografia ainda não foram habilitadas neste ambiente.",
+      formsIntegrationDisabledDesc:
+        "As credenciais e a chave de criptografia ainda não foram habilitadas neste ambiente.",
       formsBackToCadastro: "Voltar para o Cadastro",
       massImportLoading: "Carregando cadastro em massa",
       massImportLoadingDesc: "Aguarde enquanto inicializamos o motor de importação...",

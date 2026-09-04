@@ -1,8 +1,9 @@
-import { Alert, Button, Card, Flex, Tag } from "antd";
+import { Alert, Button, Card, Checkbox, Flex, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createColumnHelper } from "@tanstack/react-table";
 import { useEffect, useState } from "react";
 import { AttachmentsPanel } from "./AttachmentsPanel";
+import { ConfirmDelete } from "./components/ConfirmDelete";
 import {
   RecordCustomFieldsSection,
   recordCustomFieldError,
@@ -623,7 +624,6 @@ export function DocumentEditor(props: {
           idle_custody: "ORGANIZATION",
         },
   );
-  const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [customDraft, setCustomDraft] = useState<Record<string, CustomDraftValue>>({});
@@ -785,12 +785,16 @@ export function DocumentEditor(props: {
         />
       ) : null}
       {props.record && props.canDelete ? (
-        <DeleteBox
-          confirmation={confirmation}
+        <ConfirmDelete
+          cancelLabel="Cancelar"
+          confirmLabel="Excluir permanentemente"
+          confirmationLabel="Digite Confirmar para excluir este documento."
+          confirmationWord="Confirmar"
+          description="A exclusão removerá permanentemente este documento e não poderá ser desfeita."
           pending={props.pending}
-          label="documento"
-          onConfirmation={setConfirmation}
-          onDelete={() => props.onDelete(props.record!, confirmation)}
+          title="Exclusão permanente"
+          onCancel={props.onClose}
+          onConfirm={(word) => props.onDelete(props.record!, word)}
         />
       ) : null}
     </Card>
@@ -832,7 +836,6 @@ export function BillEditor(props: {
           idle_custody: "ORGANIZATION",
         },
   );
-  const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [customDraft, setCustomDraft] = useState<Record<string, CustomDraftValue>>({});
@@ -1028,12 +1031,16 @@ export function BillEditor(props: {
         />
       ) : null}
       {props.record && props.canDelete ? (
-        <DeleteBox
-          confirmation={confirmation}
+        <ConfirmDelete
+          cancelLabel="Cancelar"
+          confirmLabel="Excluir permanentemente"
+          confirmationLabel="Digite Confirmar para excluir este registro."
+          confirmationWord="Confirmar"
+          description="A exclusão removerá permanentemente este registro de conta/comprovante e não poderá ser desfeita."
           pending={props.pending}
-          label="registro"
-          onConfirmation={setConfirmation}
-          onDelete={() => props.onDelete(props.record!, confirmation)}
+          title="Exclusão permanente"
+          onCancel={props.onClose}
+          onConfirm={(word) => props.onDelete(props.record!, word)}
         />
       ) : null}
     </Card>
@@ -1222,22 +1229,20 @@ function DocumentTypesAdmin({
               onChange={(event) => setValues({ ...values, validation_regex: event.target.value })}
             />
           </label>
-          <label className="record-checkbox">
-            <input
-              checked={values.date_required}
-              type="checkbox"
-              onChange={(event) => setValues({ ...values, date_required: event.target.checked })}
-            />
+          <Checkbox
+            checked={values.date_required}
+            className="record-checkbox"
+            onChange={(event) => setValues({ ...values, date_required: event.target.checked })}
+          >
             Data obrigatória
-          </label>
-          <label className="record-checkbox">
-            <input
-              checked={values.active}
-              type="checkbox"
-              onChange={(event) => setValues({ ...values, active: event.target.checked })}
-            />
+          </Checkbox>
+          <Checkbox
+            checked={values.active}
+            className="record-checkbox"
+            onChange={(event) => setValues({ ...values, active: event.target.checked })}
+          >
             Ativo
-          </label>
+          </Checkbox>
           <Flex>
             <Button disabled={save.isPending} onClick={() => save.mutate()}>
               Salvar tipo
@@ -1259,11 +1264,16 @@ function DocumentTypesAdmin({
             </Button>
           </Flex>
           {selected ? (
-            <DeleteType
-              confirmation={confirmation}
+            <ConfirmDelete
+              cancelLabel="Cancelar"
+              confirmLabel="Excluir tipo"
+              confirmationLabel="Digite Confirmar para excluir o tipo não utilizado."
+              confirmationWord="Confirmar"
+              description="Esta ação exclui a definição do tipo de documento do sistema."
               pending={remove.isPending}
-              onConfirmation={setConfirmation}
-              onDelete={() => remove.mutate()}
+              title="Excluir tipo de documento"
+              onCancel={() => setSelected(undefined)}
+              onConfirm={() => remove.mutate()}
             />
           ) : null}
         </>
@@ -1351,14 +1361,13 @@ function BillTypesAdmin({
               onChange={(event) => setValues({ ...values, label: event.target.value })}
             />
           </label>
-          <label className="record-checkbox">
-            <input
-              checked={values.active}
-              type="checkbox"
-              onChange={(event) => setValues({ ...values, active: event.target.checked })}
-            />
+          <Checkbox
+            checked={values.active}
+            className="record-checkbox"
+            onChange={(event) => setValues({ ...values, active: event.target.checked })}
+          >
             Ativo
-          </label>
+          </Checkbox>
           <Flex>
             <Button disabled={save.isPending} onClick={() => save.mutate()}>
               Salvar tipo
@@ -1377,11 +1386,16 @@ function BillTypesAdmin({
             </Button>
           </Flex>
           {selected ? (
-            <DeleteType
-              confirmation={confirmation}
+            <ConfirmDelete
+              cancelLabel="Cancelar"
+              confirmLabel="Excluir tipo"
+              confirmationLabel="Digite Confirmar para excluir o tipo não utilizado."
+              confirmationWord="Confirmar"
+              description="Esta ação exclui a definição do tipo de conta/comprovante do sistema."
               pending={remove.isPending}
-              onConfirmation={setConfirmation}
-              onDelete={() => remove.mutate()}
+              title="Excluir tipo de conta"
+              onCancel={() => setSelected(undefined)}
+              onConfirm={() => remove.mutate()}
             />
           ) : null}
         </>
@@ -1423,29 +1437,6 @@ function TypesAdminShell(props: {
   );
 }
 
-function DeleteType(props: {
-  confirmation: string;
-  pending: boolean;
-  onConfirmation: (value: string) => void;
-  onDelete: () => void;
-}) {
-  return (
-    <div className="type-delete">
-      <span>Digite Confirmar para excluir o tipo não utilizado.</span>
-      <input
-        value={props.confirmation}
-        onChange={(event) => props.onConfirmation(event.target.value)}
-      />
-      <Button
-        disabled={props.confirmation !== "Confirmar" || props.pending}
-        onClick={props.onDelete}
-      >
-        Excluir tipo
-      </Button>
-    </div>
-  );
-}
-
 function EditorHeader({ title, onClose }: { title: string; onClose: () => void }) {
   return (
     <div className="record-editor__header">
@@ -1475,32 +1466,6 @@ function EditorActions<T extends DocumentRecord | BillRecord>(props: {
         <Button onClick={() => props.onDuplicate(props.record!)}>Duplicar</Button>
       ) : null}
     </Flex>
-  );
-}
-function DeleteBox(props: {
-  confirmation: string;
-  pending: boolean;
-  label: string;
-  onConfirmation: (value: string) => void;
-  onDelete: () => void;
-}) {
-  return (
-    <Card className="record-delete">
-      <Flex vertical gap="0.75rem">
-        <strong>Exclusão permanente</strong>
-        <span>Digite Confirmar para excluir este {props.label}.</span>
-        <input
-          value={props.confirmation}
-          onChange={(event) => props.onConfirmation(event.target.value)}
-        />
-        <Button
-          disabled={props.confirmation !== "Confirmar" || props.pending}
-          onClick={props.onDelete}
-        >
-          Excluir permanentemente
-        </Button>
-      </Flex>
-    </Card>
   );
 }
 function MissingRecord({ onClose }: { onClose: () => void }) {

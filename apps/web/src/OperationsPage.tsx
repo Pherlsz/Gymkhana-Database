@@ -169,39 +169,39 @@ export function OperationsPage({ includeImports = true }: { includeImports?: boo
             />
           ) : null}
           {includeImports ? (
-          <section className="page-section">
-            <Typography.Title level={2}>Importações</Typography.Title>
-            <Typography.Paragraph>
-              Cada upload é validado e processado em segundo plano. Somente suas operações aparecem
-              aqui.
-            </Typography.Paragraph>
-            {imports.isError ? (
-              <Alert
-                message="Não foi possível carregar importações"
-                type="error"
-                description={<>{operationError(imports.error)}</>}
+            <section className="page-section">
+              <Typography.Title level={2}>Importações</Typography.Title>
+              <Typography.Paragraph>
+                Cada upload é validado e processado em segundo plano. Somente suas operações
+                aparecem aqui.
+              </Typography.Paragraph>
+              {imports.isError ? (
+                <Alert
+                  message="Não foi possível carregar importações"
+                  type="error"
+                  description={<>{operationError(imports.error)}</>}
+                />
+              ) : null}
+              <DataGrid
+                caption="Importações XLSX"
+                columns={importColumns}
+                data={imports.data?.imports ?? []}
+                emptyLabel="Nenhuma importação criada."
+                getRowId={(value) => value.id}
+                loading={imports.isLoading}
+                loadingLabel="Carregando importações…"
+                renderCard={(value) => (
+                  <article className="operations-card" key={value.id}>
+                    <strong>{value.original_filename ?? "Google Forms"}</strong>
+                    <span>{moduleLabels.get(value.module) ?? value.module}</span>
+                    <OperationStatus value={value.state} />
+                    <span>{importResultLabel(value)}</span>
+                    <Button onClick={() => setSelectedImportID(value.id)}>Abrir importação</Button>
+                  </article>
+                )}
+                selectedRowId={selectedImportID}
               />
-            ) : null}
-            <DataGrid
-              caption="Importações XLSX"
-              columns={importColumns}
-              data={imports.data?.imports ?? []}
-              emptyLabel="Nenhuma importação criada."
-              getRowId={(value) => value.id}
-              loading={imports.isLoading}
-              loadingLabel="Carregando importações…"
-              renderCard={(value) => (
-                <article className="operations-card" key={value.id}>
-                  <strong>{value.original_filename ?? "Google Forms"}</strong>
-                  <span>{moduleLabels.get(value.module) ?? value.module}</span>
-                  <OperationStatus value={value.state} />
-                  <span>{importResultLabel(value)}</span>
-                  <Button onClick={() => setSelectedImportID(value.id)}>Abrir importação</Button>
-                </article>
-              )}
-              selectedRowId={selectedImportID}
-            />
-          </section>
+            </section>
           ) : null}
           {includeImports && selectedImportID ? (
             <ImportWorkspace

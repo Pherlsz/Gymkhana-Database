@@ -200,7 +200,13 @@
   flex-direction: column;
   gap: var(--gym-space-3);
   padding: var(--gym-space-5);
-  background: radial-gradient(130% 130% at 0% 0%, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.008) 100%), var(--gym-color-surface-raised);
+  background:
+    radial-gradient(
+      130% 130% at 0% 0%,
+      rgba(255, 255, 255, 0.035) 0%,
+      rgba(255, 255, 255, 0.008) 100%
+    ),
+    var(--gym-color-surface-raised);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--gym-radius-lg);
   cursor: pointer;
@@ -210,9 +216,17 @@
 
 .cadastro-entry__card:hover {
   border-color: rgba(255, 197, 61, 0.38);
-  background: radial-gradient(130% 130% at 0% 0%, rgba(255, 197, 61, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%), var(--gym-color-surface-raised);
+  background:
+    radial-gradient(
+      130% 130% at 0% 0%,
+      rgba(255, 197, 61, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ),
+    var(--gym-color-surface-raised);
   transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 24px rgba(255, 197, 61, 0.12);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    0 0 24px rgba(255, 197, 61, 0.12);
 }
 
 .cadastro-entry__card:focus-visible {

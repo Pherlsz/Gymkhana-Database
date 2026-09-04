@@ -2,7 +2,7 @@ function toneToType(tone: string): "info" | "success" | "warning" | "error" {
   return tone === "danger" ? "error" : (tone as any);
 }
 
-import { Alert, Button, Card, Flex, Tag } from "antd";
+import { Alert, Button, Card, Checkbox, Flex, Tag } from "antd";
 import { InlineStatus } from "./components/InlineStatus";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
@@ -113,14 +113,13 @@ export function AttachmentsPanel({
             <h3>{title}</h3>
             <p>{description}</p>
           </div>
-          <label className="attachments-panel__trash-toggle">
-            <input
-              checked={showTrash}
-              type="checkbox"
-              onChange={(event) => setShowTrash(event.target.checked)}
-            />
+          <Checkbox
+            checked={showTrash}
+            className="attachments-panel__trash-toggle"
+            onChange={(event) => setShowTrash(event.target.checked)}
+          >
             Mostrar lixeira
-          </label>
+          </Checkbox>
         </div>
         {notice ? (
           <Alert
@@ -162,9 +161,7 @@ export function AttachmentsPanel({
             </div>
           ) : null}
         </div>
-        {query.isLoading ? (
-          <InlineStatus kind="loading" label="Carregando anexos…" />
-        ) : null}
+        {query.isLoading ? <InlineStatus kind="loading" label="Carregando anexos…" /> : null}
         {!query.isLoading && (query.data?.length ?? 0) === 0 ? (
           <InlineStatus
             kind="empty"

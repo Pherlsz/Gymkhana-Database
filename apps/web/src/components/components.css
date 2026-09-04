@@ -74,7 +74,8 @@
   text-align: center;
   width: 100%;
   padding: clamp(3rem, 5vw, 4.5rem) 1.5rem;
-  background: radial-gradient(
+  background:
+    radial-gradient(
       120% 120% at 50% 0%,
       rgba(255, 255, 255, 0.03) 0%,
       rgba(255, 255, 255, 0.005) 100%
@@ -102,7 +103,9 @@
   border-radius: 50%;
   margin-bottom: 1.25rem;
   flex: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .state-card--compact .state-card__badge {

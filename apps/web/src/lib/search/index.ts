@@ -1,10 +1,4 @@
-export type {
-  GlobalSearchState,
-  MatchRow,
-  ProfileCard,
-  ResultGroup,
-  SearchModule,
-} from "./types";
+export type { GlobalSearchState, MatchRow, ProfileCard, ResultGroup, SearchModule } from "./types";
 export { SEARCH_MODULE_VALUES } from "./types";
 export {
   buildProfileCards,
@@ -24,8 +18,4 @@ export {
 export { searchErrorMessage } from "./errors";
 export { ProfileSearchCard } from "./ProfileSearchCard";
 export { ProfileSearchExpand } from "./ProfileSearchExpand";
-export {
-  buildFieldFilterGroups,
-  fieldOwnerModule,
-  searchModuleChips,
-} from "./fieldFilterGroups";
+export { buildFieldFilterGroups, fieldOwnerModule, searchModuleChips } from "./fieldFilterGroups";

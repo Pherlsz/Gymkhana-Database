@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Flex, Tag } from "antd";
+import { Alert, Button, Card, Checkbox, Flex, Tag } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import {
   APIRequestError,
@@ -151,15 +151,14 @@ function ManagedUserCard({
               </option>
             </select>
           </label>
-          <label className="managed-user__toggle">
-            <input
-              checked={active}
-              disabled={locked || saving}
-              onChange={(event) => setActive(event.target.checked)}
-              type="checkbox"
-            />
+          <Checkbox
+            checked={active}
+            className="managed-user__toggle"
+            disabled={locked || saving}
+            onChange={(event) => setActive(event.target.checked)}
+          >
             Acesso ativo
-          </label>
+          </Checkbox>
           <Button
             disabled={locked || saving || (role === user.role && active === user.active)}
             onClick={() => void save()}

@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildFieldFilterGroups,
-  searchModuleChips,
-} from "./fieldFilterGroups";
+import { buildFieldFilterGroups, searchModuleChips } from "./fieldFilterGroups";
 
 const moduleLabels = new Map([
   ["profiles", "Pessoas"],

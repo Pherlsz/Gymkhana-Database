@@ -107,9 +107,7 @@ export function DocumentFormFields({
               id="cad-doc-valid"
               style={{ width: "100%" }}
               value={state.docValidUntil ? dayjs(state.docValidUntil) : null}
-              onChange={(d) =>
-                onChange({ docValidUntil: d ? d.format("YYYY-MM-DD") : undefined })
-              }
+              onChange={(d) => onChange({ docValidUntil: d ? d.format("YYYY-MM-DD") : undefined })}
             />
           </div>
         </div>
