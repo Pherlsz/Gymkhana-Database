@@ -240,9 +240,9 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Abrir menu da conta" })).toBeInTheDocument();
     expect(screen.getByText("Member Name")).toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: "Sair" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Aparência" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Abrir menu da conta" }));
     expect(await screen.findByText("Configurações")).toBeInTheDocument();
-    expect(screen.getByText("Aparência")).toBeInTheDocument();
     expect(screen.getByText("Sair")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Recolher menu" })).toBeInTheDocument();
     expect(screen.getByText("Gymkhana Database")).toBeInTheDocument();
@@ -464,18 +464,15 @@ describe("App", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
-    await screen.findByRole("button", { name: "Abrir menu da conta" });
+    await screen.findByRole("button", { name: "Aparência" });
     expect(document.documentElement).not.toHaveClass("dark");
 
-    fireEvent.click(screen.getByRole("button", { name: "Abrir menu da conta" }));
-    const appearanceSwitch = await screen.findByRole("switch");
-    fireEvent.click(appearanceSwitch);
+    const appearanceBtn = screen.getByRole("button", { name: "Aparência" });
+    fireEvent.click(appearanceBtn);
     await waitFor(() => expect(document.documentElement).toHaveClass("dark"));
     expect(window.localStorage.getItem("gymkhana-theme")).toBe("dark");
-    expect(screen.getByText("Aparência")).toBeInTheDocument();
-    expect(appearanceSwitch).toBeChecked();
 
-    fireEvent.click(appearanceSwitch);
+    fireEvent.click(appearanceBtn);
     await waitFor(() => expect(document.documentElement).not.toHaveClass("dark"));
     expect(window.localStorage.getItem("gymkhana-theme")).toBe("light");
   });

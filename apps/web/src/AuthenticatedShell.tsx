@@ -1,4 +1,4 @@
-import { Avatar, Badge, Dropdown, Switch, Typography } from "antd";
+import { Avatar, Badge, Dropdown, Typography } from "antd";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ChevronDown,
@@ -400,13 +400,11 @@ function AccountMenuPanel({
   onLogout: () => void;
   onSettings: () => void;
 }) {
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === "dark";
   return (
     <div
       className="sidebar-account-menu"
       onMouseDown={(event) => {
-        if ((event.target as HTMLElement | null)?.closest(".ant-switch, button")) return;
+        if ((event.target as HTMLElement | null)?.closest("button")) return;
         event.preventDefault();
       }}
       role="menu"
@@ -420,39 +418,6 @@ function AccountMenuPanel({
         <Settings aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
         {copy.account.settings}
       </button>
-      {/* Whole-row toggle (menuitemcheckbox): clicking anywhere on the row
-          flips the theme. The Switch renders a <button role="switch"> (not a
-          checkbox), so a <label> would not forward clicks; instead the row
-          handles click/keyboard and the wrapper around the Switch stops the
-          event so a direct hit does not toggle twice (row + Switch onChange). */}
-      <div
-        aria-checked={isDark}
-        className="sidebar-account-menu__item sidebar-account-menu__appearance"
-        onClick={toggleTheme}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            toggleTheme();
-          }
-        }}
-        role="menuitemcheckbox"
-        tabIndex={0}
-      >
-        {isDark ? (
-          <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-        ) : (
-          <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-        )}
-        <span>{copy.account.appearance}</span>
-        <span className="sidebar-account-menu__switch" onClick={(event) => event.stopPropagation()}>
-          <Switch
-            aria-label={copy.account.appearance}
-            checked={isDark}
-            onChange={toggleTheme}
-            size="small"
-          />
-        </span>
-      </div>
       <div className="sidebar-account-menu__divider" />
       <button
         className="sidebar-account-menu__item"
@@ -465,6 +430,32 @@ function AccountMenuPanel({
         {signingOut ? copy.signingOut : copy.signOut}
       </button>
     </div>
+  );
+}
+
+function SidebarThemeToggle({ rail }: { rail: boolean }) {
+  const { theme, toggleTheme } = useTheme();
+  const { messages } = useI18n();
+  const isDark = theme === "dark";
+  const label = messages.shell.account.appearance;
+
+  return (
+    <RailTip label={label} rail={rail}>
+      <button
+        aria-label={label}
+        aria-pressed={isDark}
+        className="sidebar-theme-toggle"
+        onClick={toggleTheme}
+        type="button"
+      >
+        {isDark ? (
+          <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+        ) : (
+          <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+        )}
+        <span className="sidebar-theme-toggle__label">{label}</span>
+      </button>
+    </RailTip>
   );
 }
 
@@ -483,6 +474,7 @@ function UserAccountCard({ rail }: { rail: boolean }) {
 
   return (
     <div className="sidebar-account">
+      <SidebarThemeToggle rail={rail} />
       <div className="sidebar-account__anchor">
         <RailTip label={user.display_name} rail={rail}>
           <Dropdown
