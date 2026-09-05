@@ -517,6 +517,20 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   min-width: 0;
   width: 100%;
   max-width: 100%;
+  border-radius: var(--gym-radius-md);
+  background: var(--md-surface);
+  border-color: var(--md-outline-variant);
+  transition: all 150ms ease;
+}
+
+.search-field .ant-input-affix-wrapper:hover {
+  border-color: var(--md-outline);
+  background: var(--md-surface-low);
+}
+
+.search-field .ant-input-affix-wrapper-focused {
+  border-color: var(--brand-accent-solid);
+  box-shadow: 0 0 0 2px var(--md-focus-ring);
 }
 
 .search-field:focus-within {
@@ -531,6 +545,9 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--shape-xs);
   color: var(--md-on-surface-variant);
+  background: color-mix(in oklch, var(--md-on-surface) 4%, transparent);
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .search-field__listbox {
@@ -597,11 +614,14 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   text-align: start;
   background: transparent;
   border: none;
-  transition: background-color 120ms ease;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
 .nav-item:hover {
   background: var(--md-state-hover);
+  color: var(--md-on-surface);
 }
 
 .nav-item:focus-visible {
@@ -613,9 +633,9 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   background: var(--md-surface-container);
   color: var(--md-primary-text);
   font-weight: 600;
-  border-radius: 0 var(--gym-radius-md) var(--gym-radius-md) 0;
-  box-shadow: inset 3px 0 0 var(--md-primary-text);
-  padding-inline-start: calc(0.7rem - 3px);
+  border-radius: var(--gym-radius-md);
+  box-shadow: none;
+  padding-inline-start: 0.7rem;
 }
 
 .nav-item--active:hover {
@@ -633,8 +653,8 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 
 .nav-divider {
   border: none;
-  border-block-start: 1px solid var(--md-outline-variant);
-  margin: 0.45rem 0.35rem;
+  border-block-start: 1px solid color-mix(in oklch, var(--md-outline-variant) 40%, transparent);
+  margin: 0.5rem 0.35rem;
 }
 
 .nav-item__label {
@@ -680,33 +700,38 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 
 .nav-sub {
   display: grid;
-  gap: 0.15rem;
-  margin: 0.2rem 0 0.45rem 0.7rem;
-  padding: 0.2rem 0 0.2rem 0.65rem;
-  border-inline-start: 1px solid var(--md-nav-tree);
+  gap: 0.2rem;
+  margin: 0.25rem 0 0.45rem 0.75rem;
+  padding: 0.25rem 0 0.25rem 0.5rem;
+  border-inline-start: 2px solid color-mix(in oklch, var(--md-outline-variant) 30%, transparent);
+  transition: border-color 150ms ease;
 }
 
 .nav-sub:has(.nav-sub__item--active) {
-  border-inline-start-color: var(--md-primary-text);
+  border-inline-start-color: var(--brand-accent-solid);
 }
 
 .nav-sub__item {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  min-height: 2.3rem;
+  min-height: 2.25rem;
   padding: 0 0.65rem;
-  border-radius: var(--shape-sm);
+  border-radius: var(--gym-radius-md);
   color: var(--md-on-surface-variant);
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
 .nav-sub__icon {
   display: inline-flex;
   flex: none;
   color: var(--md-on-surface-variant);
+  transition: color 120ms ease;
 }
 
 .nav-sub__label {
@@ -718,17 +743,18 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 
 .nav-sub__item:hover {
   background: var(--md-state-hover);
+  color: var(--md-on-surface);
 }
 
 .nav-sub__item--active {
-  background: var(--md-surface-container);
-  color: var(--md-primary-text);
+  background: color-mix(in oklch, var(--brand-accent-solid) 10%, var(--md-surface-container));
+  color: var(--brand-accent-text);
   font-weight: 600;
-  border-radius: 0 var(--gym-radius-md) var(--gym-radius-md) 0;
+  border-radius: var(--gym-radius-md);
 }
 
 .nav-sub__item--active .nav-sub__icon {
-  color: var(--md-primary-text);
+  color: var(--brand-accent-icon);
 }
 
 .admin-tools {
@@ -757,7 +783,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 .sidebar-account {
   margin-top: auto;
   flex: none;
-  padding: 0.75rem 1rem 0.25rem;
+  padding: 0.75rem 0.85rem 0.25rem;
 }
 
 .sidebar-account__anchor {
@@ -841,22 +867,26 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 .sidebar-account__trigger {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.65rem;
   width: 100%;
   height: auto;
-  padding: 0.5rem 0.625rem;
-  border: 1px solid var(--md-outline);
+  padding: 0.5rem 0.65rem;
+  border: 1px solid transparent;
   border-radius: var(--gym-radius-lg);
-  background: var(--md-surface-container);
+  background: transparent;
   color: var(--md-on-surface);
   text-align: start;
   cursor: pointer;
   box-shadow: none;
   font: inherit;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 
 .sidebar-account__trigger:hover {
   background: var(--md-state-hover);
+  border-color: color-mix(in oklch, var(--md-outline-variant) 40%, transparent);
 }
 
 .sidebar-account__trigger:focus-visible {

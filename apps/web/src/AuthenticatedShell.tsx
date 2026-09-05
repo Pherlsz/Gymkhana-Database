@@ -484,68 +484,70 @@ function UserAccountCard({ rail }: { rail: boolean }) {
   return (
     <div className="sidebar-account">
       <div className="sidebar-account__anchor">
-        <Dropdown
-          getPopupContainer={() => document.body}
-          onOpenChange={(next, info) => {
-            if (!next && info.source === "menu") return;
-            setOpen(next);
-            if (next) return;
-            const active = document.activeElement;
-            if (active instanceof HTMLElement && active.closest(".sidebar-account__anchor")) {
-              active.blur();
-            }
-          }}
-          open={open}
-          placement={rail ? "rightBottom" : "topLeft"}
-          popupRender={() => (
-            <AccountMenuPanel
-              copy={copy}
-              signingOut={signingOut}
-              onLogout={() => {
-                setOpen(false);
-                signOut();
-              }}
-              onSettings={() => {
-                setOpen(false);
-                void navigate({ to: "/settings" });
-              }}
-            />
-          )}
-          trigger={["click"]}
-        >
-          <button
-            aria-label={copy.account.openMenu}
-            className="sidebar-account__trigger"
-            type="button"
-          >
-            <Badge className="sidebar-account__status" dot offset={rail ? [-1, 22] : [-2, 30]}>
-              <Avatar
-                size={rail ? 28 : 36}
-                src={user.avatar_url}
-                style={{
-                  backgroundColor: "var(--md-state-selected)",
-                  color: "var(--md-on-surface)",
+        <RailTip label={user.display_name} rail={rail}>
+          <Dropdown
+            getPopupContainer={() => document.body}
+            onOpenChange={(next, info) => {
+              if (!next && info.source === "menu") return;
+              setOpen(next);
+              if (next) return;
+              const active = document.activeElement;
+              if (active instanceof HTMLElement && active.closest(".sidebar-account__anchor")) {
+                active.blur();
+              }
+            }}
+            open={open}
+            placement={rail ? "rightBottom" : "topLeft"}
+            popupRender={() => (
+              <AccountMenuPanel
+                copy={copy}
+                signingOut={signingOut}
+                onLogout={() => {
+                  setOpen(false);
+                  signOut();
                 }}
-              >
-                {initials(user.display_name)}
-              </Avatar>
-            </Badge>
-            <span className="sidebar-account__meta">
-              <Typography.Text className="sidebar-account__name" ellipsis strong>
-                {user.display_name}
-              </Typography.Text>
-              <Typography.Text className="sidebar-account__login" ellipsis>
-                {user.login}
-              </Typography.Text>
-            </span>
-            <ChevronDown
-              aria-hidden
-              className="sidebar-account__chev"
-              size={ICON.md}
-              strokeWidth={ICON_STROKE}
-            />
-          </button>
-        </Dropdown>
+                onSettings={() => {
+                  setOpen(false);
+                  void navigate({ to: "/settings" });
+                }}
+              />
+            )}
+            trigger={["click"]}
+          >
+            <button
+              aria-label={copy.account.openMenu}
+              className="sidebar-account__trigger"
+              type="button"
+            >
+              <Badge className="sidebar-account__status" dot offset={rail ? [-1, 22] : [-2, 30]}>
+                <Avatar
+                  size={rail ? 28 : 36}
+                  src={user.avatar_url}
+                  style={{
+                    backgroundColor: "var(--md-state-selected)",
+                    color: "var(--md-on-surface)",
+                  }}
+                >
+                  {initials(user.display_name)}
+                </Avatar>
+              </Badge>
+              <span className="sidebar-account__meta">
+                <Typography.Text className="sidebar-account__name" ellipsis strong>
+                  {user.display_name}
+                </Typography.Text>
+                <Typography.Text className="sidebar-account__login" ellipsis>
+                  {user.login}
+                </Typography.Text>
+              </span>
+              <ChevronDown
+                aria-hidden
+                className="sidebar-account__chev"
+                size={ICON.md}
+                strokeWidth={ICON_STROKE}
+              />
+            </button>
+          </Dropdown>
+        </RailTip>
       </div>
     </div>
   );
