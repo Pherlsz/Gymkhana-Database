@@ -1,6 +1,7 @@
 import { Button } from "antd";
 import { StateCard } from "../../components/StateCard";
-import { ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ICON, ICON_STROKE } from "../../components/icons";
 import { useI18n } from "../../i18n";
@@ -12,7 +13,7 @@ import {
   type DocumentListSearch,
 } from "../api/client";
 import { OcrReviewPanel } from "./OcrReviewPanel";
-import type { TableKind } from "./cadastroSearch";
+import { CADASTRO_SEARCH_DEFAULTS, type TableKind } from "./cadastroSearch";
 import { CadastroOwnerPicker } from "./CadastroOwnerPicker";
 import { useAttachmentsEnabled } from "./useAttachmentsEnabled";
 
@@ -73,6 +74,11 @@ export function CadastroOcrWorkspace({
   if (blocked) {
     return (
       <StateCard
+        action={
+          <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
+            <Button icon={<ArrowLeft size={14} />}>{copy.formsBackToCadastro}</Button>
+          </Link>
+        }
         description={
           attachmentsEnabled.data === false ? copy.ocrUnavailableR2 : copy.ocrUnavailableProvider
         }
@@ -84,7 +90,7 @@ export function CadastroOcrWorkspace({
 
   const recordOwnerKind = table === "bills" ? "BILL" : "DOCUMENT";
   return (
-    <div className="cadastro-ocr">
+    <div className="cadastro-panel cadastro-ocr">
       {checking ? (
         <StateCard
           compact

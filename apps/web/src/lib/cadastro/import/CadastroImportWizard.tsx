@@ -1,8 +1,11 @@
-import { Segmented } from "antd";
+import { Button, Segmented } from "antd";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { StateCard } from "../../../components/StateCard";
 import { useI18n } from "../../../i18n";
+import { CADASTRO_SEARCH_DEFAULTS } from "../cadastroSearch";
 import {
   getOperationsCatalog,
   getOperationImport,
@@ -63,7 +66,11 @@ export function CadastroImportWizard({
   if (catalog.isError) {
     return (
       <StateCard
-        compact
+        action={
+          <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
+            <Button icon={<ArrowLeft size={14} />}>{copy.formsBackToCadastro}</Button>
+          </Link>
+        }
         description={copy.massImportCatalogErrorDesc}
         kind="error"
         title={copy.massImportCatalogError}
@@ -73,7 +80,6 @@ export function CadastroImportWizard({
   if (!catalog.data) {
     return (
       <StateCard
-        compact
         description={copy.massImportLoadingDesc}
         kind="loading"
         title={copy.massImportLoading}
@@ -83,7 +89,11 @@ export function CadastroImportWizard({
   if (!isModuleAllowed) {
     return (
       <StateCard
-        compact
+        action={
+          <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
+            <Button icon={<ArrowLeft size={14} />}>{copy.formsBackToCadastro}</Button>
+          </Link>
+        }
         description={copy.massImportForbiddenDesc}
         kind="warning"
         title={copy.massImportForbidden}
@@ -93,43 +103,47 @@ export function CadastroImportWizard({
 
   if (!importId) {
     return (
-      <div className="cadastro-import-flow">
-        <div className="cadastro-import-scope">
-          <div className="cadastro-import-scope__header">
-            <span className="cadastro-import-scope__label">{copy.importTargetLabel}</span>
-            <Segmented
-              options={[
-                { label: copy.people, value: "profiles" },
-                { label: copy.documents, value: "documents" },
-                { label: copy.bills, value: "bills" },
-              ]}
-              value={currentModule}
-              onChange={(val) => setCurrentModule(val as OperationModule)}
-            />
+      <div className="cadastro-panel">
+        <div className="cadastro-import-flow">
+          <div className="cadastro-import-scope">
+            <div className="cadastro-import-scope__header">
+              <span className="cadastro-import-scope__label">{copy.importTargetLabel}</span>
+              <Segmented
+                options={[
+                  { label: copy.people, value: "profiles" },
+                  { label: copy.documents, value: "documents" },
+                  { label: copy.bills, value: "bills" },
+                ]}
+                value={currentModule}
+                onChange={(val) => setCurrentModule(val as OperationModule)}
+              />
+            </div>
+            <p className="cadastro-import-scope__notice">{copy.importScopeNotice}</p>
           </div>
-          <p className="cadastro-import-scope__notice">{copy.importScopeNotice}</p>
+          <ScopedImportCreator
+            catalog={catalog.data}
+            module={currentModule}
+            onCreated={(value) => onImportCreated(value.id)}
+          />
         </div>
-        <ScopedImportCreator
-          catalog={catalog.data}
-          module={currentModule}
-          onCreated={(value) => onImportCreated(value.id)}
-        />
       </div>
     );
   }
 
   return (
-    <ImportWorkspace
-      catalog={catalog.data.modules}
-      error={selectedImport.error}
-      loading={selectedImport.isLoading}
-      report={selectedReport.data}
-      reportError={selectedReport.error}
-      reportLoading={selectedReport.isLoading}
-      value={selectedImport.data}
-      onClose={onClose}
-      onUpdated={refresh}
-    />
+    <div className="cadastro-panel">
+      <ImportWorkspace
+        catalog={catalog.data.modules}
+        error={selectedImport.error}
+        loading={selectedImport.isLoading}
+        report={selectedReport.data}
+        reportError={selectedReport.error}
+        reportLoading={selectedReport.isLoading}
+        value={selectedImport.data}
+        onClose={onClose}
+        onUpdated={refresh}
+      />
+    </div>
   );
 }
 

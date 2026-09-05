@@ -39,6 +39,18 @@ export function BillFormFields({
   const copy = { ...messages.tables.cadastro, ...customCopy };
   return (
     <div className="cadastro-bill-fields">
+      {/* Smart OCR Dropzone at the top for rapid bill ingestion */}
+      <OcrDropzoneInline
+        actionText={copy.ocrBannerAction}
+        badgeText={copy.ocrBannerBadge}
+        description={copy.ocrBannerDescBill ?? copy.ocrBannerDesc}
+        inputId={fileInputId}
+        label={copy.ocrInlineDropzoneBill}
+        title={copy.ocrBannerTitle}
+        variant="banner"
+        onFile={onFileDrop}
+      />
+
       <div className="cadastro-grid">
         {/* Tipo de Serviço */}
         <div className="cadastro-col-4">
@@ -204,13 +216,6 @@ export function BillFormFields({
           </div>
         </div>
       </div>
-
-      {/* Inline OCR Dropzone */}
-      <OcrDropzoneInline
-        inputId={fileInputId}
-        label={copy.ocrInlineDropzoneBill}
-        onFile={onFileDrop}
-      />
     </div>
   );
 }
