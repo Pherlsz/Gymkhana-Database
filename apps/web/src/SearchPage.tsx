@@ -3,7 +3,7 @@ import { InlineStatus } from "./components/InlineStatus";
 import { StateCard } from "./components/StateCard";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { SearchField } from "./components/SearchField";
 import { useI18n } from "./i18n";
 import {
@@ -44,7 +44,11 @@ export function SearchPage() {
   const { messages } = useI18n();
   const searchMessages = messages.search;
   const [draft, setDraft] = useState(search.q);
-  useEffect(() => setDraft(search.q), [search.q]);
+  const [prevSearchQ, setPrevSearchQ] = useState(search.q);
+  if (search.q !== prevSearchQ) {
+    setPrevSearchQ(search.q);
+    setDraft(search.q);
+  }
 
   const catalog = useQuery({
     queryKey: ["search-catalog"],

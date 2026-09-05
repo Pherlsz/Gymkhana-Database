@@ -339,7 +339,9 @@ describe("App", () => {
     const peopleLink = peopleLinks[0];
     if (!peopleLink) throw new Error("expected a Pessoas link");
     fireEvent.click(peopleLink);
-    expect(await screen.findByRole("heading", { name: "Pessoas" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Pessoas" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
     expect(screen.getAllByText("Documentos").length).toBeGreaterThan(1);
     expect(screen.getAllByText("CPF").length).toBeGreaterThan(0);

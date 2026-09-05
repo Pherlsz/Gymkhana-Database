@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { normalizeProfileSearch } from "../ProfilesPage";
+import { normalizeProfileSearch } from "../ProfilePanel";
 import { tableFromSection } from "../lib/tables/tableRoutes";
 
 export const Route = createFileRoute("/profiles")({

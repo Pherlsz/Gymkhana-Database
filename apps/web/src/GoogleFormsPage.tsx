@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { StateCard } from "./components/StateCard";
 import { useApplicationSession } from "./session";
 import { useI18n } from "./i18n";
-import { APIRequestError } from "./lib/api/client";
+import { errorMessage as googleFormsError, formatDateTime as formatDate } from "./lib/formatters";
 import {
   CADASTRO_SEARCH_DEFAULTS,
   googleFormsReturnPath,
@@ -720,19 +720,6 @@ function sourceErrorLabel(value?: string) {
   if (value === "multiple_answers") return "múltiplas respostas";
   if (value === "question_group") return "grade de perguntas";
   return "tipo ainda não compatível";
-}
-
-function googleFormsError(error: unknown) {
-  if (error instanceof APIRequestError) {
-    return error.requestId ? `${error.message} (requisição ${error.requestId})` : error.message;
-  }
-  return error instanceof Error ? error.message : "Tente novamente.";
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
-    new Date(value),
-  );
 }
 
 function replaceGoogleFormsSearch(tab: "sources" | "history", sourceID: string) {

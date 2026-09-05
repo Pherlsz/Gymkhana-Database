@@ -1,6 +1,7 @@
 import { DatePicker, Input, Segmented, Select } from "antd";
 import dayjs from "dayjs";
 import type { ChangeEvent } from "react";
+import { useI18n } from "../../../i18n";
 import type { BillType } from "../../api/client";
 import { OcrDropzoneInline } from "./OcrDropzoneInline";
 
@@ -23,31 +24,7 @@ export interface BillFormFieldsProps {
   billTypes: BillType[];
   onFileDrop: (event: ChangeEvent<HTMLInputElement>) => void;
   fileInputId: string;
-  copy: {
-    fieldBillService: string;
-    fieldBillProvider: string;
-    placeholderBillProvider: string;
-    fieldBillInstallation: string;
-    placeholderBillInstallation: string;
-    fieldBillCompetence: string;
-    placeholderBillCompetence: string;
-    fieldBillDueDate: string;
-    fieldBillAmount: string;
-    placeholderBillAmount: string;
-    fieldBillPrintedHolder: string;
-    placeholderBillPrintedHolder: string;
-    fieldBillPrintedAddress: string;
-    placeholderBillPrintedAddress: string;
-    fieldDocMedium: string;
-    tagPhysical: string;
-    tagDigital: string;
-    fieldDocNotes: string;
-    fieldBillNotes?: string;
-    placeholderBillNotes: string;
-    ocrInlineDropzoneBill: string;
-    pickerSelectType: string;
-    placeholderDate: string;
-  };
+  copy?: Record<string, string>;
 }
 
 export function BillFormFields({
@@ -56,8 +33,10 @@ export function BillFormFields({
   billTypes,
   onFileDrop,
   fileInputId,
-  copy,
+  copy: customCopy,
 }: BillFormFieldsProps) {
+  const { messages } = useI18n();
+  const copy = { ...messages.tables.cadastro, ...customCopy };
   return (
     <div className="cadastro-bill-fields">
       <div className="cadastro-grid">
@@ -151,7 +130,13 @@ export function BillFormFields({
             <Input
               id="cad-bill-val"
               placeholder={copy.placeholderBillAmount ?? "0,00"}
-              prefix={<span style={{ color: "var(--gym-color-text-muted)", fontSize: 13, marginRight: 2 }}>R$</span>}
+              prefix={
+                <span
+                  style={{ color: "var(--gym-color-text-muted)", fontSize: 13, marginRight: 2 }}
+                >
+                  R$
+                </span>
+              }
               value={state.billAmount}
               onChange={(e) => onChange({ billAmount: e.target.value })}
             />

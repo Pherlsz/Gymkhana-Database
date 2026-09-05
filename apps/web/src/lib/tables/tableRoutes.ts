@@ -1,6 +1,6 @@
 import { stripSearchParams } from "@tanstack/react-router";
 import type { ProfileListSearch } from "../api/client";
-import { normalizeProfileSearch } from "../../ProfilesPage";
+import { normalizeProfileSearch } from "../../ProfilePanel";
 import { formatColumnCols, parseColumnCols } from "./columnVisibility";
 
 export const TABLE_KINDS = ["people", "documents", "bills"] as const;

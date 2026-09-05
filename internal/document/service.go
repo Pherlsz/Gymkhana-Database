@@ -66,10 +66,6 @@ type AuditEvent struct {
 	RequestID        string
 }
 
-type AuditStore interface {
-	RecordAuditEvent(context.Context, AuditEvent) error
-}
-
 type AuditFailureHandler func(context.Context, AuditEvent, error)
 
 type ServiceOptions struct {

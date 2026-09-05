@@ -2,6 +2,7 @@ import { DatePicker, Input, Segmented, Select } from "antd";
 import dayjs from "dayjs";
 import { Cloud } from "lucide-react";
 import type { ChangeEvent } from "react";
+import { useI18n } from "../../../i18n";
 import type { DocumentType } from "../../api/client";
 import { OcrDropzoneInline } from "./OcrDropzoneInline";
 
@@ -21,29 +22,7 @@ export interface DocumentFormFieldsProps {
   documentTypes: DocumentType[];
   onFileDrop: (event: ChangeEvent<HTMLInputElement>) => void;
   fileInputId: string;
-  copy: {
-    fieldDocType: string;
-    fieldDocNumber: string;
-    placeholderDocNumber: string;
-    fieldDocDate: string;
-    fieldDocValidUntil: string;
-    fieldDocMedium: string;
-    tagPhysical: string;
-    tagDigital: string;
-    fieldDocCustody: string;
-    fieldDocCustodyOrg: string;
-    fieldDocCustodyOwner: string;
-    fieldDocNotes: string;
-    placeholderDocNotes: string;
-    ocrInlineDropzoneDoc: string;
-    pickerSelectType: string;
-    placeholderDate: string;
-    fieldDocDigitalStorageNotice: string;
-    ocrBannerTitle: string;
-    ocrBannerDesc: string;
-    ocrBannerBadge: string;
-    ocrBannerAction: string;
-  };
+  copy?: Record<string, string>;
 }
 
 export function DocumentFormFields({
@@ -52,8 +31,10 @@ export function DocumentFormFields({
   documentTypes,
   onFileDrop,
   fileInputId,
-  copy,
+  copy: customCopy,
 }: DocumentFormFieldsProps) {
+  const { messages } = useI18n();
+  const copy = { ...messages.tables.cadastro, ...customCopy };
   return (
     <div className="cadastro-document-fields">
       {/* Smart OCR Dropzone at the top for rapid document ingestion */}

@@ -1,5 +1,6 @@
 import { DatePicker, Input } from "antd";
 import dayjs from "dayjs";
+import { useI18n } from "../../../i18n";
 
 export interface PersonFamilyState {
   fatherName: string;
@@ -14,18 +15,17 @@ export interface PersonFamilyGroupProps {
   state: PersonFamilyState;
   onChange: (patch: Partial<PersonFamilyState>) => void;
   disabled?: boolean;
-  copy: {
-    fieldFatherName: string;
-    fieldFatherBirthDate: string;
-    fieldMotherName: string;
-    fieldMotherBirthDate: string;
-    fieldWeddingDate: string;
-    fieldParentsWeddingDate: string;
-    placeholderDate: string;
-  };
+  copy?: Record<string, string>;
 }
 
-export function PersonFamilyGroup({ state, onChange, disabled, copy }: PersonFamilyGroupProps) {
+export function PersonFamilyGroup({
+  state,
+  onChange,
+  disabled,
+  copy: customCopy,
+}: PersonFamilyGroupProps) {
+  const { messages } = useI18n();
+  const copy = { ...messages.tables.cadastro, ...customCopy };
   const isDisabled = Boolean(disabled);
 
   return (

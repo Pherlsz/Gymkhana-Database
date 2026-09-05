@@ -1,4 +1,4 @@
-import { normalizeProfileSearch } from "../../ProfilesPage";
+import { normalizeProfileSearch } from "../../ProfilePanel";
 import type { ProfileListSearch, SearchResult } from "../api/client";
 import type { MatchRow, ProfileCard, ResultGroup } from "./types";
 

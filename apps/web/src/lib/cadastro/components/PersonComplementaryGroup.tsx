@@ -1,4 +1,5 @@
 import { AutoComplete, Input, Select } from "antd";
+import { useI18n } from "../../../i18n";
 import {
   CARD_BANK_OPTIONS,
   CARD_BRAND_OPTIONS,
@@ -37,28 +38,7 @@ export interface PersonComplementaryGroupProps {
   state: PersonComplementaryState;
   onChange: (patch: Partial<PersonComplementaryState>) => void;
   disabled?: boolean;
-  copy: {
-    fieldVehicleModel: string;
-    fieldVehicleColor: string;
-    fieldVehiclePlate: string;
-    fieldVehicleYear: string;
-    fieldHealthPlan: string;
-    fieldBloodDonor: string;
-    fieldOrganDonor: string;
-    fieldTeam: string;
-    fieldSector: string;
-    fieldClubMembership: string;
-    fieldMembershipType: string;
-    fieldCollections: string;
-    fieldPet: string;
-    fieldSupermarketClub: string;
-    fieldTravelCountries: string;
-    fieldCardBrand: string;
-    fieldCardBank: string;
-    placeholderNotProvided: string;
-    optionYes: string;
-    optionNo: string;
-  };
+  copy?: Record<string, string>;
 }
 
 const filterOpt = (input: string, option?: { value?: string }) =>
@@ -68,8 +48,11 @@ export function PersonComplementaryGroup({
   state,
   onChange,
   disabled,
-  copy,
+  copy: customCopy,
 }: PersonComplementaryGroupProps) {
+  const { messages } = useI18n();
+  const copy = { ...messages.tables.cadastro, ...customCopy } as any;
+
   const vehicleColorOpts = toAutoCompleteOptions(VEHICLE_COLOR_OPTIONS);
   const healthPlanOpts = toAutoCompleteOptions(HEALTH_PLAN_OPTIONS);
   const teamOpts = toAutoCompleteOptions(TEAM_OPTIONS);

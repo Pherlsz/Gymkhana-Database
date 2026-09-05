@@ -18,6 +18,8 @@ export type OperationMapping =
   paths["/api/v1/operations/imports/{import_id}/mapping"]["put"]["requestBody"]["content"]["application/json"]["mapping"];
 export type OperationDecision =
   paths["/api/v1/operations/imports/{import_id}/decisions"]["put"]["requestBody"]["content"]["application/json"]["decisions"][number];
+export type ImportRow = OperationImport["preview"][number];
+export type ImportReportRow = OperationReport["rows"][number];
 
 type ErrorPayload = {
   error?: { code?: string; message?: string };

@@ -67,16 +67,7 @@ type AuditEvent struct {
 	RequestID       string
 }
 
-type AuditStore interface {
-	RecordAuditEvent(context.Context, AuditEvent) error
-}
-
 type AuditFailureHandler func(context.Context, AuditEvent, error)
-
-type OwnerResolver interface {
-	ListByExactFullName(context.Context, string) ([]profile.Profile, error)
-	Create(context.Context, profile.Identifier, profile.Values) (profile.Profile, error)
-}
 
 type OwnerCandidate struct {
 	ID       profile.Identifier

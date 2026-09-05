@@ -4,13 +4,26 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"reflect"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
 )
 
-func enrichProfileList(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, profiles []profileResponse, reveal bool) {
+type listEnrichmentQuerier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+}
+
+func isNilQuerier(querier listEnrichmentQuerier) bool {
+	if querier == nil {
+		return true
+	}
+	v := reflect.ValueOf(querier)
+	return v.Kind() == reflect.Pointer && v.IsNil()
+}
+
+func enrichProfileList(ctx context.Context, querier listEnrichmentQuerier, logger *slog.Logger, profiles []profileResponse, reveal bool) {
 	for i := range profiles {
 		if profiles[i].CustomValues == nil {
 			profiles[i].CustomValues = map[string]string{}
@@ -25,11 +38,11 @@ func enrichProfileList(ctx context.Context, pool *pgxpool.Pool, logger *slog.Log
 			profiles[i].DocumentPresences = []profileDocumentPresence{}
 		}
 	}
-	if pool == nil || len(profiles) == 0 {
+	if isNilQuerier(querier) || len(profiles) == 0 {
 		return
 	}
 	ids, index := listRecordIDs(profiles, func(value profileResponse) string { return value.ID })
-	values, err := queryCustomValueMaps(ctx, pool, "profile_id", ids)
+	values, err := queryCustomValueMaps(ctx, querier, "profile_id", ids)
 	if err != nil {
 		logger.Error("enrich profile custom values", "error", err)
 	} else {
@@ -39,7 +52,7 @@ func enrichProfileList(ctx context.Context, pool *pgxpool.Pool, logger *slog.Log
 			}
 		}
 	}
-	identifiers, err := queryDocumentIdentifiers(ctx, pool, ids)
+	identifiers, err := queryDocumentIdentifiers(ctx, querier, ids)
 	if err != nil {
 		logger.Error("enrich profile document identifiers", "error", err)
 	} else {
@@ -53,7 +66,7 @@ func enrichProfileList(ctx context.Context, pool *pgxpool.Pool, logger *slog.Log
 			}
 		}
 	}
-	badges, presences, err := queryDocumentBadges(ctx, pool, ids)
+	badges, presences, err := queryDocumentBadges(ctx, querier, ids)
 	if err != nil {
 		logger.Error("enrich profile document badges", "error", err)
 		return
@@ -70,17 +83,17 @@ func enrichProfileList(ctx context.Context, pool *pgxpool.Pool, logger *slog.Log
 	}
 }
 
-func enrichDocumentList(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, documents []documentResponse) {
+func enrichDocumentList(ctx context.Context, querier listEnrichmentQuerier, logger *slog.Logger, documents []documentResponse) {
 	for i := range documents {
 		if documents[i].CustomValues == nil {
 			documents[i].CustomValues = map[string]string{}
 		}
 	}
-	if pool == nil || len(documents) == 0 {
+	if isNilQuerier(querier) || len(documents) == 0 {
 		return
 	}
 	ids, index := listRecordIDs(documents, func(value documentResponse) string { return value.ID })
-	values, err := queryCustomValueMaps(ctx, pool, "document_id", ids)
+	values, err := queryCustomValueMaps(ctx, querier, "document_id", ids)
 	if err != nil {
 		logger.Error("enrich document custom values", "error", err)
 		return
@@ -92,17 +105,17 @@ func enrichDocumentList(ctx context.Context, pool *pgxpool.Pool, logger *slog.Lo
 	}
 }
 
-func enrichBillList(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, bills []billResponse) {
+func enrichBillList(ctx context.Context, querier listEnrichmentQuerier, logger *slog.Logger, bills []billResponse) {
 	for i := range bills {
 		if bills[i].CustomValues == nil {
 			bills[i].CustomValues = map[string]string{}
 		}
 	}
-	if pool == nil || len(bills) == 0 {
+	if isNilQuerier(querier) || len(bills) == 0 {
 		return
 	}
 	ids, index := listRecordIDs(bills, func(value billResponse) string { return value.ID })
-	values, err := queryCustomValueMaps(ctx, pool, "bill_id", ids)
+	values, err := queryCustomValueMaps(ctx, querier, "bill_id", ids)
 	if err != nil {
 		logger.Error("enrich bill custom values", "error", err)
 		return
@@ -125,7 +138,7 @@ func listRecordIDs[T any](values []T, id func(T) string) ([]string, map[string]i
 	return ids, index
 }
 
-func queryCustomValueMaps(ctx context.Context, pool *pgxpool.Pool, column string, ids []string) (map[string]map[string]string, error) {
+func queryCustomValueMaps(ctx context.Context, querier listEnrichmentQuerier, column string, ids []string) (map[string]map[string]string, error) {
 	if column != "profile_id" && column != "document_id" && column != "bill_id" {
 		return nil, fmt.Errorf("unsupported custom value column %q", column)
 	}
@@ -146,7 +159,7 @@ func queryCustomValueMaps(ctx context.Context, pool *pgxpool.Pool, column string
 FROM custom_field_values v
 JOIN custom_field_definitions d ON d.id = v.field_definition_id
 WHERE v.%s = ANY($1::uuid[])`, column, column)
-	rows, err := pool.Query(ctx, query, ids)
+	rows, err := querier.Query(ctx, query, ids)
 	if err != nil {
 		return nil, fmt.Errorf("list custom values: %w", err)
 	}
@@ -169,8 +182,8 @@ WHERE v.%s = ANY($1::uuid[])`, column, column)
 	return result, rows.Err()
 }
 
-func queryDocumentIdentifiers(ctx context.Context, pool *pgxpool.Pool, ownerIDs []string) (map[string]map[string]string, error) {
-	rows, err := pool.Query(ctx, `SELECT DISTINCT ON (presence.profile_id, document_type.technical_key)
+func queryDocumentIdentifiers(ctx context.Context, querier listEnrichmentQuerier, ownerIDs []string) (map[string]map[string]string, error) {
+	rows, err := querier.Query(ctx, `SELECT DISTINCT ON (presence.profile_id, document_type.technical_key)
   presence.profile_id::text,
   document_type.technical_key,
   presence.identifier_value
@@ -202,7 +215,7 @@ ORDER BY presence.profile_id, document_type.technical_key, presence.updated_at D
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	seriesRows, err := pool.Query(ctx, `SELECT DISTINCT ON (presence.profile_id)
+	seriesRows, err := querier.Query(ctx, `SELECT DISTINCT ON (presence.profile_id)
   presence.profile_id::text,
   COALESCE(value.text_value, '')
 FROM documents document
@@ -232,8 +245,8 @@ ORDER BY presence.profile_id, document.updated_at DESC`, ownerIDs)
 	return result, seriesRows.Err()
 }
 
-func queryDocumentBadges(ctx context.Context, pool *pgxpool.Pool, ownerIDs []string) (map[string][]profileDocumentBadge, map[string][]profileDocumentPresence, error) {
-	rows, err := pool.Query(ctx, `SELECT
+func queryDocumentBadges(ctx context.Context, querier listEnrichmentQuerier, ownerIDs []string) (map[string][]profileDocumentBadge, map[string][]profileDocumentPresence, error) {
+	rows, err := querier.Query(ctx, `SELECT
   presence.profile_id::text,
   presence.document_type_id::text,
   document_type.technical_key,

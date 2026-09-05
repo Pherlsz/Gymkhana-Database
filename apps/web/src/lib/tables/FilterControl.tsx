@@ -43,7 +43,11 @@ export function FilterControl({
   autoFocus?: boolean;
 }) {
   const [draft, setDraft] = useState(field.value);
-  useEffect(() => setDraft(field.value), [field.key, field.value]);
+  const [prevValue, setPrevValue] = useState(field.value);
+  if (field.value !== prevValue) {
+    setPrevValue(field.value);
+    setDraft(field.value);
+  }
 
   const commitDraft = () => {
     if (draft !== field.value) field.onChange(draft);
@@ -80,9 +84,7 @@ export function FilterControl({
   }
 
   const placeholder =
-    field.kind === "date"
-      ? "Selecionar data"
-      : `Filtrar por ${field.label.toLowerCase()}...`;
+    field.kind === "date" ? "Selecionar data" : `Filtrar por ${field.label.toLowerCase()}...`;
 
   return (
     <Input

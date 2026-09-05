@@ -10,7 +10,6 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
 	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type documentService interface {
@@ -155,7 +154,7 @@ type documentPageResponse struct {
 	Page      documentPageMeta   `json:"page"`
 }
 
-func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service documentService, search searchService, pool *pgxpool.Pool) {
+func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service documentService, search searchService, pool listEnrichmentQuerier) {
 	mux.HandleFunc("GET /api/v1/document-types", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {

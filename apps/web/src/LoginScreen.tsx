@@ -187,7 +187,7 @@ function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
                 onClick={handleGoogleSignIn}
               >
                 {loading === "google" ? (
-                  <span className="login-button__spinner" aria-label="Entrando" />
+                  <span className="login-button__spinner" aria-label={copy.signingIn} />
                 ) : (
                   <>
                     <GoogleIcon />
@@ -204,7 +204,7 @@ function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
                   onClick={handleDevelopmentSignIn}
                 >
                   {loading === "development" ? (
-                    <span className="login-button__spinner" aria-label="Entrando" />
+                    <span className="login-button__spinner" aria-label={copy.signingIn} />
                   ) : (
                     copy.developmentButton
                   )}

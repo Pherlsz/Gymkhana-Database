@@ -7,3 +7,7 @@ export * from "./PersonComplementaryGroup";
 export * from "./DocumentFormFields";
 export * from "./BillFormFields";
 export * from "./CadastroStickyBar";
+export * from "./CadastroSection";
+export * from "./CadastroHolderSection";
+export * from "./PendingDocumentsSection";
+export * from "./PendingBillsSection";

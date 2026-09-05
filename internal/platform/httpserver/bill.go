@@ -10,7 +10,6 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/bill"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
 	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type billService interface {
@@ -133,7 +132,7 @@ type billPageResponse struct {
 	Page  billPageMeta   `json:"page"`
 }
 
-func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service billService, search searchService, pool *pgxpool.Pool) {
+func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service billService, search searchService, pool listEnrichmentQuerier) {
 	mux.HandleFunc("GET /api/v1/bill-types", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {

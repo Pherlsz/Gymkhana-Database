@@ -606,18 +606,42 @@ html.dark .cadastro-group__badge--documents {
     grid-template-columns: repeat(12, 1fr);
   }
 
-  .cadastro-col-1 { grid-column: span 1; }
-  .cadastro-col-2 { grid-column: span 2; }
-  .cadastro-col-3 { grid-column: span 3; }
-  .cadastro-col-4 { grid-column: span 4; }
-  .cadastro-col-5 { grid-column: span 5; }
-  .cadastro-col-6 { grid-column: span 6; }
-  .cadastro-col-7 { grid-column: span 7; }
-  .cadastro-col-8 { grid-column: span 8; }
-  .cadastro-col-9 { grid-column: span 9; }
-  .cadastro-col-10 { grid-column: span 10; }
-  .cadastro-col-11 { grid-column: span 11; }
-  .cadastro-col-12 { grid-column: span 12; }
+  .cadastro-col-1 {
+    grid-column: span 1;
+  }
+  .cadastro-col-2 {
+    grid-column: span 2;
+  }
+  .cadastro-col-3 {
+    grid-column: span 3;
+  }
+  .cadastro-col-4 {
+    grid-column: span 4;
+  }
+  .cadastro-col-5 {
+    grid-column: span 5;
+  }
+  .cadastro-col-6 {
+    grid-column: span 6;
+  }
+  .cadastro-col-7 {
+    grid-column: span 7;
+  }
+  .cadastro-col-8 {
+    grid-column: span 8;
+  }
+  .cadastro-col-9 {
+    grid-column: span 9;
+  }
+  .cadastro-col-10 {
+    grid-column: span 10;
+  }
+  .cadastro-col-11 {
+    grid-column: span 11;
+  }
+  .cadastro-col-12 {
+    grid-column: span 12;
+  }
 }
 
 .cadastro-field {
@@ -679,7 +703,9 @@ html.dark .cadastro-group__badge--documents {
 .cadastro-single .ant-picker {
   border-radius: var(--gym-radius-md) !important;
   border-color: var(--md-outline-variant, var(--gym-hairline)) !important;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease !important;
 }
 
 .cadastro-single .ant-input:focus,

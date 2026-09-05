@@ -5,11 +5,12 @@ import { I18nProvider } from "../../i18n";
 import { CadastroSingleScreen } from "./CadastroSingleScreen";
 import { createBill, createDocument, createProfile } from "../api/client";
 
-import { message } from "antd";
+let activeClient: QueryClient | null = null;
 
 afterEach(() => {
   cleanup();
-  message.destroy();
+  activeClient?.clear();
+  activeClient = null;
 });
 
 vi.mock("../api/client", () => ({
@@ -33,7 +34,15 @@ function renderSingleScreen(
   onCancel = vi.fn(),
   onSuccess = vi.fn(),
 ) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+    },
+  });
+  activeClient = client;
   return {
     onCancel,
     onSuccess,

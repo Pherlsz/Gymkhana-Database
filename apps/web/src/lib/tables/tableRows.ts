@@ -1,4 +1,5 @@
 import type { BillRecord, CustomField, DocumentRecord, Profile } from "../api/client";
+import { formatAmount, formatCPF, formatDate } from "../formatters";
 
 export type TableRow = {
   id: string;
@@ -311,41 +312,7 @@ export function uniqueCustomFields(fields: CustomField[]): CustomField[] {
   return result;
 }
 
-export function formatCPF(value: string) {
-  const digits = value.replace(/\D/g, "");
-  return digits.length === 11
-    ? digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
-    : value;
-}
-
-export function formatDate(value: string) {
-  if (!value) return "";
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("pt-BR");
-}
-
-export function formatAmount(amount: unknown, currency: unknown) {
-  const text = String(amount ?? "").trim();
-  if (!text) return "";
-  const number = parseSheetAmount(text);
-  if (!Number.isFinite(number)) return text;
-  try {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: String(currency || "BRL"),
-    }).format(number);
-  } catch {
-    return text;
-  }
-}
-
-function parseSheetAmount(value: string): number {
-  if (/^\d+[.,]\d{1,2}$/.test(value) || /^\d+$/.test(value)) {
-    return Number(value.replace(",", "."));
-  }
-  return Number(value.replace(/\./g, "").replace(",", "."));
-}
+export { formatCPF, formatDate, formatAmount };
 
 export function formatCustomValue(value: unknown, kind: CustomField["field_kind"]): string {
   const text = value == null ? "" : String(value);

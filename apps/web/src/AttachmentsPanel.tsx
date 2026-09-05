@@ -16,6 +16,7 @@ import {
   type AttachmentRecord,
 } from "./lib/api/attachments";
 import { APIRequestError } from "./lib/api/client";
+import { formatBytes, formatDateTime as formatDate } from "./lib/formatters";
 
 const acceptedMIMEs = [
   "application/pdf",
@@ -242,16 +243,4 @@ function attachmentError(error: unknown): string {
     return error.message;
   }
   return error instanceof Error ? error.message : "Erro inesperado ao processar o anexo.";
-}
-
-function formatBytes(value: number): string {
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
-  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
-    new Date(value),
-  );
 }

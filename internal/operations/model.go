@@ -85,6 +85,10 @@ func (module Module) Label() string {
 	}
 }
 
+func SupportedModules() []Module {
+	return []Module{ModuleProfiles, ModuleDocuments, ModuleBills}
+}
+
 type SourceKind string
 
 const (

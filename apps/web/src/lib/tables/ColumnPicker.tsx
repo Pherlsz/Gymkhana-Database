@@ -159,10 +159,7 @@ export function ColumnPicker({
               <h3 className="column-picker__group-title">
                 {group}
                 <span>
-                  {
-                    groupItems.filter((item) => localVisibility[item.key] ?? item.visible)
-                      .length
-                  }
+                  {groupItems.filter((item) => localVisibility[item.key] ?? item.visible).length}
                 </span>
               </h3>
               <ul className="column-picker__list">
@@ -194,4 +191,3 @@ export function ColumnPicker({
     </div>
   );
 }
-

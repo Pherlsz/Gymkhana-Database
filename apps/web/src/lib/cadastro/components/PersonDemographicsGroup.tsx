@@ -2,6 +2,7 @@ import { AutoComplete, DatePicker, Input } from "antd";
 import dayjs from "dayjs";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
+import { useI18n } from "../../../i18n";
 import {
   BLOOD_TYPE_OPTIONS,
   GENDER_OPTIONS,
@@ -33,43 +34,7 @@ export interface PersonDemographicsProps {
   state: PersonDemographicsState;
   onChange: (patch: Partial<PersonDemographicsState>) => void;
   disabled?: boolean;
-  copy: {
-    fieldHolderName: string;
-    fieldHolderPlaceholder: string;
-    fieldSocialName: string;
-    fieldCpf: string;
-    placeholderCpf: string;
-    fieldBirthDate: string;
-    fieldEmail: string;
-    placeholderEmail: string;
-    fieldPhone: string;
-    placeholderPhone: string;
-    fieldLandline: string;
-    placeholderLandline: string;
-    fieldAddress: string;
-    placeholderAddress: string;
-    fieldPostalCode: string;
-    fieldGender: string;
-    genderMale: string;
-    genderFemale: string;
-    genderOther: string;
-    genderUninformed: string;
-    fieldMaritalStatus: string;
-    maritalSingle: string;
-    maritalMarried: string;
-    maritalDivorced: string;
-    maritalWidowed: string;
-    maritalCivilUnion: string;
-    fieldBloodType: string;
-    fieldNationality: string;
-    fieldBirthCity: string;
-    fieldBirthCountry: string;
-    fieldPlaceOfOrigin: string;
-    toggleMoreDetails: string;
-    toggleLessDetails: string;
-    placeholderDate: string;
-    placeholderPostalCode: string;
-  };
+  copy?: Record<string, string>;
 }
 
 const filterOpt = (input: string, option?: { value?: string }) =>
@@ -88,7 +53,8 @@ function maskPhone(val: string) {
   if (!digits) return "";
   if (digits.length <= 2) return `(${digits}`;
   if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  if (digits.length <= 10)
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
 }
 
@@ -102,8 +68,10 @@ export function PersonDemographicsGroup({
   state,
   onChange,
   disabled,
-  copy,
+  copy: customCopy,
 }: PersonDemographicsProps) {
+  const { messages } = useI18n();
+  const copy = { ...messages.tables.cadastro, ...customCopy };
   const [showMoreDetails, setShowMoreDetails] = useState(false);
   const isDisabled = Boolean(disabled);
 

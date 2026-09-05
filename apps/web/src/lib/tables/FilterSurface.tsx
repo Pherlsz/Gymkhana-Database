@@ -27,11 +27,7 @@ type FilterRowProps = {
     field: ToolbarFilterField | undefined,
     nextKey: string | null,
   ) => void;
-  onRemove: (
-    rowId: string,
-    isApplied: boolean,
-    field: ToolbarFilterField | undefined,
-  ) => void;
+  onRemove: (rowId: string, isApplied: boolean, field: ToolbarFilterField | undefined) => void;
 };
 
 const FilterRow = memo(function FilterRow({
@@ -78,7 +74,7 @@ const FilterRow = memo(function FilterRow({
       />
       <div className="filter-surface__control">
         {field ? (
-          <FilterControl autoFocus={!hasValue(field)} field={field} />
+          <FilterControl key={field.key} autoFocus={!hasValue(field)} field={field} />
         ) : (
           <Input allowClear disabled placeholder={chooseValueLabel} style={{ width: "100%" }} />
         )}
@@ -182,13 +178,10 @@ export function FilterSurface({
     [fields],
   );
 
-  const pickAppliedField = useCallback(
-    (field: ToolbarFilterField, nextKey: string | null) => {
-      field.onChange("");
-      setPending((current) => [...current, { id: nextDraftId(), fieldKey: nextKey }]);
-    },
-    [],
-  );
+  const pickAppliedField = useCallback((field: ToolbarFilterField, nextKey: string | null) => {
+    field.onChange("");
+    setPending((current) => [...current, { id: nextDraftId(), fieldKey: nextKey }]);
+  }, []);
 
   const pickPendingField = useCallback(
     (row: PendingRow, nextKey: string | null) => {
@@ -239,11 +232,7 @@ export function FilterSurface({
   );
 
   const handleRemove = useCallback(
-    (
-      rowId: string,
-      isApplied: boolean,
-      field: ToolbarFilterField | undefined,
-    ) => {
+    (rowId: string, isApplied: boolean, field: ToolbarFilterField | undefined) => {
       if (isApplied && field) {
         field.onChange("");
       } else {

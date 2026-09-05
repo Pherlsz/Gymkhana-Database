@@ -5,7 +5,7 @@ import { DocumentPresenceSection } from "../tables/DocumentPresenceSection";
 import { tableLinkProps } from "../tables/tableRoutes";
 import { getProfile } from "../api/client";
 import { useI18n } from "../../i18n";
-import { normalizeProfileSearch, ProfileReadout, ProfileReadoutSkeleton } from "../../ProfilesPage";
+import { normalizeProfileSearch, ProfileReadout, ProfileReadoutSkeleton } from "../../ProfilePanel";
 import { groupAsResult, profileSearchForResult, shouldFetchPreview } from "./groupResults";
 import type { ProfileCard } from "./types";
 import { searchErrorMessage } from "./errors";
