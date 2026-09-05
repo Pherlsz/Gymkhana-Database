@@ -1179,8 +1179,9 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 }
 
 .home-page {
-  display: grid;
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
   width: 100%;
   max-width: 88rem;
 }

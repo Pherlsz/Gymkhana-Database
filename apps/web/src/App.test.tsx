@@ -201,7 +201,6 @@ describe("App", () => {
     expect(await screen.findByText("Nenhum item em uso")).toBeInTheDocument();
     expect(screen.getByText("Tabelas · em posse")).toBeInTheDocument();
     expect(screen.queryByText("ver todas")).not.toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: /Abrir pessoas/ })).toBeInTheDocument();
     expect(screen.queryByText("Dados pessoais")).not.toBeInTheDocument();
     expect(screen.getByText("Documentos civis")).toBeInTheDocument();
     expect(screen.getByText("Trabalho e profissional")).toBeInTheDocument();
@@ -213,7 +212,6 @@ describe("App", () => {
     expect(screen.getByText("Internet")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Documentos" })).toBeInTheDocument();
     expect(document.querySelectorAll(".home-catalog__row-count").length).toBe(0);
-    expect((await screen.findAllByText("cadastros")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("RG").length).toBeGreaterThan(0);
     expect(screen.queryByText("56.401")).not.toBeInTheDocument();
     expect(screen.queryByText("Nenhum registro")).not.toBeInTheDocument();

@@ -12,7 +12,6 @@ import {
   Download,
   Droplet,
   FileText,
-  FolderTree,
   GraduationCap,
   HardHat,
   Heart,
@@ -25,7 +24,6 @@ import {
   Smile,
   Stethoscope,
   User,
-  Users,
   Vote,
   Wifi,
   Zap,
@@ -106,7 +104,7 @@ export function HomePage() {
 
   return (
     <div className="home-page">
-      {/* --- HERO & WELCOME BANNER --- */}
+      {/* --- WELCOME HEADER --- */}
       <header className="home-page__header">
         <Typography.Title level={1} style={{ margin: 0 }}>
           {copy.welcome.replace("{name}", session.user.display_name || session.user.login)}
@@ -131,214 +129,16 @@ export function HomePage() {
         />
       ) : null}
 
-      {/* --- KPI OVERVIEW CARDS GRID --- */}
-      <div className="home-kpi-grid">
-        <Link
-          aria-label={`${copy.hero.people}: ${typeof overview.profileTotal === "number" ? overview.profileTotal.toLocaleString("pt-BR") : "—"}`}
-          className="home-kpi-card"
-          {...tableLinkProps(normalizeProfileSearch({}))}
+      {/* --- DEDICATED STANDALONE DOCUMENT USAGE CARD --- */}
+      <section className="home-standalone-usage">
+        <div
+          className={
+            inUseTotal > 0
+              ? "home-attention home-attention--warning"
+              : "home-attention home-attention--empty"
+          }
         >
-          <span className="home-kpi-card__icon">
-            <Users aria-hidden size={ICON.lg} strokeWidth={ICON_STROKE} />
-          </span>
-          <span className="home-kpi-card__body">
-            <span className="home-kpi-card__label">{copy.hero.people}</span>
-            {overview.loading.profiles ? (
-              <Skeleton.Input active size="small" style={{ width: "4rem", marginTop: 4 }} />
-            ) : (
-              <span className="home-kpi-card__value">
-                {typeof overview.profileTotal === "number"
-                  ? overview.profileTotal.toLocaleString("pt-BR")
-                  : "—"}
-              </span>
-            )}
-          </span>
-        </Link>
-
-        <Link
-          aria-label={`${messages.common.entities.documents} em uso: ${documentsInUseTotal.toLocaleString("pt-BR")}`}
-          className="home-kpi-card"
-          {...tableLinkProps(
-            normalizeProfileSearch({
-              section: "documents",
-              document_status: "IN_USE",
-            }),
-          )}
-        >
-          <span className="home-kpi-card__icon home-kpi-card__icon--warning">
-            <FileText aria-hidden size={ICON.lg} strokeWidth={ICON_STROKE} />
-          </span>
-          <span className="home-kpi-card__body">
-            <span className="home-kpi-card__label">Doc. em Uso</span>
-            {overview.loading.inUse ? (
-              <Skeleton.Input active size="small" style={{ width: "4rem", marginTop: 4 }} />
-            ) : (
-              <span className="home-kpi-card__value">
-                {documentsInUseTotal.toLocaleString("pt-BR")}
-              </span>
-            )}
-          </span>
-        </Link>
-
-        <Link
-          aria-label={`${messages.common.entities.bills} em uso: ${billsInUseTotal.toLocaleString("pt-BR")}`}
-          className="home-kpi-card"
-          {...tableLinkProps(
-            normalizeProfileSearch({
-              section: "bills",
-              bill_status: "IN_USE",
-            }),
-          )}
-        >
-          <span className="home-kpi-card__icon home-kpi-card__icon--purple">
-            <Receipt aria-hidden size={ICON.lg} strokeWidth={ICON_STROKE} />
-          </span>
-          <span className="home-kpi-card__body">
-            <span className="home-kpi-card__label">Contas em Uso</span>
-            {overview.loading.inUse ? (
-              <Skeleton.Input active size="small" style={{ width: "4rem", marginTop: 4 }} />
-            ) : (
-              <span className="home-kpi-card__value">
-                {billsInUseTotal.toLocaleString("pt-BR")}
-              </span>
-            )}
-          </span>
-        </Link>
-
-        <div className="home-kpi-card home-kpi-card--static">
-          <span className="home-kpi-card__icon">
-            <FolderTree aria-hidden size={ICON.lg} strokeWidth={ICON_STROKE} />
-          </span>
-          <span className="home-kpi-card__body">
-            <span className="home-kpi-card__label">Categorias</span>
-            <span className="home-kpi-card__value">{catalogGroups.length}</span>
-          </span>
-        </div>
-      </div>
-
-      {/* --- DASHBOARD MAIN CONTENT SPLIT --- */}
-      <div className="home-page__rail">
-        <section className="home-page__actions">
-          <h2 className="home-section__title">{copy.quickActions.title}</h2>
-          <div className="quick-actions">
-            <Dropdown
-              menu={{
-                onClick: ({ key }) => {
-                  if (key === "person") {
-                    void navigate({
-                      to: "/cadastro",
-                      search: { ...CADASTRO_SEARCH_DEFAULTS, table: "people", mode: "manual" },
-                    });
-                    return;
-                  }
-                  if (key === "document") {
-                    void navigate({
-                      to: "/cadastro",
-                      search: { ...CADASTRO_SEARCH_DEFAULTS, table: "documents" },
-                    });
-                    return;
-                  }
-                  if (key === "bill") {
-                    void navigate({
-                      to: "/cadastro",
-                      search: { ...CADASTRO_SEARCH_DEFAULTS, table: "bills" },
-                    });
-                    return;
-                  }
-                  if (key === "batch") {
-                    void navigate({
-                      to: "/cadastro",
-                      search: { ...CADASTRO_SEARCH_DEFAULTS, table: "people", mode: "xlsx" },
-                    });
-                  }
-                },
-                items: [
-                  {
-                    key: "person",
-                    icon: <User aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
-                    label: copy.quickActions.newRecord,
-                  },
-                  {
-                    key: "document",
-                    icon: <FileText aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
-                    label: copy.quickActions.documents,
-                  },
-                  {
-                    key: "bill",
-                    icon: <Receipt aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
-                    label: copy.quickActions.newBill,
-                  },
-                  ...(admin
-                    ? [
-                        {
-                          type: "group" as const,
-                          label: copy.quickActions.assisted,
-                          children: [
-                            {
-                              key: "batch",
-                              icon: (
-                                <Download aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                              ),
-                              label: copy.quickActions.batch,
-                            },
-                          ],
-                        },
-                      ]
-                    : []),
-                ],
-              }}
-              trigger={["click"]}
-              getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
-            >
-              <Button
-                aria-label={copy.quickActions.newRecord}
-                className="quick-action quick-action--primary"
-                icon={<Plus aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
-                type="primary"
-              >
-                <span className="quick-action__copy">
-                  <span className="quick-action__label">{copy.quickActions.newRecord}</span>
-                  <span className="quick-action__hint">
-                    {copy.quickActions.newRecordDescription}
-                  </span>
-                </span>
-              </Button>
-            </Dropdown>
-
-            <div className="quick-row">
-              {admin ? (
-                <Button
-                  aria-label={copy.quickActions.googleForm}
-                  className="quick-action"
-                  icon={<ClipboardList aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
-                  onClick={() =>
-                    void navigate({
-                      search: { ...CADASTRO_SEARCH_DEFAULTS, mode: "forms" },
-                      to: "/cadastro",
-                    })
-                  }
-                >
-                  <span className="quick-action__copy">
-                    <span className="quick-action__label">{copy.quickActions.googleForm}</span>
-                    <span className="quick-action__hint">
-                      {copy.quickActions.googleFormDescription}
-                    </span>
-                  </span>
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </section>
-
-        {/* --- ATTENTION & ACTIVE ALLOCATIONS PANEL --- */}
-        <div className="home-complement__metrics">
-          <section
-            className={
-              inUseTotal > 0
-                ? "home-attention home-attention--warning"
-                : "home-attention home-attention--empty"
-            }
-          >
+          <div className="home-attention__header">
             <div className="home-attention__copy">
               <Typography.Title className="home-attention__title" level={2}>
                 {copy.attention.title}
@@ -361,7 +161,7 @@ export function HomePage() {
                       )
                     }
                     size="small"
-                    type="text"
+                    type="primary"
                   >
                     {copy.attention.openDocuments}
                   </Button>
@@ -379,133 +179,211 @@ export function HomePage() {
                       )
                     }
                     size="small"
-                    type="text"
                   >
                     {copy.attention.openBills}
                   </Button>
                 ) : null}
               </div>
             ) : null}
+          </div>
 
-            {overview.loading.inUse ? (
-              <Skeleton active paragraph={{ rows: 1 }} title={false} />
-            ) : inUseTotal === 0 ? (
-              <Typography.Text className="home-attention__none" type="secondary">
-                {copy.attention.none}
-              </Typography.Text>
-            ) : (
-              <>
-                <p className="home-attention__value">{inUseTotal.toLocaleString("pt-BR")}</p>
-                {overview.inUseTypeChips.length > 0 ? (
-                  <div className="home-attention__chips">
-                    {(showAllChips
-                      ? overview.inUseTypeChips
-                      : overview.inUseTypeChips.slice(0, CHIP_LIMIT)
-                    ).map((chip) => (
-                      <InUseTypeChip chip={chip} key={chip.key} />
-                    ))}
-                    {overview.inUseTypeChips.length > CHIP_LIMIT ? (
-                      <Button
-                        aria-expanded={showAllChips}
-                        className="home-attention__more"
-                        onClick={() => setShowAllChips((current) => !current)}
-                        size="small"
-                        type="text"
-                      >
-                        {showAllChips
-                          ? copy.attention.moreChipsCollapse
-                          : copy.attention.moreChips.replace(
-                              "{n}",
-                              String(overview.inUseTypeChips.length - CHIP_LIMIT),
-                            )}
-                      </Button>
-                    ) : null}
-                  </div>
-                ) : null}
-                {overview.inUseFetched < inUseTotal ? (
-                  <p className="home-attention__note">
-                    {copy.attention.truncatedNote
-                      .replace("{fetched}", overview.inUseFetched.toLocaleString("pt-BR"))
-                      .replace("{total}", inUseTotal.toLocaleString("pt-BR"))}
-                  </p>
-                ) : null}
-              </>
-            )}
-          </section>
-
-          <Link
-            aria-label={copy.hero.open}
-            className="home-hero"
-            {...tableLinkProps(normalizeProfileSearch({}))}
-          >
-            <span className="home-hero__icon">
-              <User aria-hidden size={ICON.lg} strokeWidth={ICON_STROKE} />
-            </span>
-            <span className="home-hero__copy">
-              <span className="home-hero__label">{copy.hero.people}</span>
-              {overview.loading.profiles ? (
-                <Skeleton.Input active size="small" style={{ width: "4.5rem" }} />
-              ) : typeof overview.profileTotal === "number" ? (
-                <span className="home-hero__value">
-                  {overview.profileTotal.toLocaleString("pt-BR")}{" "}
-                  <span className="home-hero__unit">{copy.hero.unit}</span>
-                </span>
-              ) : (
-                <span className="home-hero__empty">—</span>
-              )}
-            </span>
-            <span aria-hidden className="home-hero__open">
-              <ChevronRight aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-            </span>
-          </Link>
+          {overview.loading.inUse ? (
+            <Skeleton active paragraph={{ rows: 1 }} title={false} />
+          ) : inUseTotal === 0 ? (
+            <Typography.Text className="home-attention__none" type="secondary">
+              {copy.attention.none}
+            </Typography.Text>
+          ) : (
+            <div className="home-attention__body">
+              <p className="home-attention__value">{inUseTotal.toLocaleString("pt-BR")}</p>
+              {overview.inUseTypeChips.length > 0 ? (
+                <div className="home-attention__chips">
+                  {(showAllChips
+                    ? overview.inUseTypeChips
+                    : overview.inUseTypeChips.slice(0, CHIP_LIMIT)
+                  ).map((chip) => (
+                    <InUseTypeChip chip={chip} key={chip.key} />
+                  ))}
+                  {overview.inUseTypeChips.length > CHIP_LIMIT ? (
+                    <Button
+                      aria-expanded={showAllChips}
+                      className="home-attention__more"
+                      onClick={() => setShowAllChips((current) => !current)}
+                      size="small"
+                      type="text"
+                    >
+                      {showAllChips
+                        ? copy.attention.moreChipsCollapse
+                        : copy.attention.moreChips.replace(
+                            "{n}",
+                            String(overview.inUseTypeChips.length - CHIP_LIMIT),
+                          )}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+              {overview.inUseFetched < inUseTotal ? (
+                <p className="home-attention__note">
+                  {copy.attention.truncatedNote
+                    .replace("{fetched}", overview.inUseFetched.toLocaleString("pt-BR"))
+                    .replace("{total}", inUseTotal.toLocaleString("pt-BR"))}
+                </p>
+              ) : null}
+            </div>
+          )}
         </div>
-      </div>
+      </section>
+
+      {/* --- STANDALONE QUICK ACTIONS PANEL --- */}
+      <section className="home-page__actions-panel">
+        <h2 className="home-section__title">{copy.quickActions.title}</h2>
+        <div className="quick-actions-bar">
+          <Dropdown
+            menu={{
+              onClick: ({ key }) => {
+                if (key === "person") {
+                  void navigate({
+                    to: "/cadastro",
+                    search: { ...CADASTRO_SEARCH_DEFAULTS, table: "people", mode: "manual" },
+                  });
+                  return;
+                }
+                if (key === "document") {
+                  void navigate({
+                    to: "/cadastro",
+                    search: { ...CADASTRO_SEARCH_DEFAULTS, table: "documents" },
+                  });
+                  return;
+                }
+                if (key === "bill") {
+                  void navigate({
+                    to: "/cadastro",
+                    search: { ...CADASTRO_SEARCH_DEFAULTS, table: "bills" },
+                  });
+                  return;
+                }
+                if (key === "batch") {
+                  void navigate({
+                    to: "/cadastro",
+                    search: { ...CADASTRO_SEARCH_DEFAULTS, table: "people", mode: "xlsx" },
+                  });
+                }
+              },
+              items: [
+                {
+                  key: "person",
+                  icon: <User aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
+                  label: copy.quickActions.newRecord,
+                },
+                {
+                  key: "document",
+                  icon: <FileText aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
+                  label: copy.quickActions.documents,
+                },
+                {
+                  key: "bill",
+                  icon: <Receipt aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
+                  label: copy.quickActions.newBill,
+                },
+                ...(admin
+                  ? [
+                      {
+                        type: "group" as const,
+                        label: copy.quickActions.assisted,
+                        children: [
+                          {
+                            key: "batch",
+                            icon: <Download aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
+                            label: copy.quickActions.batch,
+                          },
+                        ],
+                      },
+                    ]
+                  : []),
+              ],
+            }}
+            trigger={["click"]}
+            getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
+          >
+            <Button
+              aria-label={copy.quickActions.newRecord}
+              className="quick-action quick-action--primary"
+              icon={<Plus aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
+              type="primary"
+            >
+              <span className="quick-action__copy">
+                <span className="quick-action__label">{copy.quickActions.newRecord}</span>
+                <span className="quick-action__hint">{copy.quickActions.newRecordDescription}</span>
+              </span>
+            </Button>
+          </Dropdown>
+
+          {admin ? (
+            <Button
+              aria-label={copy.quickActions.googleForm}
+              className="quick-action"
+              icon={<ClipboardList aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
+              onClick={() =>
+                void navigate({
+                  search: { ...CADASTRO_SEARCH_DEFAULTS, mode: "forms" },
+                  to: "/cadastro",
+                })
+              }
+            >
+              <span className="quick-action__copy">
+                <span className="quick-action__label">{copy.quickActions.googleForm}</span>
+                <span className="quick-action__hint">
+                  {copy.quickActions.googleFormDescription}
+                </span>
+              </span>
+            </Button>
+          ) : null}
+        </div>
+      </section>
 
       {/* --- CATALOG TAXONOMY SECTION --- */}
-      <div className="home-complement">
-        <section>
-          <div className="home-section__head">
-            <h2 className="home-section__title" style={{ marginBottom: 0 }}>
-              {copy.tables.title}
-            </h2>
-            <Button
-              aria-label={allGroupsOpen ? copy.tables.collapseAll : copy.tables.expandAll}
-              icon={
-                allGroupsOpen ? (
-                  <ChevronUp aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                ) : (
-                  <ChevronRight aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                )
-              }
-              onClick={() =>
-                setCollapsedGroups(
-                  allGroupsOpen ? new Set(catalogGroups.map((group) => group.key)) : new Set(),
-                )
-              }
-              size="small"
-              title={allGroupsOpen ? copy.tables.collapseAll : copy.tables.expandAll}
-              type="text"
-            />
-          </div>
-          <div className="home-catalog">
-            {catalogGroups.map((group) => (
-              <CatalogPanel
-                extra={group.items.length}
-                key={group.key}
-                label={copy.tables.groups[group.key]}
-                onToggle={() => toggleGroup(group.key)}
-                open={!collapsedGroups.has(group.key)}
-              >
-                <div className="home-catalog__rows">
-                  {group.items.map((item) => (
-                    <CatalogRow item={item} key={`${item.kind}-${item.id}`} />
-                  ))}
-                </div>
-              </CatalogPanel>
-            ))}
-          </div>
-        </section>
-      </div>
+      <section className="home-complement">
+        <div className="home-section__head">
+          <h2 className="home-section__title" style={{ marginBottom: 0 }}>
+            {copy.tables.title}
+          </h2>
+          <Button
+            aria-label={allGroupsOpen ? copy.tables.collapseAll : copy.tables.expandAll}
+            icon={
+              allGroupsOpen ? (
+                <ChevronUp aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+              ) : (
+                <ChevronRight aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+              )
+            }
+            onClick={() =>
+              setCollapsedGroups(
+                allGroupsOpen ? new Set(catalogGroups.map((group) => group.key)) : new Set(),
+              )
+            }
+            size="small"
+            title={allGroupsOpen ? copy.tables.collapseAll : copy.tables.expandAll}
+            type="text"
+          />
+        </div>
+        <div className="home-catalog">
+          {catalogGroups.map((group) => (
+            <CatalogPanel
+              extra={group.items.length}
+              key={group.key}
+              label={copy.tables.groups[group.key]}
+              onToggle={() => toggleGroup(group.key)}
+              open={!collapsedGroups.has(group.key)}
+            >
+              <div className="home-catalog__rows">
+                {group.items.map((item) => (
+                  <CatalogRow item={item} key={`${item.kind}-${item.id}`} />
+                ))}
+              </div>
+            </CatalogPanel>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
