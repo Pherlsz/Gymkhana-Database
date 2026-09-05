@@ -6,6 +6,7 @@ import {
   Folder,
   Home,
   LogOut,
+  Menu,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -15,6 +16,7 @@ import {
   Sun,
   User,
   UserPlus,
+  X,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useI18n } from "./i18n";
@@ -38,6 +40,8 @@ export function AuthenticatedShell() {
 function AuthenticatedShellLayout() {
   const { messages } = useI18n();
   const { session } = useApplicationContext();
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
   const navigate = useNavigate();
   const copy = messages.shell;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -159,14 +163,24 @@ function AuthenticatedShellLayout() {
           type="button"
         >
           {navOpen ? (
-            <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+            <X aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
           ) : (
-            <PanelLeftOpen aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+            <Menu aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
           )}
         </button>
-        {/* Theme lives in the account menu alone. The topbar carried a second
-            control that was reachable at the same time on mobile. */}
         <ShellSearch compact inputRef={topbarSearchRef} />
+        <button
+          aria-label={copy.account.appearance}
+          className="app-shell__collapse"
+          onClick={toggleTheme}
+          type="button"
+        >
+          {isDark ? (
+            <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+          ) : (
+            <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+          )}
+        </button>
       </header>
       <button
         aria-hidden
@@ -187,30 +201,45 @@ function AuthenticatedShellLayout() {
             <img alt="" className="app-shell__logo-img" height={32} src="/Gampa.png" width={32} />
             <span className="brand-text">{copy.productName}</span>
           </Link>
-          {compact ? (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
             <button
-              aria-label={copy.navigation.closeNavigation}
+              aria-label={copy.account.appearance}
               className="app-shell__collapse"
-              onClick={() => setNavOpen(false)}
+              onClick={toggleTheme}
+              title={copy.account.appearance}
               type="button"
             >
-              <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-            </button>
-          ) : (
-            <button
-              aria-label={rail ? copy.navigation.expandMenu : copy.navigation.collapseMenu}
-              className="app-shell__collapse"
-              onClick={toggleCollapsed}
-              title={rail ? copy.navigation.expandMenu : copy.navigation.collapseMenu}
-              type="button"
-            >
-              {rail ? (
-                <PanelLeftOpen aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+              {isDark ? (
+                <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
               ) : (
-                <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
               )}
             </button>
-          )}
+            {compact ? (
+              <button
+                aria-label={copy.navigation.closeNavigation}
+                className="app-shell__collapse"
+                onClick={() => setNavOpen(false)}
+                type="button"
+              >
+                <X aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+              </button>
+            ) : (
+              <button
+                aria-label={rail ? copy.navigation.expandMenu : copy.navigation.collapseMenu}
+                className="app-shell__collapse"
+                onClick={toggleCollapsed}
+                title={rail ? copy.navigation.expandMenu : copy.navigation.collapseMenu}
+                type="button"
+              >
+                {rail ? (
+                  <PanelLeftOpen aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                ) : (
+                  <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                )}
+              </button>
+            )}
+          </div>
         </div>
         {compact ? null : <ShellSearch inputRef={sidebarSearchRef} />}
         <nav>
