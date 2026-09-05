@@ -69,11 +69,7 @@ describe("StateCard", () => {
 
   it("applies compact modifier when compact prop is true", () => {
     const { container } = render(
-      <StateCard
-        compact
-        description="Pequena descrição"
-        title="Compacto"
-      />,
+      <StateCard compact description="Pequena descrição" title="Compacto" />,
     );
 
     expect(container.querySelector(".state-card--compact")).toBeInTheDocument();

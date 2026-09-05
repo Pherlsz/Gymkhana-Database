@@ -49,30 +49,17 @@ export function HolderSelectedCard({
           {profile.email ? (
             <span className="holder-selected-card__meta-item">{profile.email}</span>
           ) : null}
-          {location ? (
-            <span className="holder-selected-card__meta-item">{location}</span>
-          ) : null}
+          {location ? <span className="holder-selected-card__meta-item">{location}</span> : null}
         </div>
         {autoFilledNotice ? (
           <p className="holder-selected-card__notice">{autoFilledNotice}</p>
         ) : null}
       </div>
       <div className="holder-selected-card__actions">
-        <Button
-          icon={<RefreshCw size={14} />}
-          onClick={onChange}
-          size="small"
-          type="text"
-        >
+        <Button icon={<RefreshCw size={14} />} onClick={onChange} size="small" type="text">
           {changeText}
         </Button>
-        <Button
-          danger
-          icon={<Unlink size={14} />}
-          onClick={onUnlink}
-          size="small"
-          type="text"
-        >
+        <Button danger icon={<Unlink size={14} />} onClick={onUnlink} size="small" type="text">
           {unlinkText}
         </Button>
       </div>

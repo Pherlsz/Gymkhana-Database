@@ -1,7 +1,7 @@
-import { Alert, Button, Card, Flex, Form, Input, Skeleton } from "antd";
+import { Alert, Button, Flex, Form, Input, Skeleton } from "antd";
 import { ChevronDown, ChevronRight, FileText, Receipt } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import * as v from "valibot";
+import { ConfirmDelete } from "./components/ConfirmDelete";
 import { ProfileRecordsPanel } from "./ProfileRecordsPanel";
 import { useI18n } from "./i18n";
 import { DocumentPresenceSection } from "./lib/tables/DocumentPresenceSection";
@@ -13,6 +13,7 @@ import {
   type ProfileValuesRequest,
   type UserRole,
 } from "./lib/api/client";
+import { errorMessage, formatCPF } from "./lib/formatters";
 
 const emptyValues: ProfileValuesRequest = {
   full_name: "",
@@ -33,24 +34,49 @@ const emptyValues: ProfileValuesRequest = {
   notes: "",
 };
 
-const profileFormSchema = v.object({
-  full_name: v.pipe(v.string(), v.trim(), v.minLength(1, "Nome completo é obrigatório.")),
-  social_name: v.string(),
-  cpf: v.string(),
-  email: v.union([v.literal(""), v.pipe(v.string(), v.email("E-mail inválido."))]),
-  mobile_phone: v.string(),
-  landline_phone: v.string(),
-  address: v.object({
-    street: v.string(),
-    number: v.string(),
-    complement: v.string(),
-    neighborhood: v.string(),
-    city: v.string(),
-    state: v.string(),
-    postal_code: v.string(),
-  }),
-  notes: v.string(),
-});
+function validateProfileForm(
+  values: ProfileValuesRequest,
+):
+  | { success: true; output: ProfileValuesRequest }
+  | { success: false; issues: { message: string }[] } {
+  const issues: { message: string }[] = [];
+  const fullName = values.full_name?.trim() ?? "";
+  if (fullName.length < 1) {
+    issues.push({ message: "Nome completo é obrigatório." });
+  }
+  const email = values.email?.trim() ?? "";
+  if (email.length > 0) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      issues.push({ message: "E-mail inválido." });
+    }
+  }
+  if (issues.length > 0) {
+    return { success: false, issues };
+  }
+  return {
+    success: true,
+    output: {
+      ...values,
+      full_name: fullName,
+      social_name: values.social_name ?? "",
+      cpf: values.cpf ?? "",
+      email: email,
+      mobile_phone: values.mobile_phone ?? "",
+      landline_phone: values.landline_phone ?? "",
+      address: {
+        street: values.address?.street ?? "",
+        number: values.address?.number ?? "",
+        complement: values.address?.complement ?? "",
+        neighborhood: values.address?.neighborhood ?? "",
+        city: values.address?.city ?? "",
+        state: values.address?.state ?? "",
+        postal_code: values.address?.postal_code ?? "",
+      },
+      notes: values.notes ?? "",
+    },
+  };
+}
 
 function positiveInteger(value: unknown, fallback: number) {
   const parsed = Number(value);
@@ -181,23 +207,23 @@ export function ProfilePanel(props: {
   const copy = messages.tables.inspector;
   const fields = copy.fields;
   const [form] = Form.useForm<ProfileValuesRequest>();
-  const [confirmation, setConfirmation] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const editable = props.mode === "create" || props.mode === "edit";
   const profileId = props.profile?.id;
   const profileVersion = props.profile?.version;
+
   useEffect(() => {
     if (editable) {
       form.setFieldsValue(props.profile ? profileValues(props.profile) : emptyValues);
     }
-    setConfirmation("");
     setConfirmingDelete(false);
     setError(null);
   }, [editable, form, profileId, profileVersion, props.mode, props.profile]);
+
   const submit = async (values: ProfileValuesRequest) => {
-    const parsed = v.safeParse(profileFormSchema, values);
+    const parsed = validateProfileForm(values);
     if (!parsed.success) {
       setError(parsed.issues.map((issue) => issue.message).join(" "));
       return;
@@ -212,17 +238,18 @@ export function ProfilePanel(props: {
             version: props.profile.version,
           })
         : await createProfile(parsed.output);
-      await props.onSaved(saved, props.profile ? "Pessoa atualizada." : "Pessoa criada.");
+      await props.onSaved(saved, props.profile ? copy.personUpdated : copy.personCreated);
     } catch (caught) {
       setError(errorMessage(caught));
     } finally {
       setSaving(false);
     }
   };
+
   if (props.mode !== "create" && !props.profile) {
     if (props.loading) {
       return (
-        <aside aria-busy="true" aria-label="Detalhes da pessoa" className="profile-panel">
+        <aside aria-busy="true" aria-label={copy.personDetails} className="profile-panel">
           <div className="profile-panel__header">
             <div>
               <span className="profile-panel__eyebrow">{copy.eyebrow}</span>
@@ -252,19 +279,21 @@ export function ProfilePanel(props: {
           <Button onClick={props.onClose}>{copy.close}</Button>
         </div>
         <div className="profile-panel__body">
-          <Alert message={copy.notFound} type="error" description={copy.notFoundHint} />
+          <Alert description={copy.notFoundHint} message={copy.notFound} type="error" />
         </div>
       </aside>
     );
   }
+
   const showRecords =
     Boolean(props.profile) &&
     props.section !== "profile" &&
     props.mode !== "create" &&
     !props.hideSections;
+
   return (
     <aside
-      aria-label="Detalhes da pessoa"
+      aria-label={copy.personDetails}
       className={props.embedded ? "profile-panel profile-panel--embedded" : "profile-panel"}
     >
       {props.embedded ? null : (
@@ -280,29 +309,29 @@ export function ProfilePanel(props: {
       )}
       <div className="profile-panel__body">
         {props.profile && props.mode !== "create" && !props.hideSections ? (
-          <nav aria-label="Seções da pessoa" className="profile-sections">
+          <nav aria-label={copy.personSections} className="profile-sections">
             <button
               className={props.section === "profile" ? "profile-sections__active" : undefined}
               onClick={() => props.onSearch({ section: "profile" })}
             >
-              Perfil
+              {copy.sectionProfile}
             </button>
             <button
               className={props.section === "documents" ? "profile-sections__active" : undefined}
               onClick={() => props.onSearch({ section: "documents" })}
             >
-              Documentos
+              {copy.sectionDocuments}
             </button>
             <button
               className={props.section === "bills" ? "profile-sections__active" : undefined}
               onClick={() => props.onSearch({ section: "bills" })}
             >
-              Contas e comprovantes
+              {copy.sectionBills}
             </button>
           </nav>
         ) : null}
         {props.profile && props.recordLinks && props.mode !== "create" ? (
-          <nav aria-label="Registros da pessoa" className="profile-panel__links">
+          <nav aria-label={copy.personRecords} className="profile-panel__links">
             {props.section === "documents" || !props.onOpenDocuments ? null : (
               <Button
                 className="profile-panel__record-link"
@@ -347,7 +376,7 @@ export function ProfilePanel(props: {
         ) : (
           <>
             {error ? (
-              <Alert message={copy.saveError} type="error" description={<>{error}</>} />
+              <Alert description={<>{error}</>} message={copy.saveError} type="error" />
             ) : null}
             {props.mode === "view" && props.profile ? (
               <ProfileReadout
@@ -440,44 +469,27 @@ export function ProfilePanel(props: {
       {showRecords ? null : (
         <div className="profile-panel__footer">
           {props.profile && props.canDelete && confirmingDelete ? (
-            <Card className="profile-delete" size="small">
-              <Flex vertical gap="0.75rem">
-                <strong>{copy.deleteTitle}</strong>
-                <span>{copy.deleteHint}</span>
-                <Input
-                  autoComplete="off"
-                  placeholder={copy.confirmPlaceholder}
-                  value={confirmation}
-                  onChange={(event) => setConfirmation(event.target.value)}
-                />
-                <Flex gap="0.6rem" wrap>
-                  <Button
-                    danger
-                    disabled={confirmation !== "Confirmar" || props.pending}
-                    onClick={() => props.onDelete(props.profile!, confirmation)}
-                  >
-                    {copy.deleteConfirm}
-                  </Button>
-                  <Button
-                    disabled={props.pending}
-                    onClick={() => {
-                      setConfirmingDelete(false);
-                      setConfirmation("");
-                    }}
-                  >
-                    {copy.cancel}
-                  </Button>
-                </Flex>
-              </Flex>
-            </Card>
+            <ConfirmDelete
+              cancelLabel={copy.cancel}
+              confirmLabel={copy.deleteConfirm}
+              confirmationLabel={copy.deleteHint}
+              confirmationWord="Confirmar"
+              description="Esta ação exclui a pessoa permanentemente e não pode ser desfeita."
+              pending={props.pending}
+              title={copy.deleteTitle}
+              onCancel={() => {
+                setConfirmingDelete(false);
+              }}
+              onConfirm={(word) => props.onDelete(props.profile!, word)}
+            />
           ) : (
             <Flex className="profile-panel__actions">
               {editable ? (
-                <Button type="primary" disabled={saving} onClick={() => form.submit()}>
+                <Button disabled={saving} onClick={() => form.submit()} type="primary">
                   {saving ? copy.saving : copy.save}
                 </Button>
               ) : (
-                <Button type="primary" onClick={props.onEdit}>
+                <Button onClick={props.onEdit} type="primary">
                   {copy.edit}
                 </Button>
               )}
@@ -497,14 +509,24 @@ export function ProfilePanel(props: {
   );
 }
 
-export function ProfileReadoutSkeleton() {
-  const bar = (width: string, height: string) => (
-    <Skeleton.Input active size="small" style={{ width, height, minWidth: 0 }} />
+function renderSkeletonBar(width: string, height: string) {
+  return <Skeleton.Input active size="small" style={{ width, height, minWidth: 0 }} />;
+}
+
+function renderProfileSection(title: string, content: ReactNode) {
+  return (
+    <section className="profile-view__section">
+      <h3>{title}</h3>
+      <dl className="profile-view__grid">{content}</dl>
+    </section>
   );
+}
+
+export function ProfileReadoutSkeleton() {
   const item = (labelWidth: string, valueWidth: string) => (
     <div className="profile-view__item">
-      {bar(labelWidth, "0.7rem")}
-      {bar(valueWidth, "1rem")}
+      {renderSkeletonBar(labelWidth, "0.7rem")}
+      {renderSkeletonBar(valueWidth, "1rem")}
     </div>
   );
   return (
@@ -550,11 +572,7 @@ export function ProfileReadout({
 }) {
   const [expanded, setExpanded] = useState(false);
   useEffect(() => setExpanded(false), [profile.id]);
-  /**
-   * Empty fields are omitted rather than drawn as an em dash. The grid already
-   * works this way, and "Ver mais dados" used to dump ~40 labels of which most
-   * were placeholders, which buried the ones that carried data.
-   */
+
   const item = (
     label: string,
     value: unknown,
@@ -574,20 +592,14 @@ export function ProfileReadout({
       </div>
     );
   };
-  const section = (title: string, content: ReactNode) => (
-    <section className="profile-view__section">
-      <h3>{title}</h3>
-      <dl className="profile-view__grid">{content}</dl>
-    </section>
-  );
-  const customValues = Object.entries(profile.custom_values ?? {}).sort(([left], [right]) =>
+  const customValues = Object.entries(profile.custom_values ?? {}).toSorted(([left], [right]) =>
     left.localeCompare(right, "pt-BR"),
   );
   const detailsId = `profile-details-${profile.id}`;
 
   return (
     <div className="profile-view">
-      {section(
+      {renderProfileSection(
         sections.identification,
         <>
           {item(fields.fullName, profile.full_name, { wide: true })}
@@ -599,8 +611,6 @@ export function ProfileReadout({
           {item(columns.maritalStatus, profile.marital_status)}
         </>,
       )}
-      {/* The badges used to be drawn here and again at the top of the presence
-          section immediately below, which showed the same row twice. */}
       {documentPresence}
       <Button
         aria-controls={detailsId}
@@ -618,7 +628,7 @@ export function ProfileReadout({
       </Button>
       {expanded ? (
         <div className="profile-view__details" id={detailsId}>
-          {section(
+          {renderProfileSection(
             sections.contact,
             <>
               {item(fields.email, profile.email)}
@@ -633,7 +643,7 @@ export function ProfileReadout({
               {item(fields.postalCode, profile.address.postal_code)}
             </>,
           )}
-          {section(
+          {renderProfileSection(
             sections.originFamily,
             <>
               {item(columns.nationality, profile.nationality)}
@@ -648,7 +658,7 @@ export function ProfileReadout({
               {item(columns.motherBirthDate, profile.mother_birth_date, { date: true })}
             </>,
           )}
-          {section(
+          {renderProfileSection(
             sections.healthCommunity,
             <>
               {item(columns.healthPlan, profile.health_plan)}
@@ -660,7 +670,7 @@ export function ProfileReadout({
               {item(columns.membershipType, profile.membership_type)}
             </>,
           )}
-          {section(
+          {renderProfileSection(
             sections.interests,
             <>
               {item(columns.collections, profile.collections)}
@@ -669,7 +679,7 @@ export function ProfileReadout({
               {item(columns.travelCountries, profile.travel_countries, { wide: true })}
             </>,
           )}
-          {section(
+          {renderProfileSection(
             sections.vehicleFinancial,
             <>
               {item(columns.vehicleModel, profile.vehicle_model)}
@@ -681,13 +691,16 @@ export function ProfileReadout({
             </>,
           )}
           {customValues.length > 0
-            ? section(
+            ? renderProfileSection(
                 sections.custom,
                 <>{customValues.map(([key, value]) => item(humanizeKey(key), value, { key }))}</>,
               )
             : null}
           {String(profile.notes ?? "").trim()
-            ? section(sections.notes, <>{item(fields.notes, profile.notes, { wide: true })}</>)
+            ? renderProfileSection(
+                sections.notes,
+                <>{item(fields.notes, profile.notes, { wide: true })}</>,
+              )
             : null}
         </div>
       ) : null}
@@ -721,6 +734,7 @@ function humanizeKey(value: string) {
   const label = value.replaceAll("_", " ").replaceAll("-", " ").trim();
   return label ? `${label[0]?.toLocaleUpperCase("pt-BR") ?? ""}${label.slice(1)}` : value;
 }
+
 function profileValues(value: Profile): ProfileValuesRequest {
   const request: ProfileValuesRequest = {
     full_name: value.full_name,
@@ -771,13 +785,4 @@ function profileValues(value: Profile): ProfileValuesRequest {
     }
   }
   return request;
-}
-function formatCPF(value: string) {
-  const digits = value.replace(/\D/g, "");
-  return digits.length === 11
-    ? digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
-    : value;
-}
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Erro inesperado.";
 }

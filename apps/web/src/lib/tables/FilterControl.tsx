@@ -43,11 +43,24 @@ export function FilterControl({
   autoFocus?: boolean;
 }) {
   const [draft, setDraft] = useState(field.value);
-  useEffect(() => setDraft(field.value), [field.key, field.value]);
+  const [prevValue, setPrevValue] = useState(field.value);
+  if (field.value !== prevValue) {
+    setPrevValue(field.value);
+    setDraft(field.value);
+  }
 
   const commitDraft = () => {
     if (draft !== field.value) field.onChange(draft);
   };
+
+  // Debounced auto-commit while typing so table updates smoothly after typing stops
+  useEffect(() => {
+    if (draft === field.value) return;
+    const timer = setTimeout(() => {
+      field.onChange(draft);
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [draft, field]);
 
   if (field.kind === "select") {
     const selectOptions: DefaultOptionType[] = field.groups?.length
@@ -60,7 +73,7 @@ export function FilterControl({
         autoFocus={autoFocus}
         optionFilterProp="label"
         options={selectOptions}
-        placeholder={field.allLabel || field.label}
+        placeholder={field.allLabel || `Selecionar ${field.label.toLowerCase()}...`}
         popupMatchSelectWidth
         showSearch
         style={{ width: "100%" }}
@@ -70,18 +83,24 @@ export function FilterControl({
     );
   }
 
+  const placeholder =
+    field.kind === "date" ? "Selecionar data" : `Filtrar por ${field.label.toLowerCase()}...`;
+
   return (
     <Input
       allowClear
       aria-label={field.label}
       autoFocus={autoFocus}
-      placeholder={field.label}
+      placeholder={placeholder}
       style={{ width: "100%" }}
       value={draft}
       {...(field.kind === "date" ? { type: "date" } : {})}
       onBlur={commitDraft}
       onChange={(event) => setDraft(event.target.value)}
-      onPressEnter={(event) => event.currentTarget.blur()}
+      onPressEnter={(event) => {
+        commitDraft();
+        event.currentTarget.blur();
+      }}
     />
   );
 }

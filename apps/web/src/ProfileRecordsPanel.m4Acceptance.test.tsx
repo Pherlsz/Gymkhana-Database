@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProfileRecordsPanel } from "./ProfileRecordsPanel";
-import { normalizeProfileSearch } from "./ProfilesPage";
+import { normalizeProfileSearch } from "./ProfilePanel";
 import type { ProfileListSearch, UserRole } from "./lib/api/client";
 
 const profile = {

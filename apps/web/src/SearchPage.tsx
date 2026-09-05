@@ -3,7 +3,7 @@ import { InlineStatus } from "./components/InlineStatus";
 import { StateCard } from "./components/StateCard";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { SearchField } from "./components/SearchField";
 import { useI18n } from "./i18n";
 import {
@@ -44,7 +44,11 @@ export function SearchPage() {
   const { messages } = useI18n();
   const searchMessages = messages.search;
   const [draft, setDraft] = useState(search.q);
-  useEffect(() => setDraft(search.q), [search.q]);
+  const [prevSearchQ, setPrevSearchQ] = useState(search.q);
+  if (search.q !== prevSearchQ) {
+    setPrevSearchQ(search.q);
+    setDraft(search.q);
+  }
 
   const catalog = useQuery({
     queryKey: ["search-catalog"],
@@ -66,7 +70,15 @@ export function SearchPage() {
       sort: search.sort,
       order: search.order,
     }),
-    [search.limit, search.order, search.page, search.q, search.sort, selectedFields, selectedModules],
+    [
+      search.limit,
+      search.order,
+      search.page,
+      search.q,
+      search.sort,
+      selectedFields,
+      selectedModules,
+    ],
   );
   const results = useQuery({
     queryKey: ["global-search", request],
@@ -168,11 +180,7 @@ export function SearchPage() {
           }}
         />
         <div className="search-filters-bar">
-          <div
-            className="search-modules"
-            role="group"
-            aria-label={searchMessages.modulesLegend}
-          >
+          <div className="search-modules" role="group" aria-label={searchMessages.modulesLegend}>
             <button
               aria-pressed={selectedModules.length === 0}
               className="search-module-chip"
@@ -210,9 +218,7 @@ export function SearchPage() {
                   return (
                     <span className="search-field-option">
                       <span className="search-field-option__title">{title}</span>
-                      {scope ? (
-                        <span className="search-field-option__scope">{scope}</span>
-                      ) : null}
+                      {scope ? <span className="search-field-option__scope">{scope}</span> : null}
                     </span>
                   );
                 }}

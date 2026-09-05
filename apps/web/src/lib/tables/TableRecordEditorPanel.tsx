@@ -1,6 +1,7 @@
 import { StateCard } from "../../components/StateCard";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
+import { useI18n } from "../../i18n";
 import {
   deleteBill,
   deleteDocument,
@@ -37,17 +38,10 @@ export function TableRecordEditorPanel({
 }) {
   if (section === "documents") {
     return (
-      <DocumentTableEditor
-        role={role}
-        search={search}
-        onNotice={onNotice}
-        onSearch={onSearch}
-      />
+      <DocumentTableEditor role={role} search={search} onNotice={onNotice} onSearch={onSearch} />
     );
   }
-  return (
-    <BillTableEditor role={role} search={search} onNotice={onNotice} onSearch={onSearch} />
-  );
+  return <BillTableEditor role={role} search={search} onNotice={onNotice} onSearch={onSearch} />;
 }
 
 function DocumentTableEditor({
@@ -61,6 +55,7 @@ function DocumentTableEditor({
   onSearch: (patch: Partial<ProfileListSearch>) => void;
   onNotice: (message: string) => void;
 }) {
+  const { messages } = useI18n();
   const queryClient = useQueryClient();
   const mode = search.document_mode;
   const selectedID = search.document_selected;
@@ -68,8 +63,7 @@ function DocumentTableEditor({
 
   const recordsQuery = useQuery({
     queryKey: ["table-record-editor", "documents", search.records_owner, documentSearch(search)],
-    queryFn: ({ signal }) =>
-      listDocuments(search.records_owner, documentSearch(search), signal),
+    queryFn: ({ signal }) => listDocuments(search.records_owner, documentSearch(search), signal),
     enabled: Boolean(mode === "create" ? search.records_owner : selectedID || search.records_owner),
   });
   const selected = recordsQuery.data?.documents.find((value) => value.id === selectedID);
@@ -97,13 +91,13 @@ function DocumentTableEditor({
       onDelete={async (value, confirmation) => {
         await deleteDocument(value.id, value.version, confirmation);
         await queryClient.invalidateQueries({ queryKey: ["tables", "documents"] });
-        onNotice("Documento excluído permanentemente.");
+        onNotice(messages.records.panel.docDeletedNotice);
         onSearch({ document_selected: undefined, document_mode: undefined });
       }}
       onDuplicate={async (id) => {
         const value = await duplicateDocument(id);
         await queryClient.invalidateQueries({ queryKey: ["tables", "documents"] });
-        onNotice("Documento duplicado. Revise a cópia antes de continuar.");
+        onNotice(messages.records.panel.docDuplicatedNotice);
         onSearch({ document_selected: value.id, document_mode: "edit" });
       }}
       onEdit={() => onSearch({ document_mode: "edit" })}
@@ -126,9 +120,9 @@ function DocumentTableEditor({
         record && (mode === "view" || mode === "edit") ? (
           <>
             <AttachmentsPanel
-              description="Arquivos privados vinculados exclusivamente a este documento."
+              description={messages.records.panel.docAttachmentsDesc}
               owner={{ owner_kind: "DOCUMENT", owner_id: record.id }}
-              title="Anexos do documento"
+              title={messages.records.panel.docAttachmentsTitle}
             />
             <CadastroOcrSection owner={{ owner_kind: "DOCUMENT", owner_id: record.id }} />
           </>
@@ -149,6 +143,7 @@ function BillTableEditor({
   onSearch: (patch: Partial<ProfileListSearch>) => void;
   onNotice: (message: string) => void;
 }) {
+  const { messages } = useI18n();
   const queryClient = useQueryClient();
   const mode = search.bill_mode;
   const selectedID = search.bill_selected;
@@ -184,13 +179,13 @@ function BillTableEditor({
       onDelete={async (value, confirmation) => {
         await deleteBill(value.id, value.version, confirmation);
         await queryClient.invalidateQueries({ queryKey: ["tables", "bills"] });
-        onNotice("Conta/comprovante excluído permanentemente.");
+        onNotice(messages.records.panel.billDeletedNotice);
         onSearch({ bill_selected: undefined, bill_mode: undefined });
       }}
       onDuplicate={async (id) => {
         const value = await duplicateBill(id);
         await queryClient.invalidateQueries({ queryKey: ["tables", "bills"] });
-        onNotice("Conta/comprovante duplicado. Revise a cópia antes de continuar.");
+        onNotice(messages.records.panel.billDuplicatedNotice);
         onSearch({ bill_selected: value.id, bill_mode: "edit" });
       }}
       onEdit={() => onSearch({ bill_mode: "edit" })}
@@ -213,9 +208,9 @@ function BillTableEditor({
         record && (mode === "view" || mode === "edit") ? (
           <>
             <AttachmentsPanel
-              description="Arquivos privados vinculados exclusivamente a este registro."
+              description={messages.records.panel.billAttachmentsDesc}
               owner={{ owner_kind: "BILL", owner_id: record.id }}
-              title="Anexos da conta ou comprovante"
+              title={messages.records.panel.billAttachmentsTitle}
             />
             <CadastroOcrSection owner={{ owner_kind: "BILL", owner_id: record.id }} />
           </>
@@ -267,28 +262,29 @@ function RecordEditorShell<T extends DocumentRecord | BillRecord>({
   ) => ReactNode;
   renderExtras: (record: T | undefined) => ReactNode;
 }) {
+  const { messages } = useI18n();
   const [pending, setPending] = useState(false);
 
   if (!ownerID) {
     return (
       <StateCard
         compact
-        description="Selecione ou filtre a pessoa dona antes de cadastrar documento ou conta."
+        description={messages.tables.record.ownerRequiredDesc}
         kind="warning"
-        title="Dono obrigatório"
+        title={messages.tables.record.ownerRequiredTitle}
       />
     );
   }
   if (ownerQuery.isLoading || typesLoading) {
-    return <StateCard compact kind="loading" title="Carregando formulário" />;
+    return <StateCard compact kind="loading" title={messages.tables.record.formLoading} />;
   }
   if (ownerQuery.error || !ownerQuery.data) {
     return (
       <StateCard
         compact
-        description="Não foi possível carregar o cadastro da pessoa dona."
+        description={messages.tables.record.ownerNotFoundDesc}
         kind="error"
-        title="Pessoa não encontrada"
+        title={messages.tables.record.ownerNotFoundTitle}
       />
     );
   }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -40,37 +39,37 @@ func LoadStorage() (StorageConfig, error) {
 		return StorageConfig{}, fmt.Errorf("validate release identity: %w", err)
 	}
 
-	enabled, err := strconv.ParseBool(valueOrDefault("R2_ENABLED", "false"))
+	enabled, err := envBool("R2_ENABLED", false)
 	if err != nil {
-		return StorageConfig{}, fmt.Errorf("parse R2_ENABLED: %w", err)
+		return StorageConfig{}, err
 	}
-	uploadTTL, err := time.ParseDuration(valueOrDefault("ATTACHMENT_UPLOAD_TTL", "10m"))
+	uploadTTL, err := envDuration("ATTACHMENT_UPLOAD_TTL", "10m")
 	if err != nil {
-		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_UPLOAD_TTL: %w", err)
+		return StorageConfig{}, err
 	}
-	downloadTTL, err := time.ParseDuration(valueOrDefault("ATTACHMENT_DOWNLOAD_TTL", "5m"))
+	downloadTTL, err := envDuration("ATTACHMENT_DOWNLOAD_TTL", "5m")
 	if err != nil {
-		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_DOWNLOAD_TTL: %w", err)
+		return StorageConfig{}, err
 	}
-	trashRetention, err := time.ParseDuration(valueOrDefault("ATTACHMENT_TRASH_RETENTION", "168h"))
+	trashRetention, err := envDuration("ATTACHMENT_TRASH_RETENTION", "168h")
 	if err != nil {
-		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_TRASH_RETENTION: %w", err)
+		return StorageConfig{}, err
 	}
-	maximumFileSize, err := strconv.ParseInt(valueOrDefault("ATTACHMENT_MAX_FILE_BYTES", strconv.FormatInt(defaultAttachmentMaxFileBytes, 10)), 10, 64)
+	maximumFileSize, err := envInt64("ATTACHMENT_MAX_FILE_BYTES", defaultAttachmentMaxFileBytes)
 	if err != nil {
-		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_MAX_FILE_BYTES: %w", err)
+		return StorageConfig{}, err
 	}
-	maximumTotalBytes, err := strconv.ParseInt(valueOrDefault("ATTACHMENT_MAX_TOTAL_BYTES", strconv.FormatInt(defaultAttachmentMaxTotalBytes, 10)), 10, 64)
+	maximumTotalBytes, err := envInt64("ATTACHMENT_MAX_TOTAL_BYTES", defaultAttachmentMaxTotalBytes)
 	if err != nil {
-		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_MAX_TOTAL_BYTES: %w", err)
+		return StorageConfig{}, err
 	}
-	uploadRateLimit, err := strconv.Atoi(valueOrDefault("ATTACHMENT_UPLOAD_RATE_LIMIT", strconv.Itoa(defaultAttachmentUploadRate)))
+	uploadRateLimit, err := envInt("ATTACHMENT_UPLOAD_RATE_LIMIT", defaultAttachmentUploadRate)
 	if err != nil {
-		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_UPLOAD_RATE_LIMIT: %w", err)
+		return StorageConfig{}, err
 	}
-	cleanupBatch, err := strconv.Atoi(valueOrDefault("ATTACHMENT_CLEANUP_BATCH", "100"))
+	cleanupBatch, err := envInt("ATTACHMENT_CLEANUP_BATCH", 100)
 	if err != nil {
-		return StorageConfig{}, fmt.Errorf("parse ATTACHMENT_CLEANUP_BATCH: %w", err)
+		return StorageConfig{}, err
 	}
 	cfg := StorageConfig{
 		Enabled:           enabled,

@@ -121,7 +121,11 @@ export function DataGrid<TData>({
           {loadingLabel}
         </p>
       ) : null}
-      {!loading && data.length === 0 ? <p className="data-grid__status">{emptyLabel}</p> : null}
+      {!loading && data.length === 0 ? (
+        <p className="data-grid__status" role="status">
+          {emptyLabel}
+        </p>
+      ) : null}
       {!loading && data.length > 0 ? (
         <>
           <div className={shellClassName}>
@@ -201,9 +205,12 @@ function renderText(value: unknown): string {
   return "";
 }
 
+function rankValue(value: unknown): number {
+  return value === null || value === undefined ? 1 : 0;
+}
+
 function compareValues(a: unknown, b: unknown): number {
-  const rank = (value: unknown) => (value === null || value === undefined ? 1 : 0);
-  const order = rank(a) - rank(b);
+  const order = rankValue(a) - rankValue(b);
   if (order !== 0) return order;
   if (typeof a === "number" && typeof b === "number") return a - b;
   if (typeof a === "boolean" && typeof b === "boolean") return Number(a) - Number(b);

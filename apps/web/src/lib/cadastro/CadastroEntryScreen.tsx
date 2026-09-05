@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileSpreadsheet, FileText, User, Zap } from "lucide-react";
+import { ClipboardList, FileSpreadsheet, IdCard, User, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { listGoogleFormsSources, refreshGoogleFormsSource } from "../api/googleForms";
 import type { OperationImport } from "../api/operations";
@@ -121,8 +121,8 @@ export function CadastroEntryScreen({
       void queryClient.invalidateQueries({ queryKey: ["google-forms-syncs"] });
     },
   });
-  const latestImport: OperationImport | undefined = (imports.data?.imports ?? []).toSorted(
-    (a, b) => b.created_at.localeCompare(a.created_at),
+  const latestImport: OperationImport | undefined = (imports.data?.imports ?? []).toSorted((a, b) =>
+    b.created_at.localeCompare(a.created_at),
   )[0];
   const latestRowCount = (latestImport?.inserted_count ?? 0) + (latestImport?.updated_count ?? 0);
 
@@ -156,7 +156,7 @@ export function CadastroEntryScreen({
                 <span>{copy.documents}</span>
               </>
             }
-            icon={<FileText size={22} strokeWidth={1.75} />}
+            icon={<IdCard size={22} strokeWidth={1.75} />}
             middle={null}
             onActivate={() => onSelectTable("documents")}
             title={copy.entryDocsTitle}
@@ -195,15 +195,15 @@ export function CadastroEntryScreen({
                   : copy.entryFormsFootNone}
               </>
             }
-            icon={<FileText size={22} strokeWidth={1.75} />}
+            icon={<ClipboardList size={22} strokeWidth={1.75} />}
             middle={
               canUseForms ? (
                 <span className="cadastro-entry__formsrow">
                   <span className="cadastro-entry__badge">
                     {latestSource
                       ? copy.entryFormsBadge
-                        .replace("{title}", latestSource.title)
-                        .replace("{n}", String(activeSources.length))
+                          .replace("{title}", latestSource.title)
+                          .replace("{n}", String(activeSources.length))
                       : copy.entryFormsBadgeFallback}
                   </span>
                   {latestSource ? (
@@ -233,11 +233,14 @@ export function CadastroEntryScreen({
             body={copy.entryBulkBody}
             foot={
               <>
-                <span aria-hidden="true" className="cadastro-entry__dot cadastro-entry__dot--idle" />
+                <span
+                  aria-hidden="true"
+                  className="cadastro-entry__dot cadastro-entry__dot--idle"
+                />
                 {latestImport
                   ? copy.entryBulkFoot
-                    .replace("{n}", String(latestRowCount))
-                    .replace("{time}", timeAgo(latestImport.created_at))
+                      .replace("{n}", String(latestRowCount))
+                      .replace("{time}", timeAgo(latestImport.created_at))
                   : copy.entryBulkFootNone}
               </>
             }

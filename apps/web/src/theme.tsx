@@ -91,35 +91,35 @@ function gymkhanaAntdTheme(mode: Theme) {
       },
       Input: {
         hoverBorderColor: "var(--md-outline)",
-        activeBorderColor: "var(--md-on-surface)",
+        activeBorderColor: "var(--brand-accent-solid)",
         activeShadow: "0 0 0 2px var(--md-focus-ring)",
       },
       Select: {
         hoverBorderColor: "var(--md-outline)",
-        activeBorderColor: "var(--md-on-surface)",
+        activeBorderColor: "var(--brand-accent-solid)",
         optionSelectedBg: "var(--md-state-selected)",
       },
       DatePicker: {
         hoverBorderColor: "var(--md-outline)",
-        activeBorderColor: "var(--md-on-surface)",
+        activeBorderColor: "var(--brand-accent-solid)",
       },
       Tag: {
         defaultColor: "var(--md-on-surface)",
       },
       Menu: {
-        itemSelectedColor: "var(--md-primary-text)",
-        itemHoverColor: "var(--md-primary-text)",
+        itemSelectedColor: "var(--brand-accent-text)",
+        itemHoverColor: "var(--brand-accent-text)",
         itemHoverBg: "var(--md-state-hover)",
         itemSelectedBg: "var(--md-state-selected)",
-        subMenuItemSelectedColor: "var(--md-primary-text)",
-        horizontalItemSelectedColor: "var(--md-primary-text)",
-        horizontalItemHoverColor: "var(--md-primary-text)",
+        subMenuItemSelectedColor: "var(--brand-accent-text)",
+        horizontalItemSelectedColor: "var(--brand-accent-text)",
+        horizontalItemHoverColor: "var(--brand-accent-text)",
       },
       Tabs: {
-        inkBarColor: "var(--md-primary-text)",
-        itemSelectedColor: "var(--md-primary-text)",
-        itemHoverColor: "var(--md-primary-text)",
-        itemActiveColor: "var(--md-primary-text)",
+        inkBarColor: "var(--brand-accent-solid)",
+        itemSelectedColor: "var(--brand-accent-text)",
+        itemHoverColor: "var(--brand-accent-text)",
+        itemActiveColor: "var(--brand-accent-text)",
       },
       Pagination: {
         colorPrimary: "var(--md-on-surface)",
@@ -145,8 +145,11 @@ function gymkhanaAntdTheme(mode: Theme) {
         colorTextLightSolid: "var(--md-surface)",
       },
       Checkbox: {
-        colorPrimary: "var(--md-on-surface)",
-        colorTextLightSolid: "var(--md-surface)",
+        colorPrimary: dark ? PRIMARY : "#d97706",
+        colorPrimaryHover: dark ? "#ffd566" : "#b45309",
+        colorPrimaryBorder: dark ? PRIMARY : "#d97706",
+        colorTextLightSolid: dark ? ON_PRIMARY : "#ffffff",
+        borderRadiusSM: 4,
       },
       Switch: {
         /*

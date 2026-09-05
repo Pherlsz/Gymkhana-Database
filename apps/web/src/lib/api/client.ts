@@ -370,14 +370,14 @@ export async function listProfilesLookup(
 ): Promise<ProfilePageResponse> {
   const trimmed = q.trim();
   const query = new URLSearchParams({
-    limit: "20",
+    limit: "50",
     offset: "0",
     sort: "full_name",
     order: "asc",
   });
   if (trimmed) {
     const cleanDigits = trimmed.replace(/\D/g, "");
-    if (cleanDigits.length >= 3 && cleanDigits.length === trimmed.length) {
+    if (cleanDigits.length >= 3 && /^[0-9.\-\s/]+$/.test(trimmed)) {
       query.set("cpf", cleanDigits);
     } else {
       query.set("full_name", trimmed);
@@ -676,7 +676,11 @@ export async function suggestSearchValues(
   input: { field: string; q: string; grain?: "profiles" | "documents" | "bills"; limit?: number },
   signal?: AbortSignal,
 ): Promise<{ suggestions: Array<{ value: string; label: string }> }> {
-  const query = new URLSearchParams({ field: input.field, q: input.q, limit: String(input.limit ?? 50) });
+  const query = new URLSearchParams({
+    field: input.field,
+    q: input.q,
+    limit: String(input.limit ?? 50),
+  });
   if (input.grain) query.set("grain", input.grain);
   return requestJSON(`/api/v1/search/suggest?${query}`, signal ? { signal } : {});
 }

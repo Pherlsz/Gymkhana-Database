@@ -72,8 +72,7 @@ export function buildFieldFilterGroups(
   selectedModules: SearchModule[],
   allModuleKeys: SearchModule[],
 ): FieldFilterGroup[] {
-  const visible =
-    selectedModules.length > 0 ? new Set(selectedModules) : new Set(allModuleKeys);
+  const visible = selectedModules.length > 0 ? new Set(selectedModules) : new Set(allModuleKeys);
   const grouped = new Map<string, FieldFilterGroup>();
 
   for (const field of fields ?? []) {

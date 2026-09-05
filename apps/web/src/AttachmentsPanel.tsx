@@ -2,7 +2,7 @@ function toneToType(tone: string): "info" | "success" | "warning" | "error" {
   return tone === "danger" ? "error" : (tone as any);
 }
 
-import { Alert, Button, Card, Flex, Tag } from "antd";
+import { Alert, Button, Card, Checkbox, Flex, Tag } from "antd";
 import { InlineStatus } from "./components/InlineStatus";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
@@ -16,6 +16,7 @@ import {
   type AttachmentRecord,
 } from "./lib/api/attachments";
 import { APIRequestError } from "./lib/api/client";
+import { formatBytes, formatDateTime as formatDate } from "./lib/formatters";
 
 const acceptedMIMEs = [
   "application/pdf",
@@ -113,14 +114,13 @@ export function AttachmentsPanel({
             <h3>{title}</h3>
             <p>{description}</p>
           </div>
-          <label className="attachments-panel__trash-toggle">
-            <input
-              checked={showTrash}
-              type="checkbox"
-              onChange={(event) => setShowTrash(event.target.checked)}
-            />
+          <Checkbox
+            checked={showTrash}
+            className="attachments-panel__trash-toggle"
+            onChange={(event) => setShowTrash(event.target.checked)}
+          >
             Mostrar lixeira
-          </label>
+          </Checkbox>
         </div>
         {notice ? (
           <Alert
@@ -162,9 +162,7 @@ export function AttachmentsPanel({
             </div>
           ) : null}
         </div>
-        {query.isLoading ? (
-          <InlineStatus kind="loading" label="Carregando anexos…" />
-        ) : null}
+        {query.isLoading ? <InlineStatus kind="loading" label="Carregando anexos…" /> : null}
         {!query.isLoading && (query.data?.length ?? 0) === 0 ? (
           <InlineStatus
             kind="empty"
@@ -245,16 +243,4 @@ function attachmentError(error: unknown): string {
     return error.message;
   }
   return error instanceof Error ? error.message : "Erro inesperado ao processar o anexo.";
-}
-
-function formatBytes(value: number): string {
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
-  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
-    new Date(value),
-  );
 }

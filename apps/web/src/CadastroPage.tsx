@@ -166,9 +166,7 @@ export function CadastroPage() {
             <span className="cadastro-crumb__sep">/</span>
             <span className="cadastro-crumb__current">{copy.modeForms}</span>
           </nav>
-          <div className="cadastro-work-surface">
-            <GoogleFormsPage defaultModule={moduleFromTable(search.table)} />
-          </div>
+          <GoogleFormsPage defaultModule={moduleFromTable(search.table)} />
         </div>
       ) : null}
 
@@ -183,40 +181,38 @@ export function CadastroPage() {
               {work === "xlsx" ? copy.modeXlsx : copy.modeOcr}
             </span>
           </nav>
-          <div className="cadastro-work-surface">
-            <CadastroPanel
-              cadastro={work}
-              importId={search.import}
-              recordId={search.record}
-              recordsOwner={search.owner}
-              table={search.table}
-              typeId={search.type}
-              onClearOwner={() => patchSearch({ owner: undefined, record: undefined })}
-              onCreateInstead={() =>
-                patchSearch({
-                  mode: "manual",
-                  record: undefined,
-                  owner: search.owner,
-                  table: search.table === "people" ? "documents" : search.table,
-                })
-              }
-              onImportChange={(importId) => patchSearch({ import: importId })}
-              onOwner={(ownerProfileId) =>
-                patchSearch({
-                  owner: ownerProfileId || undefined,
-                  record: undefined,
-                })
-              }
-              onRecord={(next) =>
-                patchSearch({
-                  table: next.id ? next.table : search.table,
-                  record: next.id || undefined,
-                  owner: search.owner,
-                  mode: "ocr",
-                })
-              }
-            />
-          </div>
+          <CadastroPanel
+            cadastro={work}
+            importId={search.import}
+            recordId={search.record}
+            recordsOwner={search.owner}
+            table={search.table}
+            typeId={search.type}
+            onClearOwner={() => patchSearch({ owner: undefined, record: undefined })}
+            onCreateInstead={() =>
+              patchSearch({
+                mode: "manual",
+                record: undefined,
+                owner: search.owner,
+                table: search.table === "people" ? "documents" : search.table,
+              })
+            }
+            onImportChange={(importId) => patchSearch({ import: importId })}
+            onOwner={(ownerProfileId) =>
+              patchSearch({
+                owner: ownerProfileId || undefined,
+                record: undefined,
+              })
+            }
+            onRecord={(next) =>
+              patchSearch({
+                table: next.id ? next.table : search.table,
+                record: next.id || undefined,
+                owner: search.owner,
+                mode: "ocr",
+              })
+            }
+          />
         </div>
       ) : null}
     </div>

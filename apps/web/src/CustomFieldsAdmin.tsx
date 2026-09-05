@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Flex, Tag } from "antd";
+import { Alert, Button, Card, Checkbox, Flex, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
@@ -225,22 +225,20 @@ export function CustomFieldsAdmin() {
               }
             />
           </label>
-          <label className="custom-admin-check">
-            <input
-              checked={draft.required}
-              type="checkbox"
-              onChange={(event) => setDraft({ ...draft, required: event.target.checked })}
-            />
+          <Checkbox
+            checked={draft.required}
+            className="custom-admin-check"
+            onChange={(event) => setDraft({ ...draft, required: event.target.checked })}
+          >
             Obrigatório
-          </label>
-          <label className="custom-admin-check">
-            <input
-              checked={draft.active}
-              type="checkbox"
-              onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
-            />
+          </Checkbox>
+          <Checkbox
+            checked={draft.active}
+            className="custom-admin-check"
+            onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
+          >
             Ativo
-          </label>
+          </Checkbox>
         </div>
         <Flex>
           <Button

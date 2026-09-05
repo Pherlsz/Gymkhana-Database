@@ -1,11 +1,7 @@
 // @vitest-environment jsdom
 import { message } from "antd";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { announceSaved } from "./cadastroFeedback";
-
-afterEach(() => {
-  message.destroy();
-});
 
 describe("announceSaved", () => {
   it("shows the saved message", () => {
@@ -15,6 +11,11 @@ describe("announceSaved", () => {
   });
 
   it("falls back to the antd static message sink", () => {
+    const spy = vi
+      .spyOn(message, "success")
+      .mockImplementation((() => Object.assign(() => {}, Promise.resolve(true))) as never);
     expect(() => announceSaved(undefined, "Documento salvo")).not.toThrow();
+    expect(spy).toHaveBeenCalledWith("Documento salvo");
+    spy.mockRestore();
   });
 });

@@ -1,6 +1,7 @@
 import { DatePicker, Input, Segmented, Select } from "antd";
 import dayjs from "dayjs";
 import type { ChangeEvent } from "react";
+import { useI18n } from "../../../i18n";
 import type { BillType } from "../../api/client";
 import { OcrDropzoneInline } from "./OcrDropzoneInline";
 
@@ -23,29 +24,7 @@ export interface BillFormFieldsProps {
   billTypes: BillType[];
   onFileDrop: (event: ChangeEvent<HTMLInputElement>) => void;
   fileInputId: string;
-  copy: {
-    fieldBillService: string;
-    fieldBillProvider: string;
-    placeholderBillProvider: string;
-    fieldBillInstallation: string;
-    placeholderBillInstallation: string;
-    fieldBillCompetence: string;
-    placeholderBillCompetence: string;
-    fieldBillDueDate: string;
-    fieldBillAmount: string;
-    placeholderBillAmount: string;
-    fieldBillPrintedHolder: string;
-    placeholderBillPrintedHolder: string;
-    fieldBillPrintedAddress: string;
-    placeholderBillPrintedAddress: string;
-    fieldDocMedium: string;
-    tagPhysical: string;
-    tagDigital: string;
-    fieldDocNotes: string;
-    placeholderBillNotes: string;
-    ocrInlineDropzoneBill: string;
-    pickerSelectType: string;
-  };
+  copy?: Record<string, string>;
 }
 
 export function BillFormFields({
@@ -54,8 +33,10 @@ export function BillFormFields({
   billTypes,
   onFileDrop,
   fileInputId,
-  copy,
+  copy: customCopy,
 }: BillFormFieldsProps) {
+  const { messages } = useI18n();
+  const copy = { ...messages.tables.cadastro, ...customCopy };
   return (
     <div className="cadastro-bill-fields">
       <div className="cadastro-grid">
@@ -132,6 +113,7 @@ export function BillFormFields({
             <DatePicker
               format="DD/MM/YYYY"
               id="cad-bill-due"
+              placeholder={copy.placeholderDate}
               style={{ width: "100%" }}
               value={state.billDueDate ? dayjs(state.billDueDate) : null}
               onChange={(d) => onChange({ billDueDate: d ? d.format("YYYY-MM-DD") : undefined })}
@@ -147,7 +129,14 @@ export function BillFormFields({
             </label>
             <Input
               id="cad-bill-val"
-              placeholder={copy.placeholderBillAmount}
+              placeholder={copy.placeholderBillAmount ?? "0,00"}
+              prefix={
+                <span
+                  style={{ color: "var(--gym-color-text-muted)", fontSize: 13, marginRight: 2 }}
+                >
+                  R$
+                </span>
+              }
               value={state.billAmount}
               onChange={(e) => onChange({ billAmount: e.target.value })}
             />
@@ -204,12 +193,11 @@ export function BillFormFields({
         <div className="cadastro-col-8">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-notes">
-              {copy.fieldDocNotes}
+              {copy.fieldBillNotes ?? "Observações da conta"}
             </label>
-            <Input.TextArea
+            <Input
               id="cad-bill-notes"
               placeholder={copy.placeholderBillNotes}
-              rows={2}
               value={state.billNotes}
               onChange={(e) => onChange({ billNotes: e.target.value })}
             />

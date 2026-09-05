@@ -52,7 +52,7 @@
   padding: var(--gym-space-4);
   border: 1px solid color-mix(in oklch, var(--md-error) 40%, var(--md-outline));
   border-radius: var(--gym-radius-lg);
-  background: color-mix(in oklch, var(--md-error) 5%, transparent);
+  background: var(--md-error-container);
 }
 
 .confirm-delete__field {
@@ -74,16 +74,22 @@
   text-align: center;
   width: 100%;
   padding: clamp(3rem, 5vw, 4.5rem) 1.5rem;
-  background: radial-gradient(
+  background: var(--gym-color-surface-raised);
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-lg, 12px);
+  box-shadow: var(--shadow-card);
+  box-sizing: border-box;
+}
+
+html.dark .state-card {
+  background:
+    radial-gradient(
       120% 120% at 50% 0%,
       rgba(255, 255, 255, 0.03) 0%,
       rgba(255, 255, 255, 0.005) 100%
     ),
     var(--gym-color-surface-raised, #1c1917);
-  border: 1px solid var(--gym-color-border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--gym-radius-lg, 12px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-  box-sizing: border-box;
 }
 
 .state-card--compact {
@@ -102,7 +108,9 @@
   border-radius: 50%;
   margin-bottom: 1.25rem;
   flex: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .state-card--compact .state-card__badge {
@@ -113,42 +121,41 @@
 
 /* Variant Accents */
 .state-card__badge--loading {
-  background: rgba(255, 197, 61, 0.12);
-  border: 1px solid rgba(255, 197, 61, 0.3);
-  color: var(--ant-color-primary, #ffc53d);
-  box-shadow: 0 0 28px rgba(255, 197, 61, 0.18);
+  background: var(--brand-accent-surface);
+  border: 1px solid var(--brand-accent-border);
+  color: var(--brand-accent-text);
+  box-shadow: 0 0 24px color-mix(in oklch, var(--brand-accent-solid) 20%, transparent);
 }
 
 .state-card__badge--loading .state-card__spinner {
-  color: var(--ant-color-primary, #ffc53d);
+  color: var(--brand-accent-solid);
 }
 
 .state-card__badge--empty {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--gym-color-text-muted, #a8a29e);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.04);
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  color: var(--gym-color-text-muted);
 }
 
 .state-card__badge--warning {
-  background: rgba(255, 197, 61, 0.12);
-  border: 1px solid rgba(255, 197, 61, 0.3);
-  color: var(--ant-color-primary, #ffc53d);
-  box-shadow: 0 0 28px rgba(255, 197, 61, 0.18);
+  background: var(--brand-accent-surface);
+  border: 1px solid var(--brand-accent-border);
+  color: var(--brand-accent-text);
+  box-shadow: 0 0 24px color-mix(in oklch, var(--brand-accent-solid) 20%, transparent);
 }
 
 .state-card__badge--error {
-  background: rgba(240, 140, 122, 0.12);
-  border: 1px solid rgba(240, 140, 122, 0.35);
-  color: var(--md-error, #f08c7a);
-  box-shadow: 0 0 28px rgba(240, 140, 122, 0.18);
+  background: var(--md-error-container);
+  border: 1px solid color-mix(in oklch, var(--md-error) 35%, var(--md-outline));
+  color: var(--md-error);
+  box-shadow: 0 0 24px color-mix(in oklch, var(--md-error) 18%, transparent);
 }
 
 /* Typography */
 .state-card__title {
   font-size: var(--gym-font-size-lg, 1.125rem);
   font-weight: 600;
-  color: var(--gym-color-text, #fafaf9);
+  color: var(--gym-color-text);
   margin: 0;
   line-height: 1.35;
 }

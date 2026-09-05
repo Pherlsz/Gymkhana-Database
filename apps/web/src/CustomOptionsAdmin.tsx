@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Flex } from "antd";
+import { Alert, Button, Card, Checkbox, Flex } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { customDataError } from "./CustomValuesPanel";
@@ -86,14 +86,13 @@ export function CustomOptionsAdmin({
               }
             />
           </label>
-          <label className="custom-admin-check">
-            <input
-              checked={draft.active}
-              type="checkbox"
-              onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
-            />
+          <Checkbox
+            checked={draft.active}
+            className="custom-admin-check"
+            onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
+          >
             Ativa
-          </label>
+          </Checkbox>
         </div>
         <Flex>
           <Button

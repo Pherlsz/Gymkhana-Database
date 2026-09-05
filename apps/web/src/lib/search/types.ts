@@ -22,7 +22,6 @@ export type MatchRow = {
   module?: string;
 };
 
-
 /** One row per matched field, grouped so the record is the unit of answer. */
 export type ResultGroup = {
   key: string;

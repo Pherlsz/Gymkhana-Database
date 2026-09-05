@@ -1,6 +1,8 @@
 import { DatePicker, Input, Segmented, Select } from "antd";
 import dayjs from "dayjs";
+import { Cloud } from "lucide-react";
 import type { ChangeEvent } from "react";
+import { useI18n } from "../../../i18n";
 import type { DocumentType } from "../../api/client";
 import { OcrDropzoneInline } from "./OcrDropzoneInline";
 
@@ -20,22 +22,7 @@ export interface DocumentFormFieldsProps {
   documentTypes: DocumentType[];
   onFileDrop: (event: ChangeEvent<HTMLInputElement>) => void;
   fileInputId: string;
-  copy: {
-    fieldDocType: string;
-    fieldDocNumber: string;
-    placeholderDocNumber: string;
-    fieldDocDate: string;
-    fieldDocValidUntil: string;
-    fieldDocMedium: string;
-    tagPhysical: string;
-    tagDigital: string;
-    fieldDocCustody: string;
-    fieldDocCustodyOrg: string;
-    fieldDocCustodyOwner: string;
-    fieldDocNotes: string;
-    placeholderDocNotes: string;
-    ocrInlineDropzoneDoc: string;
-  };
+  copy?: Record<string, string>;
 }
 
 export function DocumentFormFields({
@@ -44,12 +31,26 @@ export function DocumentFormFields({
   documentTypes,
   onFileDrop,
   fileInputId,
-  copy,
+  copy: customCopy,
 }: DocumentFormFieldsProps) {
+  const { messages } = useI18n();
+  const copy = { ...messages.tables.cadastro, ...customCopy };
   return (
     <div className="cadastro-document-fields">
+      {/* Smart OCR Dropzone at the top for rapid document ingestion */}
+      <OcrDropzoneInline
+        actionText={copy.ocrBannerAction}
+        badgeText={copy.ocrBannerBadge}
+        description={copy.ocrBannerDesc}
+        inputId={fileInputId}
+        label={copy.ocrInlineDropzoneDoc}
+        title={copy.ocrBannerTitle}
+        variant="banner"
+        onFile={onFileDrop}
+      />
+
       <div className="cadastro-grid">
-        {/* Tipo de Documento */}
+        {/* Row 1: Tipo de Documento e Número */}
         <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-doc-type">
@@ -58,6 +59,7 @@ export function DocumentFormFields({
             <Select
               id="cad-doc-type"
               options={documentTypes.map((t) => ({ label: t.label, value: t.id }))}
+              placeholder={copy.pickerSelectType}
               style={{ width: "100%" }}
               value={state.docTypeId || undefined}
               onChange={(v) => onChange({ docTypeId: v ?? "" })}
@@ -65,7 +67,6 @@ export function DocumentFormFields({
           </div>
         </div>
 
-        {/* Número / Identificador */}
         <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-doc-identifier">
@@ -80,8 +81,8 @@ export function DocumentFormFields({
           </div>
         </div>
 
-        {/* Data de Emissão */}
-        <div className="cadastro-col-4">
+        {/* Row 2: Datas (Emissão e Validade) */}
+        <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-doc-date">
               {copy.fieldDocDate}
@@ -89,6 +90,7 @@ export function DocumentFormFields({
             <DatePicker
               format="DD/MM/YYYY"
               id="cad-doc-date"
+              placeholder={copy.placeholderDate}
               style={{ width: "100%" }}
               value={state.docDate ? dayjs(state.docDate) : null}
               onChange={(d) => onChange({ docDate: d ? d.format("YYYY-MM-DD") : undefined })}
@@ -96,8 +98,7 @@ export function DocumentFormFields({
           </div>
         </div>
 
-        {/* Data de Validade */}
-        <div className="cadastro-col-4">
+        <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-doc-valid">
               {copy.fieldDocValidUntil}
@@ -105,17 +106,16 @@ export function DocumentFormFields({
             <DatePicker
               format="DD/MM/YYYY"
               id="cad-doc-valid"
+              placeholder={copy.placeholderDate}
               style={{ width: "100%" }}
               value={state.docValidUntil ? dayjs(state.docValidUntil) : null}
-              onChange={(d) =>
-                onChange({ docValidUntil: d ? d.format("YYYY-MM-DD") : undefined })
-              }
+              onChange={(d) => onChange({ docValidUntil: d ? d.format("YYYY-MM-DD") : undefined })}
             />
           </div>
         </div>
 
-        {/* Meio (Físico / Digital) */}
-        <div className="cadastro-col-4">
+        {/* Row 3: Meio e Guarda / Custódia */}
+        <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label">{copy.fieldDocMedium}</label>
             <Segmented
@@ -130,11 +130,10 @@ export function DocumentFormFields({
           </div>
         </div>
 
-        {/* Custódia (se físico) */}
-        {state.docMedium === "PHYSICAL" && (
-          <div className="cadastro-col-6">
-            <div className="cadastro-field">
-              <label className="cadastro-field__label">{copy.fieldDocCustody}</label>
+        <div className="cadastro-col-6">
+          <div className="cadastro-field">
+            <label className="cadastro-field__label">{copy.fieldDocCustody}</label>
+            {state.docMedium === "PHYSICAL" ? (
               <Select
                 options={[
                   { label: copy.fieldDocCustodyOrg, value: "ORGANIZATION" },
@@ -144,11 +143,16 @@ export function DocumentFormFields({
                 value={state.docCustody}
                 onChange={(v) => onChange({ docCustody: v as "ORGANIZATION" | "OWNER" })}
               />
-            </div>
+            ) : (
+              <div className="cadastro-field__static-info">
+                <Cloud size={14} />
+                <span>{copy.fieldDocDigitalStorageNotice}</span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Observações */}
+        {/* Row 4: Observações */}
         <div className="cadastro-col-12">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-doc-notes">
@@ -164,13 +168,6 @@ export function DocumentFormFields({
           </div>
         </div>
       </div>
-
-      {/* Inline OCR Dropzone */}
-      <OcrDropzoneInline
-        inputId={fileInputId}
-        label={copy.ocrInlineDropzoneDoc}
-        onFile={onFileDrop}
-      />
     </div>
   );
 }

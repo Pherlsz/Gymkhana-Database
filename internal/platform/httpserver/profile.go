@@ -10,7 +10,6 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
 	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type profileService interface {
@@ -186,7 +185,7 @@ type distinctCitiesResponse struct {
 	Values []string `json:"values"`
 }
 
-func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service profileService, search searchService, pool *pgxpool.Pool) {
+func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service profileService, search searchService, pool listEnrichmentQuerier) {
 	mux.HandleFunc("GET /api/v1/profiles", requireCapability(auth.CapProfiles, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
@@ -403,7 +402,7 @@ func (request profileValuesRequest) domainValues() profile.Values {
 func (request updateProfileRequest) domainValues() profile.Values {
 	return request.profileValuesRequest.domainValues()
 }
-func writeProfileJSON(w http.ResponseWriter, r *http.Request, logger *slog.Logger, pool *pgxpool.Pool, value profile.Profile, actor auth.Session, status int) {
+func writeProfileJSON(w http.ResponseWriter, r *http.Request, logger *slog.Logger, pool listEnrichmentQuerier, value profile.Profile, actor auth.Session, status int) {
 	payload := []profileResponse{profileFromDomain(value, actor.User.Role.CanManageUsers())}
 	enrichProfileList(r.Context(), pool, logger, payload, actor.User.Role.CanManageUsers())
 	writeJSON(w, status, payload[0])

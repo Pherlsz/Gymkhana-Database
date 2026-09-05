@@ -339,7 +339,9 @@ describe("App", () => {
     const peopleLink = peopleLinks[0];
     if (!peopleLink) throw new Error("expected a Pessoas link");
     fireEvent.click(peopleLink);
-    expect(await screen.findByRole("heading", { name: "Pessoas" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Pessoas" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
     expect(screen.getAllByText("Documentos").length).toBeGreaterThan(1);
     expect(screen.getAllByText("CPF").length).toBeGreaterThan(0);
@@ -361,7 +363,12 @@ describe("App", () => {
               { key: "documents", label: "Documentos" },
             ],
             fields: [
-              { key: "profile.full_name", module: "profiles", label: "Nome completo", kind: "text" },
+              {
+                key: "profile.full_name",
+                module: "profiles",
+                label: "Nome completo",
+                kind: "text",
+              },
             ],
             operators: [],
             limits: { maximum_terms: 5 },
@@ -413,9 +420,9 @@ describe("App", () => {
       const bodies = searchPosts().map(([, init]) =>
         JSON.parse(String((init as RequestInit).body)),
       );
-      expect(bodies.some((body: { modules?: string[] }) => body.modules?.includes("profiles"))).toBe(
-        true,
-      );
+      expect(
+        bodies.some((body: { modules?: string[] }) => body.modules?.includes("profiles")),
+      ).toBe(true);
     });
   });
 

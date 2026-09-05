@@ -64,6 +64,18 @@ WHERE (sqlc.arg(full_name_filter)::text = '' OR lower(full_name) LIKE '%' || low
   AND (sqlc.arg(state_filter)::text = '' OR coalesce(address_state, '') = sqlc.arg(state_filter)::text)
   AND (NOT sqlc.arg(restrict_ids)::bool OR id = ANY(sqlc.arg(id_filter)::uuid[]))
 ORDER BY
+  CASE
+    WHEN sqlc.arg(full_name_filter)::text <> '' THEN
+      CASE
+        WHEN lower(full_name) = lower(sqlc.arg(full_name_filter)::text) THEN 0
+        WHEN lower(full_name) LIKE lower(sqlc.arg(full_name_filter)::text) || ' %' THEN 1
+        WHEN lower(full_name) LIKE lower(sqlc.arg(full_name_filter)::text) || '%' THEN 2
+        WHEN lower(full_name) LIKE '% ' || lower(sqlc.arg(full_name_filter)::text) || ' %' THEN 3
+        WHEN lower(full_name) LIKE '% ' || lower(sqlc.arg(full_name_filter)::text) || '%' THEN 4
+        ELSE 5
+      END
+    ELSE 0
+  END ASC,
   (CASE WHEN sqlc.arg(sort_field)::text = 'full_name' AND sqlc.arg(sort_order)::text = 'asc' THEN full_name END) COLLATE gymkhana_pt_br ASC,
   (CASE WHEN sqlc.arg(sort_field)::text = 'full_name' AND sqlc.arg(sort_order)::text = 'desc' THEN full_name END) COLLATE gymkhana_pt_br DESC,
   CASE WHEN sqlc.arg(sort_field)::text = 'cpf' AND sqlc.arg(sort_order)::text = 'asc' THEN (

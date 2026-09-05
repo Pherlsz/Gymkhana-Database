@@ -164,7 +164,10 @@ describe("generated API client helpers", () => {
 
   it("posts a Search body with numeric paging and no URL state", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ results: [], page: { total: 0, limit: 50, offset: 0, sort: "relevance", sort_order: "desc" } }),
+      jsonResponse({
+        results: [],
+        page: { total: 0, limit: 50, offset: 0, sort: "relevance", sort_order: "desc" },
+      }),
     );
     vi.stubGlobal("fetch", fetchMock);
 

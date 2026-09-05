@@ -387,7 +387,11 @@ p {
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--md-outline-variant, var(--gym-color-border));
   border-radius: var(--gym-radius-sm, 4px);
-  background: color-mix(in oklch, var(--md-surface-container, var(--gym-color-surface-raised)) 65%, transparent);
+  background: color-mix(
+    in oklch,
+    var(--md-surface-container, var(--gym-color-surface-raised)) 65%,
+    transparent
+  );
 }
 .document-presence--editable .document-presence__row {
   align-items: center;

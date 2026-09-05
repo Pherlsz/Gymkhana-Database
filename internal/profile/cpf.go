@@ -2,20 +2,16 @@ package profile
 
 import (
 	"strings"
+
+	"github.com/Pherlsz/Gymkhana-Core/normalize"
 )
 
 func CanonicalCPFDigits(value string) string {
-	var digits strings.Builder
-	for _, r := range value {
-		if r >= '0' && r <= '9' {
-			digits.WriteRune(r)
-		}
-	}
-	return digits.String()
+	return normalize.Digits(value)
 }
 
 func DisplayCPF(canonical string, reveal bool) string {
-	digits := CanonicalCPFDigits(canonical)
+	digits := normalize.Digits(canonical)
 	if len(digits) != 11 {
 		return strings.TrimSpace(canonical)
 	}
@@ -26,16 +22,13 @@ func DisplayCPF(canonical string, reveal bool) string {
 }
 
 func DigitSumCPF(canonical string) *int {
-	var sum int
-	var found bool
-	for _, r := range canonical {
-		if r >= '0' && r <= '9' {
-			sum += int(r - '0')
-			found = true
-		}
-	}
-	if !found {
+	digits := normalize.Digits(canonical)
+	if len(digits) == 0 {
 		return nil
+	}
+	var sum int
+	for i := 0; i < len(digits); i++ {
+		sum += int(digits[i] - '0')
 	}
 	return &sum
 }

@@ -1,8 +1,7 @@
-import { Alert, Drawer, Modal } from "antd";
+import { Alert, Modal } from "antd";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { memo, startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, startTransition, useCallback, useMemo, useState } from "react";
 import { getRouteApi } from "@tanstack/react-router";
-import { ProfilePanel } from "./ProfilesPage";
 import { useApplicationSession } from "./session";
 import {
   isTableKind,
@@ -47,11 +46,7 @@ import {
 import { buildPeopleColumns, PEOPLE_DOC_KEY_SET } from "./lib/tables/peopleColumns";
 import { buildBillColumns, buildDocumentColumns } from "./lib/tables/recordColumns";
 import { activeFilterChips, buildSheetFilters } from "./lib/tables/sheetFilters";
-import {
-  RecordInspector,
-  RecordInspectorState,
-  recordInspectorFields,
-} from "./lib/tables/RecordInspector";
+import { TableInspectorDrawer } from "./lib/tables/TableInspectorDrawer";
 import {
   billSearch,
   clearFilters,
@@ -74,24 +69,8 @@ import {
 import { groupedTypeFilterOptions } from "./lib/tables/typeFilterOptions";
 import { DEFAULT_SHEET_PREFERENCES } from "./lib/tables/sheetPreferences";
 import { clampSpreadsheetPageSize } from "./lib/tables/spreadsheetViewport";
-import { TableRecordEditorPanel } from "./lib/tables/TableRecordEditorPanel";
 
 const tablesRoute = getRouteApi("/tables/$table");
-
-/**
- * Keys the record card does not repeat: plumbing ids, and the identifier the
- * card already shows as its heading.
- */
-const RECORD_CARD_OMITTED_KEYS: ReadonlySet<string> = new Set([
-  "identifier",
-  "reference",
-  "owner",
-  "owner_id",
-  "type_id",
-  "type_key",
-  "current_holder_id",
-  "document_badges",
-]);
 
 const MemoSpreadsheetTable = memo(SpreadsheetTable) as typeof SpreadsheetTable;
 
@@ -104,7 +83,7 @@ export function TablesPage() {
   const navigate = tablesRoute.useNavigate();
   const queryClient = useQueryClient();
   const section = sectionFromTable(isTableKind(table) ? table : "people");
-  const search = useMemo(() => ({ ...routeSearch, section }), [routeSearch, section]);
+  const search = { ...routeSearch, section };
   const scope: TableSheetScope =
     section === "documents" ? "documents" : section === "bills" ? "bills" : "profiles";
   const columnOverrides = useMemo(() => parseColumnCols(search.cols), [search.cols]);
@@ -131,20 +110,19 @@ export function TablesPage() {
     },
     [navigate, table],
   );
-  const tableSearch = useMemo(
-    () => ({
-      ...search,
-      limit: clampSpreadsheetPageSize(search.limit),
-      document_limit: clampSpreadsheetPageSize(search.document_limit),
-      bill_limit: clampSpreadsheetPageSize(search.bill_limit),
-    }),
-    [search],
-  );
+  const tableSearch = {
+    ...search,
+    limit: clampSpreadsheetPageSize(search.limit),
+    document_limit: clampSpreadsheetPageSize(search.document_limit),
+    bill_limit: clampSpreadsheetPageSize(search.bill_limit),
+  };
 
   const [searchInput, setSearchInput] = useState(search.q);
-  useEffect(() => {
-    setSearchInput((current) => (current === search.q ? current : search.q));
-  }, [search.q]);
+  const [prevSearchQ, setPrevSearchQ] = useState(search.q);
+  if (search.q !== prevSearchQ) {
+    setPrevSearchQ(search.q);
+    setSearchInput(search.q);
+  }
   const peopleQuery = useQuery({
     queryKey: ["tables", "profiles", profileListKey(tableSearch)],
     queryFn: ({ signal }) => listProfiles(tableSearch, signal),
@@ -221,15 +199,12 @@ export function TablesPage() {
         ? documentTypes.isPending || documentFieldQueries.some((query) => query.isPending)
         : billTypes.isPending || billFieldQueries.some((query) => query.isPending);
 
-  const recordLabels: RecordSheetLabels = useMemo(
-    () => ({
-      boolean: copy.boolean,
-      status: copy.status,
-      medium: copy.medium,
-      idleCustody: copy.idleCustody,
-    }),
-    [copy.boolean, copy.idleCustody, copy.medium, copy.status],
-  );
+  const recordLabels: RecordSheetLabels = {
+    boolean: copy.boolean,
+    status: copy.status,
+    medium: copy.medium,
+    idleCustody: copy.idleCustody,
+  };
 
   const typeGroups = useMemo(() => {
     if (section === "documents") {
@@ -488,18 +463,15 @@ export function TablesPage() {
     });
   }, [updateSearch]);
 
-  const confirmDiscardEdit = useCallback(
-    (apply: () => void) => {
-      Modal.confirm({
-        title: copy.inspector.discardTitle,
-        content: copy.inspector.discardBody,
-        okText: copy.inspector.discardOk,
-        cancelText: copy.inspector.discardCancel,
-        onOk: apply,
-      });
-    },
-    [copy.inspector],
-  );
+  const confirmDiscardEdit = (apply: () => void) => {
+    Modal.confirm({
+      title: copy.inspector.discardTitle,
+      content: copy.inspector.discardBody,
+      okText: copy.inspector.discardOk,
+      cancelText: copy.inspector.discardCancel,
+      onOk: apply,
+    });
+  };
 
   const onTableRowClick = useCallback(
     (row: TableRow) => {
@@ -561,21 +533,13 @@ export function TablesPage() {
     () => columns.filter((column) => isColumnVisible(column, columnOverrides)),
     [columnOverrides, columns],
   );
-  const localExactKeys = useMemo(
-    () =>
-      new Set(
-        allFilters.filter((field) => field.local && field.kind === "select").map(cellKeyForFilter),
-      ),
-    [allFilters],
-  );
-  const localDateKeys = useMemo(
-    () =>
-      new Set(
-        allFilters.filter((field) => field.local && field.kind === "date").map(cellKeyForFilter),
-      ),
-    [allFilters],
-  );
   const rows = useMemo(() => {
+    const localExactKeys = new Set(
+      allFilters.filter((field) => field.local && field.kind === "select").map(cellKeyForFilter),
+    );
+    const localDateKeys = new Set(
+      allFilters.filter((field) => field.local && field.kind === "date").map(cellKeyForFilter),
+    );
     return baseRows.filter((row) =>
       Object.entries(localFilters).every(([key, value]) => {
         if (!value) return true;
@@ -586,7 +550,7 @@ export function TablesPage() {
         return text.includes(needle);
       }),
     );
-  }, [baseRows, localDateKeys, localExactKeys, localFilters]);
+  }, [allFilters, baseRows, localFilters]);
   const canDelete = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN";
   const selectedProfile =
     peopleQuery.data?.profiles.find((value) => value.id === search.selected) ??
@@ -631,13 +595,15 @@ export function TablesPage() {
     },
   });
 
-  const updateCols = (cols: string) => {
-    startTransition(() => {
-      updateSearch({ cols });
-    });
-  };
+  const updateCols = useCallback(
+    (cols: string) => {
+      startTransition(() => {
+        updateSearch({ cols });
+      });
+    },
+    [updateSearch],
+  );
 
-  const recordCopy = copy.record;
   const selectedRecordId =
     section === "documents"
       ? search.document_selected
@@ -656,121 +622,34 @@ export function TablesPage() {
     });
   }, [updateSearch]);
 
-  const recordInspector = selectedRecordId ? (
-    selectedRecordRow ? (
-      <RecordInspector
-        ariaLabel={section === "bills" ? recordCopy.billAria : recordCopy.documentAria}
-        closeLabel={copy.inspector.close}
-        eyebrow={section === "bills" ? recordCopy.billEyebrow : recordCopy.documentEyebrow}
-        fields={recordInspectorFields(
-          selectedRecordRow,
-          columns.map((column) => ({ key: column.key, label: columnLabel(column) })),
-          RECORD_CARD_OMITTED_KEYS,
-        )}
-        onClose={closeRecord}
-        onOpenOwner={
-          selectedRecordRow.cells.owner_id
-            ? () =>
-                updateSearch({
-                  section: "profile",
-                  selected: String(selectedRecordRow.cells.owner_id),
-                  mode: "view",
-                  document_selected: undefined,
-                  document_mode: undefined,
-                  bill_selected: undefined,
-                  bill_mode: undefined,
-                })
-            : undefined
-        }
-        openOwnerLabel={recordCopy.openOwner}
-        ownerLabel={recordCopy.owner}
-        ownerName={String(selectedRecordRow.cells.owner ?? "")}
-        title={
-          String(
-            selectedRecordRow.cells[section === "bills" ? "reference" : "identifier"] ?? "",
-          ).trim() || recordCopy.untitled
-        }
-      />
-    ) : (
-      <RecordInspectorState
-        ariaLabel={section === "bills" ? recordCopy.billAria : recordCopy.documentAria}
-        closeLabel={copy.inspector.close}
-        description={loading ? undefined : recordCopy.notFoundHint}
-        eyebrow={section === "bills" ? recordCopy.billEyebrow : recordCopy.documentEyebrow}
-        kind={loading ? "loading" : "error"}
-        onClose={closeRecord}
-        title={loading ? recordCopy.loading : recordCopy.notFound}
-      />
-    )
-  ) : null;
+  const columnPickerItems = useMemo(
+    () =>
+      columns.map((column) => ({
+        key: column.key,
+        label: columnLabel(column),
+        group: copy.columnPicker.groups[columnGroup(column.key, scope)],
+        visible: isColumnVisible(column, columnOverrides),
+        locked: Boolean(column.locked),
+      })),
+    [columns, copy.columnPicker.groups, columnOverrides, scope],
+  );
 
-  const recordFormOpen =
-    (section === "documents" && search.document_mode && search.document_mode !== "view") ||
-    (section === "bills" && search.bill_mode && search.bill_mode !== "view");
-  const recordForm = recordFormOpen ? (
-    <TableRecordEditorPanel
-      role={session.user.role}
-      search={search}
-      section={section === "bills" ? "bills" : "documents"}
-      onNotice={setNotice}
-      onSearch={updateSearch}
-    />
-  ) : null;
+  const handleColumnToggle = useCallback(
+    (key: string, visible: boolean) => {
+      const column = columns.find((item) => item.key === key);
+      if (!column) return;
+      updateCols(formatColumnCols(setColumnVisible(column, visible, columnOverrides)));
+    },
+    [columns, columnOverrides, updateCols],
+  );
 
-  const inspector = search.mode ? (
-    <ProfilePanel
-      key={search.mode === "create" ? "create" : "inspector"}
-      canDelete={canDelete}
-      hideSections
-      recordLinks={Boolean(selectedProfile)}
-      mode={search.mode}
-      pending={deleteMutation.isPending}
-      loading={!selectedProfile && selectedProfileQuery.isLoading}
-      profile={selectedProfile}
-      role={session.user.role}
-      search={search}
-      section={section === "bills" ? "bills" : section === "documents" ? "documents" : "profile"}
-      onClose={closeInspector}
-      onDelete={(value, confirmation) => deleteMutation.mutate({ value, confirmation })}
-      onEdit={() => updateSearch({ mode: "edit" })}
-      onCancelEdit={() => updateSearch({ mode: "view" })}
-      onNotice={setNotice}
-      onOpenDocuments={(value) => {
-        const apply = () =>
-          updateSearch({
-            section: "documents",
-            selected: value.id,
-            mode: "view",
-            records_owner: value.id,
-            document_page: 1,
-            document_selected: undefined,
-            document_mode: undefined,
-          });
-        if (search.mode === "edit") confirmDiscardEdit(apply);
-        else apply();
-      }}
-      onOpenBills={(value) => {
-        const apply = () =>
-          updateSearch({
-            section: "bills",
-            selected: value.id,
-            mode: "view",
-            records_owner: value.id,
-            bill_page: 1,
-            bill_selected: undefined,
-            bill_mode: undefined,
-          });
-        if (search.mode === "edit") confirmDiscardEdit(apply);
-        else apply();
-      }}
-      onSaved={async (value, message) => {
-        await refreshPeople();
-        setNotice(message);
-        updateSearch({ selected: value.id, mode: "view" });
-      }}
-      onSearch={updateSearch}
-    />
-  ) : null;
+  const handleColumnShowAll = () => {
+    updateCols(formatColumnCols(showAllColumns(columns, columnOverrides)));
+  };
+
+  const handleColumnReset = () => {
+    updateCols("");
+  };
 
   return (
     <div className="tables-page">
@@ -824,20 +703,10 @@ export function TablesPage() {
               .replace("{visible}", String(visible))
               .replace("{total}", String(totalCount)),
           hiddenCount: columnMetadataLoading ? 0 : columns.length - visibleColumns.length,
-          items: columns.map((column) => ({
-            key: column.key,
-            label: columnLabel(column),
-            group: copy.columnPicker.groups[columnGroup(column.key, scope)],
-            visible: isColumnVisible(column, columnOverrides),
-            locked: Boolean(column.locked),
-          })),
-          onToggle: (key, visible) => {
-            const column = columns.find((item) => item.key === key);
-            if (!column) return;
-            updateCols(formatColumnCols(setColumnVisible(column, visible, columnOverrides)));
-          },
-          onShowAll: () => updateCols(formatColumnCols(showAllColumns(columns, columnOverrides))),
-          onReset: () => updateCols(""),
+          items: columnPickerItems,
+          onToggle: handleColumnToggle,
+          onShowAll: handleColumnShowAll,
+          onReset: handleColumnReset,
         }}
       />
 
@@ -869,40 +738,32 @@ export function TablesPage() {
           onSort={onTableSort}
         />
 
-        {inspectorSheet ? (
-          <Drawer
-            className="tables-inspector-sheet"
-            rootClassName="tables-inspector-sheet"
-            closable={false}
-            destroyOnHidden
-            getContainer={false}
-            size={DEFAULT_SHEET_PREFERENCES.inspectorSheetSize}
-            mask={false}
-            open={Boolean(search.mode) || Boolean(recordInspector) || Boolean(recordForm)}
-            placement="bottom"
-            styles={{
-              body: { display: "flex", height: "100%", overflow: "hidden", padding: 0 },
-              wrapper: { pointerEvents: "auto" },
-            }}
-            onClose={
-              recordForm
-                ? () =>
-                    updateSearch({
-                      document_selected: undefined,
-                      document_mode: undefined,
-                      bill_selected: undefined,
-                      bill_mode: undefined,
-                    })
-                : recordInspector
-                  ? closeRecord
-                  : closeInspector
-            }
-          >
-            {recordForm ?? recordInspector ?? inspector}
-          </Drawer>
-        ) : (
-          (recordForm ?? recordInspector ?? inspector)
-        )}
+        <TableInspectorDrawer
+          canDelete={canDelete}
+          columns={columns}
+          deletePending={deleteMutation.isPending}
+          inspectorSheet={inspectorSheet}
+          loading={loading}
+          search={search}
+          section={section}
+          selectedProfile={selectedProfile}
+          selectedProfileLoading={selectedProfileQuery.isLoading}
+          selectedRecordRow={selectedRecordRow}
+          userRole={session.user.role}
+          onCancelEditProfile={() => updateSearch({ mode: "view" })}
+          onCloseInspector={closeInspector}
+          onCloseRecord={closeRecord}
+          onConfirmDiscardEdit={confirmDiscardEdit}
+          onDeleteProfile={(value, confirmation) => deleteMutation.mutate({ value, confirmation })}
+          onEditProfile={() => updateSearch({ mode: "edit" })}
+          onNotice={setNotice}
+          onSaveProfile={async (value, message) => {
+            await refreshPeople();
+            setNotice(message);
+            updateSearch({ selected: value.id, mode: "view" });
+          }}
+          onSearch={updateSearch}
+        />
       </div>
     </div>
   );

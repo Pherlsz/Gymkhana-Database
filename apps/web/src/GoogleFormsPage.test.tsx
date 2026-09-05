@@ -155,7 +155,7 @@ describe("GoogleFormsPage", () => {
   it("explains when the integration is disabled", async () => {
     vi.mocked(getGoogleFormsStatus).mockResolvedValue({ enabled: false, connected: false });
     renderPage();
-    expect(await screen.findByText("Integração desativada")).toBeInTheDocument();
+    expect(await screen.findByText("Integração do Google Forms desativada")).toBeInTheDocument();
     expect(listGoogleFormsSources).not.toHaveBeenCalled();
   });
 
@@ -174,7 +174,9 @@ describe("GoogleFormsPage", () => {
     renderPage();
     expect(await screen.findByText("Google Forms conectado")).toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "Conectar com Google" }));
-    await waitFor(() => expect(beginGoogleFormsOAuth).toHaveBeenCalledWith("/cadastro?mode=forms&tab=history"));
+    await waitFor(() =>
+      expect(beginGoogleFormsOAuth).toHaveBeenCalledWith("/cadastro?mode=forms&tab=history"),
+    );
   });
 
   it("adds an explicitly supplied form", async () => {

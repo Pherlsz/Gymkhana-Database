@@ -57,15 +57,11 @@ export function StateCard({
       role={isAlert ? "alert" : isPolite ? "status" : undefined}
       style={style}
     >
-      <div className={`state-card__badge state-card__badge--${kind}`}>
-        {renderedIcon}
-      </div>
+      <div className={`state-card__badge state-card__badge--${kind}`}>{renderedIcon}</div>
 
       <h3 className="state-card__title">{title}</h3>
 
-      {description ? (
-        <div className="state-card__desc">{description}</div>
-      ) : null}
+      {description ? <div className="state-card__desc">{description}</div> : null}
 
       {action ? <div className="state-card__actions">{action}</div> : null}
     </div>

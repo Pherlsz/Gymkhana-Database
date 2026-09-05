@@ -86,7 +86,12 @@ export function CadastroOcrWorkspace({
   return (
     <div className="cadastro-ocr">
       {checking ? (
-        <StateCard compact kind="loading" title={copy.ocrChecking} description={copy.ocrCheckingHint} />
+        <StateCard
+          compact
+          kind="loading"
+          title={copy.ocrChecking}
+          description={copy.ocrCheckingHint}
+        />
       ) : null}
       <CadastroOwnerPicker ownerId={ownerId} onClear={() => onOwner("")} onSelect={onOwner} />
       {ownerId && !recordId ? (

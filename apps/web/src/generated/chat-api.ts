@@ -4,889 +4,928 @@
  */
 
 export interface paths {
-    "/api/v1/chat/capability": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read safe Chat activation state and fixed limits */
-        get: operations["getChatCapability"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/api/v1/chat/capability": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/chat/threads": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List the current user's unexpired private threads */
-        get: operations["listChatThreads"];
-        put?: never;
-        /** Create one private thread with configured retention */
-        post: operations["createChatThread"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read safe Chat activation state and fixed limits */
+    get: operations["getChatCapability"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/chat/threads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/chat/threads/{thread_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                thread_id: components["parameters"]["ThreadID"];
-            };
-            cookie?: never;
-        };
-        /** Read one owner-scoped private thread */
-        get: operations["getChatThread"];
-        put?: never;
-        post?: never;
-        /** Explicitly delete one private thread and its Chat-only content */
-        delete: operations["deleteChatThread"];
-        options?: never;
-        head?: never;
-        /** Rename one private thread with optimistic versioning */
-        patch: operations["renameChatThread"];
-        trace?: never;
+    /** List the current user's unexpired private threads */
+    get: operations["listChatThreads"];
+    put?: never;
+    /** Create one private thread with configured retention */
+    post: operations["createChatThread"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/chat/threads/{thread_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        thread_id: components["parameters"]["ThreadID"];
+      };
+      cookie?: never;
     };
-    "/api/v1/chat/threads/{thread_id}/messages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read private ordered message content for the owning user */
-        get: operations["listChatMessages"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read one owner-scoped private thread */
+    get: operations["getChatThread"];
+    put?: never;
+    post?: never;
+    /** Explicitly delete one private thread and its Chat-only content */
+    delete: operations["deleteChatThread"];
+    options?: never;
+    head?: never;
+    /** Rename one private thread with optimistic versioning */
+    patch: operations["renameChatThread"];
+    trace?: never;
+  };
+  "/api/v1/chat/threads/{thread_id}/messages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/chat/threads/{thread_id}/active-result": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Select or clear the explicit owner-scoped follow-up context */
-        put: operations["setChatActiveResult"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read private ordered message content for the owning user */
+    get: operations["listChatMessages"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/chat/threads/{thread_id}/active-result": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/chat/threads/{thread_id}/turns": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Persist and launch one idempotent bounded turn
-         * @description A replay returns the existing run only when the owner-scoped request fingerprint matches. A thread can have only one active run.
-         */
-        post: operations["startChatTurn"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    /** Select or clear the explicit owner-scoped follow-up context */
+    put: operations["setChatActiveResult"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/chat/threads/{thread_id}/turns": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/chat/runs/{run_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Inspect one owner-scoped run without provider payloads */
-        get: operations["getChatRun"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Persist and launch one idempotent bounded turn
+     * @description A replay returns the existing run only when the owner-scoped request fingerprint matches. A thread can have only one active run.
+     */
+    post: operations["startChatTurn"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/chat/runs/{run_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/chat/runs/{run_id}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Idempotently request cancellation for one owner-scoped run */
-        post: operations["cancelChatRun"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Inspect one owner-scoped run without provider payloads */
+    get: operations["getChatRun"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/chat/runs/{run_id}/cancel": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/chat/runs/{run_id}/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Stream persisted owner-scoped run events in monotonic sequence order
-         * @description Last-Event-ID or after replays only later persisted events. Disconnecting the stream does not silently mutate the run; explicit cancellation remains available and every run has a fixed server deadline.
-         */
-        get: operations["streamChatRunEvents"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Idempotently request cancellation for one owner-scoped run */
+    post: operations["cancelChatRun"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/chat/runs/{run_id}/events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/chat/result-references/{reference_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Reauthorize and reopen one typed result reference
-         * @description The response contains only logical typed evidence. Stored logical requests, system policy, SQL, physical names, provider payloads, and hidden fields are never returned.
-         */
-        get: operations["getChatResultReference"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Stream persisted owner-scoped run events in monotonic sequence order
+     * @description Last-Event-ID or after replays only later persisted events. Disconnecting the stream does not silently mutate the run; explicit cancellation remains available and every run has a fixed server deadline.
+     */
+    get: operations["streamChatRunEvents"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/chat/result-references/{reference_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    /**
+     * Reauthorize and reopen one typed result reference
+     * @description The response contains only logical typed evidence. Stored logical requests, system policy, SQL, physical names, provider payloads, and hidden fields are never returned.
+     */
+    get: operations["getChatResultReference"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        ChatCapability: {
-            enabled: boolean;
-            maximum_tool_calls: number;
-            maximum_rows: number;
-            maximum_result_bytes: number;
-            /** Format: int64 */
-            maximum_usage: number;
-            /** Format: int64 */
-            maximum_duration_seconds: number;
-            maximum_message_runes: number;
-        };
-        ChatThread: {
-            /** Format: uuid */
-            id: string;
-            title: string;
-            /** Format: uuid */
-            active_result_reference_id?: string;
-            /** Format: date-time */
-            retention_expires_at: string;
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        ChatThreadPage: {
-            threads: components["schemas"]["ChatThread"][];
-            total: number;
-            limit: number;
-            offset: number;
-        };
-        /** @enum {string} */
-        ChatMessageRole: "USER" | "ASSISTANT";
-        ChatMessage: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            thread_id: string;
-            /** Format: uuid */
-            run_id: string;
-            /** Format: int64 */
-            sequence: number;
-            role: components["schemas"]["ChatMessageRole"];
-            content: string;
-            result_reference_ids: string[];
-            /** Format: date-time */
-            created_at: string;
-        };
-        ChatMessagePage: {
-            messages: components["schemas"]["ChatMessage"][];
-            total: number;
-            limit: number;
-            offset: number;
-        };
-        /** @enum {string} */
-        ChatRunState: "QUEUED" | "RUNNING" | "TOOL_RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
-        ChatRun: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            thread_id: string;
-            /** Format: uuid */
-            retry_of_run_id?: string;
-            state: components["schemas"]["ChatRunState"];
-            tool_call_count: number;
-            /** Format: int64 */
-            input_usage: number;
-            /** Format: int64 */
-            output_usage: number;
-            /** Format: int64 */
-            result_bytes: number;
-            error_code?: string;
-            /** Format: date-time */
-            cancel_requested_at?: string;
-            /** Format: date-time */
-            started_at?: string;
-            /** Format: date-time */
-            completed_at?: string;
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        ChatRunCreation: {
-            run: components["schemas"]["ChatRun"];
-            user_message: components["schemas"]["ChatMessage"];
-            created: boolean;
-        };
-        /** @enum {string} */
-        ChatResultReferenceKind: "SEARCH" | "QUERY";
-        ChatResultReference: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            thread_id: string;
-            /** Format: uuid */
-            run_id: string;
-            kind: components["schemas"]["ChatResultReferenceKind"];
-            /** Format: uuid */
-            query_execution_id?: string;
-            label: string;
-            row_count: number;
-            column_count: number;
-            /** Format: date-time */
-            expires_at: string;
-            /** Format: date-time */
-            created_at: string;
-        };
-        SearchEvidence: {
-            /** @enum {string} */
-            module: "profiles" | "documents" | "bills" | "custom_data" | "attachments";
-            entity_kind: string;
-            entity_id: string;
-            profile_id?: string;
-            target_kind: string;
-            target_id: string;
-            entity_label: string;
-            field_key: string;
-            field_label: string;
-            preview: string;
-            /** Format: int32 */
-            score: number;
-        };
-        SearchReferenceData: {
-            /** Format: uuid */
-            reference_id: string;
-            results: components["schemas"]["SearchEvidence"][];
-            /** Format: int64 */
-            total: number;
-        };
-        /** @enum {string} */
-        QueryValueKind: "text" | "long_text" | "identifier" | "integer" | "decimal" | "boolean" | "civil_date" | "civil_month" | "timestamp" | "enum";
-        QueryResultColumn: {
-            position: number;
-            field_key: string;
-            label: string;
-            kind: components["schemas"]["QueryValueKind"];
-        };
-        QueryResultCell: {
-            column_position: number;
-            kind: components["schemas"]["QueryValueKind"];
-            is_null: boolean;
-            value?: string | number | boolean;
-            truncated?: boolean;
-        };
-        QueryResultRow: {
-            position: number;
-            entity_kind: string;
-            entity_id: string;
-            entity_label: string;
-            cells: components["schemas"]["QueryResultCell"][];
-        };
-        QueryReferenceData: {
-            /** Format: uuid */
-            execution_id: string;
-            columns: components["schemas"]["QueryResultColumn"][];
-            rows: components["schemas"]["QueryResultRow"][];
-            total: number;
-        };
-        ChatReferenceResult: {
-            reference: components["schemas"]["ChatResultReference"];
-            data: components["schemas"]["SearchReferenceData"] | components["schemas"]["QueryReferenceData"];
-            row_count: number;
-            field_count: number;
-        };
-        /** @enum {string} */
-        ChatEventKind: "RUN_ACCEPTED" | "RUN_STARTED" | "TEXT_DELTA" | "TOOL_STARTED" | "TOOL_COMPLETED" | "RESULT_REFERENCE" | "RUN_COMPLETED" | "RUN_FAILED" | "RUN_CANCELLED";
-        ChatEvent: {
-            /** Format: int64 */
-            sequence: number;
-            kind: components["schemas"]["ChatEventKind"];
-            text_delta?: string;
-            /** Format: uuid */
-            tool_step_id?: string;
-            /** Format: uuid */
-            result_reference_id?: string;
-            error_code?: string;
-            /** Format: date-time */
-            created_at: string;
-        };
-        CreateChatThreadRequest: {
-            title?: string;
-        };
-        RenameChatThreadRequest: {
-            title: string;
-            /** Format: int64 */
-            version: number;
-        };
-        SetChatActiveResultRequest: {
-            /** Format: uuid */
-            reference_id: string | null;
-        };
-        StartChatTurnRequest: {
-            content: string;
-            idempotency_key: string;
-            /** Format: uuid */
-            retry_of_run_id?: string;
-        };
-        ErrorResponse: {
-            error: {
-                /** @enum {string} */
-                code: "bad_request" | "invalid_json" | "unsupported_media_type" | "request_too_large" | "unauthorized" | "forbidden" | "not_found" | "rate_limited" | "chat_unavailable" | "chat_busy" | "chat_quota_exceeded" | "chat_timeout" | "chat_cancelled" | "chat_stale_context" | "chat_malformed_provider" | "chat_tool_failed" | "chat_unsafe_result" | "internal_error";
-                message: string;
-            };
-            request_id?: string;
-        };
+  schemas: {
+    ChatCapability: {
+      enabled: boolean;
+      maximum_tool_calls: number;
+      maximum_rows: number;
+      maximum_result_bytes: number;
+      /** Format: int64 */
+      maximum_usage: number;
+      /** Format: int64 */
+      maximum_duration_seconds: number;
+      maximum_message_runes: number;
     };
-    responses: {
-        /** @description Strict JSON, identifier, cursor, pagination, idempotency key, or bounded content is invalid */
-        BadRequest: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description Exact session authentication is required */
-        Unauthorized: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description The current or revalidated user cannot use Chat or access the requested resource */
-        Forbidden: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description The private resource does not exist for this owner */
-        NotFound: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description Another run is active, a version changed, or the requested transition is no longer valid */
-        Busy: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description The private thread or explicit result context expired or no longer matches */
-        StaleContext: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description A persistent request, usage, tool, row, byte, or result bound was reached */
-        RateOrQuotaLimited: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description A provider or tool response did not satisfy the safe typed contract */
-        UnsafeUpstream: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description Chat is disabled, unavailable, or exceeded its safe deadline */
-        Unavailable: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
+    ChatThread: {
+      /** Format: uuid */
+      id: string;
+      title: string;
+      /** Format: uuid */
+      active_result_reference_id?: string;
+      /** Format: date-time */
+      retention_expires_at: string;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
     };
-    parameters: {
-        ThreadID: string;
-        RunID: string;
-        ReferenceID: string;
-        ThreadLimit: number;
-        ThreadOffset: number;
-        MessageLimit: number;
-        MessageOffset: number;
-        ResultLimit: number;
-        ResultOffset: number;
+    ChatThreadPage: {
+      threads: components["schemas"]["ChatThread"][];
+      total: number;
+      limit: number;
+      offset: number;
     };
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    /** @enum {string} */
+    ChatMessageRole: "USER" | "ASSISTANT";
+    ChatMessage: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      thread_id: string;
+      /** Format: uuid */
+      run_id: string;
+      /** Format: int64 */
+      sequence: number;
+      role: components["schemas"]["ChatMessageRole"];
+      content: string;
+      result_reference_ids: string[];
+      /** Format: date-time */
+      created_at: string;
+    };
+    ChatMessagePage: {
+      messages: components["schemas"]["ChatMessage"][];
+      total: number;
+      limit: number;
+      offset: number;
+    };
+    /** @enum {string} */
+    ChatRunState: "QUEUED" | "RUNNING" | "TOOL_RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED";
+    ChatRun: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      thread_id: string;
+      /** Format: uuid */
+      retry_of_run_id?: string;
+      state: components["schemas"]["ChatRunState"];
+      tool_call_count: number;
+      /** Format: int64 */
+      input_usage: number;
+      /** Format: int64 */
+      output_usage: number;
+      /** Format: int64 */
+      result_bytes: number;
+      error_code?: string;
+      /** Format: date-time */
+      cancel_requested_at?: string;
+      /** Format: date-time */
+      started_at?: string;
+      /** Format: date-time */
+      completed_at?: string;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    ChatRunCreation: {
+      run: components["schemas"]["ChatRun"];
+      user_message: components["schemas"]["ChatMessage"];
+      created: boolean;
+    };
+    /** @enum {string} */
+    ChatResultReferenceKind: "SEARCH" | "QUERY";
+    ChatResultReference: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      thread_id: string;
+      /** Format: uuid */
+      run_id: string;
+      kind: components["schemas"]["ChatResultReferenceKind"];
+      /** Format: uuid */
+      query_execution_id?: string;
+      label: string;
+      row_count: number;
+      column_count: number;
+      /** Format: date-time */
+      expires_at: string;
+      /** Format: date-time */
+      created_at: string;
+    };
+    SearchEvidence: {
+      /** @enum {string} */
+      module: "profiles" | "documents" | "bills" | "custom_data" | "attachments";
+      entity_kind: string;
+      entity_id: string;
+      profile_id?: string;
+      target_kind: string;
+      target_id: string;
+      entity_label: string;
+      field_key: string;
+      field_label: string;
+      preview: string;
+      /** Format: int32 */
+      score: number;
+    };
+    SearchReferenceData: {
+      /** Format: uuid */
+      reference_id: string;
+      results: components["schemas"]["SearchEvidence"][];
+      /** Format: int64 */
+      total: number;
+    };
+    /** @enum {string} */
+    QueryValueKind:
+      | "text"
+      | "long_text"
+      | "identifier"
+      | "integer"
+      | "decimal"
+      | "boolean"
+      | "civil_date"
+      | "civil_month"
+      | "timestamp"
+      | "enum";
+    QueryResultColumn: {
+      position: number;
+      field_key: string;
+      label: string;
+      kind: components["schemas"]["QueryValueKind"];
+    };
+    QueryResultCell: {
+      column_position: number;
+      kind: components["schemas"]["QueryValueKind"];
+      is_null: boolean;
+      value?: string | number | boolean;
+      truncated?: boolean;
+    };
+    QueryResultRow: {
+      position: number;
+      entity_kind: string;
+      entity_id: string;
+      entity_label: string;
+      cells: components["schemas"]["QueryResultCell"][];
+    };
+    QueryReferenceData: {
+      /** Format: uuid */
+      execution_id: string;
+      columns: components["schemas"]["QueryResultColumn"][];
+      rows: components["schemas"]["QueryResultRow"][];
+      total: number;
+    };
+    ChatReferenceResult: {
+      reference: components["schemas"]["ChatResultReference"];
+      data:
+        | components["schemas"]["SearchReferenceData"]
+        | components["schemas"]["QueryReferenceData"];
+      row_count: number;
+      field_count: number;
+    };
+    /** @enum {string} */
+    ChatEventKind:
+      | "RUN_ACCEPTED"
+      | "RUN_STARTED"
+      | "TEXT_DELTA"
+      | "TOOL_STARTED"
+      | "TOOL_COMPLETED"
+      | "RESULT_REFERENCE"
+      | "RUN_COMPLETED"
+      | "RUN_FAILED"
+      | "RUN_CANCELLED";
+    ChatEvent: {
+      /** Format: int64 */
+      sequence: number;
+      kind: components["schemas"]["ChatEventKind"];
+      text_delta?: string;
+      /** Format: uuid */
+      tool_step_id?: string;
+      /** Format: uuid */
+      result_reference_id?: string;
+      error_code?: string;
+      /** Format: date-time */
+      created_at: string;
+    };
+    CreateChatThreadRequest: {
+      title?: string;
+    };
+    RenameChatThreadRequest: {
+      title: string;
+      /** Format: int64 */
+      version: number;
+    };
+    SetChatActiveResultRequest: {
+      /** Format: uuid */
+      reference_id: string | null;
+    };
+    StartChatTurnRequest: {
+      content: string;
+      idempotency_key: string;
+      /** Format: uuid */
+      retry_of_run_id?: string;
+    };
+    ErrorResponse: {
+      error: {
+        /** @enum {string} */
+        code:
+          | "bad_request"
+          | "invalid_json"
+          | "unsupported_media_type"
+          | "request_too_large"
+          | "unauthorized"
+          | "forbidden"
+          | "not_found"
+          | "rate_limited"
+          | "chat_unavailable"
+          | "chat_busy"
+          | "chat_quota_exceeded"
+          | "chat_timeout"
+          | "chat_cancelled"
+          | "chat_stale_context"
+          | "chat_malformed_provider"
+          | "chat_tool_failed"
+          | "chat_unsafe_result"
+          | "internal_error";
+        message: string;
+      };
+      request_id?: string;
+    };
+  };
+  responses: {
+    /** @description Strict JSON, identifier, cursor, pagination, idempotency key, or bounded content is invalid */
+    BadRequest: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Exact session authentication is required */
+    Unauthorized: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The current or revalidated user cannot use Chat or access the requested resource */
+    Forbidden: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The private resource does not exist for this owner */
+    NotFound: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Another run is active, a version changed, or the requested transition is no longer valid */
+    Busy: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The private thread or explicit result context expired or no longer matches */
+    StaleContext: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description A persistent request, usage, tool, row, byte, or result bound was reached */
+    RateOrQuotaLimited: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description A provider or tool response did not satisfy the safe typed contract */
+    UnsafeUpstream: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Chat is disabled, unavailable, or exceeded its safe deadline */
+    Unavailable: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+  };
+  parameters: {
+    ThreadID: string;
+    RunID: string;
+    ReferenceID: string;
+    ThreadLimit: number;
+    ThreadOffset: number;
+    MessageLimit: number;
+    MessageOffset: number;
+    ResultLimit: number;
+    ResultOffset: number;
+  };
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    getChatCapability: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Safe capability metadata; enabled is false until provider, model, and retention are explicitly configured */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatCapability"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
+  getChatCapability: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    listChatThreads: {
-        parameters: {
-            query?: {
-                limit?: components["parameters"]["ThreadLimit"];
-                offset?: components["parameters"]["ThreadOffset"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Safe capability metadata; enabled is false until provider, model, and retention are explicitly configured */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Compact owner-scoped thread metadata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatThreadPage"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            503: components["responses"]["Unavailable"];
+        content: {
+          "application/json": components["schemas"]["ChatCapability"];
         };
+      };
+      401: components["responses"]["Unauthorized"];
     };
-    createChatThread: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateChatThreadRequest"];
-            };
-        };
-        responses: {
-            /** @description Created thread */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatThread"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            503: components["responses"]["Unavailable"];
-        };
+  };
+  listChatThreads: {
+    parameters: {
+      query?: {
+        limit?: components["parameters"]["ThreadLimit"];
+        offset?: components["parameters"]["ThreadOffset"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    getChatThread: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                thread_id: components["parameters"]["ThreadID"];
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Compact owner-scoped thread metadata */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Private thread metadata */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatThread"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            410: components["responses"]["StaleContext"];
-            503: components["responses"]["Unavailable"];
+        content: {
+          "application/json": components["schemas"]["ChatThreadPage"];
         };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["Unavailable"];
     };
-    deleteChatThread: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                thread_id: components["parameters"]["ThreadID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Thread deleted; canonical Search and Query data retain their own lifecycle */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Busy"];
-            503: components["responses"]["Unavailable"];
-        };
+  };
+  createChatThread: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    renameChatThread: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                thread_id: components["parameters"]["ThreadID"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RenameChatThreadRequest"];
-            };
-        };
-        responses: {
-            /** @description Renamed thread */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatThread"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Busy"];
-            410: components["responses"]["StaleContext"];
-            503: components["responses"]["Unavailable"];
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateChatThreadRequest"];
+      };
     };
-    listChatMessages: {
-        parameters: {
-            query?: {
-                limit?: components["parameters"]["MessageLimit"];
-                offset?: components["parameters"]["MessageOffset"];
-            };
-            header?: never;
-            path: {
-                thread_id: components["parameters"]["ThreadID"];
-            };
-            cookie?: never;
+    responses: {
+      /** @description Created thread */
+      201: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Ordered private message page */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatMessagePage"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            410: components["responses"]["StaleContext"];
-            503: components["responses"]["Unavailable"];
+        content: {
+          "application/json": components["schemas"]["ChatThread"];
         };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["Unavailable"];
     };
-    setChatActiveResult: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                thread_id: components["parameters"]["ThreadID"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetChatActiveResultRequest"];
-            };
-        };
-        responses: {
-            /** @description Thread with updated explicit result context */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatThread"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            410: components["responses"]["StaleContext"];
-            503: components["responses"]["Unavailable"];
-        };
+  };
+  getChatThread: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        thread_id: components["parameters"]["ThreadID"];
+      };
+      cookie?: never;
     };
-    startChatTurn: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                thread_id: components["parameters"]["ThreadID"];
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Private thread metadata */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["StartChatTurnRequest"];
-            };
+        content: {
+          "application/json": components["schemas"]["ChatThread"];
         };
-        responses: {
-            /** @description Idempotently replayed run */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatRunCreation"];
-                };
-            };
-            /** @description Newly accepted run; the user message is returned only after persistence */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatRunCreation"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Busy"];
-            410: components["responses"]["StaleContext"];
-            429: components["responses"]["RateOrQuotaLimited"];
-            503: components["responses"]["Unavailable"];
-        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      410: components["responses"]["StaleContext"];
+      503: components["responses"]["Unavailable"];
     };
-    getChatRun: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: components["parameters"]["RunID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Normalized run state and safe usage counters */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatRun"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["Unavailable"];
-        };
+  };
+  deleteChatThread: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        thread_id: components["parameters"]["ThreadID"];
+      };
+      cookie?: never;
     };
-    cancelChatRun: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: components["parameters"]["RunID"];
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Thread deleted; canonical Search and Query data retain their own lifecycle */
+      204: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Current run state after the cancellation request */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatRun"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["Unavailable"];
-        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Busy"];
+      503: components["responses"]["Unavailable"];
     };
-    streamChatRunEvents: {
-        parameters: {
-            query?: {
-                after?: number;
-            };
-            header?: {
-                "Last-Event-ID"?: number;
-            };
-            path: {
-                run_id: components["parameters"]["RunID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description text/event-stream frames use sequence as id, ChatEventKind as event, and ChatEvent JSON as data; heartbeat comments carry no content */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": string;
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["Unavailable"];
-        };
+  };
+  renameChatThread: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        thread_id: components["parameters"]["ThreadID"];
+      };
+      cookie?: never;
     };
-    getChatResultReference: {
-        parameters: {
-            query?: {
-                limit?: components["parameters"]["ResultLimit"];
-                offset?: components["parameters"]["ResultOffset"];
-            };
-            header?: never;
-            path: {
-                reference_id: components["parameters"]["ReferenceID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Reauthorized typed evidence page and compact provenance */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChatReferenceResult"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            410: components["responses"]["StaleContext"];
-            429: components["responses"]["RateOrQuotaLimited"];
-            502: components["responses"]["UnsafeUpstream"];
-            503: components["responses"]["Unavailable"];
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RenameChatThreadRequest"];
+      };
     };
+    responses: {
+      /** @description Renamed thread */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatThread"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Busy"];
+      410: components["responses"]["StaleContext"];
+      503: components["responses"]["Unavailable"];
+    };
+  };
+  listChatMessages: {
+    parameters: {
+      query?: {
+        limit?: components["parameters"]["MessageLimit"];
+        offset?: components["parameters"]["MessageOffset"];
+      };
+      header?: never;
+      path: {
+        thread_id: components["parameters"]["ThreadID"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ordered private message page */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatMessagePage"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      410: components["responses"]["StaleContext"];
+      503: components["responses"]["Unavailable"];
+    };
+  };
+  setChatActiveResult: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        thread_id: components["parameters"]["ThreadID"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetChatActiveResultRequest"];
+      };
+    };
+    responses: {
+      /** @description Thread with updated explicit result context */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatThread"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      410: components["responses"]["StaleContext"];
+      503: components["responses"]["Unavailable"];
+    };
+  };
+  startChatTurn: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        thread_id: components["parameters"]["ThreadID"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StartChatTurnRequest"];
+      };
+    };
+    responses: {
+      /** @description Idempotently replayed run */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatRunCreation"];
+        };
+      };
+      /** @description Newly accepted run; the user message is returned only after persistence */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatRunCreation"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Busy"];
+      410: components["responses"]["StaleContext"];
+      429: components["responses"]["RateOrQuotaLimited"];
+      503: components["responses"]["Unavailable"];
+    };
+  };
+  getChatRun: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: components["parameters"]["RunID"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Normalized run state and safe usage counters */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatRun"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["Unavailable"];
+    };
+  };
+  cancelChatRun: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: components["parameters"]["RunID"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Current run state after the cancellation request */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatRun"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["Unavailable"];
+    };
+  };
+  streamChatRunEvents: {
+    parameters: {
+      query?: {
+        after?: number;
+      };
+      header?: {
+        "Last-Event-ID"?: number;
+      };
+      path: {
+        run_id: components["parameters"]["RunID"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description text/event-stream frames use sequence as id, ChatEventKind as event, and ChatEvent JSON as data; heartbeat comments carry no content */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/event-stream": string;
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["Unavailable"];
+    };
+  };
+  getChatResultReference: {
+    parameters: {
+      query?: {
+        limit?: components["parameters"]["ResultLimit"];
+        offset?: components["parameters"]["ResultOffset"];
+      };
+      header?: never;
+      path: {
+        reference_id: components["parameters"]["ReferenceID"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Reauthorized typed evidence page and compact provenance */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatReferenceResult"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      410: components["responses"]["StaleContext"];
+      429: components["responses"]["RateOrQuotaLimited"];
+      502: components["responses"]["UnsafeUpstream"];
+      503: components["responses"]["Unavailable"];
+    };
+  };
 }

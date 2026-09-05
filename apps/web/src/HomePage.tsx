@@ -29,7 +29,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
-import { normalizeProfileSearch } from "./ProfilesPage";
+import { normalizeProfileSearch } from "./ProfilePanel";
 import { CADASTRO_SEARCH_DEFAULTS } from "./lib/cadastro/cadastroSearch";
 import { useI18n } from "./i18n";
 import {
