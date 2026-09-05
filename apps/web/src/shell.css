@@ -392,10 +392,25 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   place-items: center;
   inline-size: 2.5rem;
   block-size: 2.5rem;
-  border-radius: var(--shape-sm);
-  border: 1px solid var(--md-outline-variant);
-  background: var(--md-surface);
+  border-radius: var(--gym-radius-md);
+  border: 1px solid color-mix(in oklch, var(--md-outline-variant) 80%, transparent);
+  background: var(--md-surface-low);
   color: var(--md-on-surface);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.app-shell__menu:hover {
+  background: var(--md-state-hover);
+  border-color: var(--md-outline);
+}
+
+.app-shell__menu:focus-visible {
+  outline: 2px solid var(--md-primary-text);
+  outline-offset: 2px;
 }
 
 .app-shell__scrim {
@@ -1152,10 +1167,14 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
     position: fixed;
     inset: 0;
     background: var(--md-scrim);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     z-index: var(--gym-z-scrim);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 200ms ease;
+    transition:
+      opacity 200ms ease,
+      backdrop-filter 200ms ease;
   }
   .app-shell--nav-open .app-shell__scrim {
     opacity: 1;
