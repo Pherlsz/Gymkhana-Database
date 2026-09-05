@@ -12,6 +12,7 @@ import {
   Download,
   Droplet,
   FileText,
+  FolderTree,
   GraduationCap,
   HardHat,
   Heart,
@@ -24,6 +25,7 @@ import {
   Smile,
   Stethoscope,
   User,
+  Users,
   Vote,
   Wifi,
   Zap,
@@ -56,10 +58,12 @@ export function HomePage() {
   const admin = canManageUsers(session.user.role);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [showAllChips, setShowAllChips] = useState(false);
+
   const documentsInUseTotal =
     typeof overview.documentsInUse === "number" ? overview.documentsInUse : 0;
   const billsInUseTotal = typeof overview.billsInUse === "number" ? overview.billsInUse : 0;
   const inUseTotal = documentsInUseTotal + billsInUseTotal;
+
   const catalogGroups = useMemo(
     () =>
       groupHomeCatalog({
@@ -88,6 +92,7 @@ export function HomePage() {
       overview.profileTotal,
     ],
   );
+
   const allGroupsOpen = catalogGroups.every((group) => !collapsedGroups.has(group.key));
 
   function toggleGroup(key: string) {
@@ -101,6 +106,7 @@ export function HomePage() {
 
   return (
     <div className="home-page">
+      {/* --- HERO & WELCOME BANNER --- */}
       <header className="home-page__header">
         <Typography.Title level={1} style={{ margin: 0 }}>
           {copy.welcome.replace("{name}", session.user.display_name || session.user.login)}
@@ -125,6 +131,92 @@ export function HomePage() {
         />
       ) : null}
 
+      {/* --- KPI OVERVIEW CARDS GRID --- */}
+      <div className="home-kpi-grid">
+        <Link
+          aria-label={`${copy.hero.people}: ${typeof overview.profileTotal === "number" ? overview.profileTotal.toLocaleString("pt-BR") : "—"}`}
+          className="home-kpi-card"
+          {...tableLinkProps(normalizeProfileSearch({}))}
+        >
+          <span className="home-kpi-card__icon">
+            <Users aria-hidden size={ICON.lg} strokeWidth={ICON_STROKE} />
+          </span>
+          <span className="home-kpi-card__body">
+            <span className="home-kpi-card__label">{copy.hero.people}</span>
+            {overview.loading.profiles ? (
+              <Skeleton.Input active size="small" style={{ width: "4rem", marginTop: 4 }} />
+            ) : (
+              <span className="home-kpi-card__value">
+                {typeof overview.profileTotal === "number"
+                  ? overview.profileTotal.toLocaleString("pt-BR")
+                  : "—"}
+              </span>
+            )}
+          </span>
+        </Link>
+
+        <Link
+          aria-label={`${messages.common.entities.documents} em uso: ${documentsInUseTotal.toLocaleString("pt-BR")}`}
+          className="home-kpi-card"
+          {...tableLinkProps(
+            normalizeProfileSearch({
+              section: "documents",
+              document_status: "IN_USE",
+            }),
+          )}
+        >
+          <span className="home-kpi-card__icon home-kpi-card__icon--warning">
+            <FileText aria-hidden size={ICON.lg} strokeWidth={ICON_STROKE} />
+          </span>
+          <span className="home-kpi-card__body">
+            <span className="home-kpi-card__label">Doc. em Uso</span>
+            {overview.loading.inUse ? (
+              <Skeleton.Input active size="small" style={{ width: "4rem", marginTop: 4 }} />
+            ) : (
+              <span className="home-kpi-card__value">
+                {documentsInUseTotal.toLocaleString("pt-BR")}
+              </span>
+            )}
+          </span>
+        </Link>
+
+        <Link
+          aria-label={`${messages.common.entities.bills} em uso: ${billsInUseTotal.toLocaleString("pt-BR")}`}
+          className="home-kpi-card"
+          {...tableLinkProps(
+            normalizeProfileSearch({
+              section: "bills",
+              bill_status: "IN_USE",
+            }),
+          )}
+        >
+          <span className="home-kpi-card__icon home-kpi-card__icon--purple">
+            <Receipt aria-hidden size={ICON.lg} strokeWidth={ICON_STROKE} />
+          </span>
+          <span className="home-kpi-card__body">
+            <span className="home-kpi-card__label">Contas em Uso</span>
+            {overview.loading.inUse ? (
+              <Skeleton.Input active size="small" style={{ width: "4rem", marginTop: 4 }} />
+            ) : (
+              <span className="home-kpi-card__value">
+                {billsInUseTotal.toLocaleString("pt-BR")}
+              </span>
+            )}
+          </span>
+        </Link>
+
+        <div className="home-kpi-card home-kpi-card--static">
+          <span className="home-kpi-card__icon">
+            <FolderTree aria-hidden size={ICON.lg} strokeWidth={ICON_STROKE} />
+          </span>
+          <span className="home-kpi-card__body">
+            <span className="home-kpi-card__label">Categorias</span>
+            <span className="home-kpi-card__value">{catalogGroups.length}</span>
+          </span>
+        </div>
+      </div>
+
+      {/* --- DASHBOARD MAIN CONTENT SPLIT --- */}
       <div className="home-page__rail">
         <section className="home-page__actions">
           <h2 className="home-section__title">{copy.quickActions.title}</h2>
@@ -212,6 +304,7 @@ export function HomePage() {
                 </span>
               </Button>
             </Dropdown>
+
             <div className="quick-row">
               {admin ? (
                 <Button
@@ -237,6 +330,7 @@ export function HomePage() {
           </div>
         </section>
 
+        {/* --- ATTENTION & ACTIVE ALLOCATIONS PANEL --- */}
         <div className="home-complement__metrics">
           <section
             className={
@@ -251,6 +345,7 @@ export function HomePage() {
               </Typography.Title>
               <Typography.Text type="secondary">{copy.attention.subtitle}</Typography.Text>
             </div>
+
             {inUseTotal > 0 ? (
               <div className="home-attention__open">
                 {documentsInUseTotal > 0 ? (
@@ -291,6 +386,7 @@ export function HomePage() {
                 ) : null}
               </div>
             ) : null}
+
             {overview.loading.inUse ? (
               <Skeleton active paragraph={{ rows: 1 }} title={false} />
             ) : inUseTotal === 0 ? (
@@ -364,6 +460,8 @@ export function HomePage() {
           </Link>
         </div>
       </div>
+
+      {/* --- CATALOG TAXONOMY SECTION --- */}
       <div className="home-complement">
         <section>
           <div className="home-section__head">
@@ -430,6 +528,7 @@ function CatalogPanel({
       <h3 className="home-catalog__heading">
         <Button
           aria-expanded={open}
+          aria-label={`${label} (${extra})`}
           className="home-catalog__trigger"
           icon={
             <ChevronRight
@@ -465,8 +564,14 @@ function CatalogRow({ item }: { item: HomeCatalogItem }) {
       : item.kind === "document"
         ? normalizeProfileSearch({ section: "documents", ...typedFilter })
         : normalizeProfileSearch({ section: "bills", ...typedFilter });
+  const countLabel =
+    typeof item.count === "number" ? `, ${item.count.toLocaleString("pt-BR")}` : "";
   return (
-    <Link className="home-catalog__row" {...tableLinkProps(search)}>
+    <Link
+      aria-label={`${item.label}${countLabel}`}
+      className="home-catalog__row"
+      {...tableLinkProps(search)}
+    >
       <span className="home-catalog__row-icon">
         <CatalogIcon item={item} />
       </span>
@@ -535,7 +640,11 @@ function InUseTypeChip({ chip }: { chip: HomeInUseTypeChip }) {
           bill_status: "IN_USE",
         });
   return (
-    <Link className="home-attention__chip" {...tableLinkProps(search)}>
+    <Link
+      aria-label={`${chip.typeLabel}: ${chip.count.toLocaleString("pt-BR")}`}
+      className="home-attention__chip"
+      {...tableLinkProps(search)}
+    >
       <span className="home-attention__chip-label">{chip.typeLabel}</span>
       <span className="home-attention__chip-count">{chip.count.toLocaleString("pt-BR")}</span>
     </Link>
