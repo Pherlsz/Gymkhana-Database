@@ -1,6 +1,6 @@
 import { Button, Empty, Input, Select } from "antd";
-import { Plus, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Info, Plus, X } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FilterControl, type ToolbarFilterField } from "./FilterControl";
 import { ICON, ICON_STROKE } from "../../components/icons";
 
@@ -9,6 +9,91 @@ type PendingRow = { id: string; fieldKey: string | null };
 function hasValue(field: ToolbarFilterField): boolean {
   return field.value.trim().length > 0;
 }
+
+type FilterRowProps = {
+  rowId: string;
+  isApplied: boolean;
+  fieldKey: string | null;
+  field: ToolbarFilterField | undefined;
+  appliedRow: boolean;
+  canRemove: boolean;
+  fieldOptions: { value: string; label: string }[];
+  chooseFieldLabel: string;
+  chooseValueLabel: string;
+  removeFilterLabel: string;
+  onPickField: (
+    rowId: string,
+    isApplied: boolean,
+    field: ToolbarFilterField | undefined,
+    nextKey: string | null,
+  ) => void;
+  onRemove: (
+    rowId: string,
+    isApplied: boolean,
+    field: ToolbarFilterField | undefined,
+  ) => void;
+};
+
+const FilterRow = memo(function FilterRow({
+  rowId,
+  isApplied,
+  fieldKey,
+  field,
+  appliedRow,
+  canRemove,
+  fieldOptions,
+  chooseFieldLabel,
+  chooseValueLabel,
+  removeFilterLabel,
+  onPickField,
+  onRemove,
+}: FilterRowProps) {
+  const handleFieldChange = useCallback(
+    (value: string | null | undefined) => {
+      onPickField(rowId, isApplied, field, value ?? null);
+    },
+    [onPickField, rowId, isApplied, field],
+  );
+
+  const handleRemoveClick = useCallback(() => {
+    onRemove(rowId, isApplied, field);
+  }, [onRemove, rowId, isApplied, field]);
+
+  return (
+    <div
+      className={appliedRow ? "filter-surface__row is-applied" : "filter-surface__row"}
+      key={rowId}
+    >
+      <Select
+        allowClear
+        aria-label={chooseFieldLabel}
+        className="filter-surface__field-select"
+        optionFilterProp="label"
+        options={fieldOptions}
+        placeholder={chooseFieldLabel}
+        popupMatchSelectWidth
+        showSearch
+        value={fieldKey ?? undefined}
+        onChange={handleFieldChange}
+      />
+      <div className="filter-surface__control">
+        {field ? (
+          <FilterControl autoFocus={!hasValue(field)} field={field} />
+        ) : (
+          <Input allowClear disabled placeholder={chooseValueLabel} style={{ width: "100%" }} />
+        )}
+      </div>
+      <Button
+        aria-label={removeFilterLabel}
+        className="filter-surface__remove"
+        disabled={!canRemove}
+        icon={<X aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />}
+        type="text"
+        onClick={handleRemoveClick}
+      />
+    </div>
+  );
+});
 
 /**
  * Conditional filter builder: pick a column, then a value, then add another
@@ -64,10 +149,14 @@ export function FilterSurface({
   const pendingShown = pending.filter(
     (row) => row.fieldKey === null || !applied.some((field) => field.key === row.fieldKey),
   );
-  const usedKeys = new Set([
-    ...applied.map((field) => field.key),
-    ...pendingShown.flatMap((row) => (row.fieldKey ? [row.fieldKey] : [])),
-  ]);
+  const usedKeys = useMemo(
+    () =>
+      new Set([
+        ...applied.map((field) => field.key),
+        ...pendingShown.flatMap((row) => (row.fieldKey ? [row.fieldKey] : [])),
+      ]),
+    [applied, pendingShown],
+  );
   const unusedCount = fields.filter((field) => !usedKeys.has(field.key)).length;
   const hasEmptyPending = pendingShown.some((row) => row.fieldKey === null);
   const canAdd = unusedCount > 0 && !hasEmptyPending;
@@ -76,39 +165,94 @@ export function FilterSurface({
       field.local && (hasValue(field) || pendingShown.some((row) => row.fieldKey === field.key)),
   );
 
-  const fieldOptionsFor = (currentKey: string | null) =>
-    fields
-      .filter((field) => field.key === currentKey || !usedKeys.has(field.key))
-      .map((field) => ({ value: field.key, label: field.label }));
+  const fieldOptionsFor = useCallback(
+    (currentKey: string | null) =>
+      fields
+        .filter((field) => field.key === currentKey || !usedKeys.has(field.key))
+        .map((field) => ({ value: field.key, label: field.label })),
+    [fields, usedKeys],
+  );
 
-  const clearField = (key: string | null) => {
-    if (!key) return;
-    const field = fields.find((item) => item.key === key);
-    if (field && hasValue(field)) field.onChange("");
-  };
+  const clearField = useCallback(
+    (key: string | null) => {
+      if (!key) return;
+      const field = fields.find((item) => item.key === key);
+      if (field && hasValue(field)) field.onChange("");
+    },
+    [fields],
+  );
 
-  const pickAppliedField = (field: ToolbarFilterField, nextKey: string | null) => {
-    field.onChange("");
-    setPending((current) => [...current, { id: nextDraftId(), fieldKey: nextKey }]);
-  };
+  const pickAppliedField = useCallback(
+    (field: ToolbarFilterField, nextKey: string | null) => {
+      field.onChange("");
+      setPending((current) => [...current, { id: nextDraftId(), fieldKey: nextKey }]);
+    },
+    [],
+  );
 
-  const pickPendingField = (row: PendingRow, nextKey: string | null) => {
-    if (row.fieldKey && row.fieldKey !== nextKey) clearField(row.fieldKey);
-    setPending((current) =>
-      current.map((item) => (item.id === row.id ? { ...item, fieldKey: nextKey } : item)),
-    );
-  };
+  const pickPendingField = useCallback(
+    (row: PendingRow, nextKey: string | null) => {
+      if (row.fieldKey && row.fieldKey !== nextKey) clearField(row.fieldKey);
+      setPending((current) =>
+        current.map((item) => (item.id === row.id ? { ...item, fieldKey: nextKey } : item)),
+      );
+    },
+    [clearField],
+  );
 
-  const removePending = (row: PendingRow) => {
-    clearField(row.fieldKey);
-    setPending((current) => {
-      const next = current.filter((item) => item.id !== row.id);
-      if (applied.length === 0 && next.length === 0) {
-        return [{ id: nextDraftId(), fieldKey: null }];
+  const removePending = useCallback(
+    (row: PendingRow) => {
+      clearField(row.fieldKey);
+      setPending((current) => {
+        const next = current.filter((item) => item.id !== row.id);
+        if (applied.length === 0 && next.length === 0) {
+          return [{ id: nextDraftId(), fieldKey: null }];
+        }
+        return next;
+      });
+    },
+    [applied.length, clearField],
+  );
+
+  const handleClearAll = useCallback(() => {
+    for (const field of fields) {
+      if (hasValue(field)) field.onChange("");
+    }
+    setPending([{ id: nextDraftId(), fieldKey: null }]);
+  }, [fields]);
+
+  const handlePickField = useCallback(
+    (
+      rowId: string,
+      isApplied: boolean,
+      field: ToolbarFilterField | undefined,
+      nextKey: string | null,
+    ) => {
+      if (isApplied && field) {
+        pickAppliedField(field, nextKey);
+      } else {
+        const pendingRow = pending.find((p) => p.id === rowId);
+        if (pendingRow) pickPendingField(pendingRow, nextKey);
       }
-      return next;
-    });
-  };
+    },
+    [pickAppliedField, pickPendingField, pending],
+  );
+
+  const handleRemove = useCallback(
+    (
+      rowId: string,
+      isApplied: boolean,
+      field: ToolbarFilterField | undefined,
+    ) => {
+      if (isApplied && field) {
+        field.onChange("");
+      } else {
+        const pendingRow = pending.find((p) => p.id === rowId);
+        if (pendingRow) removePending(pendingRow);
+      }
+    },
+    [removePending, pending],
+  );
 
   const rows = [
     ...applied.map((field) => ({ kind: "applied" as const, id: field.key, field })),
@@ -119,6 +263,27 @@ export function FilterSurface({
 
   return (
     <div className="filter-surface">
+      <div className="filter-surface__header">
+        <div className="filter-surface__header-title">
+          <span>{appliedLabel}</span>
+          <span className={`filter-surface__header-badge ${applied.length > 0 ? "is-active" : ""}`}>
+            {applied.length > 0
+              ? `${applied.length} ativo${applied.length > 1 ? "s" : ""}`
+              : "Nenhum ativo"}
+          </span>
+        </div>
+        {applied.length > 0 ? (
+          <Button
+            className="filter-surface__clear-btn"
+            size="small"
+            type="text"
+            onClick={handleClearAll}
+          >
+            {clearLabel}
+          </Button>
+        ) : null}
+      </div>
+
       {rows.length === 0 ? (
         <Empty description={noFieldsLabel} image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
@@ -128,49 +293,23 @@ export function FilterSurface({
             const field =
               row.kind === "applied" ? row.field : fields.find((item) => item.key === row.fieldKey);
             const appliedRow = Boolean(field && hasValue(field));
+            const isApplied = row.kind === "applied";
             return (
-              <div
-                className={appliedRow ? "filter-surface__row is-applied" : "filter-surface__row"}
+              <FilterRow
+                appliedRow={appliedRow}
+                canRemove={canRemoveRow(fieldKey)}
+                chooseFieldLabel={chooseFieldLabel}
+                chooseValueLabel={chooseValueLabel}
+                field={field}
+                fieldKey={fieldKey}
+                fieldOptions={fieldOptionsFor(fieldKey)}
+                isApplied={isApplied}
                 key={row.id}
-              >
-                <Select
-                  allowClear
-                  aria-label={chooseFieldLabel}
-                  className="filter-surface__field-select"
-                  optionFilterProp="label"
-                  options={fieldOptionsFor(fieldKey)}
-                  placeholder={chooseFieldLabel}
-                  popupMatchSelectWidth
-                  showSearch
-                  value={fieldKey ?? undefined}
-                  onChange={(value) => {
-                    const nextKey = value ?? null;
-                    if (row.kind === "applied") pickAppliedField(row.field, nextKey);
-                    else pickPendingField(row, nextKey);
-                  }}
-                />
-                <div className="filter-surface__control">
-                  {field ? (
-                    <FilterControl autoFocus={!hasValue(field)} field={field} />
-                  ) : (
-                    <Input disabled placeholder={chooseValueLabel} />
-                  )}
-                </div>
-                <Button
-                  aria-label={removeFilterLabel}
-                  className="filter-surface__remove"
-                  disabled={!canRemoveRow(fieldKey)}
-                  icon={<X aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />}
-                  type="text"
-                  onClick={() => {
-                    if (row.kind === "applied") {
-                      row.field.onChange("");
-                      return;
-                    }
-                    removePending(row);
-                  }}
-                />
-              </div>
+                removeFilterLabel={removeFilterLabel}
+                rowId={row.id}
+                onPickField={handlePickField}
+                onRemove={handleRemove}
+              />
             );
           })}
         </div>
@@ -178,6 +317,7 @@ export function FilterSurface({
 
       <div className="filter-surface__footer">
         <Button
+          className="filter-surface__add-btn"
           disabled={!canAdd}
           icon={<Plus aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />}
           type="dashed"
@@ -187,20 +327,11 @@ export function FilterSurface({
         >
           {addFilterLabel}
         </Button>
-        {showsLocalHint ? <p className="filter-surface__hint">{localHint}</p> : null}
-        {applied.length > 0 ? (
-          <Button
-            size="small"
-            type="text"
-            onClick={() => {
-              for (const field of fields) {
-                if (hasValue(field)) field.onChange("");
-              }
-              setPending([{ id: nextDraftId(), fieldKey: null }]);
-            }}
-          >
-            {clearLabel}
-          </Button>
+        {showsLocalHint ? (
+          <span className="filter-surface__hint-pill">
+            <Info aria-hidden size={ICON.badge} strokeWidth={ICON_STROKE} />
+            {localHint}
+          </span>
         ) : null}
       </div>
     </div>

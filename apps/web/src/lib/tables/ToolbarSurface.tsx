@@ -1,6 +1,6 @@
 import { Button, Drawer, Popover } from "antd";
 import { ChevronDown } from "lucide-react";
-import { useCallback, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { atLeast } from "../breakpoints";
 import { useMediaQuery } from "../useMediaQuery";
 import { SHEET_INSPECTOR_SHEET_SIZE } from "./sheetDefaults";
@@ -59,18 +59,21 @@ export function ToolbarSurface({
     [onOpenChange],
   );
 
-  const body = (
-    <div
-      aria-label={title}
-      className="toolbar-surface__body"
-      id={surfaceId}
-      ref={bodyRef}
-      role="dialog"
-      tabIndex={-1}
-      onKeyDown={closeOnEscape}
-    >
-      {children}
-    </div>
+  const body = useMemo(
+    () => (
+      <div
+        aria-label={title}
+        className="toolbar-surface__body"
+        id={surfaceId}
+        ref={bodyRef}
+        role="dialog"
+        tabIndex={-1}
+        onKeyDown={closeOnEscape}
+      >
+        {children}
+      </div>
+    ),
+    [title, surfaceId, closeOnEscape, children],
   );
 
   const trigger = (
@@ -110,13 +113,14 @@ export function ToolbarSurface({
         {trigger}
         <Drawer
           className="toolbar-surface__drawer"
+          destroyOnClose
           height={SHEET_INSPECTOR_SHEET_SIZE}
           open={open}
           placement="bottom"
           title={undefined}
           onClose={() => onOpenChange(false)}
         >
-          {body}
+          {open ? body : null}
         </Drawer>
       </>
     );
@@ -126,7 +130,8 @@ export function ToolbarSurface({
     <Popover
       arrow={false}
       classNames={{ root: "toolbar-surface__popover" }}
-      content={body}
+      content={open ? body : null}
+      destroyTooltipOnHide
       open={open}
       placement="bottomLeft"
       trigger="click"

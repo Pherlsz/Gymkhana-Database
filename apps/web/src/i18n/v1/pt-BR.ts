@@ -1,5 +1,20 @@
 import type { CatalogV1 } from "./catalog";
 
+const COMMON_LABELS = {
+  physical: "Físico",
+  digital: "Digital",
+  yes: "Sim",
+  no: "Não",
+  notProvided: "Não informado",
+  organization: "Organização",
+  cancel: "Cancelar",
+  save: "Salvar",
+  delete: "Excluir",
+  close: "Fechar",
+  selectDate: "Selecionar data",
+  cep: "CEP",
+} as const;
+
 export const ptBRV1 = {
   auth: {
     login: {
@@ -329,7 +344,7 @@ export const ptBRV1 = {
       minReqSatisfied: "Requisito atendido ({types})",
       sectionIdentityTitle: "Identidade & contato",
       sectionIdentityHint:
-        "Dados pessoais do titular. Digite o nome para buscar ou criar automaticamente.",
+        "Dados pessoais e de contato para o cadastro da pessoa.",
       fieldHolderName: "Nome do titular",
       fieldHolderPlaceholder: "Digite o nome completo…",
       fieldBirthDate: "Nascimento",
@@ -346,7 +361,7 @@ export const ptBRV1 = {
         "Qualquer documento oficial brasileiro (CPF, RG, CNH, certidão, OAB, CRM…).",
       sectionDocumentsEmpty: "Nenhum documento adicionado ainda.",
       btnAddDocument: "Adicionar documento",
-      btnCancelAdd: "Cancelar",
+      btnCancelAdd: COMMON_LABELS.cancel,
       btnConfirmAdd: "Adicionar",
       fieldDocType: "Tipo de documento",
       fieldDocNumber: "Número do documento",
@@ -364,12 +379,13 @@ export const ptBRV1 = {
       fieldBillInstallation: "Número de instalação / Conta",
       fieldBillCompetence: "Competência / Vencimento",
       fieldBillAmount: "Valor (R$)",
-      tagPhysical: "físico",
-      tagDigital: "digital",
+      fieldBillNotes: "Observações da conta",
+      tagPhysical: COMMON_LABELS.physical,
+      tagDigital: COMMON_LABELS.digital,
       tagActive: "ativa",
       tagOcr: "OCR",
       actionRemove: "Remover",
-      actionCancel: "Cancelar",
+      actionCancel: COMMON_LABELS.cancel,
       savingRecord: "Salvando cadastro…",
       summaryCount: "{docs} doc(s) · {bills} conta(s)",
       crumbNewPerson: "Nova pessoa",
@@ -387,7 +403,7 @@ export const ptBRV1 = {
       fieldDocValidUntil: "Validade",
       fieldDocMedium: "Meio",
       fieldDocCustody: "Guarda",
-      fieldDocCustodyOrg: "Organização",
+      fieldDocCustodyOrg: COMMON_LABELS.organization,
       fieldDocCustodyOwner: "Com o titular",
       fieldBillDueDate: "Data de vencimento",
       fieldBillPrintedHolder: "Nome impresso na fatura",
@@ -501,21 +517,34 @@ export const ptBRV1 = {
       cardDirectBillBadge: "OCR",
       cardAutoFormsBadge: "Google Sheets",
       cardAutoMassBadge: "XLSX / CSV",
+      badgeOfficial: "Oficial",
+      fieldDocDigitalStorageNotice:
+        "Armazenamento digital no sistema (dispensa custódia física)",
+      ocrBannerTitle: "Preenchimento inteligente via OCR",
+      ocrBannerDesc:
+        "Arraste a foto ou PDF do documento aqui, ou preencha manualmente abaixo",
+      ocrBannerBadge: "IA / OCR",
+      ocrBannerAction: "Anexar foto ou PDF",
+      placeholderDate: COMMON_LABELS.selectDate,
+      placeholderPostalCode: "00000-000",
+      placeholderNotProvided: COMMON_LABELS.notProvided,
+      optionYes: COMMON_LABELS.yes,
+      optionNo: COMMON_LABELS.no,
     },
     boolean: {
-      yes: "Sim",
-      no: "Não",
+      yes: COMMON_LABELS.yes,
+      no: COMMON_LABELS.no,
     },
     status: {
       AVAILABLE: "Disponível",
       IN_USE: "Em uso",
     },
     medium: {
-      PHYSICAL: "Físico",
-      DIGITAL: "Digital",
+      PHYSICAL: COMMON_LABELS.physical,
+      DIGITAL: COMMON_LABELS.digital,
     },
     idleCustody: {
-      ORGANIZATION: "Organização",
+      ORGANIZATION: COMMON_LABELS.organization,
       OWNER: "Com o dono",
     },
     pagination: {

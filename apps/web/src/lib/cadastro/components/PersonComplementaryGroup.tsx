@@ -55,6 +55,9 @@ export interface PersonComplementaryGroupProps {
     fieldTravelCountries: string;
     fieldCardBrand: string;
     fieldCardBank: string;
+    placeholderNotProvided: string;
+    optionYes: string;
+    optionNo: string;
   };
 }
 
@@ -176,7 +179,7 @@ export function PersonComplementaryGroup({
             allowClear
             disabled={isDisabled}
             id="cad-blood-donor"
-            placeholder="Não informado"
+            placeholder={copy.placeholderNotProvided}
             style={{ width: "100%" }}
             value={state.bloodDonor === null ? undefined : state.bloodDonor ? "true" : "false"}
             onChange={(val) =>
@@ -185,8 +188,8 @@ export function PersonComplementaryGroup({
               })
             }
             options={[
-              { value: "true", label: "Sim" },
-              { value: "false", label: "Não" },
+              { value: "true", label: copy.optionYes },
+              { value: "false", label: copy.optionNo },
             ]}
           />
         </div>
@@ -201,7 +204,7 @@ export function PersonComplementaryGroup({
             allowClear
             disabled={isDisabled}
             id="cad-organ-donor"
-            placeholder="Não informado"
+            placeholder={copy.placeholderNotProvided}
             style={{ width: "100%" }}
             value={state.organDonor === null ? undefined : state.organDonor ? "true" : "false"}
             onChange={(val) =>
@@ -210,8 +213,8 @@ export function PersonComplementaryGroup({
               })
             }
             options={[
-              { value: "true", label: "Sim" },
-              { value: "false", label: "Não" },
+              { value: "true", label: copy.optionYes },
+              { value: "false", label: copy.optionNo },
             ]}
           />
         </div>

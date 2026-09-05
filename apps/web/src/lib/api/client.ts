@@ -370,14 +370,14 @@ export async function listProfilesLookup(
 ): Promise<ProfilePageResponse> {
   const trimmed = q.trim();
   const query = new URLSearchParams({
-    limit: "20",
+    limit: "50",
     offset: "0",
     sort: "full_name",
     order: "asc",
   });
   if (trimmed) {
     const cleanDigits = trimmed.replace(/\D/g, "");
-    if (cleanDigits.length >= 3 && cleanDigits.length === trimmed.length) {
+    if (cleanDigits.length >= 3 && /^[0-9.\-\s/]+$/.test(trimmed)) {
       query.set("cpf", cleanDigits);
     } else {
       query.set("full_name", trimmed);

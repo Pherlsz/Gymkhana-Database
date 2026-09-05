@@ -1,6 +1,6 @@
 import { Button, DatePicker, Input, Segmented, Select, message } from "antd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Car, Check, ChevronDown, FileText, Plus, Trash2, User, Users, Zap } from "lucide-react";
+import { Car, Check, ChevronDown, FileText, Plus, Search, Trash2, User, Users, Zap } from "lucide-react";
 import { type ChangeEvent, useId, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useI18n } from "../../i18n";
@@ -211,51 +211,96 @@ export function CadastroSingleScreen({
     setPhone(p.mobile_phone || "");
     setLandline(p.landline_phone || "");
     setSocialName(p.social_name || "");
-    if (p.birth_date) setBirthDate(p.birth_date);
-    if (p.gender) setGender(p.gender);
-    if (p.marital_status) setMaritalStatus(p.marital_status);
-    if (p.blood_type) setBloodType(p.blood_type);
-    if (p.nationality) setNationality(p.nationality);
-    if (p.birth_city) setBirthCity(p.birth_city);
-    if (p.birth_country) setBirthCountry(p.birth_country);
-    if (p.place_of_origin) setPlaceOfOrigin(p.place_of_origin);
-    if (p.father_name) setFatherName(p.father_name);
-    if (p.father_birth_date) setFatherBirthDate(p.father_birth_date);
-    if (p.mother_name) setMotherName(p.mother_name);
-    if (p.mother_birth_date) setMotherBirthDate(p.mother_birth_date);
-    if (p.wedding_date) setWeddingDate(p.wedding_date);
-    if (p.parents_wedding_date) setParentsWeddingDate(p.parents_wedding_date);
+    setBirthDate(p.birth_date || undefined);
+    setGender(p.gender || undefined);
+    setMaritalStatus(p.marital_status || undefined);
+    setBloodType(p.blood_type || undefined);
+    setNationality(p.nationality || "");
+    setBirthCity(p.birth_city || "");
+    setBirthCountry(p.birth_country || "");
+    setPlaceOfOrigin(p.place_of_origin || "");
+    setFatherName(p.father_name || "");
+    setFatherBirthDate(p.father_birth_date || undefined);
+    setMotherName(p.mother_name || "");
+    setMotherBirthDate(p.mother_birth_date || undefined);
+    setWeddingDate(p.wedding_date || undefined);
+    setParentsWeddingDate(p.parents_wedding_date || undefined);
     if (p.address?.street) {
       setAddress(
-        `${p.address.street}${p.address.number ? `, ${p.address.number}` : ""}${
-          p.address.city ? ` — ${p.address.city}/${p.address.state || ""}` : ""
-        }`.trim(),
+        `${p.address.street}${p.address.number ? `, ${p.address.number}` : ""}${p.address.city ? ` — ${p.address.city}/${p.address.state || ""}` : ""
+          }`.trim(),
       );
-      if (p.address.postal_code) setPostalCode(p.address.postal_code);
+      setPostalCode(p.address.postal_code || "");
+    } else {
+      setAddress("");
+      setPostalCode("");
     }
-    if (p.vehicle_model) setVehicleModel(p.vehicle_model);
-    if (p.vehicle_color) setVehicleColor(p.vehicle_color);
-    if (p.vehicle_plate) setVehiclePlate(p.vehicle_plate);
-    if (p.vehicle_year) setVehicleYear(String(p.vehicle_year));
-    if (p.health_plan) setHealthPlan(p.health_plan);
-    if (p.blood_donor !== undefined) setBloodDonor(p.blood_donor);
-    if (p.organ_donor !== undefined) setOrganDonor(p.organ_donor);
-    if (p.team) setTeam(p.team);
-    if (p.sector) setSector(p.sector);
-    if (p.club_membership) setClubMembership(p.club_membership);
-    if (p.membership_type) setMembershipType(p.membership_type);
-    if (p.collections) setCollections(p.collections);
-    if (p.pet) setPet(p.pet);
-    if (p.supermarket_club) setSupermarketClub(p.supermarket_club);
-    if (p.travel_countries) setTravelCountries(p.travel_countries);
-    if (p.card_brand) setCardBrand(p.card_brand);
-    if (p.card_bank) setCardBank(p.card_bank);
+    setVehicleModel(p.vehicle_model || "");
+    setVehicleColor(p.vehicle_color || "");
+    setVehiclePlate(p.vehicle_plate || "");
+    setVehicleYear(p.vehicle_year ? String(p.vehicle_year) : "");
+    setHealthPlan(p.health_plan || "");
+    setBloodDonor(p.blood_donor !== undefined ? p.blood_donor : undefined);
+    setOrganDonor(p.organ_donor !== undefined ? p.organ_donor : undefined);
+    setTeam(p.team || "");
+    setSector(p.sector || "");
+    setClubMembership(p.club_membership || "");
+    setMembershipType(p.membership_type || "");
+    setCollections(p.collections || "");
+    setPet(p.pet || "");
+    setSupermarketClub(p.supermarket_club || "");
+    setTravelCountries(p.travel_countries || "");
+    setCardBrand(p.card_brand || "");
+    setCardBank(p.card_bank || "");
   };
 
   // Profile lookup clear handler
   const handleClearProfile = () => {
     setSelectedProfile(null);
     setHolderName("");
+    setCpf("");
+    setEmail("");
+    setPhone("");
+    setLandline("");
+    setSocialName("");
+    setBirthDate(undefined);
+    setGender(undefined);
+    setMaritalStatus(undefined);
+    setBloodType(undefined);
+    setNationality("");
+    setBirthCity("");
+    setBirthCountry("");
+    setPlaceOfOrigin("");
+    setFatherName("");
+    setFatherBirthDate(undefined);
+    setMotherName("");
+    setMotherBirthDate(undefined);
+    setWeddingDate(undefined);
+    setParentsWeddingDate(undefined);
+    setAddress("");
+    setPostalCode("");
+    setVehicleModel("");
+    setVehicleColor("");
+    setVehiclePlate("");
+    setVehicleYear("");
+    setHealthPlan("");
+    setBloodDonor(undefined);
+    setOrganDonor(undefined);
+    setTeam("");
+    setSector("");
+    setClubMembership("");
+    setMembershipType("");
+    setCollections("");
+    setPet("");
+    setSupermarketClub("");
+    setTravelCountries("");
+    setCardBrand("");
+    setCardBank("");
+  };
+
+  const handleSelectNewName = (name: string) => {
+    handleClearProfile();
+    setHolderName(name);
   };
 
   // Requisito Mínimo calculation for Person mode
@@ -399,7 +444,7 @@ export function CadastroSingleScreen({
 
   // Helper to ensure or create profile
   const resolveOrCreateProfile = async (fallbackName: string): Promise<string> => {
-    if (selectedProfile) return selectedProfile.id;
+    if (mode !== "people" && selectedProfile) return selectedProfile.id;
     const finalName = holderName.trim() || fallbackName.trim() || copy.holderFallbackDefault;
     const profile = await createProfile({
       full_name: finalName,
@@ -604,13 +649,16 @@ export function CadastroSingleScreen({
       {mode === "documents" && (
         <>
           {/* Seção 1: Dados Completos do Documento */}
-          <section className={`cadastro-group ${openPrimary ? "" : "cadastro-group--collapsed"}`}>
+          <section className={`cadastro-group cadastro-group--documents ${openPrimary ? "" : "cadastro-group--collapsed"}`}>
             <header className="cadastro-group__header" onClick={() => setOpenPrimary((p) => !p)}>
               <div className="cadastro-group__title-area">
-                <span className="cadastro-group__icon">
+                <span className="cadastro-group__icon cadastro-group__icon--documents">
                   <FileText size={18} strokeWidth={1.75} />
                 </span>
-                <h2 className="cadastro-group__title">{copy.sectionDocData}</h2>
+                <div className="cadastro-group__title-wrap">
+                  <h2 className="cadastro-group__title">{copy.sectionDocData}</h2>
+                  <span className="cadastro-group__badge cadastro-group__badge--documents">{copy.badgeOfficial}</span>
+                </div>
               </div>
               <ChevronDown className="cadastro-group__chevron" size={18} />
             </header>
@@ -684,10 +732,7 @@ export function CadastroSingleScreen({
                           createNewOptionText={copy.holderCreateNewOption}
                           id="cad-doc-holder"
                           onClear={handleClearProfile}
-                          onSelectNewName={(name) => {
-                            setSelectedProfile(null);
-                            setHolderName(name);
-                          }}
+                          onSelectNewName={handleSelectNewName}
                           onSelectProfile={(p) => applyProfileToState(p)}
                           placeholder={copy.holderSelectPlaceholder}
                           selectedProfile={selectedProfile}
@@ -815,10 +860,7 @@ export function CadastroSingleScreen({
                           createNewOptionText={copy.holderCreateNewOption}
                           id="cad-bill-holder"
                           onClear={handleClearProfile}
-                          onSelectNewName={(name) => {
-                            setSelectedProfile(null);
-                            setHolderName(name);
-                          }}
+                          onSelectNewName={handleSelectNewName}
                           onSelectProfile={(p) => applyProfileToState(p)}
                           placeholder={copy.holderSelectPlaceholder}
                           selectedProfile={selectedProfile}
@@ -850,9 +892,8 @@ export function CadastroSingleScreen({
 
                 {/* Requisito Mínimo: Status Pill Positivo */}
                 <span
-                  className={`minreq-pill ${
-                    hasMinimumRequirement ? "minreq-pill--satisfied" : "minreq-pill--pending"
-                  }`}
+                  className={`minreq-pill ${hasMinimumRequirement ? "minreq-pill--satisfied" : "minreq-pill--pending"
+                    }`}
                 >
                   {hasMinimumRequirement ? (
                     <>
@@ -876,46 +917,9 @@ export function CadastroSingleScreen({
               <div className="cadastro-group__body">
                 <p className="cadastro-group__hint">{copy.sectionIdentityHint}</p>
 
-                <div className="cadastro-grid">
-                  {/* Busca e Vínculo de Titular */}
-                  <div className="cadastro-col-12">
-                    <div className="cadastro-field">
-                      <label className="cadastro-field__label" htmlFor="cad-p-holder-select">
-                        {copy.holderSelectPlaceholder}
-                      </label>
-                      {selectedProfile ? (
-                        <HolderSelectedCard
-                          autoFilledNotice={copy.holderAutoFilledNotice}
-                          changeText={copy.holderChangeButton}
-                          onChange={() => setSelectedProfile(null)}
-                          onUnlink={handleClearProfile}
-                          profile={selectedProfile}
-                          selectedTitle={copy.holderSelectedTitle}
-                          unlinkText={copy.holderUnlinkButton}
-                        />
-                      ) : (
-                        <HolderSearchSelect
-                          ariaLabel={copy.holderSelectPlaceholder}
-                          createNewOptionText={copy.holderCreateNewOption}
-                          id="cad-p-holder-select"
-                          onClear={handleClearProfile}
-                          onSelectNewName={(name) => {
-                            setSelectedProfile(null);
-                            setHolderName(name);
-                          }}
-                          onSelectProfile={(p) => applyProfileToState(p)}
-                          placeholder={copy.holderSelectPlaceholder}
-                          selectedProfile={selectedProfile}
-                          value={holderName}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-
                 <PersonDemographicsGroup
                   copy={copy}
-                  disabled={Boolean(selectedProfile)}
+                  disabled={false}
                   onChange={(patch) => {
                     if (patch.fullName !== undefined) setHolderName(patch.fullName);
                     if (patch.socialName !== undefined) setSocialName(patch.socialName);
@@ -977,7 +981,7 @@ export function CadastroSingleScreen({
                 <p className="cadastro-group__hint">{copy.sectionFamilyHint}</p>
                 <PersonFamilyGroup
                   copy={copy}
-                  disabled={Boolean(selectedProfile)}
+                  disabled={false}
                   onChange={(patch) => {
                     if (patch.fatherName !== undefined) setFatherName(patch.fatherName);
                     if (patch.fatherBirthDate !== undefined)
@@ -1024,7 +1028,7 @@ export function CadastroSingleScreen({
                 <p className="cadastro-group__hint">{copy.sectionComplementaryHint}</p>
                 <PersonComplementaryGroup
                   copy={copy}
-                  disabled={Boolean(selectedProfile)}
+                  disabled={false}
                   onChange={(patch) => {
                     if (patch.vehicleModel !== undefined) setVehicleModel(patch.vehicleModel);
                     if (patch.vehicleColor !== undefined) setVehicleColor(patch.vehicleColor);
@@ -1160,6 +1164,7 @@ export function CadastroSingleScreen({
                           <label className="cadastro-field__label">{copy.fieldDocDate}</label>
                           <DatePicker
                             format="DD/MM/YYYY"
+                            placeholder={copy.placeholderDate}
                             style={{ width: "100%" }}
                             value={inlineDocDate ? dayjs(inlineDocDate) : null}
                             onChange={(d) =>
@@ -1173,6 +1178,7 @@ export function CadastroSingleScreen({
                           <label className="cadastro-field__label">{copy.fieldDocValidUntil}</label>
                           <DatePicker
                             format="DD/MM/YYYY"
+                            placeholder={copy.placeholderDate}
                             style={{ width: "100%" }}
                             value={inlineDocValidUntil ? dayjs(inlineDocValidUntil) : null}
                             onChange={(d) =>
@@ -1429,8 +1435,8 @@ export function CadastroSingleScreen({
         summaryText={
           mode === "people"
             ? copy.summaryCount
-                .replace("{docs}", String(documents.length))
-                .replace("{bills}", String(bills.length))
+              .replace("{docs}", String(documents.length))
+              .replace("{bills}", String(bills.length))
             : undefined
         }
       />

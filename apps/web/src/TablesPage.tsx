@@ -631,11 +631,14 @@ export function TablesPage() {
     },
   });
 
-  const updateCols = (cols: string) => {
-    startTransition(() => {
-      updateSearch({ cols });
-    });
-  };
+  const updateCols = useCallback(
+    (cols: string) => {
+      startTransition(() => {
+        updateSearch({ cols });
+      });
+    },
+    [updateSearch],
+  );
 
   const recordCopy = copy.record;
   const selectedRecordId =
@@ -772,6 +775,35 @@ export function TablesPage() {
     />
   ) : null;
 
+  const columnPickerItems = useMemo(
+    () =>
+      columns.map((column) => ({
+        key: column.key,
+        label: columnLabel(column),
+        group: copy.columnPicker.groups[columnGroup(column.key, scope)],
+        visible: isColumnVisible(column, columnOverrides),
+        locked: Boolean(column.locked),
+      })),
+    [columns, copy.columnPicker.groups, columnOverrides, scope],
+  );
+
+  const handleColumnToggle = useCallback(
+    (key: string, visible: boolean) => {
+      const column = columns.find((item) => item.key === key);
+      if (!column) return;
+      updateCols(formatColumnCols(setColumnVisible(column, visible, columnOverrides)));
+    },
+    [columns, columnOverrides, updateCols],
+  );
+
+  const handleColumnShowAll = useCallback(() => {
+    updateCols(formatColumnCols(showAllColumns(columns, columnOverrides)));
+  }, [columns, columnOverrides, updateCols]);
+
+  const handleColumnReset = useCallback(() => {
+    updateCols("");
+  }, [updateCols]);
+
   return (
     <div className="tables-page">
       <PageHeader description={sectionCopy.description} title={sectionCopy.title} />
@@ -824,20 +856,10 @@ export function TablesPage() {
               .replace("{visible}", String(visible))
               .replace("{total}", String(totalCount)),
           hiddenCount: columnMetadataLoading ? 0 : columns.length - visibleColumns.length,
-          items: columns.map((column) => ({
-            key: column.key,
-            label: columnLabel(column),
-            group: copy.columnPicker.groups[columnGroup(column.key, scope)],
-            visible: isColumnVisible(column, columnOverrides),
-            locked: Boolean(column.locked),
-          })),
-          onToggle: (key, visible) => {
-            const column = columns.find((item) => item.key === key);
-            if (!column) return;
-            updateCols(formatColumnCols(setColumnVisible(column, visible, columnOverrides)));
-          },
-          onShowAll: () => updateCols(formatColumnCols(showAllColumns(columns, columnOverrides))),
-          onReset: () => updateCols(""),
+          items: columnPickerItems,
+          onToggle: handleColumnToggle,
+          onShowAll: handleColumnShowAll,
+          onReset: handleColumnReset,
         }}
       />
 

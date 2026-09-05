@@ -5,7 +5,12 @@ import { I18nProvider } from "../../i18n";
 import { CadastroSingleScreen } from "./CadastroSingleScreen";
 import { createBill, createDocument, createProfile } from "../api/client";
 
-afterEach(cleanup);
+import { message } from "antd";
+
+afterEach(() => {
+  cleanup();
+  message.destroy();
+});
 
 vi.mock("../api/client", () => ({
   listDocumentTypes: vi.fn().mockResolvedValue({
@@ -129,9 +134,58 @@ describe("CadastroSingleScreen", () => {
         );
       });
     });
+
+    it("allows direct editing of titular fields in people mode", () => {
+      renderSingleScreen("people");
+      const nameInput = screen.getByLabelText(/Nome do titular/i);
+      expect(nameInput).not.toBeDisabled();
+      const cpfInput = screen.getByLabelText(/^CPF$/i);
+      expect(cpfInput).not.toBeDisabled();
+      const emailInput = screen.getByLabelText(/E-mail/i);
+      expect(emailInput).not.toBeDisabled();
+    });
   });
 
   describe("Document mode (targetTable='documents')", () => {
+    it("clears auto-filled fields when unlinking titular", async () => {
+      const { listProfilesLookup } = await import("../api/client");
+      vi.mocked(listProfilesLookup).mockResolvedValue({
+        profiles: [
+          {
+            id: "profile-pedro",
+            full_name: "Pedro Henrique Silveira Lopes",
+            cpf: "03650716097",
+            mobile_phone: "51998606105",
+            email: "pedro@example.com",
+            birth_date: "1998-02-24",
+            address: { street: "Rua Oito", number: "120", city: "Butiá", state: "RS" },
+          } as any,
+        ],
+        page: { total: 1, limit: 10, offset: 0, sort_field: "full_name", sort_order: "asc" },
+      });
+
+      renderSingleScreen("documents");
+
+      const combobox = screen.getByRole("combobox", { name: /Nome do titular/i });
+      fireEvent.mouseDown(combobox);
+
+      const option = await screen.findByText(/Pedro Henrique Silveira Lopes/i);
+      fireEvent.click(option);
+
+      // Verify fields auto-filled
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^CPF$/i)).toHaveValue("03650716097");
+      });
+
+      // Click "Desvincular"
+      const unlinkBtn = screen.getByRole("button", { name: /Desvincular/i });
+      fireEvent.click(unlinkBtn);
+
+      // Verify fields cleared
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^CPF$/i)).toHaveValue("");
+      });
+    });
     it("renders document fields as primary and optional holder section", () => {
       renderSingleScreen("documents");
       expect(screen.getByRole("heading", { name: /Dados do documento/i })).not.toBeNull();

@@ -355,6 +355,7 @@ export type CatalogV1 = {
       fieldBillInstallation: string;
       fieldBillCompetence: string;
       fieldBillAmount: string;
+      fieldBillNotes: string;
       tagPhysical: string;
       tagDigital: string;
       tagActive: string;
@@ -483,6 +484,17 @@ export type CatalogV1 = {
       cardDirectBillBadge: string;
       cardAutoFormsBadge: string;
       cardAutoMassBadge: string;
+      badgeOfficial: string;
+      fieldDocDigitalStorageNotice: string;
+      ocrBannerTitle: string;
+      ocrBannerDesc: string;
+      ocrBannerBadge: string;
+      ocrBannerAction: string;
+      placeholderDate: string;
+      placeholderPostalCode: string;
+      placeholderNotProvided: string;
+      optionYes: string;
+      optionNo: string;
     };
     boolean: {
       yes: string;

@@ -104,8 +104,8 @@
    * container tint carries the block, the rule and gold text carry the signal.
    */
   --md-search-bg: var(--gray-1);
-  /* 85%: the lowest alpha that still clears WCAG 2.2 focus-appearance 3:1 on paper. */
-  --md-focus-ring: color-mix(in oklch, var(--md-primary-text) 85%, transparent);
+  /* Elegant halo focus ring using the brand accent */
+  --md-focus-ring: color-mix(in oklch, var(--brand-accent-solid) 28%, transparent);
   --md-nav-tree: color-mix(in oklch, var(--md-on-surface-variant) 38%, transparent);
   /*
    * States are washes of ink, never gold. This is what keeps gold rare enough
@@ -134,14 +134,19 @@
   --mark-physical: oklch(0.47 0.16 145);
   --mark-digital: oklch(0.46 0.17 250);
   --shape-xs: 4px;
-  --shape-sm: 8px;
+  --brand-accent-text: #92400e;
+  --brand-accent-icon: #b45309;
+  --brand-accent-surface: rgba(217, 119, 6, 0.08);
+  --brand-accent-border: rgba(217, 119, 6, 0.28);
+  --brand-accent-solid: #d97706;
+  --brand-accent-on-solid: #ffffff;
   --gym-color-canvas: var(--md-surface-low);
   --gym-color-surface: var(--md-surface);
   --gym-color-surface-raised: var(--md-surface-container);
   --gym-color-border: var(--md-outline);
   --gym-color-text: var(--md-on-surface);
   --gym-color-text-muted: var(--md-on-surface-variant);
-  --gym-color-accent: var(--md-primary-text);
+  --gym-color-accent: var(--brand-accent-text);
   --gym-color-danger: var(--md-error);
   --gym-color-warning: var(--md-warning);
   --gym-space-1: 0.25rem;
@@ -197,10 +202,16 @@ html.dark {
    * solid one.
    */
   --amber-11: oklch(0.88 0.075 88);
+  --brand-accent-text: #ffc53d;
+  --brand-accent-icon: #ffc53d;
+  --brand-accent-surface: rgba(255, 197, 61, 0.12);
+  --brand-accent-border: rgba(255, 197, 61, 0.32);
+  --brand-accent-solid: #ffc53d;
+  --brand-accent-on-solid: #141414;
   --md-surface-elevated: var(--gray-3);
   --md-primary-container: color-mix(in oklch, var(--md-primary) 20%, var(--md-surface));
   --md-search-bg: var(--gray-4);
-  --md-focus-ring: color-mix(in oklch, var(--md-primary-text) 80%, transparent);
+  --md-focus-ring: color-mix(in oklch, var(--brand-accent-solid) 35%, transparent);
   --md-nav-tree: color-mix(in oklch, var(--md-on-surface-variant) 28%, transparent);
   --md-success: oklch(0.78 0.15 155);
   --md-warning: oklch(0.8 0.115 62);

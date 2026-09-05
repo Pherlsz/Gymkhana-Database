@@ -506,6 +506,18 @@ WHERE ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
   AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
   AND (NOT $6::bool OR id = ANY($7::uuid[]))
 ORDER BY
+  CASE
+    WHEN $1::text <> '' THEN
+      CASE
+        WHEN lower(full_name) = lower($1::text) THEN 0
+        WHEN lower(full_name) LIKE lower($1::text) || ' %' THEN 1
+        WHEN lower(full_name) LIKE lower($1::text) || '%' THEN 2
+        WHEN lower(full_name) LIKE '% ' || lower($1::text) || ' %' THEN 3
+        WHEN lower(full_name) LIKE '% ' || lower($1::text) || '%' THEN 4
+        ELSE 5
+      END
+    ELSE 0
+  END ASC,
   (CASE WHEN $8::text = 'full_name' AND $9::text = 'asc' THEN full_name END) COLLATE gymkhana_pt_br ASC,
   (CASE WHEN $8::text = 'full_name' AND $9::text = 'desc' THEN full_name END) COLLATE gymkhana_pt_br DESC,
   CASE WHEN $8::text = 'cpf' AND $9::text = 'asc' THEN (

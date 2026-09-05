@@ -21,6 +21,7 @@ export interface PersonFamilyGroupProps {
     fieldMotherBirthDate: string;
     fieldWeddingDate: string;
     fieldParentsWeddingDate: string;
+    placeholderDate: string;
   };
 }
 
@@ -54,6 +55,7 @@ export function PersonFamilyGroup({ state, onChange, disabled, copy }: PersonFam
             disabled={isDisabled}
             format="DD/MM/YYYY"
             id="cad-fam-father-bdate"
+            placeholder={copy.placeholderDate}
             style={{ width: "100%" }}
             value={state.fatherBirthDate ? dayjs(state.fatherBirthDate) : null}
             onChange={(d) => onChange({ fatherBirthDate: d ? d.format("YYYY-MM-DD") : undefined })}
@@ -86,6 +88,7 @@ export function PersonFamilyGroup({ state, onChange, disabled, copy }: PersonFam
             disabled={isDisabled}
             format="DD/MM/YYYY"
             id="cad-fam-mother-bdate"
+            placeholder={copy.placeholderDate}
             style={{ width: "100%" }}
             value={state.motherBirthDate ? dayjs(state.motherBirthDate) : null}
             onChange={(d) => onChange({ motherBirthDate: d ? d.format("YYYY-MM-DD") : undefined })}
@@ -103,6 +106,7 @@ export function PersonFamilyGroup({ state, onChange, disabled, copy }: PersonFam
             disabled={isDisabled}
             format="DD/MM/YYYY"
             id="cad-fam-wedding"
+            placeholder={copy.placeholderDate}
             style={{ width: "100%" }}
             value={state.weddingDate ? dayjs(state.weddingDate) : null}
             onChange={(d) => onChange({ weddingDate: d ? d.format("YYYY-MM-DD") : undefined })}
@@ -119,6 +123,7 @@ export function PersonFamilyGroup({ state, onChange, disabled, copy }: PersonFam
             disabled={isDisabled}
             format="DD/MM/YYYY"
             id="cad-fam-parents-wedding"
+            placeholder={copy.placeholderDate}
             style={{ width: "100%" }}
             value={state.parentsWeddingDate ? dayjs(state.parentsWeddingDate) : null}
             onChange={(d) =>
