@@ -1071,7 +1071,8 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   }
   .app-shell--collapsed .nav-item--active {
     padding-inline-start: 0;
-    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--md-primary-text) 42%, transparent);
+    background: var(--md-surface-container);
+    color: var(--md-primary-text);
   }
   .app-shell--collapsed .app-shell__sidebar .shell-search {
     display: none;

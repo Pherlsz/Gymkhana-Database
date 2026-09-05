@@ -40,8 +40,6 @@ export function AuthenticatedShell() {
 function AuthenticatedShellLayout() {
   const { messages } = useI18n();
   const { session } = useApplicationContext();
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === "dark";
   const navigate = useNavigate();
   const copy = messages.shell;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -169,18 +167,6 @@ function AuthenticatedShellLayout() {
           )}
         </button>
         <ShellSearch compact inputRef={topbarSearchRef} />
-        <button
-          aria-label={copy.account.appearance}
-          className="app-shell__collapse"
-          onClick={toggleTheme}
-          type="button"
-        >
-          {isDark ? (
-            <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-          ) : (
-            <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-          )}
-        </button>
       </header>
       <button
         aria-hidden
@@ -201,45 +187,30 @@ function AuthenticatedShellLayout() {
             <img alt="" className="app-shell__logo-img" height={32} src="/Gampa.png" width={32} />
             <span className="brand-text">{copy.productName}</span>
           </Link>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+          {compact ? (
             <button
-              aria-label={copy.account.appearance}
+              aria-label={copy.navigation.closeNavigation}
               className="app-shell__collapse"
-              onClick={toggleTheme}
-              title={copy.account.appearance}
+              onClick={() => setNavOpen(false)}
               type="button"
             >
-              {isDark ? (
-                <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+              <X aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+            </button>
+          ) : (
+            <button
+              aria-label={rail ? copy.navigation.expandMenu : copy.navigation.collapseMenu}
+              className="app-shell__collapse"
+              onClick={toggleCollapsed}
+              title={rail ? copy.navigation.expandMenu : copy.navigation.collapseMenu}
+              type="button"
+            >
+              {rail ? (
+                <PanelLeftOpen aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
               ) : (
-                <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
               )}
             </button>
-            {compact ? (
-              <button
-                aria-label={copy.navigation.closeNavigation}
-                className="app-shell__collapse"
-                onClick={() => setNavOpen(false)}
-                type="button"
-              >
-                <X aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-              </button>
-            ) : (
-              <button
-                aria-label={rail ? copy.navigation.expandMenu : copy.navigation.collapseMenu}
-                className="app-shell__collapse"
-                onClick={toggleCollapsed}
-                title={rail ? copy.navigation.expandMenu : copy.navigation.collapseMenu}
-                type="button"
-              >
-                {rail ? (
-                  <PanelLeftOpen aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                ) : (
-                  <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                )}
-              </button>
-            )}
-          </div>
+          )}
         </div>
         {compact ? null : <ShellSearch inputRef={sidebarSearchRef} />}
         <nav>
