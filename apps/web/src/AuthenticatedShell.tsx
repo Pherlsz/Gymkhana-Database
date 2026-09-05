@@ -166,6 +166,20 @@ function AuthenticatedShellLayout() {
             <Menu aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
           )}
         </button>
+        <Link
+          aria-label={copy.productName}
+          className="app-shell__topbar-brand"
+          title={copy.productName}
+          to="/"
+        >
+          <img
+            alt=""
+            className="app-shell__logo-img app-shell__logo-img--topbar"
+            height={28}
+            src="/Gampa.png"
+            width={28}
+          />
+        </Link>
         <ShellSearch compact inputRef={topbarSearchRef} />
       </header>
       <button
@@ -449,11 +463,14 @@ function SidebarThemeToggle({ rail }: { rail: boolean }) {
         type="button"
       >
         {isDark ? (
-          <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-        ) : (
           <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+        ) : (
+          <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
         )}
         <span className="sidebar-theme-toggle__label">{label}</span>
+        <span aria-hidden className="sidebar-theme-toggle__switch">
+          <span className="sidebar-theme-toggle__thumb" />
+        </span>
       </button>
     </RailTip>
   );
