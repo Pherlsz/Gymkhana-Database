@@ -1,4 +1,5 @@
-import { Alert } from "antd";
+import { Alert, Button } from "antd";
+import { ArrowLeft } from "lucide-react";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 import { PageHeader } from "./components/PageHeader";
@@ -160,9 +161,15 @@ export function CadastroPage() {
       {!entryActive && work === "forms" ? (
         <div className="cadastro-work">
           <nav aria-label={copy.crumbHome} className="cadastro-crumb">
-            <button className="cadastro-crumb__btn" type="button" onClick={goToEntry}>
-              ← {copy.crumbHome}
-            </button>
+            <Button
+              className="cadastro-crumb__btn"
+              type="text"
+              size="small"
+              icon={<ArrowLeft size={13} />}
+              onClick={goToEntry}
+            >
+              {copy.crumbHome}
+            </Button>
             <span className="cadastro-crumb__sep">/</span>
             <span className="cadastro-crumb__current">{copy.modeForms}</span>
           </nav>
@@ -173,9 +180,15 @@ export function CadastroPage() {
       {!entryActive && (work === "xlsx" || work === "ocr") ? (
         <div className="cadastro-work">
           <nav aria-label={copy.crumbHome} className="cadastro-crumb">
-            <button className="cadastro-crumb__btn" type="button" onClick={goToEntry}>
-              ← {copy.crumbHome}
-            </button>
+            <Button
+              className="cadastro-crumb__btn"
+              type="text"
+              size="small"
+              icon={<ArrowLeft size={13} />}
+              onClick={goToEntry}
+            >
+              {copy.crumbHome}
+            </Button>
             <span className="cadastro-crumb__sep">/</span>
             <span className="cadastro-crumb__current">
               {work === "xlsx" ? copy.modeXlsx : copy.modeOcr}

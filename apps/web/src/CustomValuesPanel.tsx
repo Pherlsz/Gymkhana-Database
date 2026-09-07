@@ -1,6 +1,7 @@
-import { Alert, Button, Card, Flex, Tag } from "antd";
+import { Alert, Button, Card, Checkbox, Flex, Input, Select, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "./i18n";
 import { AttachmentsPanel } from "./AttachmentsPanel";
 import {
   getCustomValues,
@@ -27,6 +28,8 @@ type Props = {
 
 export function CustomValuesPanel(props: Props) {
   const queryClient = useQueryClient();
+  const { messages } = useI18n();
+  const copy = messages.admin.customValues;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, CustomDraftValue>>({});
   const fields = useQuery({
@@ -125,11 +128,11 @@ export function CustomValuesPanel(props: Props) {
               fields={scalarFields}
               onChange={setDraft}
             />
-            <Flex>
+            <Flex gap="0.5rem">
               {editing ? (
                 <>
-                  <Button disabled={save.isPending} onClick={() => save.mutate()}>
-                    {save.isPending ? "Salvando" : "Salvar dados personalizados"}
+                  <Button disabled={save.isPending} onClick={() => save.mutate()} type="primary">
+                    {save.isPending ? copy.saving : copy.saveCustomData}
                   </Button>
                   <Button
                     disabled={save.isPending}
@@ -138,11 +141,11 @@ export function CustomValuesPanel(props: Props) {
                       setEditing(false);
                     }}
                   >
-                    Cancelar
+                    {copy.cancel}
                   </Button>
                 </>
               ) : (
-                <Button onClick={() => setEditing(true)}>Editar dados personalizados</Button>
+                <Button onClick={() => setEditing(true)}>{copy.editCustomData}</Button>
               )}
             </Flex>
           </Flex>
@@ -192,6 +195,8 @@ function CustomFieldControl(props: {
   disabled: boolean;
   onChange: (value: CustomDraftValue) => void;
 }) {
+  const { messages } = useI18n();
+  const copy = messages.admin.customValues;
   const selectField =
     props.field.field_kind === "SINGLE_SELECT" || props.field.field_kind === "MULTI_SELECT";
   const options = useQuery({
@@ -206,17 +211,18 @@ function CustomFieldControl(props: {
     return (
       <label>
         {label}
-        <select
+        <Select
           disabled={props.disabled}
-          value={props.value === true ? "true" : props.value === false ? "false" : ""}
-          onChange={(event) =>
-            props.onChange(event.target.value === "" ? null : event.target.value === "true")
+          onChange={(value) =>
+            props.onChange(value === "" ? null : value === "true")
           }
-        >
-          <option value="">Não informado</option>
-          <option value="true">Sim</option>
-          <option value="false">Não</option>
-        </select>
+          options={[
+            { value: "", label: copy.notProvided },
+            { value: "true", label: copy.yes },
+            { value: "false", label: copy.no },
+          ]}
+          value={props.value === true ? "true" : props.value === false ? "false" : ""}
+        />
       </label>
     );
   }
@@ -225,23 +231,19 @@ function CustomFieldControl(props: {
     return (
       <label>
         {label}
-        <select
+        <Select
           disabled={props.disabled || options.isLoading}
+          onChange={(value) => props.onChange(value ? [value] : [])}
+          options={[
+            { value: "", label: copy.notProvided },
+            ...(options.data?.options.map((option) => ({
+              value: option.id,
+              label: `${option.label}${option.active ? "" : copy.inactiveSuffix}`,
+              disabled: !option.active && option.id !== selected,
+            })) ?? []),
+          ]}
           value={selected}
-          onChange={(event) => props.onChange(event.target.value ? [event.target.value] : [])}
-        >
-          <option value="">Não informado</option>
-          {options.data?.options.map((option) => (
-            <option
-              key={option.id}
-              disabled={!option.active && option.id !== selected}
-              value={option.id}
-            >
-              {option.label}
-              {option.active ? "" : " (inativa)"}
-            </option>
-          ))}
-        </select>
+        />
       </label>
     );
   }
@@ -251,22 +253,21 @@ function CustomFieldControl(props: {
       <fieldset className="custom-values__choices" disabled={props.disabled || options.isLoading}>
         <legend>{label}</legend>
         {options.data?.options.map((option) => (
-          <label key={option.id}>
-            <input
-              checked={selected.includes(option.id)}
-              disabled={!option.active && !selected.includes(option.id)}
-              type="checkbox"
-              onChange={(event) =>
-                props.onChange(
-                  event.target.checked
-                    ? [...selected, option.id]
-                    : selected.filter((value) => value !== option.id),
-                )
-              }
-            />
+          <Checkbox
+            checked={selected.includes(option.id)}
+            disabled={!option.active && !selected.includes(option.id)}
+            key={option.id}
+            onChange={(event) =>
+              props.onChange(
+                event.target.checked
+                  ? [...selected, option.id]
+                  : selected.filter((value) => value !== option.id),
+              )
+            }
+          >
             {option.label}
-            {option.active ? "" : " (inativa)"}
-          </label>
+            {option.active ? "" : copy.inactiveSuffix}
+          </Checkbox>
         ))}
       </fieldset>
     );
@@ -275,7 +276,7 @@ function CustomFieldControl(props: {
     return (
       <label className="custom-values__wide">
         {label}
-        <textarea
+        <Input.TextArea
           disabled={props.disabled}
           maxLength={props.field.maximum_length || undefined}
           rows={4}
@@ -300,7 +301,7 @@ function CustomFieldControl(props: {
   return (
     <label>
       {label}
-      <input
+      <Input
         disabled={props.disabled}
         maxLength={props.field.maximum_length || undefined}
         min={props.field.minimum_decimal || undefined}

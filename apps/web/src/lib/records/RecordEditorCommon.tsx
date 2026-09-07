@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Flex, Tag } from "antd";
+import { Alert, Button, Card, Flex, Input, Tag } from "antd";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { createColumnHelper } from "@tanstack/react-table";
@@ -200,11 +200,11 @@ export function RecordInlineInput(props: {
     setValue(props.value);
   }
   return (
-    <input
+    <Input
       aria-label={props.ariaLabel}
       className="inline-editor"
-      inputMode={props.inputMode}
-      type={props.type}
+      {...(props.inputMode ? { inputMode: props.inputMode } : {})}
+      {...(props.type ? { type: props.type as any } : {})}
       value={value}
       onChange={(event) => setValue(event.target.value)}
       onBlur={() => {

@@ -1,6 +1,7 @@
-import { Alert, Button, Card, Checkbox, Flex } from "antd";
+import { Alert, Button, Card, Checkbox, Flex, Input, InputNumber } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useI18n } from "./i18n";
 import { customDataError } from "./CustomValuesPanel";
 import { emptyOption, optionValues } from "./CustomDataShared";
 import {
@@ -20,6 +21,8 @@ export function CustomOptionsAdmin({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { messages, t } = useI18n();
+  const copy = messages.admin.customOptions;
   const [draft, setDraft] = useState(emptyOption);
   const [editing, setEditing] = useState<CustomOption | null>(null);
   const query = useQuery({
@@ -48,41 +51,41 @@ export function CustomOptionsAdmin({
       <Flex vertical gap="1rem">
         <Flex align="center" className="custom-admin-card__header">
           <div>
-            <strong>Opções de {field.label}</strong>
-            <p>Opções inativas continuam legíveis em valores históricos.</p>
+            <strong>{t(copy.title, { label: field.label })}</strong>
+            <p>{copy.subtitle}</p>
           </div>
-          <Button onClick={onClose}>Fechar</Button>
+          <Button onClick={onClose}>{copy.close}</Button>
         </Flex>
         {save.isError || remove.isError || query.isError ? (
           <Alert
-            message="Não foi possível alterar opções"
+            message={copy.errorTitle}
             type="error"
             description={<>{customDataError(save.error ?? remove.error ?? query.error)}</>}
           />
         ) : null}
         <div className="custom-admin-grid">
           <label>
-            Chave técnica
-            <input
+            {copy.technicalKey}
+            <Input
               disabled={Boolean(editing)}
               value={draft.technical_key}
               onChange={(event) => setDraft({ ...draft, technical_key: event.target.value })}
             />
           </label>
           <label>
-            Nome
-            <input
+            {copy.name}
+            <Input
               value={draft.label}
               onChange={(event) => setDraft({ ...draft, label: event.target.value })}
             />
           </label>
           <label>
-            Ordem
-            <input
-              inputMode="numeric"
+            {copy.order}
+            <InputNumber
+              style={{ width: "100%" }}
               value={draft.sort_order}
-              onChange={(event) =>
-                setDraft({ ...draft, sort_order: Number(event.target.value) || 0 })
+              onChange={(value) =>
+                setDraft({ ...draft, sort_order: Number(value) || 0 })
               }
             />
           </label>
@@ -91,15 +94,16 @@ export function CustomOptionsAdmin({
             className="custom-admin-check"
             onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
           >
-            Ativa
+            {copy.active}
           </Checkbox>
         </div>
-        <Flex>
+        <Flex gap="0.5rem">
           <Button
             disabled={!draft.technical_key || !draft.label || save.isPending}
             onClick={() => save.mutate()}
+            type="primary"
           >
-            {editing ? "Salvar opção" : "Criar opção"}
+            {editing ? copy.saveOption : copy.createOption}
           </Button>
           {editing ? (
             <Button
@@ -108,7 +112,7 @@ export function CustomOptionsAdmin({
                 setDraft(emptyOption);
               }}
             >
-              Cancelar
+              {copy.cancel}
             </Button>
           ) : null}
         </Flex>
@@ -118,16 +122,18 @@ export function CustomOptionsAdmin({
               <span>
                 {value.label} · {value.technical_key}
               </span>
-              <Flex>
+              <Flex gap="0.5rem">
                 <Button
                   onClick={() => {
                     setEditing(value);
                     setDraft(optionValues(value));
                   }}
                 >
-                  Editar
+                  {copy.edit}
                 </Button>
-                <Button onClick={() => remove.mutate(value)}>Excluir</Button>
+                <Button danger disabled={remove.isPending} onClick={() => remove.mutate(value)}>
+                  {copy.delete}
+                </Button>
               </Flex>
             </div>
           ))}

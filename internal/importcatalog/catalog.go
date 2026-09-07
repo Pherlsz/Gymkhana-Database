@@ -1,6 +1,4 @@
-// Package importcatalog implements Orchestration §16.2 product rules: column header
-// aliases, explicit discards, and document-label remaps. Value normalization
-// remains in Gymkhana-Core and domain services at execute time.
+// Package importcatalog implements column header aliases, explicit discards, and document-label remaps.
 package importcatalog
 
 import (

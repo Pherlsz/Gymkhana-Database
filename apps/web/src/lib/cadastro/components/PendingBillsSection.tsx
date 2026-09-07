@@ -26,8 +26,10 @@ export function PendingBillsSection({
   open,
   onToggleOpen,
 }: PendingBillsSectionProps) {
-  const { messages } = useI18n();
+  const { messages, t } = useI18n();
   const copy = messages.tables.cadastro;
+  const actions = messages.common.actions;
+  const labels = messages.common.labels;
 
   const [addingBill, setAddingBill] = useState(false);
   const [inlineBill, setInlineBill] = useState<InlineBillState>(INITIAL_INLINE_BILL);
@@ -66,7 +68,7 @@ export function PendingBillsSection({
       competence: "2026-09",
       amount: "150,00",
       medium: "DIGITAL",
-      notes: copy.ocrExtractedNote.replace("{filename}", file.name),
+      notes: t(copy.ocrExtractedNote, { filename: file.name }),
       tag: "ocr",
     };
     onAddBill(newBill);
@@ -107,13 +109,18 @@ export function PendingBillsSection({
               </div>
               <span className="grow" />
               <span className={`tag ${b.tag === "ocr" ? "gold" : "ok"}`}>
-                {b.tag === "ocr" ? copy.tagOcr : copy.tagActive}
+                {b.tag === "ocr" ? labels.ocr : copy.tagActive}
               </span>
               <div className="acts">
-                <button type="button" onClick={() => onRemoveBill(b.id)}>
-                  <Trash2 size={13} style={{ marginRight: 4 }} />
-                  {copy.actionRemove}
-                </button>
+                <Button
+                  danger
+                  type="text"
+                  size="small"
+                  icon={<Trash2 size={13} />}
+                  onClick={() => onRemoveBill(b.id)}
+                >
+                  {actions.remove}
+                </Button>
               </div>
             </div>
           ))
@@ -193,16 +200,17 @@ export function PendingBillsSection({
           />
 
           <div className="inline-actions">
-            <Button onClick={() => setAddingBill(false)}>{copy.btnCancelAdd}</Button>
+            <Button onClick={() => setAddingBill(false)}>{actions.cancel}</Button>
             <Button type="primary" onClick={handleConfirmAdd}>
-              {copy.btnConfirmAdd}
+              {actions.add}
             </Button>
           </div>
         </div>
       ) : (
-        <button
+        <Button
           className="addrow"
-          type="button"
+          type="dashed"
+          icon={<Plus size={15} strokeWidth={2} />}
           onClick={() => {
             setInlineBill((prev) => ({
               ...prev,
@@ -211,9 +219,8 @@ export function PendingBillsSection({
             setAddingBill(true);
           }}
         >
-          <Plus size={15} strokeWidth={2} />
-          <span>{copy.btnAddBill}</span>
-        </button>
+          {copy.btnAddBill}
+        </Button>
       )}
     </CadastroSection>
   );

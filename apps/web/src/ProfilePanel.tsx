@@ -1,4 +1,4 @@
-import { Alert, Button, Flex, Form, Input, Skeleton } from "antd";
+import { Alert, Button, Flex, Form, Input, Segmented, Skeleton } from "antd";
 import { ChevronDown, ChevronRight, FileText, Receipt } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { ConfirmDelete } from "./components/ConfirmDelete";
@@ -36,19 +36,20 @@ const emptyValues: ProfileValuesRequest = {
 
 function validateProfileForm(
   values: ProfileValuesRequest,
+  validation?: { fullNameRequired: string; invalidEmail: string },
 ):
   | { success: true; output: ProfileValuesRequest }
   | { success: false; issues: { message: string }[] } {
   const issues: { message: string }[] = [];
   const fullName = values.full_name?.trim() ?? "";
   if (fullName.length < 1) {
-    issues.push({ message: "Nome completo é obrigatório." });
+    issues.push({ message: validation?.fullNameRequired ?? "" });
   }
   const email = values.email?.trim() ?? "";
   if (email.length > 0) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      issues.push({ message: "E-mail inválido." });
+      issues.push({ message: validation?.invalidEmail ?? "" });
     }
   }
   if (issues.length > 0) {
@@ -223,7 +224,7 @@ export function ProfilePanel(props: {
   }, [editable, form, profileId, profileVersion, props.mode, props.profile]);
 
   const submit = async (values: ProfileValuesRequest) => {
-    const parsed = validateProfileForm(values);
+    const parsed = validateProfileForm(values, messages.common.validation);
     if (!parsed.success) {
       setError(parsed.issues.map((issue) => issue.message).join(" "));
       return;
@@ -310,24 +311,19 @@ export function ProfilePanel(props: {
       <div className="profile-panel__body">
         {props.profile && props.mode !== "create" && !props.hideSections ? (
           <nav aria-label={copy.personSections} className="profile-sections">
-            <button
-              className={props.section === "profile" ? "profile-sections__active" : undefined}
-              onClick={() => props.onSearch({ section: "profile" })}
-            >
-              {copy.sectionProfile}
-            </button>
-            <button
-              className={props.section === "documents" ? "profile-sections__active" : undefined}
-              onClick={() => props.onSearch({ section: "documents" })}
-            >
-              {copy.sectionDocuments}
-            </button>
-            <button
-              className={props.section === "bills" ? "profile-sections__active" : undefined}
-              onClick={() => props.onSearch({ section: "bills" })}
-            >
-              {copy.sectionBills}
-            </button>
+            <Segmented
+              block
+              className="segmented-tabs"
+              onChange={(value) =>
+                props.onSearch({ section: value as "profile" | "documents" | "bills" })
+              }
+              options={[
+                { label: copy.sectionProfile, value: "profile" },
+                { label: copy.sectionDocuments, value: "documents" },
+                { label: copy.sectionBills, value: "bills" },
+              ]}
+              value={props.section || "profile"}
+            />
           </nav>
         ) : null}
         {props.profile && props.recordLinks && props.mode !== "create" ? (

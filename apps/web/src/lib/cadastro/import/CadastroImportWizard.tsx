@@ -1,7 +1,7 @@
 import { Segmented } from "antd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { StateCard } from "../../../components/StateCard";
+import { CadastroStateCard } from "../../../components/StateCard";
 import { useI18n } from "../../../i18n";
 import {
   getOperationsCatalog,
@@ -62,18 +62,18 @@ export function CadastroImportWizard({
 
   if (catalog.isError) {
     return (
-      <StateCard
-        compact
+      <CadastroStateCard
         description={copy.massImportCatalogErrorDesc}
         kind="error"
+        onRetry={() => void refresh()}
         title={copy.massImportCatalogError}
       />
     );
   }
   if (!catalog.data) {
     return (
-      <StateCard
-        compact
+      <CadastroStateCard
+        backToCadastro={false}
         description={copy.massImportLoadingDesc}
         kind="loading"
         title={copy.massImportLoading}
@@ -82,8 +82,7 @@ export function CadastroImportWizard({
   }
   if (!isModuleAllowed) {
     return (
-      <StateCard
-        compact
+      <CadastroStateCard
         description={copy.massImportForbiddenDesc}
         kind="warning"
         title={copy.massImportForbidden}

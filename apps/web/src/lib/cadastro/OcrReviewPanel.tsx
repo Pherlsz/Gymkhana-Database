@@ -1,6 +1,7 @@
-import { Alert, Button, Flex, Input, Tag } from "antd";
+import { Alert, Button, Flex, Input, Select, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "../../i18n";
 import {
   applyOCRSuggestions,
   consumeOCRJobEvents,
@@ -17,6 +18,9 @@ import { listAttachments, type AttachmentOwner } from "../api/attachments";
 import { APIRequestError } from "../api/client";
 
 export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
+  const { messages, t } = useI18n();
+  const copy = messages.cadastro.ocrReview;
+  const { actions, labels } = messages.common;
   const queryClient = useQueryClient();
   const capability = useQuery({
     queryKey: ["ocr-capability"],
@@ -99,32 +103,33 @@ export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
       {notice ? <Alert showIcon type="success" title={notice} /> : null}
       {start.error ? (
         <Alert
-          message="Não foi possível iniciar o OCR"
+          message={copy.startError}
           type="error"
-          description={ocrError(start.error)}
+          description={ocrError(start.error, copy.unexpectedError)}
         />
       ) : null}
       <label className="ocr-review-panel__field">
-        Anexo (PDF, JPEG ou PNG)
-        <select
-          aria-label="Anexo para OCR"
+        {copy.attachmentLabel}
+        <Select
+          aria-label={copy.attachmentAria}
           value={attachmentID}
-          onChange={(event) => setAttachmentID(event.target.value)}
-        >
-          <option value="">Selecione</option>
-          {ocrAttachments.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.original_filename}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setAttachmentID(value)}
+          options={[
+            { value: "", label: labels.selectPrompt },
+            ...ocrAttachments.map((item) => ({
+              value: item.id,
+              label: item.original_filename,
+            })),
+          ]}
+          style={{ width: "100%" }}
+        />
       </label>
       <Button
         disabled={!attachmentID || start.isPending}
         type="primary"
         onClick={() => start.mutate()}
       >
-        {start.isPending ? "Iniciando…" : "Extrair dados (OCR)"}
+        {start.isPending ? copy.starting : copy.extractData}
       </Button>
       {job.data ? <OcrJobStatus job={job.data} /> : null}
       {(suggestions.data?.suggestions.length ?? 0) > 0 ? (
@@ -142,10 +147,11 @@ export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
 }
 
 function OcrJobStatus({ job }: { job: OCRJob }) {
+  const { messages } = useI18n();
   return (
     <Flex align="center" aria-live="polite" className="ocr-review-panel__status" gap="0.5rem">
       <Tag>{job.state}</Tag>
-      <span>{job.error_code ?? "Processando extração…"}</span>
+      <span>{job.error_code ?? messages.cadastro.ocrReview.processing}</span>
     </Flex>
   );
 }
@@ -159,6 +165,9 @@ function OcrSuggestionList({
   suggestions: OCRSuggestion[];
   onApplied: (message: string) => void;
 }) {
+  const { messages, t } = useI18n();
+  const copy = messages.cadastro.ocrReview;
+  const { actions, labels } = messages.common;
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const review = useMutation({
     mutationFn: (input: {
@@ -177,19 +186,19 @@ function OcrSuggestionList({
       const accepted = suggestions.filter((item) => item.review_state === "ACCEPTED");
       return applyOCRSuggestions(job.id, accepted, newOCRIdempotencyKey("apply"));
     },
-    onSuccess: () => onApplied("Valores aceitos foram aplicados ao registro."),
+    onSuccess: () => onApplied(copy.applySuccess),
   });
 
   return (
     <div className="ocr-review-panel__suggestions">
-      <h3>Sugestões</h3>
+      <h3>{copy.suggestionsTitle}</h3>
       <table className="ocr-review-panel__table">
         <thead>
           <tr>
-            <th scope="col">Campo</th>
-            <th scope="col">Valor sugerido</th>
-            <th scope="col">Confiança</th>
-            <th scope="col">Revisão</th>
+            <th scope="col">{labels.field}</th>
+            <th scope="col">{copy.suggestedValueHeader}</th>
+            <th scope="col">{copy.confidenceHeader}</th>
+            <th scope="col">{copy.reviewHeader}</th>
           </tr>
         </thead>
         <tbody>
@@ -198,7 +207,7 @@ function OcrSuggestionList({
               <td>{suggestion.field_label}</td>
               <td>
                 <Input
-                  aria-label={`Valor para ${suggestion.field_label}`}
+                  aria-label={t(copy.fieldValueAria, { label: suggestion.field_label })}
                   disabled={suggestion.review_state === "REJECTED"}
                   value={drafts[suggestion.id] ?? suggestion.proposed_value ?? ""}
                   onChange={(event) =>
@@ -219,13 +228,13 @@ function OcrSuggestionList({
                       })
                     }
                   >
-                    Aceitar
+                    {actions.accept}
                   </Button>
                   <Button
                     size="small"
                     onClick={() => review.mutate({ suggestion, action: "REJECT" })}
                   >
-                    Rejeitar
+                    {actions.reject}
                   </Button>
                 </Flex>
               </td>
@@ -237,13 +246,13 @@ function OcrSuggestionList({
         disabled={apply.isPending || !suggestions.some((item) => item.review_state === "ACCEPTED")}
         onClick={() => apply.mutate()}
       >
-        Aplicar aceitos
+        {copy.applyAccepted}
       </Button>
       {apply.error ? (
         <Alert
-          message="Não foi possível aplicar"
+          message={copy.applyError}
           type="error"
-          description={ocrError(apply.error)}
+          description={ocrError(apply.error, copy.unexpectedError)}
         />
       ) : null}
     </div>
@@ -255,8 +264,8 @@ export function formatOCRConfidence(value: number | null | undefined): string {
   return `${Math.round(value / 100)}%`;
 }
 
-function ocrError(error: unknown) {
+function ocrError(error: unknown, fallback = "Erro inesperado.") {
   if (error instanceof APIRequestError) return error.message;
   if (error instanceof Error) return error.message;
-  return "Erro inesperado.";
+  return fallback;
 }

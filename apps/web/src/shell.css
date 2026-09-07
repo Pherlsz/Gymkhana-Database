@@ -1,11 +1,3 @@
-/*
- * Ink and paper. The crest (`public/logo.png`) and the mascot (`public/Gampa.png`)
- * are pure black on white with a single warm accent, and the crest's stars are
- * where the gold comes from. So: high-contrast neutrals carry the structure,
- * gold is reserved for what was earned or for "you are here", red is
- * destructive. Neutrals hold hue 85 at chroma <=0.006 so gold never reads
- * dirty against them; that is a hint of warmth, not a sand palette.
- */
 @property --gray-1 {
   syntax: "<color>";
   inherits: true;
@@ -130,7 +122,6 @@
   --md-error-container: color-mix(in oklch, var(--md-error) 8%, var(--md-surface));
   --md-info-container: color-mix(in oklch, var(--md-info) 10%, var(--md-surface));
   --md-scrim: oklch(0.185 0.006 85 / 0.45);
-  /* Document presence marks, per Orchestration 12.1: F green, D blue. */
   --mark-physical: oklch(0.47 0.16 145);
   --mark-digital: oklch(0.46 0.17 250);
   --shape-xs: 4px;
@@ -340,28 +331,8 @@ html.theme-switching *::after {
   color: var(--md-on-surface);
 }
 
-/*
- * M3 roles: --md-primary (amber-9) is fill gold, reserved for the owner disc.
- * Text, icons, and outlines on surface are ink. Gold text (--md-primary-text)
- * is only the "you are here" rule, the matching nav icon, and the focus ring.
- * https://m3.material.io/styles/color/roles
- */
-html .ant-btn.ant-btn-color-primary:not(.ant-btn-variant-solid) {
-  --ant-btn-color-base: var(--md-on-surface);
-  --ant-btn-color-hover: var(--md-on-surface);
-  --ant-btn-color-active: var(--md-on-surface);
-}
+/* Button tokens and interactions are governed by theme.tsx and components.css */
 
-html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
-  --ant-btn-color-base: var(--md-on-surface);
-  --ant-btn-color-hover: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
-  --ant-btn-color-active: color-mix(in oklch, var(--md-on-surface) 76%, var(--md-surface));
-  --ant-btn-text-color: var(--md-surface);
-  --ant-btn-text-color-hover: var(--md-surface);
-  --ant-btn-text-color-active: var(--md-surface);
-  border-color: transparent;
-  box-shadow: none;
-}
 
 .page-measure {
   width: 100%;
@@ -575,8 +546,6 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   min-width: 0;
 }
 
-/* Layout only: Ant Input's affix wrapper has an intrinsic min-width from
-   prefix + suffix (the Ctrl K hint) that otherwise overflows the rail. */
 .search-field .ant-input-affix-wrapper {
   min-width: 0;
   width: 100%;
@@ -696,7 +665,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 .nav-item--active {
   background: var(--md-surface-container);
   color: var(--md-primary-text);
-  font-weight: 600;
+  font-weight: 500;
   border-radius: var(--gym-radius-md);
   box-shadow: none;
   padding-inline-start: 0.7rem;
@@ -741,20 +710,13 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   display: grid;
   grid-template-rows: 1fr;
   min-height: 0;
+  overflow: hidden;
   transition: grid-template-rows 200ms ease;
 }
 
-.nav-item--toggle[aria-expanded="false"] + .nav-sub-wrap {
-  grid-template-rows: 0fr;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* Margins on .nav-sub escape overflow:hidden on the element itself;
-   zero them when collapsed so the group fully disappears. */
-.nav-item--toggle[aria-expanded="false"] + .nav-sub-wrap .nav-sub {
-  margin: 0;
-  padding-block: 0;
+.nav-item--toggle[aria-expanded="false"] + .nav-sub-wrap,
+.nav-sub-wrap[aria-hidden="true"] {
+  display: none;
 }
 
 .nav-sub-wrap > .nav-sub {
@@ -766,9 +728,8 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   display: grid;
   gap: 0.2rem;
   margin: 0.25rem 0 0.45rem 0.75rem;
-  padding: 0.25rem 0 0.25rem 0.5rem;
-  border-inline-start: 2px solid color-mix(in oklch, var(--md-outline-variant) 30%, transparent);
-  transition: border-color 150ms ease;
+  padding: 0.25rem 0;
+  border: none;
 }
 
 .nav-sub__item {
@@ -809,7 +770,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
 .nav-sub__item--active {
   background: var(--md-surface-container);
   color: var(--md-primary-text);
-  font-weight: 600;
+  font-weight: 500;
   border-radius: var(--gym-radius-md);
 }
 
@@ -858,13 +819,11 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   text-align: start;
   cursor: pointer;
   transition:
-    transform 120ms cubic-bezier(0.2, 0, 0, 1),
     background-color 150ms ease,
     border-color 150ms ease;
 }
 
 .sidebar-theme-toggle:active {
-  transform: scale(0.98);
   background: var(--md-state-pressed);
 }
 
@@ -970,10 +929,6 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   user-select: none;
 }
 
-/* The unchecked antd Switch track is colorTextQuaternary — nearly invisible on
-   the menu surface. antd re-declares its component token vars on the Switch's
-   own root node, so a --ant-* scope on this ancestor loses the cascade; the
-   override must target the concrete property on the component class. */
 .sidebar-account-menu__appearance .ant-switch:not(.ant-switch-checked) {
   background: var(--md-state-selected);
   box-shadow: inset 0 0 0 1px var(--md-outline);
@@ -1020,13 +975,11 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   box-shadow: none;
   font: inherit;
   transition:
-    transform 120ms cubic-bezier(0.2, 0, 0, 1),
     background-color 150ms ease,
     border-color 150ms ease;
 }
 
 .sidebar-account__trigger:active {
-  transform: scale(0.98);
   background: var(--md-state-pressed);
 }
 
@@ -1113,8 +1066,9 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   .app-shell {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
-    gap: var(--shell-inset);
-    padding: var(--shell-inset);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0;
+    padding: 0;
     box-sizing: border-box;
     height: 100dvh;
     max-height: 100dvh;
@@ -1124,6 +1078,7 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
     display: flex;
     overflow: hidden;
     width: 18.5rem;
+    margin: var(--shell-inset);
   }
   .app-shell--collapsed .app-shell__sidebar {
     width: 4.5rem;
@@ -1401,314 +1356,221 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   }
 }
 
+/* ===== Modern Home Page (Bento Grid) ===== */
 .home-page {
-  display: grid;
-  gap: 1rem;
-  width: 100%;
-  max-width: 88rem;
-}
-
-.home-page__header h1 {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
-.home-section__title {
-  display: block;
-  margin: 0;
-  margin-bottom: 0.7rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--md-on-surface-variant);
-}
-
-.home-section__head {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.65rem;
+  flex-direction: column;
+  gap: var(--gym-space-4);
+  width: 100%;
+  max-width: min(100%, 124rem);
+  margin-inline: auto;
 }
 
 .home-page a {
   color: inherit;
 }
 
-.quick-actions {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.5rem;
-}
-
-.quick-row {
-  display: contents;
-}
-
-.quick-actions .ant-dropdown-trigger,
-.quick-actions .ant-btn.quick-action {
-  width: 100%;
-}
-
-.quick-actions .ant-btn.quick-action {
-  height: auto;
-  min-height: 3.75rem;
-  justify-content: flex-start;
-  align-items: flex-start;
-  text-align: start;
-  padding: 0.75rem 0.9rem;
-  white-space: normal;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 120ms ease,
-    color 160ms ease;
-}
-
-.quick-actions .ant-btn.quick-action:not(.ant-btn-primary) {
-  --ant-btn-bg-color: var(--md-surface-container);
-  --ant-btn-bg-color-hover: var(--gray-4);
-  --ant-btn-bg-color-active: var(--gray-5);
-  --ant-btn-border-color: var(--md-outline-variant);
-  --ant-btn-border-color-hover: var(--md-on-surface);
-  --ant-btn-border-color-active: var(--md-on-surface);
-  --ant-btn-text-color: var(--md-on-surface);
-  --ant-btn-text-color-hover: var(--md-on-surface);
-  --ant-btn-text-color-active: var(--md-on-surface);
-  background-color: var(--md-surface-container);
-  border-color: var(--md-outline-variant);
-  color: var(--md-on-surface);
-}
-
-/*
- * The primary quick action is ink, not gold. A full-width gold slab is the
- * largest thing on the home page, and gold at furniture scale stops reading as
- * an earned mark. Inverting to ink matches the crest and leaves the fill gold
- * for document badges — the owner disc is the one gold fill that remains.
- */
-.quick-actions .ant-btn.quick-action.ant-btn-primary {
-  --ant-btn-bg-color: var(--md-on-surface);
-  --ant-btn-bg-color-hover: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
-  --ant-btn-bg-color-active: color-mix(in oklch, var(--md-on-surface) 76%, var(--md-surface));
-  --ant-btn-text-color: var(--md-surface);
-  --ant-btn-text-color-hover: var(--md-surface);
-  --ant-btn-text-color-active: var(--md-surface);
-  background-color: var(--md-on-surface);
-  border-color: transparent;
-  color: var(--md-surface);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .quick-actions .ant-btn.quick-action:not(.ant-btn-primary):not(:disabled):hover {
-    background-color: var(--gray-4);
-    border-color: var(--md-on-surface);
-    color: var(--md-on-surface);
-  }
-
-  .quick-actions .ant-btn.quick-action:not(.ant-btn-primary):not(:disabled):hover .ant-btn-icon {
-    color: var(--md-on-surface);
-  }
-
-  .quick-actions .ant-btn.quick-action.ant-btn-primary:not(:disabled):hover {
-    background-color: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
-    border-color: transparent;
-    color: var(--md-surface);
-  }
-}
-
-.quick-actions .ant-btn.quick-action:not(:disabled):active {
-  transform: scale(0.99);
-  box-shadow: none;
-}
-
-.quick-actions .ant-btn.quick-action.ant-btn-primary[aria-expanded="true"] {
-  background-color: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
-  color: var(--md-surface);
-}
-
-.quick-actions .ant-btn.quick-action:focus-visible {
-  outline: 2px solid var(--md-primary-text);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .quick-actions .ant-btn.quick-action {
-    transition: none;
-  }
-
-  .quick-actions .ant-btn.quick-action:not(:disabled):active {
-    transform: none;
-  }
-}
-
-.quick-actions .ant-btn.quick-action .ant-btn-icon {
-  margin-block-start: 0.125rem;
-}
-
-.quick-action__copy {
+/* Header Bar */
+.home-header-hero {
   display: flex;
-  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gym-space-3);
+  padding: clamp(0.75rem, 1.2vw, 1rem) clamp(1rem, 1.8vw, 1.35rem);
+  background: var(--gym-color-surface);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-lg);
+  box-shadow: var(--shadow-card);
+  width: 100%;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.dark .home-header-hero {
+  background:
+    radial-gradient(
+      130% 130% at 0% 0%,
+      rgba(255, 255, 255, 0.035) 0%,
+      rgba(255, 255, 255, 0.008) 100%
+    ),
+    var(--gym-color-surface-raised);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+
+.home-header-hero__copy {
+  display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 0.15rem;
 }
 
-.quick-action__label {
-  font-weight: 600;
-  line-height: 1.25;
+.home-header-hero__title.ant-typography {
+  margin: 0;
+  font-size: clamp(1.2rem, 1.8vw, 1.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--gym-color-text);
 }
 
-.quick-action__hint {
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1.35;
-  color: var(--md-on-surface-variant);
+.home-header-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gym-space-2);
 }
 
-.quick-action--primary .quick-action__hint {
-  color: color-mix(in oklch, var(--md-surface) 78%, var(--md-on-surface));
+.home-header-hero__btn.ant-btn,
+.home-header-hero__action-btn.ant-btn {
+  height: 2.35rem;
+  padding-inline: 1.15rem;
+  font-size: var(--gym-font-size-sm);
 }
 
-.home-complement {
+/* 2. Top Summary Strip */
+.home-top-strip {
   display: grid;
-  gap: 0.6rem;
+  grid-template-columns: minmax(min(100%, 18rem), 24rem) minmax(min(100%, 20rem), 1fr);
+  gap: clamp(0.75rem, 1.2vw, 1.25rem);
+  width: 100%;
+  align-items: stretch;
 }
 
-.home-page__rail {
-  display: grid;
-  align-content: start;
-  gap: 0;
-  min-width: 0;
-  padding: 0.9rem;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--gym-radius-lg);
-  background: var(--md-surface-low);
+@media (max-width: 860px) {
+  .home-top-strip {
+    grid-template-columns: 1fr;
+  }
 }
 
-.home-complement__metrics {
-  display: grid;
-  gap: 0;
-  margin-top: 0.85rem;
-  padding-top: 0.35rem;
-  border-top: 1px solid var(--md-outline-variant);
+/* Hero Card for People */
+.home-hero-card {
+  width: 100%;
+  justify-content: center;
 }
 
-.home-attention,
-.home-hero {
-  border: 0;
-  border-radius: var(--gym-radius-md);
-  background: transparent;
+.home-hero-card .app-card__title {
+  font-size: var(--gym-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gym-color-text-muted);
 }
 
+/* Operational Attention Card */
 .home-attention {
-  display: grid;
-  grid-template-columns: min-content minmax(0, 1fr);
-  grid-template-areas:
-    "copy copy"
-    "value chips";
-  gap: 0.55rem 0.75rem;
-  align-items: start;
-  min-width: 0;
-  padding: 0.8rem 0.45rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--gym-space-2);
+  padding: 0.85rem 1.15rem;
+  border-radius: var(--gym-radius-lg);
+  border: 1px solid var(--md-outline-variant);
+  background: var(--gym-color-surface);
+  box-shadow: var(--shadow-card);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.dark .home-attention {
+  background:
+    radial-gradient(
+      130% 130% at 0% 0%,
+      rgba(255, 255, 255, 0.035) 0%,
+      rgba(255, 255, 255, 0.008) 100%
+    ),
+    var(--gym-color-surface-raised);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
 }
 
 .home-attention--warning {
-  background: color-mix(in oklch, var(--md-warning) 8%, transparent);
+  background: color-mix(in oklch, var(--md-warning) 8%, var(--gym-color-surface));
+  border-color: color-mix(in oklch, var(--md-warning) 30%, transparent);
+}
+
+html.dark .home-attention--warning {
+  background: color-mix(in oklch, var(--md-warning) 12%, var(--gym-color-surface-raised));
+  border-color: color-mix(in oklch, var(--md-warning) 40%, transparent);
 }
 
 .home-attention--empty {
-  grid-template-columns: 1fr;
-  grid-template-areas:
-    "copy"
-    "none";
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .home-attention__copy {
-  grid-area: copy;
-  padding-inline-end: 3.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
 .home-attention__title.ant-typography {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--gym-font-size-xs);
   font-weight: 700;
-  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gym-color-text-muted);
 }
 
 .home-attention__copy .ant-typography {
-  font-size: 0.75rem;
-}
-
-.home-attention__open {
-  grid-area: copy;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  justify-content: flex-end;
-  align-self: start;
-}
-
-.home-attention__chips .home-attention__more.ant-btn {
-  height: auto;
-  min-height: 0;
-  padding: 0.35rem 0.6rem;
-  border: 1px solid var(--md-outline);
-  border-radius: 999px;
-  font-size: 0.75rem;
-  line-height: 1.2;
-  color: var(--md-on-surface-variant);
-}
-
-.home-attention__chips .home-attention__more.ant-btn:focus-visible {
-  outline: 2px solid var(--md-primary-text);
-  outline-offset: 2px;
+  font-size: 0.8125rem;
 }
 
 .home-attention__value {
-  grid-area: value;
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.45rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
-  line-height: 1;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
   color: var(--md-on-surface);
 }
 
+.home-attention__open {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.home-attention__open .ant-btn {
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
 .home-attention__chips {
-  grid-area: chips;
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
   min-width: 0;
+  align-items: center;
+  margin-top: 0.25rem;
 }
 
 .home-attention__chip {
-  display: flex;
+  display: inline-flex;
   min-width: 0;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.35rem 0.6rem;
-  border: 1px solid var(--md-outline);
-  border-radius: 999px;
+  gap: 0.45rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-pill);
   background: var(--md-surface);
   color: var(--md-on-surface);
   text-decoration: none;
   font-size: 0.75rem;
   line-height: 1.2;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease;
 }
 
 .home-attention__chip:hover {
   background: var(--md-state-hover);
-}
-
-.home-attention__chip:focus-visible {
-  outline: 2px solid var(--md-primary-text);
-  outline-offset: 2px;
+  border-color: var(--md-outline);
 }
 
 .home-attention__chip-label {
@@ -1724,206 +1586,136 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   font-weight: 700;
 }
 
-.home-attention__none {
-  grid-area: none;
-}
-
-.home-attention .ant-skeleton {
-  grid-column: 1 / -1;
-}
-
-.home-hero {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.85rem 0.45rem;
-  border-top: 1px solid var(--md-outline-variant);
-  border-radius: 0;
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-  transition:
-    background 160ms ease,
-    border-color 160ms ease;
-}
-
-.home-hero:hover {
-  background: var(--md-state-hover);
-}
-
-.home-hero:hover .home-hero__open {
-  color: var(--md-on-surface);
-}
-
-.home-hero:focus-visible {
-  outline: 2px solid var(--md-primary-text);
-  outline-offset: 2px;
-}
-
-.home-hero__icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  color: var(--md-on-surface-variant);
-}
-
-.home-hero__copy {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.home-hero__label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--md-on-surface-variant);
-}
-
-.home-hero__value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-}
-
-.home-hero__unit {
-  margin-left: 0.3rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  color: var(--md-on-surface-variant);
-}
-
-.home-hero__empty {
-  font-size: 1rem;
-  font-style: italic;
-  color: var(--md-on-surface-variant);
-}
-
-.home-hero__open {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  margin-inline-start: auto;
-  color: var(--md-on-surface-variant);
-}
-
-/*
- * Catalog = grouped cards. Column count follows the container (not the
- * viewport): by the time this column renders, the rail already consumed
- * ~40% of the screen. Badges-only counts keep 2-up cells truncation-free.
- */
-.home-catalog {
-  container-type: inline-size;
-  display: grid;
-  gap: 0.75rem;
-}
-
-.home-catalog__group {
-  overflow: hidden;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--gym-radius-md);
-  background: var(--md-surface-low);
-}
-
-.home-catalog__heading {
-  margin: 0;
-  font-size: inherit;
-  font-weight: inherit;
-}
-
-.home-catalog__trigger.ant-btn {
-  display: flex;
-  width: 100%;
+.home-attention__more.ant-btn {
   height: auto;
-  justify-content: flex-start;
-  min-height: 2.35rem;
-  padding: 0.45rem 0.75rem;
+  min-height: 0;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--gym-radius-pill);
   font-size: 0.75rem;
-  font-weight: 600;
+  line-height: 1.2;
+  color: var(--md-on-surface-variant);
+}
+
+.home-attention__none {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gym-color-text-muted);
+}
+
+.home-attention__note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--md-on-surface-variant);
+}
+
+/* Section Headings */
+.home-section__title {
+  display: block;
+  margin: 0;
+  font-size: var(--gym-font-size-xs);
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--md-on-surface-variant);
-  border-radius: 0;
+  color: var(--gym-color-text-muted);
 }
 
-.home-catalog__trigger.ant-btn:hover,
-.home-catalog__trigger.ant-btn:focus-visible {
-  background: var(--md-state-hover);
+.home-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: var(--gym-space-2);
 }
 
-.home-catalog__trigger.ant-btn:active {
-  background: var(--md-state-pressed);
+/* Catalog Bento Grid */
+.home-catalog-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-2);
+  width: 100%;
+  container-type: inline-size;
 }
 
-.home-catalog__trigger-label {
-  flex: 1;
-  text-align: start;
+.home-bento-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: var(--gym-space-3);
+  width: 100%;
 }
 
-.home-catalog__trigger-extra {
-  font-variant-numeric: tabular-nums;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
+@media (min-width: 640px) {
+  .home-bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--gym-space-3);
+  }
 }
 
-.home-catalog__chevron {
-  font-size: 0.75rem;
-  transition: transform 160ms ease;
+@media (min-width: 1100px) {
+  .home-bento-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--gym-space-4);
+  }
 }
 
-.home-catalog__chevron--open {
-  transform: rotate(90deg);
+@media (min-width: 1560px) {
+  .home-bento-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--gym-space-4);
+  }
 }
 
-.home-catalog__body {
-  padding: 0;
+/* Container query responsiveness (for fluid adapting when sidebar expands or collapses) */
+@container (min-width: 580px) {
+  .home-bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--gym-space-3);
+  }
 }
+
+@container (min-width: 960px) {
+  .home-bento-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--gym-space-4);
+  }
+}
+
+@container (min-width: 1360px) {
+  .home-bento-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--gym-space-4);
+  }
+}
+
 
 .home-catalog__rows {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.2rem;
 }
 
 .home-catalog__row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  min-height: 2.25rem;
-  padding: 0.4rem 0.75rem;
-  margin: 0;
-  border: 0;
-  border-top: 1px solid var(--md-outline-variant);
-  border-radius: 0;
+  gap: 0.65rem;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: var(--gym-radius-md);
   text-decoration: none;
   color: inherit;
   cursor: pointer;
   transition:
-    background 160ms ease,
-    border-color 160ms ease;
-}
-
-.home-catalog__row:last-child {
-  margin-bottom: 0;
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .home-catalog__row:hover {
   background: var(--md-state-hover);
-  border-color: var(--md-outline-variant);
 }
 
 .home-catalog__row:active {
   background: var(--md-state-pressed);
-}
-
-.home-catalog__row:hover .home-catalog__row-open {
-  color: var(--md-on-surface);
 }
 
 .home-catalog__row:focus-visible {
@@ -1931,64 +1723,66 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
   outline-offset: 1px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .home-hero,
-  .home-catalog__row,
-  .home-catalog__chevron {
-    transition: none;
-  }
+.home-catalog__row-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--md-on-surface-variant);
+  transition: color 150ms ease;
 }
 
-.home-catalog__row-icon {
-  display: inline-flex;
-  color: var(--md-on-surface-variant);
+.home-catalog__row:hover .home-catalog__row-icon {
+  color: var(--gym-color-text);
 }
 
 .home-catalog__row-name {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: var(--gym-font-size-sm);
+  font-weight: 500;
+  color: var(--gym-color-text);
 }
 
 .home-catalog__row-count {
-  display: inline-flex;
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.4rem;
-  padding: 0.05rem 0.35rem;
-  border: 1px solid var(--md-outline);
-  border-radius: var(--gym-radius-pill);
   font-variant-numeric: tabular-nums;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--md-on-surface);
+  font-weight: 700;
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text);
+  padding: 2px 7px;
+  background: var(--md-surface-container);
+  border-radius: var(--gym-radius-pill);
+}
+
+.home-hero__unit {
+  font-weight: 500;
+  color: var(--gym-color-text-muted);
 }
 
 .home-catalog__row-count--empty {
-  color: inherit;
-  border-color: transparent;
-}
-
-.home-catalog__row-count--none {
-  border: 0;
-}
-
-.home-attention__note {
-  grid-column: 1 / -1;
-  margin: 0;
-  font-size: 0.75rem;
-  line-height: 1.35;
   color: var(--md-on-surface-variant);
+  background: transparent;
+  font-weight: 400;
 }
 
 .home-catalog__row-open {
   flex-shrink: 0;
   color: var(--md-on-surface-variant);
-  font-size: 0.75rem;
+  opacity: 0.6;
+  transition:
+    opacity 150ms ease,
+    color 150ms ease;
+}
+
+.home-catalog__row:hover .home-catalog__row-open {
+  color: var(--gym-color-text);
+  opacity: 1;
 }
 
 .login-theme-toggle {
@@ -2027,72 +1821,48 @@ html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
     transform 200ms ease;
 }
 
-/*
- * Quick-action dropdown: antd gives the item-group list an 8px margin per
- * side, so "Importação em lote" rendered narrower than the sibling items.
- * Zero it so every clickable row shares the same width. (The popup renders
- * inside .quick-actions via getPopupContainer, keeping the rule scoped.)
- */
-.quick-actions .ant-dropdown .ant-dropdown-menu-item-group-list {
-  margin-inline: 0;
-}
-
-@media (min-width: 600px) {
-  .home-page__header h1 {
-    font-size: 1.5rem;
+@media (max-width: 640px) {
+  .home-header-hero {
+    flex-direction: column;
+    align-items: stretch;
   }
-  .quick-actions {
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  .home-header-hero__actions {
+    width: 100%;
   }
-}
-
-@media (min-width: 840px) {
-  .home-page {
-    grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
-    align-items: start;
-    column-gap: 1.25rem;
+  .home-header-hero__btn.ant-btn,
+  .home-header-hero__action-btn.ant-btn {
+    flex: 1;
+    justify-content: center;
   }
-  .home-page__header,
-  .home-page > .ant-alert {
-    grid-column: 1 / -1;
-  }
-  .home-page__rail {
-    grid-column: 1;
-    grid-row: 2;
-  }
-  .home-complement {
-    grid-column: 2;
-    grid-row: 2;
-    min-width: 0;
-  }
-  .quick-actions {
-    grid-template-columns: 1fr;
-  }
-  .home-complement__metrics {
+  .home-top-strip {
     grid-template-columns: 1fr;
   }
 }
 
-/* Columns follow the catalog's own width (rail already took ~40% of the
- * viewport), not the viewport. Two cells need ~42rem to keep names whole. */
-@container (min-width: 42rem) {
-  .home-catalog__rows {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0;
+@media (max-width: 400px) {
+  .home-header-hero__actions {
+    flex-direction: column;
+  }
+  .home-header-hero__btn.ant-btn,
+  .home-header-hero__action-btn.ant-btn {
+    width: 100%;
   }
 }
 
-@media (min-width: 1500px) {
-  .home-page {
-    grid-template-columns: minmax(17rem, 19.5rem) minmax(0, 1fr);
-    column-gap: 1.5rem;
-  }
-}
-
-@media (max-width: 599px) {
-  .home-catalog__row {
-    flex-wrap: wrap;
-    row-gap: 0.2rem;
+@media (prefers-reduced-motion: reduce) {
+  .home-header-hero,
+  .home-hero-card,
+  .home-hero-card__icon,
+  .home-hero-card__arrow,
+  .home-bento-card,
+  .home-bento-card__icon-box,
+  .home-bento-card__chevron,
+  .home-catalog__row,
+  .home-catalog__row-icon,
+  .home-catalog__row-open,
+  .home-header-hero__btn,
+  .home-header-hero__action-btn {
+    transition: none !important;
+    transform: none !important;
   }
 }

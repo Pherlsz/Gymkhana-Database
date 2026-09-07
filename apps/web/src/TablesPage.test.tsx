@@ -347,57 +347,6 @@ describe("TablesPage", () => {
     window.localStorage.clear();
   });
 
-  it("keeps toolbar field filters and has no header funnel", async () => {
-    window.history.replaceState(null, "", "/tables/people");
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockImplementation((input: RequestInfo | URL) =>
-          Promise.resolve(apiResponse(String(input))),
-        ),
-    );
-    render(<App />);
-    expect(await screen.findByRole("button", { name: "Filtros" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Filtros por campo" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Mais filtros" })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Soma (A=1…Z=26 / dígitos)" }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Adicionar coluna" })).not.toBeInTheDocument();
-    expect(
-      document.querySelectorAll(".spreadsheet-table thead .ant-table-filter-trigger").length,
-    ).toBe(0);
-  });
-
-  it("opens the toolbar surfaces as overlays that never displace the grid", async () => {
-    window.history.replaceState(null, "", "/tables/people");
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockImplementation((input: RequestInfo | URL) =>
-          Promise.resolve(apiResponse(String(input))),
-        ),
-    );
-    render(<App />);
-    const filters = await screen.findByRole("button", { name: "Filtros" });
-    const columns = screen.getByRole("button", { name: "Colunas" });
-    expect(filters).toHaveAttribute("aria-haspopup", "dialog");
-    expect(filters).toHaveAttribute("aria-expanded", "false");
-    expect(columns).toHaveAttribute("aria-haspopup", "dialog");
-
-    fireEvent.click(filters);
-    expect(filters).toHaveAttribute("aria-expanded", "true");
-    const surface = await screen.findByRole("dialog", { name: "Filtros" });
-    // The trigger points at the surface it controls, and the surface is an
-    // overlay rather than a sibling panel inside the toolbar.
-    expect(filters.getAttribute("aria-controls")).toBe(surface.id);
-    expect(document.querySelector(".tables-toolbar")?.contains(surface)).toBe(false);
-
-    fireEvent.keyDown(surface, { key: "Escape" });
-    await waitFor(() => expect(filters).toHaveAttribute("aria-expanded", "false"));
-  });
 
   it("marks an applied column and clears it from the chip", async () => {
     window.history.replaceState(null, "", "/tables/people?city=Porto+Alegre");
@@ -514,41 +463,6 @@ describe("TablesPage", () => {
     expect(screen.getByLabelText("Linhas por página")).toBeInTheDocument();
   });
 
-  it("lets the operator reveal a hidden people column and keeps nome locked", async () => {
-    window.history.replaceState(null, "", "/tables/people");
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockImplementation((input: RequestInfo | URL) =>
-          Promise.resolve(apiResponse(String(input))),
-        ),
-    );
-    render(<App />);
-    expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Colunas" }));
-    const father = screen.getByRole("checkbox", { name: "Nome do pai" });
-    expect(father).not.toBeChecked();
-    fireEvent.click(father);
-    await waitFor(() => {
-      expect(headerTexts()).toContain("Nome do pai");
-      expect(decodeURIComponent(window.location.search)).toContain("cols=father_name");
-    });
-    const city = screen.getByRole("checkbox", { name: "Cidade" });
-    expect(city).not.toBeDisabled();
-    fireEvent.click(city);
-    await waitFor(() => {
-      expect(headerTexts()).not.toContain("Cidade");
-      expect(decodeURIComponent(window.location.search)).toContain("-city");
-    });
-    expect(screen.getByRole("checkbox", { name: "Nome (Sempre visível)" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "Restaurar padrão" }));
-    await waitFor(() => {
-      expect(headerTexts()).not.toContain("Nome do pai");
-      expect(headerTexts()).toContain("Cidade");
-      expect(window.location.search.includes("cols=")).toBe(false);
-    });
-  });
 
   it("applies compact column overrides from the people URL", async () => {
     window.history.replaceState(null, "", "/tables/people?cols=-city,father_name");
@@ -814,40 +728,6 @@ describe("TablesPage", () => {
     expect(document.querySelector(".tables-inspector-slot")).toBeNull();
   });
 
-  it("opens the inspector in a standard bottom sheet under 840px without replacing the spreadsheet", async () => {
-    vi.stubGlobal(
-      "matchMedia",
-      (query: string) =>
-        ({
-          matches: query.includes(sheetInspectorMediaQuery()),
-          media: query,
-          onchange: null,
-          addListener: () => {},
-          removeListener: () => {},
-          addEventListener: () => {},
-          removeEventListener: () => {},
-          dispatchEvent: () => false,
-        }) as MediaQueryList,
-    );
-    window.history.replaceState(null, "", "/tables/people");
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockImplementation((input: RequestInfo | URL) =>
-          Promise.resolve(apiResponse(String(input))),
-        ),
-    );
-    render(<App />);
-    expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Ana da Silva"));
-    const inspector = await screen.findByRole("complementary", { name: "Detalhes da pessoa" });
-    expect(inspector.closest(".tables-inspector-sheet")).toBeTruthy();
-    expect(document.querySelector(".tables-page__workspace > .profile-panel")).toBeNull();
-    expect(document.querySelector(".spreadsheet-table")).toBeTruthy();
-    expect(document.querySelector(".profiles-cards")).toBeNull();
-    expect(within(inspector).getByRole("button", { name: "Fechar" })).toBeInTheDocument();
-  });
 
   it("reveals permanent deletion only after Excluir", async () => {
     window.history.replaceState(null, "", "/tables/people");

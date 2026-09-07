@@ -1,6 +1,7 @@
-import { Alert, Button, Card, Checkbox, Flex, Tag } from "antd";
+import { Alert, Button, Card, Checkbox, Flex, Input, Select, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useI18n } from "./i18n";
 import {
   emptyField,
   fieldKinds,
@@ -61,6 +62,8 @@ function withOptionalString(
 }
 
 export function CustomFieldsAdmin() {
+  const { messages } = useI18n();
+  const copy = messages.admin.customFields;
   const queryClient = useQueryClient();
   const types = useQuery({
     queryKey: ["custom-entity-types"],
@@ -101,7 +104,8 @@ export function CustomFieldsAdmin() {
     },
   });
   const remove = useMutation({
-    mutationFn: (value: CustomField) => deleteCustomField(value.id, value.version, "Confirmar"),
+    mutationFn: (value: CustomField) =>
+      deleteCustomField(value.id, value.version, messages.common.actions.confirm),
     onSuccess: async () => {
       setSelected(null);
       await queryClient.invalidateQueries({ queryKey: ["custom-fields", targetKind] });
@@ -119,12 +123,12 @@ export function CustomFieldsAdmin() {
   return (
     <Flex vertical gap="1rem">
       <SectionTitle
-        title="Campos personalizados"
-        description="Campos pertencem a um contexto e preservam o tipo depois que recebem valores."
+        title={copy.title}
+        description={copy.description}
       />
       {save.isError || remove.isError || fields.isError ? (
         <Alert
-          message="Não foi possível concluir a operação"
+          message={copy.errorTitle}
           type="error"
           description={<>{customDataError(save.error ?? remove.error ?? fields.error)}</>}
         />
@@ -132,67 +136,66 @@ export function CustomFieldsAdmin() {
       <Card className="custom-admin-form">
         <div className="custom-admin-grid">
           <label>
-            Contexto
-            <select
+            {copy.context}
+            <Select
               value={targetKind}
-              onChange={(event) => {
-                setTargetKind(event.target.value as CustomTargetKind);
+              onChange={(value) => {
+                setTargetKind(value as CustomTargetKind);
                 setTargetId("");
               }}
-            >
-              <option value="PROFILE">Pessoa</option>
-              <option value="DOCUMENT_TYPE">Tipo de documento</option>
-              <option value="BILL_TYPE">Tipo de conta/comprovante</option>
-              <option value="CUSTOM_ENTITY_TYPE">Tipo de entidade</option>
-            </select>
+              options={[
+                { value: "PROFILE", label: copy.targetProfile },
+                { value: "DOCUMENT_TYPE", label: copy.targetDocumentType },
+                { value: "BILL_TYPE", label: copy.targetBillType },
+                { value: "CUSTOM_ENTITY_TYPE", label: copy.targetCustomEntityType },
+              ]}
+            />
           </label>
           {targetKind !== "PROFILE" ? (
             <label>
-              Alvo
-              <select value={targetId} onChange={(event) => setTargetId(event.target.value)}>
-                <option value="">Selecione</option>
-                {targets.map((value) => (
-                  <option key={value.id} value={value.id}>
-                    {value.label}
-                  </option>
-                ))}
-              </select>
+              {copy.target}
+              <Select
+                value={targetId}
+                onChange={(value) => setTargetId(value)}
+                options={[
+                  { value: "", label: copy.targetSelectPlaceholder },
+                  ...targets.map((value) => ({ value: value.id, label: value.label })),
+                ]}
+              />
             </label>
           ) : null}
           <label>
-            Chave técnica
-            <input
+            {copy.technicalKey}
+            <Input
               disabled={Boolean(editing)}
               value={draft.technical_key}
               onChange={(event) => setDraft({ ...draft, technical_key: event.target.value })}
             />
           </label>
           <label>
-            Nome
-            <input
+            {copy.name}
+            <Input
               value={draft.label}
               onChange={(event) => setDraft({ ...draft, label: event.target.value })}
             />
           </label>
           <label>
-            Tipo do valor
-            <select
+            {copy.valueKind}
+            <Select
               disabled={Boolean(editing)}
               value={draft.field_kind}
-              onChange={(event) =>
-                setDraft({ ...draft, field_kind: event.target.value as CustomFieldKind })
+              onChange={(value) =>
+                setDraft({ ...draft, field_kind: value as CustomFieldKind })
               }
-            >
-              {fieldKinds.map((value) => (
-                <option key={value} value={value}>
-                  {fieldKindLabel(value)}
-                </option>
-              ))}
-            </select>
+              options={fieldKinds.map((value) => ({
+                value,
+                label: fieldKindLabel(value),
+              }))}
+            />
           </label>
           <label>
-            Tamanho mínimo
-            <input
+            {copy.minLength}
+            <Input
               inputMode="numeric"
               value={draft.minimum_length ?? ""}
               onChange={(event) =>
@@ -203,8 +206,8 @@ export function CustomFieldsAdmin() {
             />
           </label>
           <label>
-            Tamanho máximo
-            <input
+            {copy.maxLength}
+            <Input
               inputMode="numeric"
               value={draft.maximum_length ?? ""}
               onChange={(event) =>
@@ -215,8 +218,8 @@ export function CustomFieldsAdmin() {
             />
           </label>
           <label>
-            Regex opcional
-            <input
+            {copy.optionalRegex}
+            <Input
               value={draft.validation_regex ?? ""}
               onChange={(event) =>
                 setDraft((current) =>
@@ -230,14 +233,14 @@ export function CustomFieldsAdmin() {
             className="custom-admin-check"
             onChange={(event) => setDraft({ ...draft, required: event.target.checked })}
           >
-            Obrigatório
+            {copy.required}
           </Checkbox>
           <Checkbox
             checked={draft.active}
             className="custom-admin-check"
             onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
           >
-            Ativo
+            {copy.active}
           </Checkbox>
         </div>
         <Flex>
@@ -249,8 +252,9 @@ export function CustomFieldsAdmin() {
               (targetKind !== "PROFILE" && !targetId)
             }
             onClick={() => save.mutate()}
+            type="primary"
           >
-            {editing ? "Salvar campo" : "Criar campo"}
+            {editing ? copy.saveField : copy.createField}
           </Button>
           {editing ? (
             <Button
@@ -259,7 +263,7 @@ export function CustomFieldsAdmin() {
                 setDraft(scopedFieldValues(emptyField, targetKind, targetId));
               }}
             >
-              Cancelar
+              {copy.cancel}
             </Button>
           ) : null}
         </Flex>
@@ -276,7 +280,7 @@ export function CustomFieldsAdmin() {
                   </p>
                 </div>
                 <Tag color={value.active ? "success" : "neutral"}>
-                  {value.active ? "Ativo" : "Inativo"}
+                  {value.active ? copy.active : copy.inactive}
                 </Tag>
               </Flex>
               <Flex>
@@ -286,13 +290,13 @@ export function CustomFieldsAdmin() {
                     setDraft(fieldValues(value));
                   }}
                 >
-                  Editar
+                  {copy.edit}
                 </Button>
                 {value.field_kind === "SINGLE_SELECT" || value.field_kind === "MULTI_SELECT" ? (
-                  <Button onClick={() => setSelected(value)}>Opções</Button>
+                  <Button onClick={() => setSelected(value)}>{copy.options}</Button>
                 ) : null}
-                <Button disabled={remove.isPending} onClick={() => remove.mutate(value)}>
-                  Excluir
+                <Button danger disabled={remove.isPending} onClick={() => remove.mutate(value)}>
+                  {copy.delete}
                 </Button>
               </Flex>
             </Flex>

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Link2Off } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { StateCard } from "./components/StateCard";
+import { CadastroStateCard, StateCard } from "./components/StateCard";
 import { useApplicationSession } from "./session";
 import { useI18n } from "./i18n";
 import { errorMessage as googleFormsError, formatDateTime as formatDate } from "./lib/formatters";
@@ -125,12 +125,7 @@ export function GoogleFormsPage({
         />
       ) : null}
       {status.data && !status.data.enabled ? (
-        <StateCard
-          action={
-            <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
-              <Button icon={<ArrowLeft size={14} />}>{cadastroCopy.formsBackToCadastro}</Button>
-            </Link>
-          }
+        <CadastroStateCard
           description={cadastroCopy.formsIntegrationDisabledDesc}
           icon={<Link2Off aria-hidden size={28} strokeWidth={1.75} />}
           kind="warning"

@@ -1,5 +1,6 @@
 import type { BillRecord, CustomField, DocumentRecord, Profile } from "../api/client";
 import { formatAmount, formatCPF, formatDate } from "../formatters";
+import { t } from "../../i18n";
 
 export type TableRow = {
   id: string;
@@ -334,12 +335,9 @@ export function displayCell(value: unknown): string {
 
 export function paginationRange(page: number, pageSize: number, total: number, template: string) {
   if (total === 0) {
-    return template.replace("{from}", "0").replace("{to}", "0").replace("{total}", "0");
+    return t(template, { from: 0, to: 0, total: 0 });
   }
   const from = (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
-  return template
-    .replace("{from}", String(from))
-    .replace("{to}", String(to))
-    .replace("{total}", String(total));
+  return t(template, { from, to, total });
 }

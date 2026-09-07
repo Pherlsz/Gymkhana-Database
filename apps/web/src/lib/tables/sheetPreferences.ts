@@ -14,10 +14,6 @@ import {
   sheetInspectorMediaQuery,
 } from "./sheetDefaults";
 
-/**
- * Optional account overlay for sheet chrome. Persistent values belong on the
- * backend (`/settings`); this type is the merge surface until that API exists.
- */
 export type SheetPreferenceOverrides = {
   pageSize?: number;
   pageSizes?: readonly number[];

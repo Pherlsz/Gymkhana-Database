@@ -87,12 +87,12 @@ export function CadastroHolderSection({
           <div className="cadastro-col-4">
             <div className="cadastro-field">
               <label className="cadastro-field__label" htmlFor={cpfInputId}>
-                {copy.fieldCpf}
+                {messages.common.labels.cpf}
               </label>
               <Input
                 disabled={Boolean(selectedProfile)}
                 id={cpfInputId}
-                placeholder={copy.placeholderCpf}
+                placeholder={messages.common.placeholders.cpf}
                 value={cpf ?? ""}
                 onChange={(e) => onChangeCpf(e.target.value)}
               />

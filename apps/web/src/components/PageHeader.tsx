@@ -1,11 +1,6 @@
 import { Typography } from "antd";
 import type { ReactNode } from "react";
 
-/**
- * The one page title treatment. Six variants had grown across the app, three of
- * them leaning on `.page-header` / `.page-title` classes that carried no CSS at
- * all. Actions sit beside the title and wrap under it when the line runs out.
- */
 export function PageHeader({
   title,
   description,
