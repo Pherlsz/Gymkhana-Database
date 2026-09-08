@@ -12,10 +12,6 @@ export interface OcrDropzoneProps {
   actionText?: string;
 }
 
-/**
- * OCR Dropzone component used across document and bill forms.
- * Supports both an inline link-style trigger and a rich banner-style dropzone card.
- */
 export function OcrDropzoneInline({
   inputId,
   label,

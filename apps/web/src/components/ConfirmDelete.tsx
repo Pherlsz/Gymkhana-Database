@@ -1,14 +1,6 @@
 import { Alert, Button, Flex, Input, Typography } from "antd";
 import { useId, useState } from "react";
 
-/**
- * The single destructive-confirmation shape. `Modal.confirm`, `window.confirm`
- * and hand-rolled "type Confirmar" cards all coexisted; Orchestration 12.2
- * fixes the typed word, so that is the one kept and the other two go.
- *
- * The control stays disabled until the word matches exactly, and the word
- * itself is supplied by the catalog rather than compared against a literal.
- */
 export function ConfirmDelete({
   title,
   description,

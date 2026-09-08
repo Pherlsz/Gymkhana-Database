@@ -13,6 +13,8 @@ export interface BillModeProps {
   fileInputId: string;
   onFileDrop: (e: ChangeEvent<HTMLInputElement>) => void;
   holderName: string;
+  cpf?: string | undefined;
+  onChangeCpf?: ((cpf: string) => void) | undefined;
   selectedProfile: Profile | null;
   onSelectProfile: (p: Profile) => void;
   onSelectNewName: (name: string) => void;
@@ -29,6 +31,8 @@ export function BillMode({
   fileInputId,
   onFileDrop,
   holderName,
+  cpf,
+  onChangeCpf,
   selectedProfile,
   onSelectProfile,
   onSelectNewName,
@@ -43,9 +47,15 @@ export function BillMode({
   return (
     <>
       <CadastroSection
+        badge={
+          <span className="cadastro-group__badge cadastro-group__badge--bills">
+            {copy.badgeConsumption}
+          </span>
+        }
         defaultOpen={defaultOpenPrimary}
         hint={copy.sectionBillDataHint}
         icon={<Zap size={18} strokeWidth={1.75} />}
+        modifier="bills"
         title={copy.sectionBillData}
       >
         <BillFormFields
@@ -58,9 +68,12 @@ export function BillMode({
       </CadastroSection>
 
       <CadastroHolderSection
+        cpf={cpf}
+        cpfInputId="cad-bill-holder-cpf"
         defaultOpen={defaultOpenHolder}
         holderName={holderName}
         inputId="cad-bill-holder"
+        onChangeCpf={onChangeCpf}
         onChangeSelectedProfile={onChangeSelectedProfile}
         onClearProfile={onClearProfile}
         onSelectNewName={onSelectNewName}

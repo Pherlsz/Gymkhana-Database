@@ -64,7 +64,6 @@ export function normalizeCadastroPageSearch(search: Record<string, unknown>): Ca
   if (mode) result.mode = mode;
   if (importId) result.import = importId;
   if (owner) result.owner = owner;
-  // Keep record for OCR (record picker) and manual (review step).
   if ((mode === "ocr" || mode === undefined) && record) result.record = record;
   if (table !== "people" && typeId) result.type = typeId;
   if (mode === "forms") {

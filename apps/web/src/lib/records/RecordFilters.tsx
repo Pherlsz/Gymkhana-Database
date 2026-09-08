@@ -1,4 +1,4 @@
-import { Card } from "antd";
+import { Card, Input, Select } from "antd";
 import type { ReactNode } from "react";
 import { useI18n } from "../../i18n";
 import type { BillType, DocumentType, ProfileListSearch } from "../api/client";
@@ -29,54 +29,49 @@ export function RecordFiltersCard(props: {
       {props.children}
       <label>
         {messages.common.labels.type}
-        <select value={props.selectedType} onChange={(e) => props.onTypeChange(e.target.value)}>
-          <option value="">{messages.common.labels.all}</option>
-          {props.types.map((type) => (
-            <option key={type.id} value={type.id}>
-              {type.label}
-            </option>
-          ))}
-        </select>
+        <Select
+          onChange={(value) => props.onTypeChange(value)}
+          options={[
+            { value: "", label: messages.common.labels.all },
+            ...props.types.map((type) => ({ value: type.id, label: type.label })),
+          ]}
+          style={{ minWidth: 140 }}
+          value={props.selectedType}
+        />
       </label>
       <label>
         {messages.common.labels.status}
-        <select
+        <Select
+          onChange={(value) => props.onStatusChange(value as "AVAILABLE" | "IN_USE" | "")}
+          options={[
+            { value: "", label: messages.common.labels.all },
+            { value: "AVAILABLE", label: messages.common.status.available },
+            { value: "IN_USE", label: messages.common.status.inUse },
+          ]}
+          style={{ minWidth: 140 }}
           value={props.status}
-          onChange={(e) => props.onStatusChange(e.target.value as "AVAILABLE" | "IN_USE" | "")}
-        >
-          <option value="">{messages.common.labels.all}</option>
-          <option value="AVAILABLE">{messages.common.status.available}</option>
-          <option value="IN_USE">{messages.common.status.inUse}</option>
-        </select>
+        />
       </label>
       <label>
         {messages.common.labels.medium}
-        <select
+        <Select
+          onChange={(value) => props.onMediumChange(value as "PHYSICAL" | "DIGITAL" | "")}
+          options={mediaOptions}
+          style={{ minWidth: 140 }}
           value={props.medium}
-          onChange={(e) => props.onMediumChange(e.target.value as "PHYSICAL" | "DIGITAL" | "")}
-        >
-          {mediaOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        />
       </label>
       <label>
         {messages.common.labels.order}
-        <select
-          value={props.sortValue}
-          onChange={(e) => {
-            const [sort, order] = e.target.value.split(":") as [string, "asc" | "desc"];
+        <Select
+          onChange={(value) => {
+            const [sort, order] = value.split(":") as [string, "asc" | "desc"];
             props.onSortChange(sort, order);
           }}
-        >
-          {props.sortOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          options={props.sortOptions}
+          style={{ minWidth: 180 }}
+          value={props.sortValue}
+        />
       </label>
     </Card>
   );
@@ -153,7 +148,7 @@ export function RecordFilters({
       {isDoc ? (
         <label>
           {messages.common.labels.identifier}
-          <input
+          <Input
             onChange={(e) => onSearch({ document_identifier: e.target.value, document_page: 1 })}
             value={search.document_identifier}
           />
@@ -162,14 +157,14 @@ export function RecordFilters({
         <>
           <label>
             {messages.common.labels.reference}
-            <input
+            <Input
               onChange={(e) => onSearch({ bill_reference: e.target.value, bill_page: 1 })}
               value={search.bill_reference}
             />
           </label>
           <label>
             {messages.common.labels.competence}
-            <input
+            <Input
               onChange={(e) => onSearch({ bill_competence: e.target.value, bill_page: 1 })}
               placeholder={messages.common.placeholders.competence}
               value={search.bill_competence}

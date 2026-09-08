@@ -1,3 +1,4 @@
+import { Button } from "antd";
 import { ChevronDown } from "lucide-react";
 import { evidenceRowsForCard } from "./groupResults";
 import { ProfileSearchExpand } from "./ProfileSearchExpand";
@@ -27,11 +28,11 @@ export function ProfileSearchCard({
 
   return (
     <article className={open ? "search-card is-open" : "search-card"}>
-      <button
+      <Button
         aria-controls={expandId}
         aria-expanded={open}
         className="search-card__header"
-        type="button"
+        type="text"
         onClick={() => onToggle(card.profileId)}
       >
         <span className="search-card__title-block">
@@ -55,7 +56,7 @@ export function ProfileSearchCard({
             strokeWidth={ICON_STROKE}
           />
         </span>
-      </button>
+      </Button>
 
       {evidence.length > 0 ? (
         <div className="search-card__evidence">

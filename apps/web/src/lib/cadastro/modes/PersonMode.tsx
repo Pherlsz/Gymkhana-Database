@@ -57,7 +57,6 @@ export function PersonMode({
 
   return (
     <>
-      {/* Seção 1: Identidade & Contato */}
       <CadastroSection
         defaultOpen={true}
         extraTitle={
@@ -88,7 +87,6 @@ export function PersonMode({
         <PersonDemographicsGroup state={demographics} onChange={onChangeDemographics} />
       </CadastroSection>
 
-      {/* Seção 2: Família e Filiação */}
       <CadastroSection
         defaultOpen={false}
         hint={copy.sectionFamilyHint}
@@ -98,7 +96,6 @@ export function PersonMode({
         <PersonFamilyGroup state={family} onChange={onChangeFamily} />
       </CadastroSection>
 
-      {/* Seção 3: Dados Complementares */}
       <CadastroSection
         defaultOpen={false}
         hint={copy.sectionComplementaryHint}
@@ -108,7 +105,6 @@ export function PersonMode({
         <PersonComplementaryGroup state={complementary} onChange={onChangeComplementary} />
       </CadastroSection>
 
-      {/* Seção 4: Anexar Documentos Iniciais */}
       <PendingDocumentsSection
         defaultOpen={true}
         documentTypes={documentTypes}
@@ -117,7 +113,6 @@ export function PersonMode({
         onRemoveDoc={onRemoveDoc}
       />
 
-      {/* Seção 5: Anexar Contas Iniciais */}
       <PendingBillsSection
         billTypes={billTypes}
         bills={bills}

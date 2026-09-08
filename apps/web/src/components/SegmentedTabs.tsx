@@ -8,12 +8,6 @@ export type SegmentedTabItem = {
   title?: string;
 };
 
-/**
- * One tab control. The app ran three: `.custom-data-tabs`, `.profile-sections`
- * and bare `Button role="tab"` sets, the last of which announced tabs without
- * ever exposing a tablist or panel relationship. Ant's Segmented owns the
- * roving focus and selected state.
- */
 export function SegmentedTabs({
   label,
   items,

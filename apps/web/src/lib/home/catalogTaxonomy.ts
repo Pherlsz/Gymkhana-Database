@@ -55,6 +55,7 @@ type CanonicalContext = {
   group: Exclude<HomeCatalogGroupKey, "otherDocuments">;
   kind: HomeCatalogKind;
   match: string[];
+  labelKey: string;
 };
 
 const GROUP_ORDER: HomeCatalogGroupKey[] = [
@@ -69,65 +70,121 @@ const GROUP_ORDER: HomeCatalogGroupKey[] = [
 ];
 
 const CANONICAL_CONTEXTS: CanonicalContext[] = [
-  { slug: "dados-pessoais", group: "personal", kind: "people", match: ["dados-pessoais"] },
-  { slug: "conta-luz", group: "bills", kind: "bill", match: ["conta-luz", "energia", "luz"] },
-  { slug: "conta-agua", group: "bills", kind: "bill", match: ["conta-agua", "agua"] },
+  {
+    slug: "dados-pessoais",
+    group: "personal",
+    kind: "people",
+    match: ["dados-pessoais"],
+    labelKey: "personalData",
+  },
+  {
+    slug: "conta-luz",
+    group: "bills",
+    kind: "bill",
+    match: ["conta-luz", "energia", "luz"],
+    labelKey: "electricityBill",
+  },
+  {
+    slug: "conta-agua",
+    group: "bills",
+    kind: "bill",
+    match: ["conta-agua", "agua"],
+    labelKey: "waterBill",
+  },
   {
     slug: "conta-internet",
     group: "bills",
     kind: "bill",
     match: ["conta-internet", "internet", "wifi"],
+    labelKey: "internetBill",
   },
-  { slug: "doc-rg", group: "identity", kind: "document", match: ["doc-rg", "rg"] },
-  { slug: "doc-cnh", group: "identity", kind: "document", match: ["doc-cnh", "cnh"] },
+  { slug: "doc-rg", group: "identity", kind: "document", match: ["doc-rg", "rg"], labelKey: "rg" },
+  {
+    slug: "doc-cnh",
+    group: "identity",
+    kind: "document",
+    match: ["doc-cnh", "cnh"],
+    labelKey: "cnh",
+  },
   {
     slug: "doc-passaporte",
     group: "identity",
     kind: "document",
     match: ["doc-passaporte", "passaporte"],
+    labelKey: "passport",
   },
-  { slug: "doc-ctps", group: "work", kind: "document", match: ["doc-ctps", "ctps"] },
-  { slug: "doc-pis", group: "work", kind: "document", match: ["doc-pis", "pis", "pasep"] },
-  { slug: "doc-crea", group: "work", kind: "document", match: ["doc-crea", "crea"] },
-  { slug: "doc-oab", group: "work", kind: "document", match: ["doc-oab", "oab"] },
-  { slug: "doc-crm", group: "work", kind: "document", match: ["doc-crm", "crm"] },
-  { slug: "doc-cro", group: "work", kind: "document", match: ["doc-cro", "cro"] },
-  { slug: "doc-coren", group: "work", kind: "document", match: ["doc-coren", "coren"] },
+  {
+    slug: "doc-ctps",
+    group: "work",
+    kind: "document",
+    match: ["doc-ctps", "ctps"],
+    labelKey: "ctps",
+  },
+  {
+    slug: "doc-pis",
+    group: "work",
+    kind: "document",
+    match: ["doc-pis", "pis", "pasep"],
+    labelKey: "pis",
+  },
+  {
+    slug: "doc-crea",
+    group: "work",
+    kind: "document",
+    match: ["doc-crea", "crea"],
+    labelKey: "crea",
+  },
+  { slug: "doc-oab", group: "work", kind: "document", match: ["doc-oab", "oab"], labelKey: "oab" },
+  { slug: "doc-crm", group: "work", kind: "document", match: ["doc-crm", "crm"], labelKey: "crm" },
+  { slug: "doc-cro", group: "work", kind: "document", match: ["doc-cro", "cro"], labelKey: "cro" },
+  {
+    slug: "doc-coren",
+    group: "work",
+    kind: "document",
+    match: ["doc-coren", "coren"],
+    labelKey: "coren",
+  },
   {
     slug: "doc-titulo-eleitoral",
     group: "socialHealth",
     kind: "document",
     match: ["doc-titulo-eleitoral", "titulo-eleitoral", "titulo-de-eleitor", "titulo"],
+    labelKey: "voterId",
   },
   {
     slug: "doc-cartao-sus",
     group: "socialHealth",
     kind: "document",
     match: ["doc-cartao-sus", "cartao-sus", "sus"],
+    labelKey: "susCard",
   },
   {
     slug: "doc-cartao-cidadao",
     group: "socialHealth",
     kind: "document",
     match: ["doc-cartao-cidadao", "cartao-cidadao", "cidadao"],
+    labelKey: "citizenCard",
   },
   {
     slug: "doc-carteira-estudante",
     group: "education",
     kind: "document",
     match: ["doc-carteira-estudante", "carteira-estudantil", "carteira-estudante", "estudante"],
+    labelKey: "studentId",
   },
   {
     slug: "doc-certidao-nascimento",
     group: "certificates",
     kind: "document",
     match: ["doc-certidao-nascimento", "certidao-nascimento", "nascimento"],
+    labelKey: "birthCertificate",
   },
   {
     slug: "doc-certidao-casamento",
     group: "certificates",
     kind: "document",
     match: ["doc-certidao-casamento", "certidao-casamento", "casamento"],
+    labelKey: "weddingCertificate",
   },
 ];
 
@@ -202,7 +259,7 @@ export function groupHomeCatalog(input: {
   people: HomeCatalogItem;
   documents: HomeCatalogItem[];
   bills: HomeCatalogItem[];
-  labels: Record<HomeCatalogContextSlug, string>;
+  labels: Record<string, string>;
   documentsLoading?: boolean;
   billsLoading?: boolean;
 }): HomeCatalogGroup[] {
@@ -222,18 +279,19 @@ export function groupHomeCatalog(input: {
     types: HomeCatalogItem[],
     loading: boolean,
   ): HomeCatalogItem {
+    const label = input.labels[context.labelKey] ?? context.slug;
     const match = types.find(
       (type) =>
         !assigned.has(type.id) &&
         !isDiscontinuedDocument(type) &&
         bestContext(type, context.kind)?.slug === context.slug,
     );
-    if (!match) return placeholder(context, input.labels[context.slug], loading);
+    if (!match) return placeholder(context, label, loading);
     assigned.add(match.id);
     return {
       ...match,
       kind: context.kind,
-      label: input.labels[context.slug],
+      label,
       technicalKey: context.slug,
     };
   }

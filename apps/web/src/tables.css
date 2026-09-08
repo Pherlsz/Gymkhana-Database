@@ -115,9 +115,9 @@
 }
 
 .toolbar-surface__trigger.ant-btn.is-active {
-  border-color: var(--md-on-surface);
-  background-color: var(--md-state-selected);
-  color: var(--md-on-surface);
+  border-color: var(--brand-accent-solid);
+  background-color: var(--brand-accent-surface);
+  color: var(--brand-accent-text);
 }
 
 /* Below `sm` the label would force the bar to wrap, so the icon carries it. */
