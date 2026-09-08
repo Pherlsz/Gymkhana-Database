@@ -56,12 +56,12 @@ export function HomePage() {
         },
         documents: overview.documentTypes.map((type) => ({ ...type, kind: "document" as const })),
         bills: overview.billTypes.map((type) => ({ ...type, kind: "bill" as const })),
-        labels: messages.common.labels,
+        labels: copy.tables.contexts,
         documentsLoading: overview.loading.documentTypes,
         billsLoading: overview.loading.billTypes,
       }).filter((group) => group.key !== "personal"),
     [
-      messages.common.labels,
+      copy.tables.contexts,
       copy.tables.personalRecord,
       overview.billTypes,
       overview.documentTypes,
@@ -113,10 +113,7 @@ export function HomePage() {
       const isGroupLoading =
         (group.key === "bills" && overview.loading.billTypes) ||
         (group.key !== "bills" && overview.loading.documentTypes);
-      const hasAnyRegistered = group.items.some(
-        (item) => typeof item.count === "number" && item.count > 0,
-      );
-      const isGroupEmpty = !isGroupLoading && !hasAnyRegistered;
+      const isGroupEmpty = !isGroupLoading && group.items.length === 0;
       const badgeText = isGroupLoading
         ? undefined
         : extra === 1

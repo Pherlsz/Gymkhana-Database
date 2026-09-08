@@ -98,7 +98,7 @@ function checkBarrelImports() {
 function runTypecheck() {
   log("\n🔍 [3/4] Validando tipagem TypeScript...", "\x1b[36m");
   try {
-    execSync("npx tsc -p tsconfig.json --noEmit", {
+    execSync("./node_modules/.bin/tsc -p tsconfig.json --noEmit", {
       cwd: WEB_DIR,
       stdio: "inherit",
     });
@@ -111,7 +111,7 @@ function runTypecheck() {
 function runBuildAndCheckBudgets() {
   log("\n🔍 [4/4] Compilando produção e auditando orçamentos de bundle...", "\x1b[36m");
   try {
-    execSync("npx vite build", {
+    execSync("./node_modules/.bin/vite build", {
       cwd: WEB_DIR,
       stdio: "pipe",
     });

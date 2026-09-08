@@ -11,17 +11,20 @@
 ## Inventário do que JÁ existe (verificado 2026-09-03)
 
 **Backend (Go, nada a construir):**
+
 - `GET /api/v1/document-types`, `GET /api/v1/bill-types` (catálogo; frontend já usa via `listDocumentTypes`/`listBillTypes` em `lib/api/client.ts`).
 - `listCustomFields(targetKind, targetId)` em `lib/api/customdata.ts` → campos de `custom_field_definitions` por DOCUMENT_TYPE / BILL_TYPE (é a fonte dos campos por tipo).
 - `POST /api/v1/profiles`, `PUT /api/v1/document-presences`, `POST /api/v1/documents`, `POST /api/v1/bills` — criação existe e é auditada.
 - OCR: jobs → suggestions → apply (`lib/api/ocr.ts`); review UI já existe (`OcrReviewPanel`, `CadastroOcrWorkspace`).
 
 **Frontend (já existe):**
+
 - `lib/cadastro/`: `CadastroPanel` (orquestrador manual/xlsx/ocr), `CadastroSteps` (trilha numerada já pronta), `CadastroTypePicker` (catálogo agrupado com ícones Lucide, vindo da API), `CadastroOwnerPicker` (busca de pessoa), `CadastroManualPanel` (**fino: só owner picker — é aqui que entra o form dinâmico**), `CadastroImportWizard`.
 - `CadastroSteps.test.tsx`, `CadastroManualPanel.test.tsx`, `cadastroPicker.test.ts` etc. — há convenção de testes co-locados.
 - i18n pt-BR via `useI18n()` (`messages.tables.cadastro.*`).
 
 **O que o sketch 011 adiciona (o delta a portar):**
+
 1. Form dinâmico por tipo com os campos reais do DB (hoje inexistente no manual).
 2. UX inline: label+valor em linha, hover na linha inteira, foco sem glow, alturas idênticas ativo/inativo (Tarefas 2–3 do plano do sketch).
 3. Indicador discreto de requisito mínimo — linha fina, não Alert/banner (Tarefa 1 do plano do sketch).
@@ -57,14 +60,14 @@
 
 1. Ao selecionar um tipo no `CadastroTypePicker`: `useQuery(["custom-fields", targetKind, typeId], () => listCustomFields(...))`.
 2. `TypeFieldsForm` renderiza antd `Form` dinâmico a partir dos campos:
-   | field_kind DB | componente antd |
-   |---|---|
-   | TEXT | `Input` (maxLength do campo) |
-   | LONG_TEXT | `Input.TextArea` |
-   | INTEGER / DECIMAL | `InputNumber` |
-   | CIVIL_DATE | `DatePicker` (formato pt-BR) |
-   | BOOLEAN | `Switch` |
-   | SINGLE_SELECT | `Select` com `custom_field_options` |
+   | field_kind DB     | componente antd                     |
+   | ----------------- | ----------------------------------- |
+   | TEXT              | `Input` (maxLength do campo)        |
+   | LONG_TEXT         | `Input.TextArea`                    |
+   | INTEGER / DECIMAL | `InputNumber`                       |
+   | CIVIL_DATE        | `DatePicker` (formato pt-BR)        |
+   | BOOLEAN           | `Switch`                            |
+   | SINGLE_SELECT     | `Select` com `custom_field_options` |
 3. Campos base fixos por tabela, antes dos custom:
    - Documento: `identifier_value` (obrigatório) + `document_date` + `notes`. Se `document_types.validation_regex` existir (CPF/PIS `^[0-9]{11}$`), aplicar como regra do Form com mensagem pt-BR.
    - Conta: titular impresso, endereço, referência, competência (YYYY-MM via `DatePicker` picker="month"), valor + moeda.
@@ -90,6 +93,7 @@
 ## Fase 3 — UX inline do 011 (ritmo + hover)
 
 **Portar as Tarefas 2 e 3 do plano do sketch para `cadastro.css` + componentes, em antd:**
+
 - Linhas do formulário (modo leitura/resumo): par label+valor em linha, altura fixa idêntica com/sem edição; hover cobre a linha inteira (label+valor) com `--hover` do tema, cursor pointer.
 - Foco sutil: sem glow/`box-shadow` espalhafatoso — borda do token gold/ink do tema + fundo leve (via tokens de `shell.css`, não cores novas).
 - Implementar como padrão reutilizável (ex.: `InlineValueRow`) pois a revisão (Fase 4) usa o mesmo padrão.
@@ -124,6 +128,7 @@
 ```
 Fase 0 (spike) → Fase 1 (form) → Fase 2 (save) → Fase 3 (UX inline) → Fase 4 (indicador + revisão) → Fase 5 (integração/PR)
 ```
+
 Fases 3 e 4 podem paralelizar após a 2 se forem dois agentes, mas a Fase 4 consome o componente da Fase 3 — em série é mais seguro.
 
 ## Riscos / aberto

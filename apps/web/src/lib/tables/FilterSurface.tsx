@@ -91,6 +91,11 @@ const FilterRow = memo(function FilterRow({
   );
 });
 
+/**
+ * Conditional filter builder: pick a column, then a value, then add another
+ * row. Applied rows stay in catalog order so turning a filter on does not
+ * jump it to the top of the sheet.
+ */
 export function FilterSurface({
   addFilterLabel,
   chooseFieldLabel,

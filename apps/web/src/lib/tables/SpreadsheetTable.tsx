@@ -11,7 +11,6 @@ import {
 } from "react";
 import { DEFAULT_SHEET_PREFERENCES } from "./sheetPreferences";
 import { spreadsheetPageSizeOptions } from "./spreadsheetViewport";
-import { t } from "../../i18n";
 
 export type SpreadsheetColumn<T> = {
   key: string;
@@ -38,6 +37,7 @@ type VirtualTableHandle = {
   scrollTo: (config: { index?: number; key?: Key; top?: number }) => void;
 };
 
+/** antd 6 computes a default row height and omits listItemHeight from TableProps, but still forwards it to RcVirtualTable. */
 type VirtualAntdTableProps<T> = TableProps<T> & {
   listItemHeight?: number;
   ref?: { current: VirtualTableHandle | null };
@@ -96,7 +96,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     () =>
       spreadsheetPageSizeOptions(pageSize).map((size) => ({
         value: size,
-        label: t(pageSizeOptionLabel, { n: size }),
+        label: pageSizeOptionLabel.replace("{n}", String(size)),
       })),
     [pageSize, pageSizeOptionLabel],
   );
@@ -291,6 +291,9 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
               ? (row, index) => ({
                   "aria-selected": row.id === selectedRowId,
                   role: "button",
+                  // Roving tabindex: only the selected row (or the first row when
+                  // nothing is selected) is a tab stop. Arrow-key navigation in
+                  // useEffect moves selection; Enter/Space activates.
                   tabIndex: row.id === selectedRowId || (!selectedRowId && index === 0) ? 0 : -1,
                   onClick: () => onRowClick(row),
                   onKeyDown: (event) => {

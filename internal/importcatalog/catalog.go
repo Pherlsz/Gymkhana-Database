@@ -1,4 +1,6 @@
-// Package importcatalog implements column header aliases, explicit discards, and document-label remaps.
+// Package importcatalog implements Orchestration §16.2 product rules: column header
+// aliases, explicit discards, and document-label remaps. Value normalization
+// remains in Gymkhana-Core and domain services at execute time.
 package importcatalog
 
 import (
@@ -89,8 +91,8 @@ func aliasTable(module Module) map[string]string {
 var profileAliases = map[string]string{
 	"nome": "full_name", "name": "full_name", "nome completo": "full_name",
 	"nome social": "social_name",
-	"cpf": "cpf",
-	"email": "email", "e mail": "email",
+	"cpf":         "cpf",
+	"email":       "email", "e mail": "email",
 	"celular": "mobile_phone", "telefone celular": "mobile_phone",
 	"residencial": "landline_phone", "fone comercial": "landline_phone",
 	"telefone": "landline_phone", "fone": "landline_phone",
@@ -101,7 +103,7 @@ var profileAliases = map[string]string{
 	"bairro": "address_neighborhood",
 	"cidade": "address_city", "cidade reside": "address_city", "cidade residencia": "address_city",
 	"uf": "address_state", "estado": "address_state",
-	"cep": "address_postal_code",
+	"cep":         "address_postal_code",
 	"observacoes": "notes", "obs": "notes", "notas": "notes",
 	"record id": "record_id", "id registro": "record_id", "id": "record_id",
 	"versao": "version", "version": "version",
@@ -120,12 +122,12 @@ var documentAliases = map[string]string{
 var billAliases = map[string]string{
 	"referencia": "reference_value", "conta": "reference_value", "numero conta": "reference_value",
 	"competencia": "competence",
-	"valor": "amount", "amount": "amount",
+	"valor":       "amount", "amount": "amount",
 	"moeda": "currency", "currency": "currency",
 	"nome impresso": "printed_holder_name", "titular": "printed_holder_name", "nome titular": "printed_holder_name",
 	"endereco impresso": "printed_address", "endereco": "printed_address",
 	"observacoes": "notes", "obs": "notes",
-	"meio": "medium",
+	"meio":      "medium",
 	"id pessoa": "owner_profile_id", "id proprietario": "owner_profile_id",
 	"id tipo": "bill_type_id", "tipo id": "bill_type_id",
 	"record id": "record_id", "versao": "version",

@@ -341,7 +341,6 @@ export function CadastroSingleScreen({
         <BillMode
           billFields={billFields}
           billTypes={billTypes.data?.types ?? []}
-          cpf={demographics.cpf}
           fileInputId={standaloneBillFileId}
           holderName={demographics.fullName}
           onChangeBillFields={(patch) => {
@@ -353,7 +352,6 @@ export function CadastroSingleScreen({
               }));
             }
           }}
-          onChangeCpf={(cpf) => setDemographics((prev) => ({ ...prev, cpf }))}
           onChangeSelectedProfile={setSelectedProfile}
           onClearProfile={handleClearProfile}
           onFileDrop={handleStandaloneBillOcrDrop}

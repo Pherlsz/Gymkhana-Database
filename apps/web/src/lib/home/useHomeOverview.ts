@@ -40,6 +40,11 @@ export type HomeInUseTypeChip = {
   count: number;
 };
 
+/**
+ * Groups the fetched in-use page by entity + type. The page endpoint caps at 50
+ * items, so past that point chip counts understate `page.total`; callers show a
+ * truncation note when the total exceeds the fetched length.
+ */
 export function groupInUseByType(items: HomeInUseItem[]): HomeInUseTypeChip[] {
   const grouped = new Map<string, HomeInUseTypeChip>();
   for (const item of items) {
@@ -144,6 +149,7 @@ export function useHomeOverview() {
     profileTotal: profiles.data?.page.total ?? null,
     documentsInUse: documentsInUse.data?.page.total ?? null,
     billsInUse: billsInUse.data?.page.total ?? null,
+    /** How many in-use items the fixed-size pages actually returned. */
     inUseFetched,
     inUseTypeChips,
     documentTypes: catalog.documentTypes.map((type) => ({

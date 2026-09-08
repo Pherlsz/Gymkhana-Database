@@ -308,7 +308,7 @@ function ShellSearch({
     <div className="shell-search">
       <SearchField
         inputRef={inputRef}
-        label={messages.search.inputPlaceholder}
+        label={messages.common.actions.search}
         mode="text"
         placeholder={messages.search.inputPlaceholder}
         shortcutHint={compact ? undefined : "Ctrl K"}

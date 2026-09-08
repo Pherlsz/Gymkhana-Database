@@ -1,4 +1,3 @@
-import { message } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,7 +9,6 @@ let activeClient: QueryClient | null = null;
 
 afterEach(() => {
   cleanup();
-  message.destroy();
   activeClient?.clear();
   activeClient = null;
 });
@@ -239,18 +237,14 @@ describe("CadastroSingleScreen", () => {
     it("renders bill fields as primary and optional holder section", () => {
       renderSingleScreen("bills");
       expect(screen.getByText(/Dados da fatura \/ serviço/i)).not.toBeNull();
-      expect(screen.getByText("Consumo")).not.toBeNull();
-      expect(screen.getByText(/Preenchimento inteligente via OCR/i)).not.toBeNull();
-      expect(screen.getByText(/IA \/ OCR/i)).not.toBeNull();
       expect(screen.getByLabelText(/Fornecedor \/ Concessionária/i)).not.toBeNull();
       expect(screen.getByLabelText(/Número de instalação \/ Conta/i)).not.toBeNull();
       expect(screen.getByLabelText(/Competência \/ Vencimento/i)).not.toBeNull();
       expect(screen.getByLabelText(/Valor \(R\$\)/i)).not.toBeNull();
-      expect(screen.getByLabelText(/CPF/i)).not.toBeNull();
       expect(screen.getByRole("button", { name: /Salvar conta/i })).not.toBeNull();
     });
 
-    it("saves bill and auto-creates profile with CPF from bill holder", async () => {
+    it("saves bill and auto-creates profile from bill printed holder", async () => {
       const onSuccess = vi.fn();
       renderSingleScreen("bills", vi.fn(), onSuccess);
 
@@ -263,18 +257,12 @@ describe("CadastroSingleScreen", () => {
       const printHolderInput = screen.getByLabelText(/Nome impresso na fatura/i);
       fireEvent.change(printHolderInput, { target: { value: "Clarice Lispector" } });
 
-      const cpfInput = screen.getByLabelText(/CPF/i);
-      fireEvent.change(cpfInput, { target: { value: "123.456.789-00" } });
-
       const saveBtn = screen.getByRole("button", { name: /Salvar conta/i });
       fireEvent.click(saveBtn);
 
       await waitFor(() => {
         expect(createProfile).toHaveBeenCalledWith(
-          expect.objectContaining({
-            full_name: "Clarice Lispector",
-            cpf: "123.456.789-00",
-          }),
+          expect.objectContaining({ full_name: "Clarice Lispector" }),
         );
         expect(createBill).toHaveBeenCalledWith(
           expect.objectContaining({

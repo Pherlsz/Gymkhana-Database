@@ -16,7 +16,6 @@ export function groupedTypeFilterOptions(
   types: { id: string; label: string; technicalKey: string }[],
   kind: Exclude<HomeCatalogKind, "people">,
   copy: CatalogV1["home"]["tables"],
-  labels: Record<string, string>,
 ): TypeFilterGroup[] {
   const items = types.map((type) => ({
     ...type,
@@ -35,7 +34,7 @@ export function groupedTypeFilterOptions(
     },
     documents: kind === "document" ? items : [],
     bills: kind === "bill" ? items : [],
-    labels,
+    labels: copy.contexts,
   });
 
   return groups.flatMap((group) => {

@@ -1,4 +1,3 @@
-import { Button } from "antd";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useI18n } from "./i18n";
 import { apiURL } from "./lib/api/client";
@@ -181,27 +180,35 @@ function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
 
               <div className="login-card-divider" aria-hidden />
 
-              <Button
+              <button
                 className="login-google-btn"
+                type="button"
                 disabled={loading !== null}
-                icon={loading !== "google" ? <GoogleIcon /> : undefined}
-                loading={loading === "google"}
                 onClick={handleGoogleSignIn}
-                size="large"
               >
-                {copy.googleButton}
-              </Button>
+                {loading === "google" ? (
+                  <span className="login-button__spinner" aria-label={copy.signingIn} />
+                ) : (
+                  <>
+                    <GoogleIcon />
+                    <span>{copy.googleButton}</span>
+                  </>
+                )}
+              </button>
 
               {import.meta.env.DEV ? (
-                <Button
+                <button
                   className="login-google-btn login-google-btn--dev"
+                  type="button"
                   disabled={loading !== null}
-                  loading={loading === "development"}
                   onClick={handleDevelopmentSignIn}
-                  size="large"
                 >
-                  {copy.developmentButton}
-                </Button>
+                  {loading === "development" ? (
+                    <span className="login-button__spinner" aria-label={copy.signingIn} />
+                  ) : (
+                    copy.developmentButton
+                  )}
+                </button>
               ) : null}
             </div>
           </section>

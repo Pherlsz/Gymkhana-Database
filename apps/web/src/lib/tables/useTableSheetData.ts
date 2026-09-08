@@ -163,7 +163,6 @@ export function useTableSheetData({
         })),
         "document",
         messages.home.tables,
-        messages.common.labels,
       );
     }
     if (section === "bills") {
@@ -175,11 +174,10 @@ export function useTableSheetData({
         })),
         "bill",
         messages.home.tables,
-        messages.common.labels,
       );
     }
     return [];
-  }, [billTypeList, documentTypeList, messages.common.labels, messages.home.tables, section]);
+  }, [billTypeList, documentTypeList, messages.home.tables, section]);
 
   const extraFields = useMemo(() => {
     if (section === "profile") return uniqueCustomFields(profileFieldsQuery.data?.fields ?? []);
@@ -218,7 +216,6 @@ export function useTableSheetData({
       })),
       "document",
       messages.home.tables,
-      messages.common.labels,
     );
     const ordered = grouped.flatMap((group) =>
       group.options.map((option) => documentTypeList.find((type) => type.id === option.value)),
@@ -227,7 +224,7 @@ export function useTableSheetData({
       (type): type is NonNullable<typeof type> =>
         type != null && PEOPLE_DOC_KEY_SET.has(type.technical_key),
     );
-  }, [documentTypeList, messages.common.labels, messages.home.tables, section]);
+  }, [documentTypeList, messages.home.tables, section]);
 
   const baseRows: TableRow[] = useMemo(() => {
     if (section === "documents") {

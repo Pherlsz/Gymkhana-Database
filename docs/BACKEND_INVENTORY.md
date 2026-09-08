@@ -8,26 +8,26 @@ This is an implementation inventory, not a live tracker. Current work and next a
 
 **How to read status**
 
-| Status | Meaning |
-| --- | --- |
-| Done | Backend implements the approved initial scope |
-| Partial | Package and HTTP exist; a required piece is missing or disabled |
+| Status   | Meaning                                                              |
+| -------- | -------------------------------------------------------------------- |
+| Done     | Backend implements the approved initial scope                        |
+| Partial  | Package and HTTP exist; a required piece is missing or disabled      |
 | Deferred | Orchestration explicitly postpones this (do not build until decided) |
-| Missing | Approved initial scope with no backend package/API |
-| Mismatch | Code exists but contradicts the current product rule |
+| Missing  | Approved initial scope with no backend package/API                   |
+| Mismatch | Code exists but contradicts the current product rule                 |
 
 ---
 
 ## Summary
 
-| Bucket | Count |
-| --- | --- |
-| Done for initial scope | Auth product (Google + allowlist + SUPERADMIN/ADMIN/EXTERNAL), Profile CRUD including absorbed person fields and writable `team` / `club_membership`, document presences + exemplars, Bills, current-use, Custom data (no formulas), Attachments/R2, Search, Query v1+v2 HTTP, Matching HTTP (no SPA route), XLSX operations lifecycle, Google Forms, Admin users |
-| Partial | AI Assistente (shared Administração model key, not per-user BYOK), OCR model path fake-only, Query/task tools inside Chat |
-| Deferred by Orchestration | Objects module, full usage/gymkhana-team history, redo of Neon import, Profile matching UI (last module; no `/matching` route) |
-| Missing vs Orchestration | Shared Administração model key for Assistente/OCR, Chat query v2 + task interpretation, Gemini-only OCR flag gated on that key, import column/value catalogs (§16.2) |
-| Bugs / wiring | EXTERNAL capability checker not passed into `cmd/api` |
-| Out of product | User Tasks workspace (`/tasks`, `TASKS` capability); gymkhana team or football club as a module or User field; per-user model keys; `/matching` as a destination |
+| Bucket                    | Count                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Done for initial scope    | Auth product (Google + allowlist + SUPERADMIN/ADMIN/EXTERNAL), Profile CRUD including absorbed person fields and writable `team` / `club_membership`, document presences + exemplars, Bills, current-use, Custom data (no formulas), Attachments/R2, Search, Query v1+v2 HTTP, Matching HTTP (no SPA route), XLSX operations lifecycle, Google Forms, Admin users |
+| Partial                   | AI Assistente (shared Administração model key, not per-user BYOK), OCR model path fake-only, Query/task tools inside Chat                                                                                                                                                                                                                                         |
+| Deferred by Orchestration | Objects module, full usage/gymkhana-team history, redo of Neon import, Profile matching UI (last module; no `/matching` route)                                                                                                                                                                                                                                    |
+| Missing vs Orchestration  | Shared Administração model key for Assistente/OCR, Chat query v2 + task interpretation, Gemini-only OCR flag gated on that key, import column/value catalogs (§16.2)                                                                                                                                                                                              |
+| Bugs / wiring             | EXTERNAL capability checker not passed into `cmd/api`                                                                                                                                                                                                                                                                                                             |
+| Out of product            | User Tasks workspace (`/tasks`, `TASKS` capability); gymkhana team or football club as a module or User field; per-user model keys; `/matching` as a destination                                                                                                                                                                                                  |
 
 The rebuild is **ahead of legacy** on Query Engine (typed plans, no client SQL), generic custom entities, document/bill types, presence vs exemplar, and current-use on bills. It is **behind legacy** on a production model provider for Assistente/OCR. Neon 18 Dev/Prod have schema version 30 and empty cadastro; the older Postgres 17 projects still hold the imported copy with gaps (no bills/attachments). Reimport is later work.
 
@@ -75,9 +75,9 @@ The rebuild is **ahead of legacy** on Query Engine (typed plans, no client SQL),
 
 **Rebuild: Done** — both are writable Profile columns (not User, not modules). They are **two different fields**.
 
-| Field | Meaning | Legacy |
-| --- | --- | --- |
-| `team` | Gymkhana team (“Equipe”) | `Profile.team`, group gincana, free text |
+| Field             | Meaning                       | Legacy                                     |
+| ----------------- | ----------------------------- | ------------------------------------------ |
+| `team`            | Gymkhana team (“Equipe”)      | `Profile.team`, group gincana, free text   |
 | `club_membership` | Football club (“Sócio clube”) | seed SELECT Internacional / Grêmio / Outro |
 
 `sector` is gymkhana **setor**, not a team. `membership_type` is club membership category (Cartão / Sócio / Outro).
@@ -307,13 +307,13 @@ Code (`internal/taskengine/`):
 
 Neon (survey 2026-08-16, counts only, no row payloads):
 
-| Database | Notes |
-| --- | --- |
-| Rebuild Dev-18 (`Gymkhana-Database-Dev-18`) | Postgres 18, schema version 30, empty cadastro |
-| Rebuild Prod-18 (`Gymkhana-Database-Prod-18`) | Postgres 18, schema version 30, empty cadastro |
-| Rebuild Dev-17 (`Gymkhana-Database-Dev`) | Imported copy: 88033 profiles, 57630 documents, 0 bills, 0 attachments |
-| Rebuild Prod-17 (`Gymkhana-Database-Prod`) | Same imported copy as Dev-17 |
-| Legacy Prisma (`Gymkhana-database-staging`) | 87356 profiles, 0 documents, 0 bills, 6 attachments |
+| Database                                      | Notes                                                                  |
+| --------------------------------------------- | ---------------------------------------------------------------------- |
+| Rebuild Dev-18 (`Gymkhana-Database-Dev-18`)   | Postgres 18, schema version 30, empty cadastro                         |
+| Rebuild Prod-18 (`Gymkhana-Database-Prod-18`) | Postgres 18, schema version 30, empty cadastro                         |
+| Rebuild Dev-17 (`Gymkhana-Database-Dev`)      | Imported copy: 88033 profiles, 57630 documents, 0 bills, 0 attachments |
+| Rebuild Prod-17 (`Gymkhana-Database-Prod`)    | Same imported copy as Dev-17                                           |
+| Legacy Prisma (`Gymkhana-database-staging`)   | 87356 profiles, 0 documents, 0 bills, 6 attachments                    |
 
 `cmd/legacy-reconcile` still only validates a bundle. The live Neon 17 load is treated as an existing attempt with known gaps (bills/attachments empty, profile count drift). Do not rebuild the importer as active work unless the operator asks.
 
@@ -329,15 +329,15 @@ Neon (survey 2026-08-16, counts only, no row payloads):
 
 ## Binaries
 
-| Command | Role |
-| --- | --- |
-| `cmd/api` | HTTP API |
-| `cmd/worker` | River: operations, matching, Forms, OCR, cleanup |
-| `cmd/migrate` / `cmd/river-migrate` | schema |
-| `cmd/configcheck` | fail-closed config |
-| `cmd/launch-smoke` | live/ready + revision |
-| `cmd/legacy-reconcile` | bundle validation |
-| `cmd/cleanup-documents` | identifier classification |
+| Command                             | Role                                             |
+| ----------------------------------- | ------------------------------------------------ |
+| `cmd/api`                           | HTTP API                                         |
+| `cmd/worker`                        | River: operations, matching, Forms, OCR, cleanup |
+| `cmd/migrate` / `cmd/river-migrate` | schema                                           |
+| `cmd/configcheck`                   | fail-closed config                               |
+| `cmd/launch-smoke`                  | live/ready + revision                            |
+| `cmd/legacy-reconcile`              | bundle validation                                |
+| `cmd/cleanup-documents`             | identifier classification                        |
 
 ---
 

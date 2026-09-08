@@ -31,6 +31,10 @@ export type ToolbarFilterField =
       onChange: (value: string) => void;
     };
 
+/**
+ * The value control for one column filter. Text and date commit on blur or Enter
+ * so typing does not refetch per keystroke; select commits immediately.
+ */
 export function FilterControl({
   field,
   autoFocus = false,
@@ -49,6 +53,7 @@ export function FilterControl({
     if (draft !== field.value) field.onChange(draft);
   };
 
+  // Debounced auto-commit while typing so table updates smoothly after typing stops
   useEffect(() => {
     if (draft === field.value) return;
     const timer = setTimeout(() => {
@@ -100,6 +105,7 @@ export function FilterControl({
   );
 }
 
+/** The human-readable value of an applied filter, for chips and list rows. */
 export function filterValuePreview(field: ToolbarFilterField): string {
   if (field.kind !== "select") return field.value;
   const option = field.options.find((item) => item.value === field.value);

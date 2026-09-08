@@ -16,12 +16,12 @@ import (
 )
 
 type cleanupReport struct {
-	Scanned int            `json:"scanned"`
-	Updated int            `json:"updated"`
-	Deleted int            `json:"deleted"`
-	Kept    int            `json:"kept"`
-	States  int            `json:"states"`
-	DryRun  bool           `json:"dry_run"`
+	Scanned int             `json:"scanned"`
+	Updated int             `json:"updated"`
+	Deleted int             `json:"deleted"`
+	Kept    int             `json:"kept"`
+	States  int             `json:"states"`
+	DryRun  bool            `json:"dry_run"`
 	Samples []cleanupSample `json:"samples,omitempty"`
 }
 

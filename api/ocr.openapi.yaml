@@ -215,7 +215,18 @@ components:
     OCRCapability:
       type: object
       additionalProperties: false
-      required: [enabled, supported_mimes, maximum_source_bytes, maximum_pages, maximum_pixels, maximum_suggestions, maximum_duration_seconds, maximum_requests_per_hour, maximum_provider_usage_per_hour]
+      required:
+        [
+          enabled,
+          supported_mimes,
+          maximum_source_bytes,
+          maximum_pages,
+          maximum_pixels,
+          maximum_suggestions,
+          maximum_duration_seconds,
+          maximum_requests_per_hour,
+          maximum_provider_usage_per_hour,
+        ]
       properties:
         enabled: { type: boolean }
         supported_mimes:
@@ -227,14 +238,30 @@ components:
         maximum_suggestions: { type: integer, minimum: 1, maximum: 100 }
         maximum_duration_seconds: { type: integer, format: int64, minimum: 1, maximum: 300 }
         maximum_requests_per_hour: { type: integer, minimum: 1, maximum: 1000 }
-        maximum_provider_usage_per_hour: { type: integer, format: int64, minimum: 1, maximum: 100000000 }
+        maximum_provider_usage_per_hour:
+          { type: integer, format: int64, minimum: 1, maximum: 100000000 }
     OCRJobState:
       type: string
       enum: [QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED]
     OCRJob:
       type: object
       additionalProperties: false
-      required: [id, attachment_id, source_mime, source_bytes, state, attempt_count, page_count, pixel_count, suggestion_count, provider_usage, version, created_at, updated_at]
+      required:
+        [
+          id,
+          attachment_id,
+          source_mime,
+          source_bytes,
+          state,
+          attempt_count,
+          page_count,
+          pixel_count,
+          suggestion_count,
+          provider_usage,
+          version,
+          created_at,
+          updated_at,
+        ]
       properties:
         id: { $ref: "#/components/schemas/UUID" }
         attachment_id: { $ref: "#/components/schemas/UUID" }
@@ -301,7 +328,24 @@ components:
     OCRSuggestion:
       type: object
       additionalProperties: false
-      required: [id, job_id, ordinal, target_kind, target_id, target_version, field_key, field_label, value_kind, proposed_value, evidence, review_state, version, created_at, updated_at]
+      required:
+        [
+          id,
+          job_id,
+          ordinal,
+          target_kind,
+          target_id,
+          target_version,
+          field_key,
+          field_label,
+          value_kind,
+          proposed_value,
+          evidence,
+          review_state,
+          version,
+          created_at,
+          updated_at,
+        ]
       properties:
         id: { $ref: "#/components/schemas/UUID" }
         job_id: { $ref: "#/components/schemas/UUID" }
@@ -398,7 +442,16 @@ components:
         completed_at: { $ref: "#/components/schemas/Timestamp" }
     OCRJobEventKind:
       type: string
-      enum: [JOB_ACCEPTED, JOB_STARTED, SOURCE_VALIDATED, SUGGESTIONS_READY, JOB_COMPLETED, JOB_FAILED, JOB_CANCELLED]
+      enum:
+        [
+          JOB_ACCEPTED,
+          JOB_STARTED,
+          SOURCE_VALIDATED,
+          SUGGESTIONS_READY,
+          JOB_COMPLETED,
+          JOB_FAILED,
+          JOB_CANCELLED,
+        ]
     OCRJobEvent:
       type: object
       additionalProperties: false

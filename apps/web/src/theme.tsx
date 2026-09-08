@@ -1,4 +1,4 @@
-import { Button, ConfigProvider, theme as antdTheme } from "antd";
+import { ConfigProvider, theme as antdTheme } from "antd";
 import { Moon, Sun } from "lucide-react";
 import {
   createContext,
@@ -16,6 +16,13 @@ type Theme = "light" | "dark";
 const STORAGE_KEY = "gymkhana-theme";
 const THEME_SWITCH_MS = 240;
 
+/*
+ * Ant derives variants from these seeds with FastColor, which cannot read a CSS
+ * variable — it resolves one to black. So every mixable seed is a literal here
+ * and the same literal is what `shell.css` declares for the matching `--md-*`
+ * role. Non-mixable tokens keep pointing at the variable so they follow the
+ * theme without a second source of truth.
+ */
 const PRIMARY = "#ffc53d";
 const ON_PRIMARY = "#141414";
 const SEEDS = {
@@ -43,6 +50,7 @@ const ThemeContext = createContext<{
 function gymkhanaAntdTheme(mode: Theme) {
   const dark = mode === "dark";
   const seed = dark ? SEEDS.dark : SEEDS.light;
+  // Surfaces follow html.dark via --ant-* in shell.css.
   return {
     cssVar: { key: "gymkhana" },
     hashed: false,
@@ -68,17 +76,11 @@ function gymkhanaAntdTheme(mode: Theme) {
     },
     components: {
       Button: {
-        controlHeight: 36,
-        controlHeightSM: 30,
-        controlHeightLG: 42,
-        borderRadius: 8,
-        borderRadiusSM: 6,
-        borderRadiusLG: 10,
-        primaryColor: dark ? "#141414" : "#ffffff",
+        primaryColor: "var(--md-surface)",
         defaultColor: "var(--md-on-surface)",
-        defaultBorderColor: "var(--md-outline-variant)",
+        defaultBorderColor: "var(--md-outline)",
         defaultHoverColor: "var(--md-on-surface)",
-        defaultHoverBorderColor: "var(--md-outline)",
+        defaultHoverBorderColor: "var(--md-on-surface)",
         defaultActiveColor: "var(--md-on-surface)",
         defaultActiveBorderColor: "var(--md-on-surface)",
         defaultGhostColor: "var(--md-on-surface)",
@@ -86,7 +88,6 @@ function gymkhanaAntdTheme(mode: Theme) {
         textTextColor: "var(--md-on-surface)",
         textTextHoverColor: "var(--md-on-surface)",
         textTextActiveColor: "var(--md-on-surface)",
-        fontWeight: 600,
       },
       Input: {
         hoverBorderColor: "var(--md-outline)",
@@ -151,6 +152,12 @@ function gymkhanaAntdTheme(mode: Theme) {
         borderRadiusSM: 4,
       },
       Switch: {
+        /*
+         * Checked = the crest star gold, as a literal: antd derives hover
+         * colors with FastColor, which resolves a var() to black and falls
+         * back to the seed — an ink var() read white-on-white in dark mode
+         * and flipped gold on hover. A literal derives cleanly instead.
+         */
         colorPrimary: PRIMARY,
       },
       Card: {
@@ -262,8 +269,8 @@ export function ThemeToggle({
   const isDark = theme === "dark";
 
   return (
-    <Button
-      type="text"
+    <button
+      type="button"
       className="login-theme-toggle"
       data-theme={theme}
       onClick={toggleTheme}
@@ -290,6 +297,6 @@ export function ThemeToggle({
       >
         <Moon aria-hidden size={16} strokeWidth={1.75} />
       </span>
-    </Button>
+    </button>
   );
 }

@@ -34,10 +34,10 @@ export function DocumentFormFields({
   copy: customCopy,
 }: DocumentFormFieldsProps) {
   const { messages } = useI18n();
-  const labels = messages.common.labels;
   const copy = { ...messages.tables.cadastro, ...customCopy };
   return (
     <div className="cadastro-document-fields">
+      {/* Smart OCR Dropzone at the top for rapid document ingestion */}
       <OcrDropzoneInline
         actionText={copy.ocrBannerAction}
         badgeText={copy.ocrBannerBadge}
@@ -50,6 +50,7 @@ export function DocumentFormFields({
       />
 
       <div className="cadastro-grid">
+        {/* Row 1: Tipo de Documento e Número */}
         <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-doc-type">
@@ -80,6 +81,7 @@ export function DocumentFormFields({
           </div>
         </div>
 
+        {/* Row 2: Datas (Emissão e Validade) */}
         <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-doc-date">
@@ -99,7 +101,7 @@ export function DocumentFormFields({
         <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-doc-valid">
-              {labels.validUntil}
+              {copy.fieldDocValidUntil}
             </label>
             <DatePicker
               format="DD/MM/YYYY"
@@ -112,14 +114,15 @@ export function DocumentFormFields({
           </div>
         </div>
 
+        {/* Row 3: Meio e Guarda / Custódia */}
         <div className="cadastro-col-6">
           <div className="cadastro-field">
-            <label className="cadastro-field__label">{labels.medium}</label>
+            <label className="cadastro-field__label">{copy.fieldDocMedium}</label>
             <Segmented
               block
               options={[
-                { label: labels.physical, value: "PHYSICAL" },
-                { label: labels.digital, value: "DIGITAL" },
+                { label: copy.tagPhysical, value: "PHYSICAL" },
+                { label: copy.tagDigital, value: "DIGITAL" },
               ]}
               value={state.docMedium}
               onChange={(v) => onChange({ docMedium: v as "PHYSICAL" | "DIGITAL" })}
@@ -129,12 +132,12 @@ export function DocumentFormFields({
 
         <div className="cadastro-col-6">
           <div className="cadastro-field">
-            <label className="cadastro-field__label">{labels.custody}</label>
+            <label className="cadastro-field__label">{copy.fieldDocCustody}</label>
             {state.docMedium === "PHYSICAL" ? (
               <Select
                 options={[
-                  { label: labels.organization, value: "ORGANIZATION" },
-                  { label: labels.owner, value: "OWNER" },
+                  { label: copy.fieldDocCustodyOrg, value: "ORGANIZATION" },
+                  { label: copy.fieldDocCustodyOwner, value: "OWNER" },
                 ]}
                 style={{ width: "100%" }}
                 value={state.docCustody}
@@ -149,6 +152,7 @@ export function DocumentFormFields({
           </div>
         </div>
 
+        {/* Row 4: Observações */}
         <div className="cadastro-col-12">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-doc-notes">

@@ -26,18 +26,18 @@ The capability system provides granular permission control beyond role-based acc
 
 ### Available capabilities
 
-| Capability | Description |
-| --- | --- |
-| `search` | Access to search endpoints |
-| `profiles` | Access to profile management |
-| `data_tables` | Access to documents, bills, custom data. A dedicated `custom_data` capability (beyond formula columns and user-created columns) is an open product question; do not invent a new grant surface until that is decided. |
-| `attachments` | Access to file attachments |
-| `ocr` | Access to OCR processing |
-| `operations` | Access to bulk operations |
-| `google_forms` | Access to Google Forms integration |
-| `query` | Access to query engine |
-| `matching` | Access to duplicate matching |
-| `chat` | Access to the Assistente (same HTTP engine; not a /chat destination page) |
+| Capability     | Description                                                                                                                                                                                                           |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search`       | Access to search endpoints                                                                                                                                                                                            |
+| `profiles`     | Access to profile management                                                                                                                                                                                          |
+| `data_tables`  | Access to documents, bills, custom data. A dedicated `custom_data` capability (beyond formula columns and user-created columns) is an open product question; do not invent a new grant surface until that is decided. |
+| `attachments`  | Access to file attachments                                                                                                                                                                                            |
+| `ocr`          | Access to OCR processing                                                                                                                                                                                              |
+| `operations`   | Access to bulk operations                                                                                                                                                                                             |
+| `google_forms` | Access to Google Forms integration                                                                                                                                                                                    |
+| `query`        | Access to query engine                                                                                                                                                                                                |
+| `matching`     | Access to duplicate matching                                                                                                                                                                                          |
+| `chat`         | Access to the Assistente (same HTTP engine; not a /chat destination page)                                                                                                                                             |
 
 ### Granting capabilities
 
@@ -67,17 +67,17 @@ GET /api/admin/users/{userID}/capabilities
 
 ## Required environment values
 
-| Variable | Purpose |
-| --- | --- |
-| `APP_ENV` | `local`, `test`, `staging`, or `production`. lokeys `--env dev` injects `development`, which the application treats as `local` |
-| `DATABASE_URL` | PostgreSQL connection string; required whenever authentication is enabled |
-| `AUTH_ENABLED` | Must be `true` in staging and production |
-| `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth client ID |
-| `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth client secret; supply only through a local or deployment secret manager |
-| `GOOGLE_OAUTH_REDIRECT_URL` | Absolute API callback URL ending in `/auth/callback` |
-| `AUTH_APPLICATION_URL` | Absolute web application URL used after successful login |
-| `AUTH_SUPERADMIN_EMAIL` | Initial and recovery email for the single `SUPERADMIN`; it must also be allowlisted |
-| `VITE_API_BASE_URL` | Browser-visible API origin |
+| Variable                     | Purpose                                                                                                                        |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `APP_ENV`                    | `local`, `test`, `staging`, or `production`. lokeys `--env dev` injects `development`, which the application treats as `local` |
+| `DATABASE_URL`               | PostgreSQL connection string; required whenever authentication is enabled                                                      |
+| `AUTH_ENABLED`               | Must be `true` in staging and production                                                                                       |
+| `GOOGLE_OAUTH_CLIENT_ID`     | Google OAuth client ID                                                                                                         |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth client secret; supply only through a local or deployment secret manager                                           |
+| `GOOGLE_OAUTH_REDIRECT_URL`  | Absolute API callback URL ending in `/auth/callback`                                                                           |
+| `AUTH_APPLICATION_URL`       | Absolute web application URL used after successful login                                                                       |
+| `AUTH_SUPERADMIN_EMAIL`      | Initial and recovery email for the single `SUPERADMIN`; it must also be allowlisted                                            |
+| `VITE_API_BASE_URL`          | Browser-visible API origin                                                                                                     |
 
 The email allowlist is now stored in the `allowed_emails` table and managed via admin endpoints, not environment variables.
 
@@ -200,17 +200,17 @@ DELETE /api/admin/users/{userID}/capabilities/profiles
 
 ## Audit events
 
-| Event | Typical outcomes |
-| --- | --- |
-| `SIGN_IN_SUCCEEDED` | `SUCCESS` |
-| `SIGN_IN_DENIED` | `DENIED` for an unallowlisted or inactive account |
-| `SIGN_IN_FAILED` | `FAILURE` for invalid callback input, provider failure, persistence failure, or session creation failure |
-| `SIGN_OUT` | `SUCCESS` or `FAILURE` |
-| `USER_ADMINISTRATION_ACCESSED` | `SUCCESS`, `DENIED`, or `FAILURE` |
-| `USER_ACCESS_CHANGED` | `SUCCESS`, `DENIED`, or `FAILURE` |
-| `SESSION_REVOKED` | `SUCCESS` or `FAILURE` after an access change |
-| `CAPABILITY_GRANTED` | `SUCCESS` or `FAILURE` |
-| `CAPABILITY_REVOKED` | `SUCCESS` or `FAILURE` |
+| Event                          | Typical outcomes                                                                                         |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `SIGN_IN_SUCCEEDED`            | `SUCCESS`                                                                                                |
+| `SIGN_IN_DENIED`               | `DENIED` for an unallowlisted or inactive account                                                        |
+| `SIGN_IN_FAILED`               | `FAILURE` for invalid callback input, provider failure, persistence failure, or session creation failure |
+| `SIGN_OUT`                     | `SUCCESS` or `FAILURE`                                                                                   |
+| `USER_ADMINISTRATION_ACCESSED` | `SUCCESS`, `DENIED`, or `FAILURE`                                                                        |
+| `USER_ACCESS_CHANGED`          | `SUCCESS`, `DENIED`, or `FAILURE`                                                                        |
+| `SESSION_REVOKED`              | `SUCCESS` or `FAILURE` after an access change                                                            |
+| `CAPABILITY_GRANTED`           | `SUCCESS` or `FAILURE`                                                                                   |
+| `CAPABILITY_REVOKED`           | `SUCCESS` or `FAILURE`                                                                                   |
 
 Audit writes remain best-effort so a temporary audit-table failure does not create a partial authentication transaction. Every failed audit write emits a structured error log containing only event type, outcome, request ID, and the storage error. Tokens, OAuth codes, provider payloads, and secrets are never logged.
 
