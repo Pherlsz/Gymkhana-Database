@@ -100,7 +100,9 @@ export function CadastroPage() {
             <span className="cadastro-crumb__sep">/</span>
             <span className="cadastro-crumb__current">{copy.modeForms}</span>
           </nav>
-          <Suspense fallback={<Spin size="large" style={{ display: "block", margin: "3rem auto" }} />}>
+          <Suspense
+            fallback={<Spin size="large" style={{ display: "block", margin: "3rem auto" }} />}
+          >
             <GoogleFormsPage defaultModule={moduleFromTable(search.table)} />
           </Suspense>
         </div>
@@ -123,7 +125,9 @@ export function CadastroPage() {
               {work === "xlsx" ? copy.modeXlsx : copy.modeOcr}
             </span>
           </nav>
-          <Suspense fallback={<Spin size="large" style={{ display: "block", margin: "3rem auto" }} />}>
+          <Suspense
+            fallback={<Spin size="large" style={{ display: "block", margin: "3rem auto" }} />}
+          >
             <CadastroPanel
               cadastro={work}
               importId={search.import}

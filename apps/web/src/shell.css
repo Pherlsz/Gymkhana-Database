@@ -333,7 +333,6 @@ html.theme-switching *::after {
 
 /* Button tokens and interactions are governed by theme.tsx and components.css */
 
-
 .page-measure {
   width: 100%;
   max-width: var(--page-measure);
@@ -518,7 +517,6 @@ html.theme-switching *::after {
 .app-shell__sidebar .shell-search {
   margin: 0 1.25rem 1rem;
 }
-
 
 .shell-search {
   display: block;
@@ -784,7 +782,6 @@ html.theme-switching *::after {
 .nav-sub__item--active .nav-sub__icon {
   color: var(--md-primary-text);
 }
-
 
 .sidebar-theme-toggle {
   display: flex;

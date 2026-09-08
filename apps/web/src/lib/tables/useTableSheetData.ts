@@ -65,7 +65,12 @@ export function useTableSheetData({
   });
 
   const citiesQuery = useQuery({
-    queryKey: queryKeys.profiles.cityOptions(search.full_name, search.cpf, search.email, search.state),
+    queryKey: queryKeys.profiles.cityOptions(
+      search.full_name,
+      search.cpf,
+      search.email,
+      search.state,
+    ),
     queryFn: ({ signal }) =>
       listDistinctCities(
         {

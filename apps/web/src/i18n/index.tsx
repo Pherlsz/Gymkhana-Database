@@ -90,4 +90,3 @@ export function I18nProvider({ locale, children }: PropsWithChildren<{ locale: A
 export function useI18n(): I18nContextValue {
   return useContext(I18nContext) ?? defaultContextValue;
 }
-

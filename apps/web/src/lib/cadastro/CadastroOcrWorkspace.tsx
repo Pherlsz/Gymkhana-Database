@@ -139,7 +139,10 @@ function CadastroRecordPicker({
   const showDocuments = table !== "bills";
   const showBills = table !== "documents";
   const documents = useQuery({
-    queryKey: queryKeys.records.documents(ownerId, { ...DOCUMENT_LIST_SEARCH, document_type: typeId ?? "" }),
+    queryKey: queryKeys.records.documents(ownerId, {
+      ...DOCUMENT_LIST_SEARCH,
+      document_type: typeId ?? "",
+    }),
     queryFn: ({ signal }) =>
       listDocuments(ownerId, { ...DOCUMENT_LIST_SEARCH, document_type: typeId ?? "" }, signal),
     enabled: showDocuments,

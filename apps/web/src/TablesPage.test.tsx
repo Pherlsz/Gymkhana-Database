@@ -346,7 +346,6 @@ describe("TablesPage", () => {
     window.localStorage.clear();
   });
 
-
   it("marks an applied column and clears it from the chip", async () => {
     window.history.replaceState(null, "", "/tables/people?city=Porto+Alegre");
     vi.stubGlobal(
@@ -461,7 +460,6 @@ describe("TablesPage", () => {
     expect(document.querySelector(".spreadsheet-table")?.contains(footer)).toBe(false);
     expect(screen.getByLabelText("Linhas por página")).toBeInTheDocument();
   });
-
 
   it("applies compact column overrides from the people URL", async () => {
     window.history.replaceState(null, "", "/tables/people?cols=-city,father_name");
@@ -726,7 +724,6 @@ describe("TablesPage", () => {
     });
     expect(document.querySelector(".tables-inspector-slot")).toBeNull();
   });
-
 
   it("reveals permanent deletion only after Excluir", async () => {
     window.history.replaceState(null, "", "/tables/people");

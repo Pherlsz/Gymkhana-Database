@@ -8,10 +8,7 @@ import "./google-forms.css";
 import { useApplicationSession } from "./session";
 import { useI18n } from "./i18n";
 import { errorMessage as googleFormsError, formatDateTime as formatDate } from "./lib/formatters";
-import {
-  googleFormsReturnPath,
-  tableFromModule,
-} from "./lib/cadastro/cadastroSearch";
+import { googleFormsReturnPath, tableFromModule } from "./lib/cadastro/cadastroSearch";
 import { queryKeys } from "./lib/api/queryKeys";
 import {
   beginGoogleFormsOAuth,

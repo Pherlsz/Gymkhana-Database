@@ -366,7 +366,6 @@ function TableLink({
   );
 }
 
-
 function SidebarThemeToggle({ rail }: { rail: boolean }) {
   const { theme, toggleTheme } = useTheme();
   const { messages } = useI18n();

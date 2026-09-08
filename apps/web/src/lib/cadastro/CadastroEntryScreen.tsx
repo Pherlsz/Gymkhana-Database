@@ -5,10 +5,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { listGoogleFormsSources, refreshGoogleFormsSource } from "../api/googleForms";
 import type { OperationImport } from "../api/operations";
 import { listOperationImports } from "../api/operations";
-import {
-  normalizeCadastroPageSearch,
-  type TableKind,
-} from "./cadastroSearch";
+import { normalizeCadastroPageSearch, type TableKind } from "./cadastroSearch";
 import { queryKeys } from "../api/queryKeys";
 import { AppCard } from "../../components/AppCard";
 import { useI18n } from "../../i18n";
@@ -165,9 +162,9 @@ export function CadastroEntryScreen({
                 <span className="cadastro-entry__badge">
                   {latestSource
                     ? t(copy.entryFormsBadge, {
-                      title: latestSource.title,
-                      n: activeSources.length,
-                    })
+                        title: latestSource.title,
+                        n: activeSources.length,
+                      })
                     : copy.entryFormsBadgeFallback}
                 </span>
                 {latestSource ? (
@@ -219,15 +216,12 @@ export function CadastroEntryScreen({
               </Button>
             </span>
             <div className="app-card__foot">
-              <span
-                aria-hidden="true"
-                className="cadastro-entry__dot cadastro-entry__dot--idle"
-              />
+              <span aria-hidden="true" className="cadastro-entry__dot cadastro-entry__dot--idle" />
               {latestImport
                 ? t(copy.entryBulkFoot, {
-                  n: latestRowCount,
-                  time: timeAgo(latestImport.created_at),
-                })
+                    n: latestRowCount,
+                    time: timeAgo(latestImport.created_at),
+                  })
                 : copy.entryBulkFootNone}
             </div>
           </AppCard>

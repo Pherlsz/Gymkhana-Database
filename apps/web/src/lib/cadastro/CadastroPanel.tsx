@@ -67,7 +67,9 @@ export function CadastroPanel({
       ) : null}
 
       {cadastro === "ocr" ? (
-        <Suspense fallback={<Spin size="large" style={{ display: "block", margin: "3rem auto" }} />}>
+        <Suspense
+          fallback={<Spin size="large" style={{ display: "block", margin: "3rem auto" }} />}
+        >
           <CadastroOcrWorkspace
             ownerId={recordsOwner}
             recordId={recordId}

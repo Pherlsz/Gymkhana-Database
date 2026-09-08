@@ -20,9 +20,10 @@ export const queryKeys = {
   },
   profiles: {
     all: ["profile"] as const,
-    detail: (id?: string) => (id !== undefined ? (["profile", id] as const) : (["profile"] as const)),
-    lookup: (q?: string) => (["profiles-lookup", q] as const),
-    cityOptions: (...filters: unknown[]) => (["profile-city-options", ...filters] as const),
+    detail: (id?: string) =>
+      id !== undefined ? (["profile", id] as const) : (["profile"] as const),
+    lookup: (q?: string) => ["profiles-lookup", q] as const,
+    cityOptions: (...filters: unknown[]) => ["profile-city-options", ...filters] as const,
   },
   types: {
     documents: ["document-types"] as const,
@@ -43,22 +44,20 @@ export const queryKeys = {
           : (["bills"] as const),
   },
   customData: {
-    fields: (kind: string, id?: string) =>
-      (["custom-fields", kind, id ?? "global"] as const),
-    values: (kind: string, id?: string) =>
-      (["custom-values", kind, id ?? "new"] as const),
-    options: (fieldId: string) => (["custom-options", fieldId] as const),
+    fields: (kind: string, id?: string) => ["custom-fields", kind, id ?? "global"] as const,
+    values: (kind: string, id?: string) => ["custom-values", kind, id ?? "new"] as const,
+    options: (fieldId: string) => ["custom-options", fieldId] as const,
   },
   search: {
     catalog: ["search-catalog"] as const,
-    global: (request?: unknown) => (["global-search", request] as const),
+    global: (request?: unknown) => ["global-search", request] as const,
     suggest: (grain?: string, hint?: string, q?: string) =>
-      (["search-suggest", grain, hint, q] as const),
+      ["search-suggest", grain, hint, q] as const,
   },
   ocr: {
     capability: ["ocr-capability"] as const,
-    job: (jobId?: string) => (["ocr-job", jobId] as const),
-    suggestions: (jobId?: string) => (["ocr-suggestions", jobId] as const),
+    job: (jobId?: string) => ["ocr-job", jobId] as const,
+    suggestions: (jobId?: string) => ["ocr-suggestions", jobId] as const,
   },
   googleForms: {
     status: ["google-forms-status"] as const,
@@ -67,8 +66,8 @@ export const queryKeys = {
   },
   operations: {
     catalog: ["operations-catalog"] as const,
-    import: (id?: string) => (["operation-import", id] as const),
-    importReport: (id?: string) => (["operation-import-report", id] as const),
+    import: (id?: string) => ["operation-import", id] as const,
+    importReport: (id?: string) => ["operation-import-report", id] as const,
     importsList: ["operation-imports"] as const,
   },
   attachments: {

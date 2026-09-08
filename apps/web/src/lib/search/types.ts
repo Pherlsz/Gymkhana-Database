@@ -53,4 +53,3 @@ export const SEARCH_MODULE_VALUES: SearchModule[] = [
   "custom_data",
   "attachments",
 ];
-

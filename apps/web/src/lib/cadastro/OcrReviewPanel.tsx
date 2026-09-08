@@ -139,7 +139,9 @@ export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
           suggestions={suggestions.data!.suggestions.map((view) => view.suggestion)}
           onApplied={(message) => {
             setNotice(message);
-            void queryClient.invalidateQueries({ queryKey: queryKeys.ocr.suggestions(activeJobID) });
+            void queryClient.invalidateQueries({
+              queryKey: queryKeys.ocr.suggestions(activeJobID),
+            });
           }}
         />
       ) : null}

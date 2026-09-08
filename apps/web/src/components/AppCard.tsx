@@ -138,9 +138,7 @@ export function AppCard({
           {emptyDescription ? (
             <span className="app-card__empty-desc">{emptyDescription}</span>
           ) : null}
-          {emptyAction ? (
-            <div className="app-card__empty-action">{emptyAction}</div>
-          ) : null}
+          {emptyAction ? <div className="app-card__empty-action">{emptyAction}</div> : null}
         </div>
       );
     }
@@ -153,12 +151,7 @@ export function AppCard({
   const content = (
     <>
       {isAccordion ? (
-        <button
-          aria-expanded={open}
-          className="app-card__trigger"
-          onClick={onToggle}
-          type="button"
-        >
+        <button aria-expanded={open} className="app-card__trigger" onClick={onToggle} type="button">
           {header}
         </button>
       ) : (

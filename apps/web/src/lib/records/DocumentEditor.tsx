@@ -157,9 +157,7 @@ export function DocumentEditor(props: {
           <Select
             disabled={!editable}
             onChange={(value) =>
-              setValues(
-                withRecordMedium(values, value as DocumentValuesRequest["medium"]),
-              )
+              setValues(withRecordMedium(values, value as DocumentValuesRequest["medium"]))
             }
             options={media.map((value) => ({
               value,
@@ -176,9 +174,7 @@ export function DocumentEditor(props: {
               onChange={(value) =>
                 setValues({
                   ...values,
-                  idle_custody: value as NonNullable<
-                    DocumentValuesRequest["idle_custody"]
-                  >,
+                  idle_custody: value as NonNullable<DocumentValuesRequest["idle_custody"]>,
                 })
               }
               options={[

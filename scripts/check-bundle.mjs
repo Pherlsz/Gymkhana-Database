@@ -2,7 +2,7 @@
 
 /**
  * scripts/check-bundle.mjs
- * 
+ *
  * Automated bundle & import audit script.
  * Enforces:
  * 1. Route-level CSS decoupling (no feature CSS leaked into main.tsx)
@@ -24,7 +24,7 @@ const DIST_ASSETS = path.join(WEB_DIR, "dist/assets");
 const BUDGETS = {
   entryCssMaxKb: 65, // Max initial CSS (currently ~56 KB)
   entryJsMaxKb: 110, // Max initial JS (currently ~99.8 KB)
-  routeJsMaxKb: 75,  // Max individual route/feature chunk
+  routeJsMaxKb: 75, // Max individual route/feature chunk
 };
 
 // Forbidden CSS in root entry (must be code-split into their respective routes)
@@ -63,7 +63,7 @@ function checkRootCssImports() {
   for (const forbidden of FORBIDDEN_ROOT_CSS) {
     if (content.includes(forbidden)) {
       fail(
-        `Regressão de bundle detectada em main.tsx: "${forbidden}" não deve ser importado globalmente no root. Importe diretamente no componente da rota correspondente.`
+        `Regressão de bundle detectada em main.tsx: "${forbidden}" não deve ser importado globalmente no root. Importe diretamente no componente da rota correspondente.`,
       );
     }
   }
@@ -84,7 +84,9 @@ function checkBarrelImports() {
         const code = fs.readFileSync(fullPath, "utf-8");
         for (const barrel of FORBIDDEN_BARREL_IMPORTS) {
           if (code.includes(barrel)) {
-            fail(`Import de barrel file obsoleto detectado em ${path.relative(WEB_DIR, fullPath)}: "${barrel}". Importe diretamente do módulo específico.`);
+            fail(
+              `Import de barrel file obsoleto detectado em ${path.relative(WEB_DIR, fullPath)}: "${barrel}". Importe diretamente do módulo específico.`,
+            );
           }
         }
       }
@@ -155,7 +157,7 @@ function runBuildAndCheckBudgets() {
       Arquivo: r.file,
       "Tamanho (KB)": `${r.rawKb.toFixed(2)} KB`,
       "Gzip (KB)": `${r.gzipKb.toFixed(2)} KB`,
-    }))
+    })),
   );
 
   // Verificação de Budgets
@@ -163,7 +165,7 @@ function runBuildAndCheckBudgets() {
 
   if (entryCssSizeKb > BUDGETS.entryCssMaxKb) {
     fail(
-      `CSS inicial excede o limite! Tamanho: ${entryCssSizeKb} KB > Máximo permitido: ${BUDGETS.entryCssMaxKb} KB.`
+      `CSS inicial excede o limite! Tamanho: ${entryCssSizeKb} KB > Máximo permitido: ${BUDGETS.entryCssMaxKb} KB.`,
     );
   } else {
     log(`  ✔ CSS Inicial: ${entryCssSizeKb} KB <= ${BUDGETS.entryCssMaxKb} KB`, "\x1b[32m");
@@ -171,7 +173,7 @@ function runBuildAndCheckBudgets() {
 
   if (entryJsSizeKb > BUDGETS.entryJsMaxKb) {
     fail(
-      `JS inicial excede o limite! Tamanho: ${entryJsSizeKb} KB > Máximo permitido: ${BUDGETS.entryJsMaxKb} KB.`
+      `JS inicial excede o limite! Tamanho: ${entryJsSizeKb} KB > Máximo permitido: ${BUDGETS.entryJsMaxKb} KB.`,
     );
   } else {
     log(`  ✔ JS Inicial: ${entryJsSizeKb} KB <= ${BUDGETS.entryJsMaxKb} KB`, "\x1b[32m");
@@ -179,10 +181,11 @@ function runBuildAndCheckBudgets() {
 
   // Verificar chunks de rotas da aplicação (excluindo vendors isolados e chunk de i18n)
   for (const r of rows) {
-    if (r.file.startsWith("vendor-") || r.file.startsWith("i18n-") || r.file.startsWith("index-")) continue;
+    if (r.file.startsWith("vendor-") || r.file.startsWith("i18n-") || r.file.startsWith("index-"))
+      continue;
     if (r.file.endsWith(".js") && r.rawKb > BUDGETS.routeJsMaxKb) {
       fail(
-        `Chunk de rota "${r.file}" excede o limite de ${BUDGETS.routeJsMaxKb} KB (${r.rawKb} KB). Considere code-splitting.`
+        `Chunk de rota "${r.file}" excede o limite de ${BUDGETS.routeJsMaxKb} KB (${r.rawKb} KB). Considere code-splitting.`,
       );
     }
   }
@@ -196,7 +199,10 @@ function main() {
   checkBarrelImports();
   runTypecheck();
   runBuildAndCheckBudgets();
-  log("\n✨ Todos os checks de imports e performance de bundle passaram com sucesso!\n", "\x1b[1m\x1b[32m");
+  log(
+    "\n✨ Todos os checks de imports e performance de bundle passaram com sucesso!\n",
+    "\x1b[1m\x1b[32m",
+  );
 }
 
 main();

@@ -1254,8 +1254,7 @@ export const googleForms = {
   lastSyncNever: common.labels.never,
   paginationPending: " · há mais páginas agendadas",
   historyTitle: "Histórico de sincronizações",
-  historyDesc:
-    "A sincronização prepara uma importação; revise e execute o cadastro em /cadastro.",
+  historyDesc: "A sincronização prepara uma importação; revise e execute o cadastro em /cadastro.",
   historyError: "Não foi possível carregar o histórico",
   loadingSyncs: "Carregando sincronizações",
   emptySyncsTitle: "Nenhuma sincronização solicitada",
@@ -1300,4 +1299,3 @@ export type TranslationKeys = typeof ptBR;
 export type CatalogV1 = typeof ptBR;
 
 export const ptBRV1 = ptBR;
-

@@ -9,11 +9,7 @@ import {
   sectionFromTable,
   tableFromSection,
 } from "./lib/tables/tableRoutes";
-import {
-  deleteProfile,
-  type Profile,
-  type ProfileListSearch,
-} from "./lib/api/client";
+import { deleteProfile, type Profile, type ProfileListSearch } from "./lib/api/client";
 import { queryKeys } from "./lib/api/queryKeys";
 import { useI18n } from "./i18n";
 import { PageHeader } from "./components/PageHeader";
@@ -37,17 +33,9 @@ import { buildPeopleColumns } from "./lib/tables/peopleColumns";
 import { buildBillColumns, buildDocumentColumns } from "./lib/tables/recordColumns";
 import { activeFilterChips } from "./lib/tables/sheetFilters";
 import { TableInspectorDrawer } from "./lib/tables/TableInspectorDrawer";
-import {
-  clearFilters,
-  pagePatch,
-  resetPage,
-} from "./lib/tables/sheetQuery";
+import { clearFilters, pagePatch, resetPage } from "./lib/tables/sheetQuery";
 import { useInspectorSheet } from "./lib/tables/useInspectorSheet";
-import {
-  cellText,
-  paginationRange,
-  type TableRow,
-} from "./lib/tables/tableRows";
+import { cellText, paginationRange, type TableRow } from "./lib/tables/tableRows";
 import { DEFAULT_SHEET_PREFERENCES } from "./lib/tables/sheetPreferences";
 import { clampSpreadsheetPageSize } from "./lib/tables/spreadsheetViewport";
 import { useTableSheetData } from "./lib/tables/useTableSheetData";

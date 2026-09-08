@@ -185,7 +185,8 @@ export function CadastroSingleScreen({
         void queryClient.invalidateQueries({ queryKey: MINIMUM_REQUIREMENT_QUERY });
 
         const typeLabel =
-          documentTypes.data?.types?.find((type) => type.id === typeId)?.label || copy.docFallbackDefault;
+          documentTypes.data?.types?.find((type) => type.id === typeId)?.label ||
+          copy.docFallbackDefault;
         const msg = t(copy.savedSuccessDoc, {
           type: typeLabel,
           name: demographics.fullName.trim() || copy.holderFallbackDefault,

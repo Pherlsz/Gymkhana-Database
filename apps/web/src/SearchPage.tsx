@@ -20,10 +20,7 @@ import {
   searchModuleChips,
 } from "./lib/search/fieldFilterGroups";
 import { buildProfileCards } from "./lib/search/groupResults";
-import {
-  parseList,
-  serializeList,
-} from "./lib/search/urlState";
+import { parseList, serializeList } from "./lib/search/urlState";
 import type { GlobalSearchState, SearchModule } from "./lib/search/types";
 import { ProfileSearchCard } from "./lib/search/ProfileSearchCard";
 import { searchErrorMessage } from "./lib/search/errors";

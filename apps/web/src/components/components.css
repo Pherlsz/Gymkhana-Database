@@ -253,7 +253,9 @@ a.app-card {
   a.app-card:hover {
     transform: translateY(-2px);
     border-color: var(--card-glow-border, var(--brand-accent-border));
-    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+    box-shadow:
+      0 8px 24px -4px rgba(0, 0, 0, 0.08),
+      0 2px 6px -1px rgba(0, 0, 0, 0.04);
   }
 
   html.dark .app-card--interactive:hover,
@@ -904,5 +906,3 @@ html.dark .app-card--other .app-card__icon {
     transform: none !important;
   }
 }
-
-

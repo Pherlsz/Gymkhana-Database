@@ -139,9 +139,7 @@ export function DataGrid<TData>({
                       onChange: (keys) =>
                         selection.onChange(new Set(keys.map((key) => String(key)))),
                       columnTitle: (
-                        <span className="visually-hidden">
-                          {t(grid.selectAll, { caption })}
-                        </span>
+                        <span className="visually-hidden">{t(grid.selectAll, { caption })}</span>
                       ),
                       getCheckboxProps: (row: TData) => ({
                         "aria-label": t(grid.selectRow, { label: selection.rowLabel(row) }),
@@ -233,9 +231,7 @@ export function DataGridPagination({
       <Button disabled={page <= 1} onClick={() => onPage(page - 1)}>
         {grid.previousPage}
       </Button>
-      <span aria-live="polite">
-        {t(grid.pageStatus, { page, totalPages, total, label })}
-      </span>
+      <span aria-live="polite">{t(grid.pageStatus, { page, totalPages, total, label })}</span>
       <Button disabled={page >= totalPages} onClick={() => onPage(page + 1)}>
         {grid.nextPage}
       </Button>

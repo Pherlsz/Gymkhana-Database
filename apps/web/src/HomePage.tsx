@@ -88,8 +88,7 @@ export function HomePage() {
       return (["bills", "identity", "work"] as const).map((key) => {
         const Icon = groupCategoryIcon(key);
         const theme = groupCategoryTheme(key);
-        const isCatalogLoading =
-          overview.loading.documentTypes || overview.loading.billTypes;
+        const isCatalogLoading = overview.loading.documentTypes || overview.loading.billTypes;
         return (
           <AppCard
             empty={!isCatalogLoading}
@@ -142,9 +141,7 @@ export function HomePage() {
               size="small"
               type="primary"
             >
-              {group.key === "bills"
-                ? copy.quickActions.newBill
-                : copy.quickActions.documents}
+              {group.key === "bills" ? copy.quickActions.newBill : copy.quickActions.documents}
             </Button>
           }
           emptyDescription={copy.tables.emptyGroupDescription}

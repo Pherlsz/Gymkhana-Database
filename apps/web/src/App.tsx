@@ -1,9 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
-const LoginScreen = lazy(() =>
-  import("./LoginScreen").then((m) => ({ default: m.LoginScreen })),
-);
+const LoginScreen = lazy(() => import("./LoginScreen").then((m) => ({ default: m.LoginScreen })));
 import {
   APIRequestError,
   apiURL,

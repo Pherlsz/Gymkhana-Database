@@ -96,9 +96,7 @@ function CustomFieldControl(props: {
         {label}
         <Select
           disabled={props.disabled}
-          onChange={(value) =>
-            props.onChange(value === "" ? null : value === "true")
-          }
+          onChange={(value) => props.onChange(value === "" ? null : value === "true")}
           options={[
             { value: "", label: copy.notProvided },
             { value: "true", label: copy.yes },
