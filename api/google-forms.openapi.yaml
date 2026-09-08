@@ -452,7 +452,21 @@ components:
       type: object
       additionalProperties: false
       required:
-        [id, provider_form_id, title, module, state, schema_revision, sync_mode, poll_interval_seconds, pagination_pending, version, created_at, updated_at, questions]
+        [
+          id,
+          provider_form_id,
+          title,
+          module,
+          state,
+          schema_revision,
+          sync_mode,
+          poll_interval_seconds,
+          pagination_pending,
+          version,
+          created_at,
+          updated_at,
+          questions,
+        ]
       properties:
         id: { type: string, format: uuid }
         provider_form_id: { type: string }
@@ -502,7 +516,18 @@ components:
       type: object
       additionalProperties: false
       required:
-        [id, source_id, trigger_kind, state, received_count, staged_count, duplicate_count, version, created_at, updated_at]
+        [
+          id,
+          source_id,
+          trigger_kind,
+          state,
+          received_count,
+          staged_count,
+          duplicate_count,
+          version,
+          created_at,
+          updated_at,
+        ]
       properties:
         id: { type: string, format: uuid }
         source_id: { type: string, format: uuid }

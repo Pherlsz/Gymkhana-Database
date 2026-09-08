@@ -158,6 +158,8 @@ type FieldError struct {
 
 // SearchCatalogField defines model for SearchCatalogField.
 type SearchCatalogField struct {
+	Group SearchModule `json:"group"`
+
 	// Key Opaque logical identifier from the authorized catalog.
 	Key    string       `json:"key"`
 	Kind   string       `json:"kind"`

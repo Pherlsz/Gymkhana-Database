@@ -32,24 +32,24 @@ Everything below the fold survives only as mood/density guidance (Minimalism, de
 
 ### Color Palette
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#2563EB` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
-| Secondary | `#3B82F6` | `--color-secondary` |
-| On Secondary | `#000000` | `--color-on-secondary` |
-| Accent/CTA | `#EA580C` | `--color-accent` |
-| On Accent/CTA | `#000000` | `--color-on-accent` |
-| Background | `#F8FAFC` | `--color-background` |
-| Foreground | `#1E293B` | `--color-foreground` |
-| Card | `#FFFFFF` | `--color-card` |
-| Card Foreground | `#1E293B` | `--color-card-foreground` |
-| Muted | `#E9EFF8` | `--color-muted` |
+| Role             | Hex       | CSS Variable               |
+| ---------------- | --------- | -------------------------- |
+| Primary          | `#2563EB` | `--color-primary`          |
+| On Primary       | `#FFFFFF` | `--color-on-primary`       |
+| Secondary        | `#3B82F6` | `--color-secondary`        |
+| On Secondary     | `#000000` | `--color-on-secondary`     |
+| Accent/CTA       | `#EA580C` | `--color-accent`           |
+| On Accent/CTA    | `#000000` | `--color-on-accent`        |
+| Background       | `#F8FAFC` | `--color-background`       |
+| Foreground       | `#1E293B` | `--color-foreground`       |
+| Card             | `#FFFFFF` | `--color-card`             |
+| Card Foreground  | `#1E293B` | `--color-card-foreground`  |
+| Muted            | `#E9EFF8` | `--color-muted`            |
 | Muted Foreground | `#475569` | `--color-muted-foreground` |
-| Border | `#E2E8F0` | `--color-border` |
-| Destructive | `#DC2626` | `--color-destructive` |
-| On Destructive | `#FFFFFF` | `--color-on-destructive` |
-| Ring | `#2563EB` | `--color-ring` |
+| Border           | `#E2E8F0` | `--color-border`           |
+| Destructive      | `#DC2626` | `--color-destructive`      |
+| On Destructive   | `#FFFFFF` | `--color-on-destructive`   |
+| Ring             | `#2563EB` | `--color-ring`             |
 
 **Color Notes:** Trust blue + orange CTA contrast [Accent adjusted from #F97316]
 
@@ -61,31 +61,32 @@ Everything below the fold survives only as mood/density guidance (Minimalism, de
 - **Google Fonts:** [Outfit + Work Sans](https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Work+Sans:wght@300;400;500;600;700&display=swap)
 
 **CSS Import:**
+
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Work+Sans:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Work+Sans:wght@300;400;500;600;700&display=swap");
 ```
 
 ### Spacing Variables
 
-*Density: 8/10 — Dense / Dashboard*
+_Density: 8/10 — Dense / Dashboard_
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `2px` / `0.125rem` | Tight gaps |
-| `--space-sm` | `4px` / `0.25rem` | Icon gaps, inline spacing |
-| `--space-md` | `8px` / `0.5rem` | Standard padding |
-| `--space-lg` | `12px` / `0.75rem` | Section padding |
-| `--space-xl` | `16px` / `1rem` | Large gaps |
-| `--space-2xl` | `24px` / `1.5rem` | Section margins |
-| `--space-3xl` | `32px` / `2rem` | Hero padding |
+| Token         | Value              | Usage                     |
+| ------------- | ------------------ | ------------------------- |
+| `--space-xs`  | `2px` / `0.125rem` | Tight gaps                |
+| `--space-sm`  | `4px` / `0.25rem`  | Icon gaps, inline spacing |
+| `--space-md`  | `8px` / `0.5rem`   | Standard padding          |
+| `--space-lg`  | `12px` / `0.75rem` | Section padding           |
+| `--space-xl`  | `16px` / `1rem`    | Large gaps                |
+| `--space-2xl` | `24px` / `1.5rem`  | Section margins           |
+| `--space-3xl` | `32px` / `2rem`    | Hero padding              |
 
 ### Shadow Depths
 
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
+| Level         | Value                          | Usage                       |
+| ------------- | ------------------------------ | --------------------------- |
+| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)`   | Subtle lift                 |
+| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)`    | Cards, buttons              |
+| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)`  | Modals, dropdowns           |
 | `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
 
 ---
@@ -97,7 +98,7 @@ Everything below the fold survives only as mood/density guidance (Minimalism, de
 ```css
 /* Primary Button */
 .btn-primary {
-  background: #EA580C;
+  background: #ea580c;
   color: white;
   padding: 12px 24px;
   border-radius: 8px;
@@ -114,8 +115,8 @@ Everything below the fold survives only as mood/density guidance (Minimalism, de
 /* Secondary Button */
 .btn-secondary {
   background: transparent;
-  color: #2563EB;
-  border: 2px solid #2563EB;
+  color: #2563eb;
+  border: 2px solid #2563eb;
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
@@ -128,7 +129,7 @@ Everything below the fold survives only as mood/density guidance (Minimalism, de
 
 ```css
 .card {
-  background: #F8FAFC;
+  background: #f8fafc;
   border-radius: 12px;
   padding: 24px;
   box-shadow: var(--shadow-md);
@@ -147,16 +148,16 @@ Everything below the fold survives only as mood/density guidance (Minimalism, de
 ```css
 .input {
   padding: 12px 16px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 16px;
   transition: border-color 200ms ease;
 }
 
 .input:focus {
-  border-color: #2563EB;
+  border-color: #2563eb;
   outline: none;
-  box-shadow: 0 0 0 3px #2563EB20;
+  box-shadow: 0 0 0 3px #2563eb20;
 }
 ```
 
@@ -205,7 +206,14 @@ Everything below the fold survives only as mood/density guidance (Minimalism, de
 **Stagger List** (Standard) — Trigger: load or scroll | Duration: 300-450ms | Easing: `back.out(1.4)`
 
 ```js
-gsap.from('.grid-item', { opacity: 0, scale: 0.92, y: 16, duration: 0.4, stagger: { each: 0.06, from: 'start', grid: 'auto' }, ease: 'back.out(1.4)' });
+gsap.from(".grid-item", {
+  opacity: 0,
+  scale: 0.92,
+  y: 16,
+  duration: 0.4,
+  stagger: { each: 0.06, from: "start", grid: "auto" },
+  ease: "back.out(1.4)",
+});
 ```
 
 **Framework notes:** grid: 'auto' lets GSAP infer rows/columns from a CSS grid layout for a natural wave stagger; Use matchMedia('(prefers-reduced-motion: reduce)') to skip non-essential motion and render the final state immediately
@@ -217,7 +225,6 @@ gsap.from('.grid-item', { opacity: 0, scale: 0.92, y: 16, duration: 0.4, stagger
 ---
 
 ## Anti-Patterns (Do NOT Use)
-
 
 ### Additional Forbidden Patterns
 

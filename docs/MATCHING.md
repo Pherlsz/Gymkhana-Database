@@ -10,17 +10,17 @@ Candidate generation runs inside PostgreSQL against the current normalized Profi
 
 The server owns the complete evidence catalog and contributions:
 
-| Evidence | Candidate contribution |
-| --- | ---: |
-| Exact normalized CPF | 100 |
-| Exact normalized e-mail | 95 |
-| Exact normalized mobile phone | 90 |
-| Exact normalized landline phone | 75 |
-| Exact case-insensitive full name | 70 |
-| Similar full name | 35–65, derived from PostgreSQL trigram similarity |
-| Exact postal code | 20 |
-| Exact case-insensitive city | 10 |
-| Similar street | 0–15, derived from PostgreSQL trigram similarity |
+| Evidence                         |                            Candidate contribution |
+| -------------------------------- | ------------------------------------------------: |
+| Exact normalized CPF             |                                               100 |
+| Exact normalized e-mail          |                                                95 |
+| Exact normalized mobile phone    |                                                90 |
+| Exact normalized landline phone  |                                                75 |
+| Exact case-insensitive full name |                                                70 |
+| Similar full name                | 35–65, derived from PostgreSQL trigram similarity |
+| Exact postal code                |                                                20 |
+| Exact case-insensitive city      |                                                10 |
+| Similar street                   |  0–15, derived from PostgreSQL trigram similarity |
 
 The public score is the sum capped at 100. Pairs below 50 are not cases; 50–69 is `LOW`, 70–89 is `MEDIUM`, and 90–100 is `HIGH`. Name blockers return at most 25 neighbors per Profile before the global limit. One analysis returns at most 2,000 pairs and uses a 15-second PostgreSQL statement timeout. Clients cannot select fields, SQL, functions or weights.
 

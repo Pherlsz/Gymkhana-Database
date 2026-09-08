@@ -8,13 +8,13 @@ Cloudflare R2 is required for attachments, XLSX import temp storage, digital doc
 2. Configure CORS for the SPA origin (`AUTH_APPLICATION_URL`, e.g. `http://localhost:5173` in dev).
 3. Store credentials in lokeys profile `gymkhana` (never commit):
 
-   | Variable | Purpose |
-   | --- | --- |
-   | `R2_ENABLED` | `true` |
-   | `R2_ENDPOINT` | `https://<account>.r2.cloudflarestorage.com` |
-   | `R2_BUCKET` | Bucket name |
-   | `R2_ACCESS_KEY_ID` | API token |
-   | `R2_SECRET_ACCESS_KEY` | Secret |
+   | Variable               | Purpose                                      |
+   | ---------------------- | -------------------------------------------- |
+   | `R2_ENABLED`           | `true`                                       |
+   | `R2_ENDPOINT`          | `https://<account>.r2.cloudflarestorage.com` |
+   | `R2_BUCKET`            | Bucket name                                  |
+   | `R2_ACCESS_KEY_ID`     | API token                                    |
+   | `R2_SECRET_ACCESS_KEY` | Secret                                       |
 
 4. Verify: `make check-config` reports `attachments_enabled=true`.
 5. Smoke: upload a PDF via **Anexos** on a document record; confirm appears in list.

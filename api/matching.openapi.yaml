@@ -323,7 +323,18 @@ components:
       pattern: "^[a-f0-9]{64}$"
     EvidenceKind:
       type: string
-      enum: [CPF_EXACT, EMAIL_EXACT, MOBILE_EXACT, LANDLINE_EXACT, NAME_EXACT, NAME_SIMILAR, POSTAL_EXACT, CITY_EXACT, ADDRESS_SIMILAR]
+      enum:
+        [
+          CPF_EXACT,
+          EMAIL_EXACT,
+          MOBILE_EXACT,
+          LANDLINE_EXACT,
+          NAME_EXACT,
+          NAME_SIMILAR,
+          POSTAL_EXACT,
+          CITY_EXACT,
+          ADDRESS_SIMILAR,
+        ]
     EvidenceDefinition:
       type: object
       additionalProperties: false
@@ -334,7 +345,15 @@ components:
     MatchingCatalog:
       type: object
       additionalProperties: false
-      required: [evidence, can_merge, maximum_candidates, maximum_page_size, maximum_analyses_per_window, analysis_window_seconds]
+      required:
+        [
+          evidence,
+          can_merge,
+          maximum_candidates,
+          maximum_page_size,
+          maximum_analyses_per_window,
+          analysis_window_seconds,
+        ]
       properties:
         evidence:
           type: array
@@ -358,7 +377,18 @@ components:
     MatchingAnalysis:
       type: object
       additionalProperties: false
-      required: [id, state, profiles_scanned, candidate_count, refreshed_count, expires_at, version, created_at, updated_at]
+      required:
+        [
+          id,
+          state,
+          profiles_scanned,
+          candidate_count,
+          refreshed_count,
+          expires_at,
+          version,
+          created_at,
+          updated_at,
+        ]
       properties:
         id: { type: string, format: uuid }
         state: { $ref: "#/components/schemas/AnalysisState" }
@@ -420,7 +450,21 @@ components:
     MatchingCase:
       type: object
       additionalProperties: false
-      required: [id, left_profile_id, right_profile_id, left_profile_version, right_profile_version, score, score_band, state, evidence, version, created_at, updated_at]
+      required:
+        [
+          id,
+          left_profile_id,
+          right_profile_id,
+          left_profile_version,
+          right_profile_version,
+          score,
+          score_band,
+          state,
+          evidence,
+          version,
+          created_at,
+          updated_at,
+        ]
       properties:
         id: { type: string, format: uuid }
         left_profile_id: { type: string, format: uuid }
@@ -502,7 +546,17 @@ components:
         selected_source: { $ref: "#/components/schemas/FieldSource" }
     DependencyKind:
       type: string
-      enum: [DOCUMENT_OWNER, DOCUMENT_HOLDER, BILL_OWNER, BILL_HOLDER, CUSTOM_ENTITY_OWNER, CUSTOM_PROFILE_VALUE, ATTACHMENT_INTENT, ATTACHMENT]
+      enum:
+        [
+          DOCUMENT_OWNER,
+          DOCUMENT_HOLDER,
+          BILL_OWNER,
+          BILL_HOLDER,
+          CUSTOM_ENTITY_OWNER,
+          CUSTOM_PROFILE_VALUE,
+          ATTACHMENT_INTENT,
+          ATTACHMENT,
+        ]
     DependencyCount:
       type: object
       additionalProperties: false
@@ -523,7 +577,19 @@ components:
     MergePreview:
       type: object
       additionalProperties: false
-      required: [case_id, survivor, source, fields, dependencies, conflicts, unresolved_field_count, preview_fingerprint, confirmation, generated_at]
+      required:
+        [
+          case_id,
+          survivor,
+          source,
+          fields,
+          dependencies,
+          conflicts,
+          unresolved_field_count,
+          preview_fingerprint,
+          confirmation,
+          generated_at,
+        ]
       properties:
         case_id: { type: string, format: uuid }
         survivor: { $ref: "#/components/schemas/MatchingProfile" }
@@ -549,7 +615,17 @@ components:
     MergeProfilesRequest:
       type: object
       additionalProperties: false
-      required: [survivor_profile_id, source_profile_id, survivor_version, source_version, choices, preview_fingerprint, idempotency_key, confirmation]
+      required:
+        [
+          survivor_profile_id,
+          source_profile_id,
+          survivor_version,
+          source_version,
+          choices,
+          preview_fingerprint,
+          idempotency_key,
+          confirmation,
+        ]
       properties:
         survivor_profile_id: { type: string, format: uuid }
         source_profile_id: { type: string, format: uuid }
@@ -565,7 +641,15 @@ components:
     MergeResult:
       type: object
       additionalProperties: false
-      required: [case_id, survivor_profile_id, source_profile_id, survivor_version, moved_dependencies, merged_at]
+      required:
+        [
+          case_id,
+          survivor_profile_id,
+          source_profile_id,
+          survivor_version,
+          moved_dependencies,
+          merged_at,
+        ]
       properties:
         case_id: { type: string, format: uuid }
         survivor_profile_id: { type: string, format: uuid }
