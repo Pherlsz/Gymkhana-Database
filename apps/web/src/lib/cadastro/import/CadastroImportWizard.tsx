@@ -63,6 +63,7 @@ export function CadastroImportWizard({
   if (catalog.isError) {
     return (
       <CadastroStateCard
+        backLabel={copy.formsBackToCadastro}
         description={copy.massImportCatalogErrorDesc}
         kind="error"
         onRetry={() => void refresh()}
@@ -83,6 +84,7 @@ export function CadastroImportWizard({
   if (!isModuleAllowed) {
     return (
       <CadastroStateCard
+        backLabel={copy.formsBackToCadastro}
         description={copy.massImportForbiddenDesc}
         kind="warning"
         title={copy.massImportForbidden}
@@ -92,43 +94,47 @@ export function CadastroImportWizard({
 
   if (!importId) {
     return (
-      <div className="cadastro-import-flow">
-        <div className="cadastro-import-scope">
-          <div className="cadastro-import-scope__header">
-            <span className="cadastro-import-scope__label">{copy.importTargetLabel}</span>
-            <Segmented
-              options={[
-                { label: copy.people, value: "profiles" },
-                { label: copy.documents, value: "documents" },
-                { label: copy.bills, value: "bills" },
-              ]}
-              value={currentModule}
-              onChange={(val) => setCurrentModule(val as OperationModule)}
-            />
+      <div className="cadastro-panel">
+        <div className="cadastro-import-flow">
+          <div className="cadastro-import-scope">
+            <div className="cadastro-import-scope__header">
+              <span className="cadastro-import-scope__label">{copy.importTargetLabel}</span>
+              <Segmented
+                options={[
+                  { label: copy.people, value: "profiles" },
+                  { label: copy.documents, value: "documents" },
+                  { label: copy.bills, value: "bills" },
+                ]}
+                value={currentModule}
+                onChange={(val) => setCurrentModule(val as OperationModule)}
+              />
+            </div>
+            <p className="cadastro-import-scope__notice">{copy.importScopeNotice}</p>
           </div>
-          <p className="cadastro-import-scope__notice">{copy.importScopeNotice}</p>
+          <ScopedImportCreator
+            catalog={catalog.data}
+            module={currentModule}
+            onCreated={(value) => onImportCreated(value.id)}
+          />
         </div>
-        <ScopedImportCreator
-          catalog={catalog.data}
-          module={currentModule}
-          onCreated={(value) => onImportCreated(value.id)}
-        />
       </div>
     );
   }
 
   return (
-    <ImportWorkspace
-      catalog={catalog.data.modules}
-      error={selectedImport.error}
-      loading={selectedImport.isLoading}
-      report={selectedReport.data}
-      reportError={selectedReport.error}
-      reportLoading={selectedReport.isLoading}
-      value={selectedImport.data}
-      onClose={onClose}
-      onUpdated={refresh}
-    />
+    <div className="cadastro-panel">
+      <ImportWorkspace
+        catalog={catalog.data.modules}
+        error={selectedImport.error}
+        loading={selectedImport.isLoading}
+        report={selectedReport.data}
+        reportError={selectedReport.error}
+        reportLoading={selectedReport.isLoading}
+        value={selectedImport.data}
+        onClose={onClose}
+        onUpdated={refresh}
+      />
+    </div>
   );
 }
 

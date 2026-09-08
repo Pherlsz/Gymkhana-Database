@@ -355,6 +355,20 @@ html.dark .cadastro-group--documents .cadastro-group__icon--documents {
   box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
 }
 
+/* Bill group icon & badge */
+.cadastro-group--bills .cadastro-group__icon--bills {
+  background: rgba(5, 150, 105, 0.12);
+  border: 1px solid rgba(5, 150, 105, 0.28);
+  color: #059669;
+}
+
+html.dark .cadastro-group--bills .cadastro-group__icon--bills {
+  background: rgba(52, 211, 153, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.32);
+  color: #34d399;
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.15);
+}
+
 .cadastro-group__title-wrap {
   display: flex;
   align-items: center;
@@ -388,6 +402,18 @@ html.dark .cadastro-group__badge--documents {
   background: rgba(56, 189, 248, 0.12);
   border: 1px solid rgba(56, 189, 248, 0.25);
   color: #38bdf8;
+}
+
+.cadastro-group__badge--bills {
+  background: rgba(5, 150, 105, 0.08);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  color: #059669;
+}
+
+html.dark .cadastro-group__badge--bills {
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  color: #34d399;
 }
 
 .cadastro-group__chevron {

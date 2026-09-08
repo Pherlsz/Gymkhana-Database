@@ -1,14 +1,13 @@
 import { Alert, Button, Card, Flex, Tag, Typography } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Link2Off } from "lucide-react";
+import { Link2Off } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CadastroStateCard, StateCard } from "./components/StateCard";
 import { useApplicationSession } from "./session";
 import { useI18n } from "./i18n";
 import { errorMessage as googleFormsError, formatDateTime as formatDate } from "./lib/formatters";
 import {
-  CADASTRO_SEARCH_DEFAULTS,
   googleFormsReturnPath,
   tableFromModule,
 } from "./lib/cadastro/cadastroSearch";

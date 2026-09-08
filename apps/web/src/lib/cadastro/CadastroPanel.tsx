@@ -39,6 +39,17 @@ export function CadastroPanel({
 }) {
   const module = moduleFromTable(table) satisfies OperationModule;
 
+  if (cadastro === "xlsx") {
+    return (
+      <CadastroImportWizard
+        importId={importId}
+        module={module}
+        onClose={() => onImportChange(undefined)}
+        onImportCreated={(id) => onImportChange(id)}
+      />
+    );
+  }
+
   return (
     <div className="cadastro-panel">
       {cadastro === "manual" && table !== "people" ? (
@@ -47,15 +58,6 @@ export function CadastroPanel({
           table={table}
           onClearOwner={onClearOwner}
           onOwner={onOwner}
-        />
-      ) : null}
-
-      {cadastro === "xlsx" ? (
-        <CadastroImportWizard
-          importId={importId}
-          module={module}
-          onClose={() => onImportChange(undefined)}
-          onImportCreated={(id) => onImportChange(id)}
         />
       ) : null}
 

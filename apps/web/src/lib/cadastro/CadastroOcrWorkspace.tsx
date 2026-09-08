@@ -73,6 +73,7 @@ export function CadastroOcrWorkspace({
   if (blocked) {
     return (
       <CadastroStateCard
+        backLabel={copy.formsBackToCadastro}
         description={
           attachmentsEnabled.data === false ? copy.ocrUnavailableR2 : copy.ocrUnavailableProvider
         }
@@ -84,7 +85,7 @@ export function CadastroOcrWorkspace({
 
   const recordOwnerKind = table === "bills" ? "BILL" : "DOCUMENT";
   return (
-    <div className="cadastro-ocr">
+    <div className="cadastro-panel cadastro-ocr">
       {checking ? (
         <StateCard
           compact

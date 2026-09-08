@@ -18,9 +18,9 @@ import { listAttachments, type AttachmentOwner } from "../api/attachments";
 import { APIRequestError } from "../api/client";
 
 export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
-  const { messages, t } = useI18n();
+  const { messages } = useI18n();
   const copy = messages.cadastro.ocrReview;
-  const { actions, labels } = messages.common;
+  const { labels } = messages.common;
   const queryClient = useQueryClient();
   const capability = useQuery({
     queryKey: ["ocr-capability"],
