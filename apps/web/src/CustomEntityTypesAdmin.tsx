@@ -1,7 +1,6 @@
-import { Alert, Button, Card, Checkbox, Flex, Input, Select, Tag } from "antd";
+import { Alert, Button, Card, Checkbox, Flex, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useI18n } from "./i18n";
 import { customDataError } from "./CustomValuesPanel";
 import { emptyType, SectionTitle } from "./CustomDataShared";
 import {
@@ -14,8 +13,6 @@ import {
 
 export function CustomEntityTypesAdmin() {
   const client = useQueryClient();
-  const { messages } = useI18n();
-  const copy = messages.admin.customEntityTypes;
   const [draft, setDraft] = useState(emptyType);
   const [editing, setEditing] = useState<CustomEntityType>();
   const query = useQuery({
@@ -36,19 +33,19 @@ export function CustomEntityTypesAdmin() {
   });
   const remove = useMutation({
     mutationFn: (value: CustomEntityType) =>
-      deleteCustomEntityType(value.id, value.version, messages.common.actions.confirm),
+      deleteCustomEntityType(value.id, value.version, "Confirmar"),
     onSuccess: refresh,
   });
   const error = save.error ?? remove.error ?? query.error;
   return (
     <Flex vertical gap="1rem">
       <SectionTitle
-        title={copy.title}
-        description={copy.description}
+        title="Tipos de entidade"
+        description="Controle a cardinalidade por pessoa e mantenha chaves técnicas estáveis."
       />
       {error ? (
         <Alert
-          message={copy.errorTitle}
+          message="Não foi possível concluir a operação"
           type="error"
           description={<>{customDataError(error)}</>}
         />
@@ -56,54 +53,52 @@ export function CustomEntityTypesAdmin() {
       <Card className="custom-admin-form">
         <div className="custom-admin-grid">
           <label>
-            {copy.technicalKey}
-            <Input
+            Chave técnica
+            <input
               disabled={Boolean(editing)}
               value={draft.technical_key}
               onChange={(event) => setDraft({ ...draft, technical_key: event.target.value })}
             />
           </label>
           <label>
-            {copy.name}
-            <Input
+            Nome
+            <input
               value={draft.label}
               onChange={(event) => setDraft({ ...draft, label: event.target.value })}
             />
           </label>
           <label>
-            {copy.cardinality}
-            <Select
+            Cardinalidade
+            <select
               value={draft.profile_cardinality}
-              onChange={(value) =>
+              onChange={(event) =>
                 setDraft({
                   ...draft,
                   profile_cardinality:
-                    value === "ONE_PER_PROFILE"
+                    event.target.value === "ONE_PER_PROFILE"
                       ? "ONE_PER_PROFILE"
                       : "MANY_PER_PROFILE",
                 })
               }
-              options={[
-                { value: "ONE_PER_PROFILE", label: copy.onePerProfile },
-                { value: "MANY_PER_PROFILE", label: copy.manyPerProfile },
-              ]}
-            />
+            >
+              <option value="ONE_PER_PROFILE">Uma por pessoa</option>
+              <option value="MANY_PER_PROFILE">Várias por pessoa</option>
+            </select>
           </label>
           <Checkbox
             checked={draft.active}
             className="custom-admin-check"
             onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
           >
-            {copy.active}
+            Ativo
           </Checkbox>
         </div>
-        <Flex gap="0.5rem">
+        <Flex>
           <Button
             disabled={!draft.technical_key || !draft.label || save.isPending}
             onClick={() => save.mutate()}
-            type="primary"
           >
-            {editing ? copy.saveType : copy.createType}
+            {editing ? "Salvar tipo" : "Criar tipo"}
           </Button>
           {editing ? (
             <Button
@@ -112,7 +107,7 @@ export function CustomEntityTypesAdmin() {
                 setDraft(emptyType);
               }}
             >
-              {copy.cancel}
+              Cancelar
             </Button>
           ) : null}
         </Flex>
@@ -127,15 +122,15 @@ export function CustomEntityTypesAdmin() {
                   <p>{value.technical_key}</p>
                 </div>
                 <Tag color={value.active ? "success" : "neutral"}>
-                  {value.active ? copy.active : copy.inactive}
+                  {value.active ? "Ativo" : "Inativo"}
                 </Tag>
               </Flex>
               <span>
                 {value.profile_cardinality === "ONE_PER_PROFILE"
-                  ? copy.onePerProfile
-                  : copy.manyPerProfile}
+                  ? "Uma por pessoa"
+                  : "Várias por pessoa"}
               </span>
-              <Flex gap="0.5rem">
+              <Flex>
                 <Button
                   onClick={() => {
                     setEditing(value);
@@ -147,10 +142,10 @@ export function CustomEntityTypesAdmin() {
                     });
                   }}
                 >
-                  {copy.edit}
+                  Editar
                 </Button>
-                <Button danger disabled={remove.isPending} onClick={() => remove.mutate(value)}>
-                  {copy.delete}
+                <Button disabled={remove.isPending} onClick={() => remove.mutate(value)}>
+                  Excluir
                 </Button>
               </Flex>
             </Flex>

@@ -62,6 +62,11 @@ const ColumnPickerRow = memo(function ColumnPickerRow({
   );
 });
 
+/**
+ * Columns as a grouped, searchable list instead of a flat checkbox grid. People
+ * carries ~57 columns; a grid of that size is a wall, and the group headings plus
+ * the per-group count are what make it scannable at a glance.
+ */
 export function ColumnPicker({
   searchLabel,
   showAllLabel,

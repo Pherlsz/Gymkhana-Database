@@ -1,4 +1,4 @@
-import { Alert, Button, Layout, Pagination, Select } from "antd";
+import { Alert, Layout, Pagination, Select } from "antd";
 import { InlineStatus } from "./components/InlineStatus";
 import { StateCard } from "./components/StateCard";
 import { useQuery } from "@tanstack/react-query";
@@ -181,33 +181,25 @@ export function SearchPage() {
         />
         <div className="search-filters-bar">
           <div className="search-modules" role="group" aria-label={searchMessages.modulesLegend}>
-            <Button
+            <button
               aria-pressed={selectedModules.length === 0}
               className="search-module-chip"
+              type="button"
               onClick={() => selectModule(null)}
-              shape="round"
-              size="small"
-              type={selectedModules.length === 0 ? "primary" : "default"}
             >
               {searchMessages.modulesAll}
-            </Button>
-            {(moduleChips ?? []).map((module) => {
-              const isSelected =
-                selectedModules.length === 0 || selectedModules.includes(module.key);
-              return (
-                <Button
-                  aria-pressed={isSelected}
-                  className="search-module-chip"
-                  key={module.key}
-                  onClick={() => selectModule(module.key)}
-                  shape="round"
-                  size="small"
-                  type={isSelected ? "primary" : "default"}
-                >
-                  {module.label}
-                </Button>
-              );
-            })}
+            </button>
+            {(moduleChips ?? []).map((module) => (
+              <button
+                key={module.key}
+                aria-pressed={selectedModules.length === 0 || selectedModules.includes(module.key)}
+                className="search-module-chip"
+                type="button"
+                onClick={() => selectModule(module.key)}
+              >
+                {module.label}
+              </button>
+            ))}
           </div>
           <div className="search-filter-controls">
             <label className="search-filter search-filter--fields">

@@ -38,6 +38,7 @@ import {
   type UserRole,
 } from "./lib/api/client";
 
+// Re-export editors for backward compatibility (e.g. TableRecordEditorPanel)
 export { DocumentEditor } from "./lib/records/DocumentEditor";
 export { BillEditor } from "./lib/records/BillEditor";
 

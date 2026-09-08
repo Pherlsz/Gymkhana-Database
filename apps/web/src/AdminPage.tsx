@@ -12,7 +12,7 @@ export function AdminPage() {
   const session = useApplicationSession();
   const { messages } = useI18n();
   const copy = messages.home;
-  const entities = messages.common.entities;
+  const nav = messages.shell.navigation;
 
   if (!canManageUsers(session.user.role)) {
     return (
@@ -33,16 +33,16 @@ export function AdminPage() {
     <Layout className="page-measure">
       <header className="page-header">
         <Typography.Title level={1} className="page-title">
-          {entities.admin}
+          {nav.admin}
         </Typography.Title>
         <Typography.Paragraph className="page-description">
           {copy.userAdministrationDescription}
         </Typography.Paragraph>
       </header>
       <div className="page-content">
-        <nav aria-label={entities.admin} className="admin-tools">
+        <nav aria-label={nav.admin} className="admin-tools">
           <Link search={{ ...CADASTRO_SEARCH_DEFAULTS, mode: "forms" }} to="/cadastro">
-            {entities.forms}
+            {nav.forms}
           </Link>
         </nav>
         <AdminUsersPanel currentLogin={session.user.login} />

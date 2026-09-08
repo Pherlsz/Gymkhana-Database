@@ -1,6 +1,5 @@
-import { Alert, Button, Card, Checkbox, Flex, Select, Tag } from "antd";
+import { Alert, Button, Card, Checkbox, Flex, Tag } from "antd";
 import { useCallback, useEffect, useState } from "react";
-import { useI18n } from "./i18n";
 import {
   APIRequestError,
   listApplicationUsers,
@@ -16,8 +15,6 @@ type LoadState =
 
 export function AdminUsersPanel({ currentLogin }: { currentLogin: string }) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
-  const { messages } = useI18n();
-  const copy = messages.admin.users;
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     setState({ kind: "loading" });
@@ -26,9 +23,9 @@ export function AdminUsersPanel({ currentLogin }: { currentLogin: string }) {
       setState({ kind: "ready", users: response.users });
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      setState({ kind: "error", message: errorMessage(error, copy.loadErrorMessage) });
+      setState({ kind: "error", message: errorMessage(error) });
     }
-  }, [copy.loadErrorMessage]);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -39,23 +36,23 @@ export function AdminUsersPanel({ currentLogin }: { currentLogin: string }) {
   if (state.kind === "loading") {
     return (
       <Alert
-        message={copy.loadingTitle}
+        message="Carregando usuários"
         type="info"
-        description={copy.loadingDescription}
+        description="Consultando acessos da aplicação."
       />
     );
   }
   if (state.kind === "error") {
     return (
       <Alert
-        message={copy.errorTitle}
+        message="Não foi possível carregar usuários"
         type="error"
         description={
           <>
             <Flex vertical gap="0.75rem">
               <span>{state.message}</span>
               <Flex>
-                <Button onClick={() => void refresh()}>{copy.retry}</Button>
+                <Button onClick={() => void refresh()}>Tentar novamente</Button>
               </Flex>
             </Flex>
           </>
@@ -96,15 +93,12 @@ function ManagedUserCard({
   user: AdminUser;
   onUpdated: (user: AdminUser) => void;
 }) {
-  const { messages } = useI18n();
-  const copy = messages.admin.users;
   const [role, setRole] = useState<UserRole>(user.role);
   const [active, setActive] = useState(user.active);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const protectedAccount = user.role === "SUPERADMIN";
   const locked = current || protectedAccount;
-  const isDirty = role !== user.role || active !== user.active;
 
   const save = async () => {
     setSaving(true);
@@ -119,7 +113,7 @@ function ManagedUserCard({
       setRole(updated.role);
       setActive(updated.active);
     } catch (cause: unknown) {
-      setError(errorMessage(cause, copy.loadErrorMessage));
+      setError(errorMessage(cause));
     } finally {
       setSaving(false);
     }
@@ -134,28 +128,28 @@ function ManagedUserCard({
             <p className="managed-user__secondary">@{user.login}</p>
           </div>
           <Flex align="center">
-            {current ? <Tag color="info">{copy.currentAccount}</Tag> : null}
-            {protectedAccount ? <Tag color="neutral">{copy.protected}</Tag> : null}
+            {current ? <Tag color="info">Sua conta</Tag> : null}
+            {protectedAccount ? <Tag color="neutral">Protegido</Tag> : null}
             <Tag color={user.active ? "success" : "neutral"}>
-              {user.active ? copy.active : copy.inactive}
+              {user.active ? "Ativo" : "Inativo"}
             </Tag>
           </Flex>
         </Flex>
 
         <Flex align="end">
           <label className="managed-user__field">
-            <span>{copy.roleLabel}</span>
-            <Select
+            <span>Função</span>
+            <select
               disabled={locked || saving}
-              onChange={(value) => setRole(value as UserRole)}
-              options={[
-                { value: "EXTERNAL", label: copy.roleMember },
-                { value: "ADMIN", label: copy.roleAdmin },
-                { value: "SUPERADMIN", label: copy.roleSuperadmin, disabled: true },
-              ]}
-              style={{ minWidth: 140 }}
+              onChange={(event) => setRole(event.target.value as UserRole)}
               value={role}
-            />
+            >
+              <option value="EXTERNAL">Membro</option>
+              <option value="ADMIN">Admin</option>
+              <option disabled value="SUPERADMIN">
+                Superadmin
+              </option>
+            </select>
           </label>
           <Checkbox
             checked={active}
@@ -163,36 +157,35 @@ function ManagedUserCard({
             disabled={locked || saving}
             onChange={(event) => setActive(event.target.checked)}
           >
-            {copy.activeAccessToggle}
+            Acesso ativo
           </Checkbox>
           <Button
-            disabled={locked || saving || !isDirty}
+            disabled={locked || saving || (role === user.role && active === user.active)}
             onClick={() => void save()}
-            type={isDirty ? "primary" : "default"}
           >
-            {saving ? copy.saving : copy.saveAccess}
+            {saving ? "Salvando" : "Salvar acesso"}
           </Button>
         </Flex>
 
         {current ? (
           <span className="managed-user__secondary">
-            {copy.currentAccountNotice}
+            Sua própria função e acesso não podem ser alterados por esta tela.
           </span>
         ) : null}
         {protectedAccount ? (
           <span className="managed-user__secondary">
-            {copy.superadminNotice}
+            O superadmin único permanece protegido contra alterações de acesso.
           </span>
         ) : null}
         {error ? (
-          <Alert message={copy.updateErrorTitle} type="error" description={<>{error}</>} />
+          <Alert message="Alteração não aplicada" type="error" description={<>{error}</>} />
         ) : null}
       </Flex>
     </Card>
   );
 }
 
-function errorMessage(error: unknown, fallbackMessage: string): string {
+function errorMessage(error: unknown): string {
   if (error instanceof APIRequestError) return error.message;
-  return fallbackMessage;
+  return "O serviço de administração não respondeu.";
 }

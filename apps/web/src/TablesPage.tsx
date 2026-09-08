@@ -75,7 +75,7 @@ const tablesRoute = getRouteApi("/tables/$table");
 const MemoSpreadsheetTable = memo(SpreadsheetTable) as typeof SpreadsheetTable;
 
 export function TablesPage() {
-  const { messages, t } = useI18n();
+  const { messages } = useI18n();
   const copy = messages.tables;
   const session = useApplicationSession();
   const { table } = tablesRoute.useParams();
@@ -216,7 +216,6 @@ export function TablesPage() {
         })),
         "document",
         messages.home.tables,
-        messages.common.labels,
       );
     }
     if (section === "bills") {
@@ -228,11 +227,10 @@ export function TablesPage() {
         })),
         "bill",
         messages.home.tables,
-        messages.common.labels,
       );
     }
     return [];
-  }, [billTypeList, documentTypeList, messages.common.labels, messages.home.tables, section]);
+  }, [billTypeList, documentTypeList, messages.home.tables, section]);
 
   const extraFields = useMemo(() => {
     if (section === "profile") return uniqueCustomFields(profileFieldsQuery.data?.fields ?? []);
@@ -250,6 +248,7 @@ export function TablesPage() {
       return billFieldQueries[index]?.data?.fields ?? [];
     });
     return uniqueCustomFields(fields);
+    // Stamps replace the useQueries array identity, which changes every render.
   }, [
     billFieldsStamp,
     billTypeList,
@@ -271,7 +270,6 @@ export function TablesPage() {
       })),
       "document",
       messages.home.tables,
-      messages.common.labels,
     );
     const ordered = grouped.flatMap((group) =>
       group.options.map((option) => documentTypeList.find((type) => type.id === option.value)),
@@ -280,7 +278,7 @@ export function TablesPage() {
       (type): type is NonNullable<typeof type> =>
         type != null && PEOPLE_DOC_KEY_SET.has(type.technical_key),
     );
-  }, [documentTypeList, messages.common.labels, messages.home.tables, section]);
+  }, [documentTypeList, messages.home.tables, section]);
 
   const baseRows: TableRow[] = useMemo(() => {
     if (section === "documents") {
@@ -488,6 +486,8 @@ export function TablesPage() {
         }
         apply();
       };
+      // Each table opens its own record. Documents and bills used to set
+      // `selected` to the owner, so clicking a document showed the person.
       if (section === "documents") {
         confirmIfEditing(undefined, () =>
           startTransition(() => {
@@ -679,7 +679,7 @@ export function TablesPage() {
         removeFilterLabel={copy.filters.removeFilter}
         appliedFiltersLabel={copy.filters.appliedFilters}
         noFieldsLabel={copy.filters.noFields}
-        moreChipsLabel={(count) => t(copy.filters.moreChips, { count })}
+        moreChipsLabel={(count) => copy.filters.moreChips.replace("{count}", String(count))}
         moreChipsCollapseLabel={copy.filters.moreChipsCollapse}
         chips={activeChips}
         clearLabel={copy.filters.clear}
@@ -699,7 +699,9 @@ export function TablesPage() {
           lockedLabel: copy.columnPicker.locked,
           emptyLabel: copy.columnPicker.empty,
           visibleCountLabel: (visible, totalCount) =>
-            t(copy.columnPicker.visibleCount, { visible, total: totalCount }),
+            copy.columnPicker.visibleCount
+              .replace("{visible}", String(visible))
+              .replace("{total}", String(totalCount)),
           hiddenCount: columnMetadataLoading ? 0 : columns.length - visibleColumns.length,
           items: columnPickerItems,
           onToggle: handleColumnToggle,

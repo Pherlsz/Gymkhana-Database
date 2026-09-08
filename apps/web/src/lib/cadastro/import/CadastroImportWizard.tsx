@@ -1,7 +1,7 @@
 import { Segmented } from "antd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { CadastroStateCard } from "../../../components/StateCard";
+import { StateCard } from "../../../components/StateCard";
 import { useI18n } from "../../../i18n";
 import {
   getOperationsCatalog,
@@ -62,19 +62,18 @@ export function CadastroImportWizard({
 
   if (catalog.isError) {
     return (
-      <CadastroStateCard
-        backLabel={copy.formsBackToCadastro}
+      <StateCard
+        compact
         description={copy.massImportCatalogErrorDesc}
         kind="error"
-        onRetry={() => void refresh()}
         title={copy.massImportCatalogError}
       />
     );
   }
   if (!catalog.data) {
     return (
-      <CadastroStateCard
-        backToCadastro={false}
+      <StateCard
+        compact
         description={copy.massImportLoadingDesc}
         kind="loading"
         title={copy.massImportLoading}
@@ -83,8 +82,8 @@ export function CadastroImportWizard({
   }
   if (!isModuleAllowed) {
     return (
-      <CadastroStateCard
-        backLabel={copy.formsBackToCadastro}
+      <StateCard
+        compact
         description={copy.massImportForbiddenDesc}
         kind="warning"
         title={copy.massImportForbidden}
@@ -94,47 +93,43 @@ export function CadastroImportWizard({
 
   if (!importId) {
     return (
-      <div className="cadastro-panel">
-        <div className="cadastro-import-flow">
-          <div className="cadastro-import-scope">
-            <div className="cadastro-import-scope__header">
-              <span className="cadastro-import-scope__label">{copy.importTargetLabel}</span>
-              <Segmented
-                options={[
-                  { label: copy.people, value: "profiles" },
-                  { label: copy.documents, value: "documents" },
-                  { label: copy.bills, value: "bills" },
-                ]}
-                value={currentModule}
-                onChange={(val) => setCurrentModule(val as OperationModule)}
-              />
-            </div>
-            <p className="cadastro-import-scope__notice">{copy.importScopeNotice}</p>
+      <div className="cadastro-import-flow">
+        <div className="cadastro-import-scope">
+          <div className="cadastro-import-scope__header">
+            <span className="cadastro-import-scope__label">{copy.importTargetLabel}</span>
+            <Segmented
+              options={[
+                { label: copy.people, value: "profiles" },
+                { label: copy.documents, value: "documents" },
+                { label: copy.bills, value: "bills" },
+              ]}
+              value={currentModule}
+              onChange={(val) => setCurrentModule(val as OperationModule)}
+            />
           </div>
-          <ScopedImportCreator
-            catalog={catalog.data}
-            module={currentModule}
-            onCreated={(value) => onImportCreated(value.id)}
-          />
+          <p className="cadastro-import-scope__notice">{copy.importScopeNotice}</p>
         </div>
+        <ScopedImportCreator
+          catalog={catalog.data}
+          module={currentModule}
+          onCreated={(value) => onImportCreated(value.id)}
+        />
       </div>
     );
   }
 
   return (
-    <div className="cadastro-panel">
-      <ImportWorkspace
-        catalog={catalog.data.modules}
-        error={selectedImport.error}
-        loading={selectedImport.isLoading}
-        report={selectedReport.data}
-        reportError={selectedReport.error}
-        reportLoading={selectedReport.isLoading}
-        value={selectedImport.data}
-        onClose={onClose}
-        onUpdated={refresh}
-      />
-    </div>
+    <ImportWorkspace
+      catalog={catalog.data.modules}
+      error={selectedImport.error}
+      loading={selectedImport.isLoading}
+      report={selectedReport.data}
+      reportError={selectedReport.error}
+      reportLoading={selectedReport.isLoading}
+      value={selectedImport.data}
+      onClose={onClose}
+      onUpdated={refresh}
+    />
   );
 }
 

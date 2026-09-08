@@ -11,7 +11,7 @@ function item(
   return { id, label, technicalKey, kind, count: 0, loading: false };
 }
 
-const labels = ptBRV1.common.labels;
+const labels = ptBRV1.home.tables.contexts;
 
 describe("groupHomeCatalog", () => {
   it("always lists the legacy subcategories, including empty contas", () => {

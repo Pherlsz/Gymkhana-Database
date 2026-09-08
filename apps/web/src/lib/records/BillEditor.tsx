@@ -1,4 +1,4 @@
-import { Alert, Card, Input, Select } from "antd";
+import { Alert, Card } from "antd";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ConfirmDelete } from "../../components/ConfirmDelete";
@@ -120,24 +120,24 @@ export function BillEditor(props: {
       <div className="record-form">
         <label>
           {common.labels.type}
-          <Select
+          <select
             disabled={!editable || Boolean(props.lockType)}
-            onChange={(value) => setValues({ ...values, bill_type_id: value })}
-            options={[
-              { value: "", label: panel.selectPlaceholder },
-              ...props.types
-                .filter((value) => value.active || value.id === values.bill_type_id)
-                .map((value) => ({
-                  value: value.id,
-                  label: value.label,
-                })),
-            ]}
             value={values.bill_type_id}
-          />
+            onChange={(event) => setValues({ ...values, bill_type_id: event.target.value })}
+          >
+            <option value="">{panel.selectPlaceholder}</option>
+            {props.types
+              .filter((value) => value.active || value.id === values.bill_type_id)
+              .map((value) => (
+                <option key={value.id} value={value.id}>
+                  {value.label}
+                </option>
+              ))}
+          </select>
         </label>
         <label>
           {common.labels.reference}
-          <Input
+          <input
             disabled={!editable}
             value={values.reference_value}
             onChange={(event) => setValues({ ...values, reference_value: event.target.value })}
@@ -145,7 +145,7 @@ export function BillEditor(props: {
         </label>
         <label>
           {common.labels.competence}
-          <Input
+          <input
             disabled={!editable}
             placeholder={panel.competencePlaceholder}
             value={values.competence}
@@ -154,7 +154,7 @@ export function BillEditor(props: {
         </label>
         <label>
           {common.labels.amount}
-          <Input
+          <input
             disabled={!editable}
             inputMode="decimal"
             value={values.amount}
@@ -163,7 +163,7 @@ export function BillEditor(props: {
         </label>
         <label>
           {common.labels.currency}
-          <Input
+          <input
             disabled={!editable}
             maxLength={3}
             value={values.currency}
@@ -174,40 +174,43 @@ export function BillEditor(props: {
         </label>
         <label>
           {common.labels.medium}
-          <Select
+          <select
             disabled={!editable}
-            onChange={(value) =>
-              setValues(withRecordMedium(values, value as BillValuesRequest["medium"]))
-            }
-            options={media.map((value) => ({
-              value,
-              label: mediumLabel(value, messages),
-            }))}
             value={values.medium}
-          />
+            onChange={(event) =>
+              setValues(withRecordMedium(values, event.target.value as BillValuesRequest["medium"]))
+            }
+          >
+            {media.map((value) => (
+              <option key={value} value={value}>
+                {mediumLabel(value, messages)}
+              </option>
+            ))}
+          </select>
         </label>
         {values.medium === "PHYSICAL" ? (
           <label>
             {common.labels.custody}
-            <Select
+            <select
               disabled={!editable}
-              onChange={(value) =>
+              value={values.idle_custody ?? "ORGANIZATION"}
+              onChange={(event) =>
                 setValues({
                   ...values,
-                  idle_custody: value as NonNullable<BillValuesRequest["idle_custody"]>,
+                  idle_custody: event.target.value as NonNullable<
+                    BillValuesRequest["idle_custody"]
+                  >,
                 })
               }
-              options={[
-                { value: "ORGANIZATION", label: panel.custodyOrg },
-                { value: "OWNER", label: panel.custodyOwner },
-              ]}
-              value={values.idle_custody ?? "ORGANIZATION"}
-            />
+            >
+              <option value="ORGANIZATION">{panel.custodyOrg}</option>
+              <option value="OWNER">{panel.custodyOwner}</option>
+            </select>
           </label>
         ) : null}
         <label className="record-form__wide">
           {common.labels.printedHolder}
-          <Input
+          <input
             disabled={!editable}
             value={values.printed_holder_name}
             onChange={(event) => setValues({ ...values, printed_holder_name: event.target.value })}
@@ -215,7 +218,7 @@ export function BillEditor(props: {
         </label>
         <label className="record-form__wide">
           {common.labels.printedAddress}
-          <Input
+          <input
             disabled={!editable}
             value={values.printed_address}
             onChange={(event) => setValues({ ...values, printed_address: event.target.value })}
@@ -223,7 +226,7 @@ export function BillEditor(props: {
         </label>
         <label className="record-form__wide">
           {common.labels.notes}
-          <Input.TextArea
+          <textarea
             disabled={!editable}
             rows={4}
             value={values.notes}

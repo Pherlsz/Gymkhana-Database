@@ -10,36 +10,12 @@
   border-radius: var(--gym-radius-md);
   background: var(--gym-color-surface);
   color: var(--gym-color-text);
-  font-weight: 600;
-  font-size: var(--gym-font-size-sm);
   cursor: pointer;
   white-space: nowrap;
-  touch-action: manipulation;
-  transition:
-    background-color 130ms cubic-bezier(0.2, 0, 0, 1),
-    border-color 130ms cubic-bezier(0.2, 0, 0, 1),
-    color 130ms cubic-bezier(0.2, 0, 0, 1),
-    transform 120ms cubic-bezier(0.2, 0, 0, 1);
 }
-
-.custom-data-tabs button:hover:not(.custom-data-tabs__active) {
-  background: var(--md-state-hover);
-  border-color: var(--md-outline);
-}
-
-.custom-data-tabs button:active {
-  transform: scale(0.97);
-}
-
-.custom-data-tabs button:focus-visible {
-  outline: 2px solid var(--brand-accent-solid) !important;
-  outline-offset: 2px !important;
-}
-
 .custom-data-tabs__active {
-  border-color: var(--brand-accent-solid) !important;
-  background: var(--brand-accent-surface) !important;
-  color: var(--brand-accent-text) !important;
+  border-color: var(--md-primary-text);
+  background: var(--md-state-selected);
   font-weight: 700;
 }
 .custom-section-title h2,

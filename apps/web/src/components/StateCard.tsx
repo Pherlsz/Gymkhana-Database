@@ -1,8 +1,6 @@
-import { Button, Spin } from "antd";
-import { Link } from "@tanstack/react-router";
-import { AlertCircle, AlertTriangle, ArrowLeft, Inbox, RotateCcw } from "lucide-react";
+import { Spin } from "antd";
+import { AlertCircle, AlertTriangle, Inbox } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
-import { CADASTRO_SEARCH_DEFAULTS } from "../lib/cadastro/cadastroSearch";
 
 export type StateCardKind = "loading" | "empty" | "warning" | "error";
 
@@ -15,11 +13,6 @@ export interface StateCardProps {
   compact?: boolean;
   className?: string;
   style?: CSSProperties;
-  backToCadastro?: boolean;
-  onBack?: () => void;
-  backLabel?: ReactNode;
-  onRetry?: () => void;
-  retryLabel?: ReactNode;
 }
 
 function defaultIconForKind(kind: StateCardKind): ReactNode {
@@ -35,6 +28,13 @@ function defaultIconForKind(kind: StateCardKind): ReactNode {
   }
 }
 
+/**
+ * Standardized StateCard for screens and panels showing loading, empty,
+ * warning/disabled, or error states.
+ *
+ * Implements a centered glassmorphic surface with glowing badge halo,
+ * responsive typography, and action buttons slot.
+ */
 export function StateCard({
   kind = "empty",
   title,
@@ -44,17 +44,10 @@ export function StateCard({
   compact = false,
   className = "",
   style,
-  backToCadastro = false,
-  onBack,
-  backLabel,
-  onRetry,
-  retryLabel,
 }: StateCardProps) {
   const renderedIcon = icon ?? defaultIconForKind(kind);
   const isPolite = kind === "loading";
   const isAlert = kind === "error";
-
-  const hasStandardActions = Boolean(backToCadastro || onBack || onRetry);
 
   return (
     <div
@@ -70,35 +63,7 @@ export function StateCard({
 
       {description ? <div className="state-card__desc">{description}</div> : null}
 
-      {hasStandardActions || action ? (
-        <div className="state-card__actions">
-          {onRetry ? (
-            <Button icon={<RotateCcw size={14} />} onClick={onRetry}>
-              {retryLabel ?? "Tentar novamente"}
-            </Button>
-          ) : null}
-
-          {backToCadastro ? (
-            <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
-              <Button icon={<ArrowLeft size={14} />}>
-                {backLabel ?? "Voltar para o Cadastro"}
-              </Button>
-            </Link>
-          ) : onBack ? (
-            <Button icon={<ArrowLeft size={14} />} onClick={onBack}>
-              {backLabel ?? "Voltar"}
-            </Button>
-          ) : null}
-
-          {action}
-        </div>
-      ) : null}
+      {action ? <div className="state-card__actions">{action}</div> : null}
     </div>
   );
-}
-
-export const StatusCard = StateCard;
-
-export function CadastroStateCard(props: StateCardProps) {
-  return <StateCard backToCadastro={props.backToCadastro ?? true} {...props} />;
 }

@@ -33,6 +33,24 @@ export interface PendingBill {
   tag: "manual" | "ocr";
 }
 
+export interface InlineDocState {
+  typeId: string;
+  number: string;
+  notes: string;
+  date?: string | undefined;
+  validUntil?: string | undefined;
+  medium: "PHYSICAL" | "DIGITAL";
+  custody: "ORGANIZATION" | "OWNER";
+}
+
+export interface InlineBillState {
+  typeId: string;
+  provider: string;
+  installation: string;
+  competence: string;
+  amount: string;
+}
+
 export const INITIAL_DEMOGRAPHICS: PersonDemographicsState = {
   fullName: "",
   socialName: "",
@@ -102,6 +120,24 @@ export const INITIAL_BILL_FIELDS: BillFormFieldsState = {
   billPrintedAddress: "",
   billMedium: "DIGITAL",
   billNotes: "",
+};
+
+export const INITIAL_INLINE_DOC: InlineDocState = {
+  typeId: "",
+  number: "",
+  notes: "",
+  date: undefined,
+  validUntil: undefined,
+  medium: "PHYSICAL",
+  custody: "ORGANIZATION",
+};
+
+export const INITIAL_INLINE_BILL: InlineBillState = {
+  typeId: "",
+  provider: "",
+  installation: "",
+  competence: "",
+  amount: "",
 };
 
 const OFFICIAL_DOC_PATTERNS = ["cpf", "rg", "cnh", "certid", "nascimento", "casamento"];

@@ -36,23 +36,11 @@ export function BillFormFields({
   copy: customCopy,
 }: BillFormFieldsProps) {
   const { messages } = useI18n();
-  const labels = messages.common.labels;
   const copy = { ...messages.tables.cadastro, ...customCopy };
   return (
     <div className="cadastro-bill-fields">
-      {/* Smart OCR Dropzone at the top for rapid bill ingestion */}
-      <OcrDropzoneInline
-        actionText={copy.ocrBannerAction}
-        badgeText={copy.ocrBannerBadge}
-        description={copy.ocrBannerDescBill ?? copy.ocrBannerDesc}
-        inputId={fileInputId}
-        label={copy.ocrInlineDropzoneBill}
-        title={copy.ocrBannerTitle}
-        variant="banner"
-        onFile={onFileDrop}
-      />
-
       <div className="cadastro-grid">
+        {/* Tipo de Serviço */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-type">
@@ -71,6 +59,7 @@ export function BillFormFields({
           </div>
         </div>
 
+        {/* Fornecedor / Concessionária */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-prov">
@@ -85,6 +74,7 @@ export function BillFormFields({
           </div>
         </div>
 
+        {/* Instalação / Código do Cliente */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-inst">
@@ -99,6 +89,7 @@ export function BillFormFields({
           </div>
         </div>
 
+        {/* Competência / Mês */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-comp">
@@ -113,6 +104,7 @@ export function BillFormFields({
           </div>
         </div>
 
+        {/* Vencimento */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-due">
@@ -129,6 +121,7 @@ export function BillFormFields({
           </div>
         </div>
 
+        {/* Valor (R$) */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-val">
@@ -150,6 +143,7 @@ export function BillFormFields({
           </div>
         </div>
 
+        {/* Nome impresso no boleto */}
         <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-print-holder">
@@ -164,6 +158,7 @@ export function BillFormFields({
           </div>
         </div>
 
+        {/* Endereço impresso */}
         <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-print-addr">
@@ -178,14 +173,15 @@ export function BillFormFields({
           </div>
         </div>
 
+        {/* Meio (Físico / Digital) */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
-            <label className="cadastro-field__label">{labels.medium}</label>
+            <label className="cadastro-field__label">{copy.fieldDocMedium}</label>
             <Segmented
               block
               options={[
-                { label: labels.physical, value: "PHYSICAL" },
-                { label: labels.digital, value: "DIGITAL" },
+                { label: copy.tagPhysical, value: "PHYSICAL" },
+                { label: copy.tagDigital, value: "DIGITAL" },
               ]}
               value={state.billMedium}
               onChange={(v) => onChange({ billMedium: v as "PHYSICAL" | "DIGITAL" })}
@@ -193,10 +189,11 @@ export function BillFormFields({
           </div>
         </div>
 
+        {/* Observações */}
         <div className="cadastro-col-8">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-notes">
-              {labels.notes}
+              {copy.fieldBillNotes ?? "Observações da conta"}
             </label>
             <Input
               id="cad-bill-notes"
@@ -207,6 +204,13 @@ export function BillFormFields({
           </div>
         </div>
       </div>
+
+      {/* Inline OCR Dropzone */}
+      <OcrDropzoneInline
+        inputId={fileInputId}
+        label={copy.ocrInlineDropzoneBill}
+        onFile={onFileDrop}
+      />
     </div>
   );
 }

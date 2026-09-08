@@ -1,7 +1,6 @@
-import { Alert, Button, Card, Flex, Select } from "antd";
+import { Alert, Button, Card, Flex } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useI18n } from "./i18n";
 import { SearchField } from "./components/SearchField";
 import {
   CustomFieldInputGrid,
@@ -23,8 +22,6 @@ import { SectionTitle } from "./CustomDataShared";
 
 export function CustomEntitiesAdmin() {
   const queryClient = useQueryClient();
-  const { messages } = useI18n();
-  const copy = messages.admin.customEntities;
   const types = useQuery({
     queryKey: ["custom-entity-types"],
     queryFn: ({ signal }) => listCustomEntityTypes(signal),
@@ -66,8 +63,7 @@ export function CustomEntitiesAdmin() {
     },
   });
   const remove = useMutation({
-    mutationFn: (value: CustomEntity) =>
-      deleteCustomEntity(value.id, value.version, messages.common.actions.confirm),
+    mutationFn: (value: CustomEntity) => deleteCustomEntity(value.id, value.version, "Confirmar"),
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["custom-entities", typeId] }),
   });
   useEffect(() => {
@@ -77,12 +73,12 @@ export function CustomEntitiesAdmin() {
   return (
     <Flex vertical gap="1rem">
       <SectionTitle
-        title={copy.title}
-        description={copy.description}
+        title="Entidades personalizadas"
+        description="Cadastre itens como veículos, equipamentos ou qualquer outro conjunto tipado reutilizável."
       />
       {save.isError || remove.isError || entities.isError || fields.isError ? (
         <Alert
-          message={copy.errorTitle}
+          message="Não foi possível concluir a operação"
           type="error"
           description={
             <>{customDataError(save.error ?? remove.error ?? entities.error ?? fields.error)}</>
@@ -92,28 +88,25 @@ export function CustomEntitiesAdmin() {
       <Card className="custom-admin-form">
         <div className="custom-admin-grid">
           <label>
-            {copy.typeLabel}
-            <Select
-              onChange={(value) => setTypeId(value)}
-              options={[
-                { value: "", label: copy.typeSelectPlaceholder },
-                ...(types.data?.types
-                  .filter((value) => value.active)
-                  .map((value) => ({
-                    value: value.id,
-                    label: value.label,
-                  })) ?? []),
-              ]}
-              value={typeId}
-            />
+            Tipo
+            <select value={typeId} onChange={(event) => setTypeId(event.target.value)}>
+              <option value="">Selecione</option>
+              {types.data?.types
+                .filter((value) => value.active)
+                .map((value) => (
+                  <option key={value.id} value={value.id}>
+                    {value.label}
+                  </option>
+                ))}
+            </select>
           </label>
           <label>
-            {copy.ownerProfileLabel}
+            Pessoa vinculada
             <SearchField
-              label={copy.ownerProfileLabel}
+              label="Pessoa vinculada"
               lookup
               mode="suggest"
-              placeholder={copy.ownerProfilePlaceholder}
+              placeholder="Buscar pessoa…"
               value={ownerQuery}
               onChange={setOwnerQuery}
               onPick={(id, name) => {
@@ -126,8 +119,8 @@ export function CustomEntitiesAdmin() {
         {selectedType ? (
           <p>
             {selectedType.profile_cardinality === "ONE_PER_PROFILE"
-              ? copy.onePerProfileNotice
-              : copy.manyPerProfileNotice}
+              ? "Este tipo aceita uma entidade por pessoa."
+              : "Este tipo aceita várias entidades por pessoa."}
           </p>
         ) : null}
         {typeId && fields.data ? (
@@ -139,16 +132,15 @@ export function CustomEntitiesAdmin() {
           />
         ) : null}
         {typeId ? (
-          <Flex gap="0.5rem">
+          <Flex>
             <Button
               disabled={
                 save.isPending ||
                 (selectedType?.profile_cardinality === "ONE_PER_PROFILE" && !ownerId)
               }
               onClick={() => save.mutate()}
-              type="primary"
             >
-              {editing ? copy.saveEntity : copy.createEntity}
+              {editing ? "Salvar entidade" : "Criar entidade"}
             </Button>
             {editing ? (
               <Button
@@ -157,7 +149,7 @@ export function CustomEntitiesAdmin() {
                   setDraft({});
                 }}
               >
-                {copy.cancel}
+                Cancelar
               </Button>
             ) : null}
           </Flex>
@@ -168,20 +160,20 @@ export function CustomEntitiesAdmin() {
           <Card key={value.id} className="custom-admin-card">
             <Flex vertical gap="0.75rem">
               <strong>
-                {selectedType?.label ?? copy.defaultEntityName} #{index + 1}
+                {selectedType?.label ?? "Entidade"} #{index + 1}
               </strong>
-              <span>{value.owner_profile_id ? copy.profileLinked : copy.profileUnlinked}</span>
-              <Flex gap="0.5rem">
+              <span>{value.owner_profile_id ? "Pessoa vinculada" : "Sem pessoa vinculada"}</span>
+              <Flex>
                 <Button
                   onClick={() => {
                     setEditing(value);
                     setDraft(draftFromStoredValues(value.values));
                   }}
                 >
-                  {copy.edit}
+                  Editar
                 </Button>
-                <Button danger disabled={remove.isPending} onClick={() => remove.mutate(value)}>
-                  {copy.delete}
+                <Button disabled={remove.isPending} onClick={() => remove.mutate(value)}>
+                  Excluir
                 </Button>
               </Flex>
             </Flex>

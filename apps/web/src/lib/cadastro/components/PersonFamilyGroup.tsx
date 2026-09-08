@@ -25,21 +25,21 @@ export function PersonFamilyGroup({
   copy: customCopy,
 }: PersonFamilyGroupProps) {
   const { messages } = useI18n();
-  const labels = messages.common.labels;
   const copy = { ...messages.tables.cadastro, ...customCopy };
   const isDisabled = Boolean(disabled);
 
   return (
     <div className="cadastro-grid">
+      {/* Pai */}
       <div className="cadastro-col-6">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-fam-father">
-            {labels.fatherName}
+            {copy.fieldFatherName}
           </label>
           <Input
             disabled={isDisabled}
             id="cad-fam-father"
-            placeholder={labels.fatherName}
+            placeholder={copy.fieldFatherName}
             value={state.fatherName}
             onChange={(e) => onChange({ fatherName: e.target.value })}
           />
@@ -49,7 +49,7 @@ export function PersonFamilyGroup({
       <div className="cadastro-col-6">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-fam-father-bdate">
-            {labels.fatherBirthDate}
+            {copy.fieldFatherBirthDate}
           </label>
           <DatePicker
             disabled={isDisabled}
@@ -63,15 +63,16 @@ export function PersonFamilyGroup({
         </div>
       </div>
 
+      {/* Mãe */}
       <div className="cadastro-col-6">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-fam-mother">
-            {labels.motherName}
+            {copy.fieldMotherName}
           </label>
           <Input
             disabled={isDisabled}
             id="cad-fam-mother"
-            placeholder={labels.motherName}
+            placeholder={copy.fieldMotherName}
             value={state.motherName}
             onChange={(e) => onChange({ motherName: e.target.value })}
           />
@@ -81,7 +82,7 @@ export function PersonFamilyGroup({
       <div className="cadastro-col-6">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-fam-mother-bdate">
-            {labels.motherBirthDate}
+            {copy.fieldMotherBirthDate}
           </label>
           <DatePicker
             disabled={isDisabled}
@@ -95,10 +96,11 @@ export function PersonFamilyGroup({
         </div>
       </div>
 
+      {/* Casamentos */}
       <div className="cadastro-col-6">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-fam-wedding">
-            {labels.weddingDate}
+            {copy.fieldWeddingDate}
           </label>
           <DatePicker
             disabled={isDisabled}
@@ -115,7 +117,7 @@ export function PersonFamilyGroup({
       <div className="cadastro-col-6">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-fam-parents-wedding">
-            {labels.parentsWeddingDate}
+            {copy.fieldParentsWeddingDate}
           </label>
           <DatePicker
             disabled={isDisabled}

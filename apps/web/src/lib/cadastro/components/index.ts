@@ -11,4 +11,3 @@ export * from "./CadastroSection";
 export * from "./CadastroHolderSection";
 export * from "./PendingDocumentsSection";
 export * from "./PendingBillsSection";
-export * from "./CadastroStagedSection";

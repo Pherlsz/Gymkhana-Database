@@ -1,4 +1,4 @@
-import { Alert, Card, Input, Select } from "antd";
+import { Alert, Card } from "antd";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ConfirmDelete } from "../../components/ConfirmDelete";
@@ -111,24 +111,24 @@ export function DocumentEditor(props: {
       <div className="record-form">
         <label>
           {common.labels.type}
-          <Select
+          <select
             disabled={!editable || Boolean(props.lockType)}
-            onChange={(value) => setValues({ ...values, document_type_id: value })}
-            options={[
-              { value: "", label: panel.selectPlaceholder },
-              ...props.types
-                .filter((value) => value.active || value.id === values.document_type_id)
-                .map((value) => ({
-                  value: value.id,
-                  label: value.label,
-                })),
-            ]}
             value={values.document_type_id}
-          />
+            onChange={(event) => setValues({ ...values, document_type_id: event.target.value })}
+          >
+            <option value="">{panel.selectPlaceholder}</option>
+            {props.types
+              .filter((value) => value.active || value.id === values.document_type_id)
+              .map((value) => (
+                <option key={value.id} value={value.id}>
+                  {value.label}
+                </option>
+              ))}
+          </select>
         </label>
         <label>
           {common.labels.identifier}
-          <Input
+          <input
             disabled={!editable}
             value={values.identifier_value}
             onChange={(event) => setValues({ ...values, identifier_value: event.target.value })}
@@ -136,7 +136,7 @@ export function DocumentEditor(props: {
         </label>
         <label>
           {common.labels.date}
-          <Input
+          <input
             disabled={!editable}
             type="date"
             value={values.document_date}
@@ -145,7 +145,7 @@ export function DocumentEditor(props: {
         </label>
         <label>
           {common.labels.validUntil}
-          <Input
+          <input
             disabled={!editable}
             type="date"
             value={values.valid_until ?? ""}
@@ -154,44 +154,45 @@ export function DocumentEditor(props: {
         </label>
         <label>
           {common.labels.medium}
-          <Select
+          <select
             disabled={!editable}
-            onChange={(value) =>
+            value={values.medium}
+            onChange={(event) =>
               setValues(
-                withRecordMedium(values, value as DocumentValuesRequest["medium"]),
+                withRecordMedium(values, event.target.value as DocumentValuesRequest["medium"]),
               )
             }
-            options={media.map((value) => ({
-              value,
-              label: mediumLabel(value, messages),
-            }))}
-            value={values.medium}
-          />
+          >
+            {media.map((value) => (
+              <option key={value} value={value}>
+                {mediumLabel(value, messages)}
+              </option>
+            ))}
+          </select>
         </label>
         {values.medium === "PHYSICAL" ? (
           <label>
             {common.labels.custody}
-            <Select
+            <select
               disabled={!editable}
-              onChange={(value) =>
+              value={values.idle_custody ?? "ORGANIZATION"}
+              onChange={(event) =>
                 setValues({
                   ...values,
-                  idle_custody: value as NonNullable<
+                  idle_custody: event.target.value as NonNullable<
                     DocumentValuesRequest["idle_custody"]
                   >,
                 })
               }
-              options={[
-                { value: "ORGANIZATION", label: panel.custodyOrg },
-                { value: "OWNER", label: panel.custodyOwner },
-              ]}
-              value={values.idle_custody ?? "ORGANIZATION"}
-            />
+            >
+              <option value="ORGANIZATION">{panel.custodyOrg}</option>
+              <option value="OWNER">{panel.custodyOwner}</option>
+            </select>
           </label>
         ) : null}
         <label className="record-form__wide">
           {common.labels.notes}
-          <Input.TextArea
+          <textarea
             disabled={!editable}
             rows={4}
             value={values.notes}

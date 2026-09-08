@@ -13,6 +13,8 @@ import { useI18n } from "./i18n";
 
 type GridColumn<TData> = ColumnDef<TData, any>;
 
+// Structural view of the ColumnDef fields this adapter reads; avoids fighting
+// TanStack's discriminated union narrowing.
 type LooseColumn<TData> = {
   id?: string;
   accessorKey?: string;
@@ -58,8 +60,7 @@ export function DataGrid<TData>({
       }
     | undefined;
 }) {
-  const { messages, t } = useI18n();
-  const grid = messages.tables.grid;
+  const grid = useI18n().messages.tables.grid;
   const surfaceClassName = ["data-grid", className].filter(Boolean).join(" ");
   const shellClassName = ["data-grid__table-shell", tableWrapClassName].filter(Boolean).join(" ");
   const cardsClasses = ["data-grid__cards", cardsClassName].filter(Boolean).join(" ");
@@ -87,6 +88,9 @@ export function DataGrid<TData>({
         const cell = typeof column.cell === "function" ? column.cell : undefined;
         const hasValue =
           typeof column.accessorFn === "function" || typeof column.accessorKey === "string";
+        // ponytail: sort only — the list pages already own URL-backed filters
+        // (ProfileFilters, search terms, module/state selects); adding antd
+        // column filters would duplicate them with uncontrolled state.
         return {
           key: id,
           title: header,
@@ -140,11 +144,11 @@ export function DataGrid<TData>({
                         selection.onChange(new Set(keys.map((key) => String(key)))),
                       columnTitle: (
                         <span className="visually-hidden">
-                          {t(grid.selectAll, { caption })}
+                          {grid.selectAll.replace("{caption}", caption)}
                         </span>
                       ),
                       getCheckboxProps: (row: TData) => ({
-                        "aria-label": t(grid.selectRow, { label: selection.rowLabel(row) }),
+                        "aria-label": grid.selectRow.replace("{label}", selection.rowLabel(row)),
                       }),
                     },
                   }
@@ -226,15 +230,18 @@ export function DataGridPagination({
   label: string;
   onPage: (page: number) => void;
 }) {
-  const { messages, t } = useI18n();
-  const grid = messages.tables.grid;
+  const grid = useI18n().messages.tables.grid;
   return (
     <Flex align="center" className="data-grid__pagination">
       <Button disabled={page <= 1} onClick={() => onPage(page - 1)}>
         {grid.previousPage}
       </Button>
       <span aria-live="polite">
-        {t(grid.pageStatus, { page, totalPages, total, label })}
+        {grid.pageStatus
+          .replace("{page}", String(page))
+          .replace("{totalPages}", String(totalPages))
+          .replace("{total}", String(total))
+          .replace("{label}", label)}
       </span>
       <Button disabled={page >= totalPages} onClick={() => onPage(page + 1)}>
         {grid.nextPage}
