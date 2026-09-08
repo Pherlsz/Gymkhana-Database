@@ -8,6 +8,8 @@ import {
   type Profile,
   type ProfileDocumentPresence,
 } from "../api/client";
+import { queryKeys } from "../api/queryKeys";
+import { useI18n } from "../../i18n";
 import { DocumentBadges, documentTypeAcronym, type BadgeMarksCopy } from "./documentBadges";
 
 type PresenceCopy = {
@@ -27,17 +29,20 @@ const UNSPECIFIED = "";
 export function DocumentPresenceSection({
   profile,
   editable,
-  copy,
-  marks,
+  copy: propCopy,
+  marks: propMarks,
 }: {
   profile: Profile;
   editable: boolean;
-  copy: PresenceCopy;
-  marks: BadgeMarksCopy;
+  copy?: PresenceCopy;
+  marks?: BadgeMarksCopy;
 }) {
+  const { messages } = useI18n();
+  const copy = propCopy ?? messages.tables.inspector.presence;
+  const marks = propMarks ?? (messages.tables.badges as BadgeMarksCopy);
   const queryClient = useQueryClient();
   const types = useQuery({
-    queryKey: ["document-types"],
+    queryKey: queryKeys.types.documents,
     queryFn: ({ signal }) => listDocumentTypes(signal),
   });
   const [error, setError] = useState<string | null>(null);
@@ -58,8 +63,8 @@ export function DocumentPresenceSection({
     onSuccess: async () => {
       setError(null);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["tables", "profiles"] }),
-        queryClient.invalidateQueries({ queryKey: ["profile", profile.id] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.tables.profiles() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.profiles.detail(profile.id) }),
       ]);
     },
     onError: (caught) => {

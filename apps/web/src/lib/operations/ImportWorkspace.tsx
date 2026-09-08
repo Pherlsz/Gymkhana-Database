@@ -4,6 +4,7 @@ import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
 import { useEffect, useMemo, useState } from "react";
 import { DataGrid } from "../../DataGrid";
 import { useI18n } from "../../i18n";
+import "../../operations.css";
 import { formatBytes, errorMessage as operationError } from "../formatters";
 import {
   actionLabel,

@@ -2,12 +2,9 @@ import { Zap } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { useI18n } from "../../../i18n";
 import type { BillType, Profile } from "../../api/client";
-import {
-  BillFormFields,
-  type BillFormFieldsState,
-  CadastroHolderSection,
-  CadastroSection,
-} from "../components";
+import { BillFormFields, type BillFormFieldsState } from "../components/BillFormFields";
+import { CadastroHolderSection } from "../components/CadastroHolderSection";
+import { CadastroSection } from "../components/CadastroSection";
 
 export interface BillModeProps {
   billFields: BillFormFieldsState;

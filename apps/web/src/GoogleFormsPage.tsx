@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { Link2Off } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CadastroStateCard, StateCard } from "./components/StateCard";
+import "./google-forms.css";
 import { useApplicationSession } from "./session";
 import { useI18n } from "./i18n";
 import { errorMessage as googleFormsError, formatDateTime as formatDate } from "./lib/formatters";
@@ -11,6 +12,7 @@ import {
   googleFormsReturnPath,
   tableFromModule,
 } from "./lib/cadastro/cadastroSearch";
+import { queryKeys } from "./lib/api/queryKeys";
 import {
   beginGoogleFormsOAuth,
   cancelGoogleFormsSync,
@@ -46,17 +48,17 @@ export function GoogleFormsPage({
   const [selectedSourceID, setSelectedSourceID] = useState(initialSearch.get("source") ?? "");
   const canManage = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN";
   const status = useQuery({
-    queryKey: ["google-forms-status"],
+    queryKey: queryKeys.googleForms.status,
     queryFn: ({ signal }) => getGoogleFormsStatus(signal),
     enabled: canManage,
   });
   const sources = useQuery({
-    queryKey: ["google-forms-sources"],
+    queryKey: queryKeys.googleForms.sources,
     queryFn: ({ signal }) => listGoogleFormsSources(signal),
     enabled: canManage && status.data?.connected === true,
   });
   const syncs = useQuery({
-    queryKey: ["google-forms-syncs"],
+    queryKey: queryKeys.googleForms.syncs,
     queryFn: ({ signal }) => listGoogleFormsSyncs(signal),
     enabled: canManage && status.data?.connected === true,
     refetchInterval: (query) =>
@@ -65,17 +67,17 @@ export function GoogleFormsPage({
         : false,
   });
   const catalog = useQuery({
-    queryKey: ["operations-catalog"],
+    queryKey: queryKeys.operations.catalog,
     queryFn: ({ signal }) => getOperationsCatalog(signal),
     enabled: canManage && status.data?.connected === true,
     staleTime: 60_000,
   });
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["google-forms-status"] }),
-      queryClient.invalidateQueries({ queryKey: ["google-forms-sources"] }),
-      queryClient.invalidateQueries({ queryKey: ["google-forms-syncs"] }),
-      queryClient.invalidateQueries({ queryKey: ["operation-imports"] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.googleForms.status }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.googleForms.sources }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.googleForms.syncs }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.operations.importsList }),
     ]);
   };
   const oauthResult = initialSearch.get("google_forms");

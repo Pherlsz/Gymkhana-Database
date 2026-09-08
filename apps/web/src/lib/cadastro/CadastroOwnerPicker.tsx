@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SearchField } from "../../components/SearchField";
 import { useI18n } from "../../i18n";
 import { getProfile } from "../api/client";
+import { queryKeys } from "../api/queryKeys";
 
 export function CadastroOwnerPicker({
   ownerId,
@@ -18,7 +19,7 @@ export function CadastroOwnerPicker({
   const copy = messages.tables.cadastro;
   const [query, setQuery] = useState("");
   const selected = useQuery({
-    queryKey: ["cadastro-owner", ownerId],
+    queryKey: queryKeys.profiles.detail(ownerId),
     queryFn: ({ signal }) => getProfile(ownerId!, signal),
     enabled: Boolean(ownerId),
   });

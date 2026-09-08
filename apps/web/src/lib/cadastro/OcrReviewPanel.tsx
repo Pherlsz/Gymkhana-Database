@@ -16,6 +16,7 @@ import {
 } from "../api/ocr";
 import { listAttachments, type AttachmentOwner } from "../api/attachments";
 import { APIRequestError } from "../api/client";
+import { queryKeys } from "../api/queryKeys";
 
 export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
   const { messages } = useI18n();
@@ -23,18 +24,18 @@ export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
   const { labels } = messages.common;
   const queryClient = useQueryClient();
   const capability = useQuery({
-    queryKey: ["ocr-capability"],
+    queryKey: queryKeys.ocr.capability,
     queryFn: ({ signal }) => getOCRCapability(signal),
   });
   const attachments = useQuery({
-    queryKey: ["attachments", owner, false],
+    queryKey: queryKeys.attachments.byOwner(owner, false),
     queryFn: ({ signal }) => listAttachments(owner, false, signal),
   });
   const [attachmentID, setAttachmentID] = useState("");
   const [activeJobID, setActiveJobID] = useState<string>();
   const [notice, setNotice] = useState<string | null>(null);
   const job = useQuery({
-    queryKey: ["ocr-job", activeJobID],
+    queryKey: queryKeys.ocr.job(activeJobID),
     queryFn: ({ signal }) => getOCRJob(activeJobID!, signal),
     enabled: Boolean(activeJobID),
     refetchInterval: (query) =>
@@ -43,7 +44,7 @@ export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
         : false,
   });
   const suggestions = useQuery({
-    queryKey: ["ocr-suggestions", activeJobID],
+    queryKey: queryKeys.ocr.suggestions(activeJobID),
     queryFn: ({ signal }) => listOCRSuggestions(activeJobID!, signal),
     enabled: Boolean(activeJobID && job.data?.state === "COMPLETED"),
   });
@@ -69,8 +70,8 @@ export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
       activeJobID,
       0,
       () => {
-        void queryClient.invalidateQueries({ queryKey: ["ocr-job", activeJobID] });
-        void queryClient.invalidateQueries({ queryKey: ["ocr-suggestions", activeJobID] });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.ocr.job(activeJobID) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.ocr.suggestions(activeJobID) });
       },
       controller.signal,
     );
@@ -138,7 +139,7 @@ export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
           suggestions={suggestions.data!.suggestions.map((view) => view.suggestion)}
           onApplied={(message) => {
             setNotice(message);
-            void queryClient.invalidateQueries({ queryKey: ["ocr-suggestions", activeJobID] });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.ocr.suggestions(activeJobID) });
           }}
         />
       ) : null}

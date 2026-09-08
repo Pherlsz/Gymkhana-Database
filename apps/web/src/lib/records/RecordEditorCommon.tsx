@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { createColumnHelper } from "@tanstack/react-table";
 import { SearchField } from "../../components/SearchField";
 import { useI18n } from "../../i18n";
-import type { CatalogV1 } from "../../i18n/v1/catalog";
+import type { CatalogV1 } from "../../i18n/v1/pt-BR";
 import {
   APIRequestError,
   assignBillCurrentUse,

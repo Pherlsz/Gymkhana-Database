@@ -11,11 +11,14 @@ import {
   listDocumentTypes,
   type Profile,
 } from "../api/client";
+import { queryKeys } from "../api/queryKeys";
 import { MINIMUM_REQUIREMENT_QUERY } from "./CadastroMinimumRequirement";
 import { announceSaved } from "./cadastroFeedback";
 import { buildProfilePayload, mapProfileToState } from "./cadastroPayloads";
-import { CadastroStickyBar } from "./components";
-import { BillMode, DocumentMode, PersonMode } from "./modes";
+import { CadastroStickyBar } from "./components/CadastroStickyBar";
+import { BillMode } from "./modes/BillMode";
+import { DocumentMode } from "./modes/DocumentMode";
+import { PersonMode } from "./modes/PersonMode";
 import {
   type CadastroSingleScreenProps,
   INITIAL_BILL_FIELDS,
@@ -42,11 +45,11 @@ export function CadastroSingleScreen({
   const mode = targetTable;
 
   const documentTypes = useQuery({
-    queryKey: ["document-types"],
+    queryKey: queryKeys.types.documents,
     queryFn: ({ signal }) => listDocumentTypes(signal),
   });
   const billTypes = useQuery({
-    queryKey: ["bill-types"],
+    queryKey: queryKeys.types.bills,
     queryFn: ({ signal }) => listBillTypes(signal),
   });
 
@@ -176,12 +179,13 @@ export function CadastroSingleScreen({
           notes: docFields.docNotes.trim(),
         });
 
-        void queryClient.invalidateQueries({ queryKey: ["documents"] });
-        void queryClient.invalidateQueries({ queryKey: ["profiles"] });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.records.documents() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.tables.profiles() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.all });
         void queryClient.invalidateQueries({ queryKey: MINIMUM_REQUIREMENT_QUERY });
 
         const typeLabel =
-          documentTypes.data?.types?.find((t) => t.id === typeId)?.label || copy.docFallbackDefault;
+          documentTypes.data?.types?.find((type) => type.id === typeId)?.label || copy.docFallbackDefault;
         const msg = t(copy.savedSuccessDoc, {
           type: typeLabel,
           name: demographics.fullName.trim() || copy.holderFallbackDefault,
@@ -216,8 +220,9 @@ export function CadastroSingleScreen({
           medium: billFields.billMedium,
         });
 
-        void queryClient.invalidateQueries({ queryKey: ["bills"] });
-        void queryClient.invalidateQueries({ queryKey: ["profiles"] });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.records.bills() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.tables.profiles() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.all });
 
         const msg = copy.savedSuccessBill.replace(
           "{name}",
@@ -271,9 +276,10 @@ export function CadastroSingleScreen({
         }
       }
 
-      void queryClient.invalidateQueries({ queryKey: ["profiles"] });
-      void queryClient.invalidateQueries({ queryKey: ["documents"] });
-      void queryClient.invalidateQueries({ queryKey: ["bills"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tables.profiles() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records.documents() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records.bills() });
       void queryClient.invalidateQueries({ queryKey: MINIMUM_REQUIREMENT_QUERY });
 
       const successMsg = t(copy.savedSuccessPerson, {

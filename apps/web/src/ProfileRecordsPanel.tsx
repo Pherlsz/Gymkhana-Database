@@ -1,7 +1,7 @@
 import { Button, Flex } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AttachmentsPanel } from "./AttachmentsPanel";
-import { CadastroOcrSection } from "./lib/cadastro/CadastroPanel";
+import { CadastroOcrSection } from "./lib/cadastro/CadastroOcrSection";
 import { DataGrid, DataGridPagination } from "./DataGrid";
 import { BillFilters, DocumentFilters } from "./lib/records/RecordFilters";
 import { BillTypesAdmin, DocumentTypesAdmin } from "./lib/records/RecordTypesAdmin";
@@ -18,6 +18,7 @@ import {
   recordSearch,
 } from "./lib/records/RecordEditorCommon";
 import { useI18n } from "./i18n";
+import { queryKeys } from "./lib/api/queryKeys";
 import {
   deleteBill,
   deleteDocument,
@@ -37,9 +38,6 @@ import {
   type ProfileListSearch,
   type UserRole,
 } from "./lib/api/client";
-
-export { DocumentEditor } from "./lib/records/DocumentEditor";
-export { BillEditor } from "./lib/records/BillEditor";
 
 type Props = {
   profile: Profile;
@@ -63,11 +61,11 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
   const panel = messages.records.panel;
   const queryClient = useQueryClient();
   const types = useQuery({
-    queryKey: ["document-types"],
+    queryKey: queryKeys.types.documents,
     queryFn: ({ signal }) => listDocumentTypes(signal),
   });
   const records = useQuery({
-    queryKey: ["documents", profile.id, recordSearch(search, "document")],
+    queryKey: queryKeys.records.documents(profile.id, recordSearch(search, "document")),
     queryFn: ({ signal }) => listDocuments(profile.id, recordSearch(search, "document"), signal),
   });
   const selected = records.data?.documents.find((value) => value.id === search.document_selected);
@@ -75,8 +73,8 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
   const canDelete = canAdministerTypes;
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["documents", profile.id] }),
-      queryClient.invalidateQueries({ queryKey: ["document-types"] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.records.documents(profile.id) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.types.documents }),
     ]);
   };
   const duplicateMutation = useMutation({
@@ -222,11 +220,11 @@ function BillsSection({ profile, role, search, onSearch, onNotice }: Props) {
   const panel = messages.records.panel;
   const queryClient = useQueryClient();
   const types = useQuery({
-    queryKey: ["bill-types"],
+    queryKey: queryKeys.types.bills,
     queryFn: ({ signal }) => listBillTypes(signal),
   });
   const records = useQuery({
-    queryKey: ["bills", profile.id, recordSearch(search, "bill")],
+    queryKey: queryKeys.records.bills(profile.id, recordSearch(search, "bill")),
     queryFn: ({ signal }) => listBills(profile.id, recordSearch(search, "bill"), signal),
   });
   const selected = records.data?.bills.find((value) => value.id === search.bill_selected);
@@ -234,8 +232,8 @@ function BillsSection({ profile, role, search, onSearch, onNotice }: Props) {
   const canDelete = canAdministerTypes;
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["bills", profile.id] }),
-      queryClient.invalidateQueries({ queryKey: ["bill-types"] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.records.bills(profile.id) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.types.bills }),
     ]);
   };
   const duplicateMutation = useMutation({

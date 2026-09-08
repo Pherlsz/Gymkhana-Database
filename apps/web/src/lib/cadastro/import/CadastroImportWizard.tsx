@@ -9,7 +9,8 @@ import {
   getOperationImportReport,
   type OperationModule,
 } from "../../api/operations";
-import { ImportCreator, ImportWorkspace } from "../../../OperationsPage";
+import { queryKeys } from "../../api/queryKeys";
+import { ImportCreator, ImportWorkspace } from "../../operations/ImportWorkspace";
 import { operationActive, operationTerminal } from "./importHelpers";
 
 export function CadastroImportWizard({
@@ -29,19 +30,19 @@ export function CadastroImportWizard({
   const [currentModule, setCurrentModule] = useState<OperationModule>(module);
 
   const catalog = useQuery({
-    queryKey: ["operations-catalog"],
+    queryKey: queryKeys.operations.catalog,
     queryFn: ({ signal }) => getOperationsCatalog(signal),
     staleTime: 60_000,
   });
   const selectedImport = useQuery({
-    queryKey: ["operation-import", importId],
+    queryKey: queryKeys.operations.import(importId),
     queryFn: ({ signal }) => getOperationImport(importId!, signal),
     enabled: Boolean(importId),
     refetchInterval: (query) =>
       query.state.data && operationActive(query.state.data.state) ? 1_500 : false,
   });
   const selectedReport = useQuery({
-    queryKey: ["operation-import-report", importId],
+    queryKey: queryKeys.operations.importReport(importId),
     queryFn: ({ signal }) => getOperationImportReport(importId!, signal),
     enabled: Boolean(
       importId && selectedImport.data && operationTerminal(selectedImport.data.state),
@@ -49,9 +50,9 @@ export function CadastroImportWizard({
   });
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["operation-imports"] }),
-      queryClient.invalidateQueries({ queryKey: ["operation-import", importId] }),
-      queryClient.invalidateQueries({ queryKey: ["operation-import-report", importId] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.operations.importsList }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.operations.import(importId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.operations.importReport(importId) }),
     ]);
   };
   const modules = useMemo(

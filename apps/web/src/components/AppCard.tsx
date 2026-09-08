@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { Button } from "antd";
 import { ChevronRight, Inbox } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { ICON, ICON_STROKE } from "./icons";
@@ -154,14 +153,14 @@ export function AppCard({
   const content = (
     <>
       {isAccordion ? (
-        <Button
+        <button
           aria-expanded={open}
           className="app-card__trigger"
           onClick={onToggle}
-          type="text"
+          type="button"
         >
           {header}
-        </Button>
+        </button>
       ) : (
         header
       )}
@@ -171,7 +170,8 @@ export function AppCard({
     </>
   );
 
-  const classes = `app-card app-card--${variant} ${open ? "app-card--open" : ""} ${className}`.trim();
+  const classes =
+    `app-card app-card--${variant} ${isAccordion ? "app-card--accordion" : ""} ${isInteractive ? "app-card--interactive" : ""} ${open ? "app-card--open" : ""} ${className}`.trim();
 
   if (to) {
     return (

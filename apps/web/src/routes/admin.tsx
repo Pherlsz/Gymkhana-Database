@@ -1,8 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { EmptyTab } from "../EmptyTab";
-import { normalizeOperationsSearch } from "../OperationsPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/admin")({
-  validateSearch: normalizeOperationsSearch,
-  component: EmptyTab,
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
 });

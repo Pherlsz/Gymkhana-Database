@@ -1,17 +1,18 @@
 import { Car, Check, User, Users } from "lucide-react";
 import { useI18n } from "../../../i18n";
 import type { BillType, DocumentType } from "../../api/client";
+import { CadastroSection } from "../components/CadastroSection";
+import { PendingBillsSection } from "../components/PendingBillsSection";
+import { PendingDocumentsSection } from "../components/PendingDocumentsSection";
 import {
-  CadastroSection,
-  PendingBillsSection,
-  PendingDocumentsSection,
   PersonComplementaryGroup,
   type PersonComplementaryState,
+} from "../components/PersonComplementaryGroup";
+import {
   PersonDemographicsGroup,
   type PersonDemographicsState,
-  PersonFamilyGroup,
-  type PersonFamilyState,
-} from "../components";
+} from "../components/PersonDemographicsGroup";
+import { PersonFamilyGroup, type PersonFamilyState } from "../components/PersonFamilyGroup";
 import type { PendingBill, PendingDoc } from "../types";
 
 export interface PersonModeProps {

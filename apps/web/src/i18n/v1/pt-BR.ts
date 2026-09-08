@@ -1297,6 +1297,7 @@ export const ptBR = {
 } as const;
 
 export type TranslationKeys = typeof ptBR;
+export type CatalogV1 = typeof ptBR;
 
 export const ptBRV1 = ptBR;
 

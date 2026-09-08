@@ -4,7 +4,7 @@ import {
   type HomeCatalogGroupKey,
   type HomeCatalogKind,
 } from "../home/catalogTaxonomy";
-import type { CatalogV1 } from "../../i18n/v1/catalog";
+import type { CatalogV1 } from "../../i18n/v1/pt-BR";
 
 export type TypeFilterGroup = {
   key: HomeCatalogGroupKey;

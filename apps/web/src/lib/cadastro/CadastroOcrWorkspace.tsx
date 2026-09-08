@@ -11,6 +11,7 @@ import {
   type BillListSearch,
   type DocumentListSearch,
 } from "../api/client";
+import { queryKeys } from "../api/queryKeys";
 import { OcrReviewPanel } from "./OcrReviewPanel";
 import type { TableKind } from "./cadastroSearch";
 import { CadastroOwnerPicker } from "./CadastroOwnerPicker";
@@ -62,7 +63,7 @@ export function CadastroOcrWorkspace({
   const copy = messages.tables.cadastro;
   const attachmentsEnabled = useAttachmentsEnabled();
   const capability = useQuery({
-    queryKey: ["ocr-capability"],
+    queryKey: queryKeys.ocr.capability,
     queryFn: ({ signal }) => getOCRCapability(signal),
   });
   const checking = !attachmentsEnabled.isFetched || capability.isLoading;
@@ -138,13 +139,13 @@ function CadastroRecordPicker({
   const showDocuments = table !== "bills";
   const showBills = table !== "documents";
   const documents = useQuery({
-    queryKey: ["cadastro-ocr-documents", ownerId, typeId],
+    queryKey: queryKeys.records.documents(ownerId, { ...DOCUMENT_LIST_SEARCH, document_type: typeId ?? "" }),
     queryFn: ({ signal }) =>
       listDocuments(ownerId, { ...DOCUMENT_LIST_SEARCH, document_type: typeId ?? "" }, signal),
     enabled: showDocuments,
   });
   const bills = useQuery({
-    queryKey: ["cadastro-ocr-bills", ownerId, typeId],
+    queryKey: queryKeys.records.bills(ownerId, { ...BILL_LIST_SEARCH, bill_type: typeId ?? "" }),
     queryFn: ({ signal }) =>
       listBills(ownerId, { ...BILL_LIST_SEARCH, bill_type: typeId ?? "" }, signal),
     enabled: showBills,

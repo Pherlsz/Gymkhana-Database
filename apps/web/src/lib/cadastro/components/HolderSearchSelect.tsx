@@ -4,6 +4,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../../../i18n";
 import { type Profile, listProfilesLookup } from "../../api/client";
+import { queryKeys } from "../../api/queryKeys";
 
 export interface HolderSearchSelectProps {
   id?: string;
@@ -57,7 +58,7 @@ export function HolderSearchSelect({
   const [searchQuery, setSearchQuery] = useState("");
 
   const profilesLookup = useQuery({
-    queryKey: ["profiles-lookup", searchQuery],
+    queryKey: queryKeys.profiles.lookup(searchQuery),
     queryFn: ({ signal }) => listProfilesLookup(searchQuery, signal),
     staleTime: 30_000,
   });

@@ -111,7 +111,7 @@ export function ToolbarSurface({
         <Drawer
           className="toolbar-surface__drawer"
           destroyOnClose
-          height={SHEET_INSPECTOR_SHEET_SIZE}
+          size={SHEET_INSPECTOR_SHEET_SIZE}
           open={open}
           placement="bottom"
           title={undefined}

@@ -221,8 +221,10 @@ html.dark .state-card {
   text-decoration: none;
   color: inherit;
   transition:
-    border-color 150ms ease,
-    box-shadow 150ms ease;
+    border-color 200ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 200ms cubic-bezier(0.2, 0, 0, 1),
+    transform 200ms cubic-bezier(0.2, 0, 0, 1),
+    background-color 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 html.dark .app-card {
@@ -237,29 +239,52 @@ html.dark .app-card {
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
 }
 
+.app-card--interactive,
+.app-card--accordion,
 .app-card[role="button"],
 a.app-card {
   cursor: pointer;
 }
 
-.app-card[role="button"]:hover,
-a.app-card:hover,
-.app-card:hover {
-  border-color: var(--brand-accent-border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+@media (hover: hover) and (pointer: fine) {
+  .app-card--interactive:hover,
+  .app-card--accordion:hover,
+  .app-card[role="button"]:hover,
+  a.app-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--card-glow-border, var(--brand-accent-border));
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  }
+
+  html.dark .app-card--interactive:hover,
+  html.dark .app-card--accordion:hover,
+  html.dark .app-card[role="button"]:hover,
+  html.dark a.app-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--card-glow-border-dark, rgba(255, 197, 61, 0.32));
+    box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.45);
+  }
 }
 
-html.dark .app-card[role="button"]:hover,
-html.dark a.app-card:hover,
-html.dark .app-card:hover {
-  border-color: rgba(255, 197, 61, 0.28);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+/* Micro-Interaction: Smooth tactile response on click/active */
+.app-card--accordion:not(.app-card--open):active,
+.app-card--interactive:not(.app-card--open):active,
+.app-card[role="button"]:active,
+a.app-card:active {
+  transform: translateY(0) scale(0.993);
+  transition-duration: 70ms;
+}
+
+.app-card--accordion.app-card--open .app-card__trigger:active {
+  transform: scale(0.992);
+  transition-duration: 70ms;
 }
 
 .app-card:focus-visible,
 .app-card__trigger:focus-visible {
   outline: 2px solid var(--brand-accent-solid);
-  outline-offset: 2px;
+  outline-offset: 3px;
+  border-radius: var(--gym-radius-md);
 }
 
 /* Trigger button for accordion cards */
@@ -274,6 +299,8 @@ html.dark .app-card:hover {
   color: inherit;
   cursor: pointer;
   text-align: start;
+  border-radius: var(--gym-radius-md);
+  transition: transform 120ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* Header Row */
@@ -294,6 +321,16 @@ html.dark .app-card:hover {
   flex-shrink: 0;
   background: color-mix(in oklch, var(--gym-color-text) 12%, transparent);
   color: var(--gym-color-text);
+  transition:
+    transform 200ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.app-card--interactive:hover .app-card__icon,
+.app-card--accordion:hover .app-card__icon,
+.app-card[role="button"]:hover .app-card__icon,
+a.app-card:hover .app-card__icon {
+  transform: scale(1.05);
 }
 
 /* Header Titles */
@@ -358,7 +395,7 @@ html.dark .app-card__badge {
   opacity: 0.6;
   flex-shrink: 0;
   transition:
-    transform 180ms ease,
+    transform 200ms cubic-bezier(0.2, 0, 0, 1),
     opacity 150ms ease,
     color 150ms ease;
 }
@@ -371,6 +408,16 @@ html.dark .app-card__badge {
 .app-card:hover .app-card__chevron {
   color: var(--gym-color-text);
   opacity: 1;
+}
+
+.app-card--interactive:hover .app-card__chevron:not(.app-card__chevron--open),
+.app-card--accordion:hover .app-card__chevron:not(.app-card__chevron--open) {
+  transform: translateX(3px);
+}
+
+.app-card--interactive:hover .app-card__chevron--open,
+.app-card--accordion:hover .app-card__chevron--open {
+  transform: rotate(90deg) translateY(-2px);
 }
 
 /* Body */
@@ -510,6 +557,13 @@ html.dark .app-card__badge {
 }
 
 /* Semantic Colors */
+.app-card--people,
+.app-card--certificates,
+.app-card--forms {
+  --card-glow-border: var(--brand-accent-border);
+  --card-glow-border-dark: rgba(245, 158, 11, 0.35);
+}
+
 .app-card--people .app-card__icon,
 .app-card--certificates .app-card__icon,
 .app-card--forms .app-card__icon {
@@ -524,6 +578,11 @@ html.dark .app-card--forms .app-card__icon {
   border: 1px solid rgba(245, 158, 11, 0.28);
 }
 
+.app-card--bills {
+  --card-glow-border: rgba(5, 150, 105, 0.35);
+  --card-glow-border-dark: rgba(52, 211, 153, 0.35);
+}
+
 .app-card--bills .app-card__icon {
   background: rgba(5, 150, 105, 0.1);
   color: #059669;
@@ -533,6 +592,12 @@ html.dark .app-card--bills .app-card__icon {
   background: rgba(52, 211, 153, 0.14);
   color: #34d399;
   border: 1px solid rgba(52, 211, 153, 0.28);
+}
+
+.app-card--identity,
+.app-card--documents {
+  --card-glow-border: rgba(2, 132, 199, 0.35);
+  --card-glow-border-dark: rgba(56, 189, 248, 0.35);
 }
 
 .app-card--identity .app-card__icon,
@@ -548,6 +613,12 @@ html.dark .app-card--documents .app-card__icon {
   border: 1px solid rgba(56, 189, 248, 0.28);
 }
 
+.app-card--work,
+.app-card--bulk {
+  --card-glow-border: rgba(126, 34, 206, 0.35);
+  --card-glow-border-dark: rgba(168, 85, 247, 0.35);
+}
+
 .app-card--work .app-card__icon,
 .app-card--bulk .app-card__icon {
   background: rgba(126, 34, 206, 0.1);
@@ -561,6 +632,11 @@ html.dark .app-card--bulk .app-card__icon {
   border: 1px solid rgba(168, 85, 247, 0.28);
 }
 
+.app-card--health {
+  --card-glow-border: rgba(225, 29, 72, 0.35);
+  --card-glow-border-dark: rgba(251, 113, 133, 0.35);
+}
+
 .app-card--health .app-card__icon {
   background: rgba(225, 29, 72, 0.1);
   color: #e11d48;
@@ -572,6 +648,11 @@ html.dark .app-card--health .app-card__icon {
   border: 1px solid rgba(251, 113, 133, 0.28);
 }
 
+.app-card--education {
+  --card-glow-border: rgba(79, 70, 229, 0.35);
+  --card-glow-border-dark: rgba(129, 140, 248, 0.35);
+}
+
 .app-card--education .app-card__icon {
   background: rgba(79, 70, 229, 0.1);
   color: #4f46e5;
@@ -581,6 +662,11 @@ html.dark .app-card--education .app-card__icon {
   background: rgba(129, 140, 248, 0.14);
   color: #818cf8;
   border: 1px solid rgba(129, 140, 248, 0.28);
+}
+
+.app-card--other {
+  --card-glow-border: rgba(13, 148, 136, 0.35);
+  --card-glow-border-dark: rgba(45, 212, 191, 0.35);
 }
 
 .app-card--other .app-card__icon {

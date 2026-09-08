@@ -1,5 +1,5 @@
 import type { CustomField, ProfileListSearch } from "../api/client";
-import type { CatalogV1 } from "../../i18n/v1/catalog";
+import type { CatalogV1 } from "../../i18n/v1/pt-BR";
 import {
   brazilStateOptions,
   customFieldFilter,

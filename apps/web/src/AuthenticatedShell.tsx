@@ -12,7 +12,6 @@ import {
   PanelLeftOpen,
   Receipt,
   Settings,
-  SlidersHorizontal,
   Sun,
   User,
   UserPlus,
@@ -20,10 +19,9 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useI18n } from "./i18n";
-import { canManageUsers } from "./lib/roles";
 import { TABLE_SEARCH_DEFAULTS } from "./lib/tables/tableRoutes";
 import { CADASTRO_SEARCH_DEFAULTS } from "./lib/cadastro/cadastroSearch";
-import { GLOBAL_SEARCH_DEFAULTS } from "./SearchPage";
+import { GLOBAL_SEARCH_DEFAULTS } from "./lib/search/urlState";
 import { useApplicationContext } from "./session";
 import { useTheme } from "./theme";
 import { ICON, ICON_STROKE } from "./components/icons";
@@ -39,7 +37,6 @@ export function AuthenticatedShell() {
 
 function AuthenticatedShellLayout() {
   const { messages } = useI18n();
-  const { session } = useApplicationContext();
   const navigate = useNavigate();
   const copy = messages.shell;
   const entities = messages.common.entities;
@@ -52,7 +49,6 @@ function AuthenticatedShellLayout() {
     if (typeof window === "undefined") return true;
     return window.localStorage.getItem(NAV_TABLES_OPEN_KEY) !== "0";
   });
-  const admin = canManageUsers(session.user.role);
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(NAV_COLLAPSED_KEY) === "1");
@@ -287,20 +283,6 @@ function AuthenticatedShellLayout() {
               <span className="nav-item__label">{entities.cadastro}</span>
             </Link>
           </RailTip>
-          {admin ? (
-            <RailTip label={entities.admin} rail={rail}>
-              <Link
-                activeOptions={{ exact: true }}
-                activeProps={{ "aria-current": "page", className: "nav-item--active" }}
-                className="nav-item"
-                title={entities.admin}
-                to="/admin"
-              >
-                <SlidersHorizontal aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                <span className="nav-item__label">{entities.admin}</span>
-              </Link>
-            </RailTip>
-          ) : null}
         </nav>
         <UserAccountCard rail={rail} />
       </aside>
@@ -384,50 +366,6 @@ function TableLink({
   );
 }
 
-function AccountMenuPanel({
-  copy,
-  signingOut,
-  onLogout,
-  onSettings,
-}: {
-  copy: ReturnType<typeof useI18n>["messages"]["shell"];
-  signingOut: boolean;
-  onLogout: () => void;
-  onSettings: () => void;
-}) {
-  return (
-    <div
-      className="sidebar-account-menu"
-      onMouseDown={(event) => {
-        if ((event.target as HTMLElement | null)?.closest("button")) return;
-        event.preventDefault();
-      }}
-      role="menu"
-    >
-      <Button
-        className="sidebar-account-menu__item"
-        onClick={onSettings}
-        role="menuitem"
-        type="text"
-      >
-        <Settings aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-        {copy.account.settings}
-      </Button>
-      <div className="sidebar-account-menu__divider" />
-      <Button
-        className="sidebar-account-menu__item"
-        danger
-        disabled={signingOut}
-        onClick={onLogout}
-        role="menuitem"
-        type="text"
-      >
-        <LogOut aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-        {signingOut ? copy.signingOut : copy.signOut}
-      </Button>
-    </div>
-  );
-}
 
 function SidebarThemeToggle({ rail }: { rail: boolean }) {
   const { theme, toggleTheme } = useTheme();
@@ -489,20 +427,37 @@ function UserAccountCard({ rail }: { rail: boolean }) {
             }}
             open={open}
             placement={rail ? "rightBottom" : "topLeft"}
-            popupRender={() => (
-              <AccountMenuPanel
-                copy={copy}
-                signingOut={signingOut}
-                onLogout={() => {
-                  setOpen(false);
-                  signOut();
-                }}
-                onSettings={() => {
+            menu={{
+              onClick: ({ key }) => {
+                if (key === "settings") {
                   setOpen(false);
                   void navigate({ to: "/settings" });
-                }}
-              />
-            )}
+                  return;
+                }
+                if (key === "logout") {
+                  setOpen(false);
+                  signOut();
+                }
+              },
+              items: [
+                {
+                  key: "settings",
+                  icon: <Settings aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
+                  label: copy.account.settings,
+                },
+                {
+                  type: "divider",
+                },
+                {
+                  key: "logout",
+                  danger: true,
+                  disabled: signingOut,
+                  icon: <LogOut aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
+                  label: signingOut ? copy.signingOut : copy.signOut,
+                },
+              ],
+            }}
+            styles={{ root: { minWidth: rail ? 160 : 210 } }}
             trigger={["click"]}
           >
             <Button
