@@ -8,7 +8,6 @@ import {
   type BillPageResponse,
   type DocumentPageResponse,
 } from "../api/client";
-import { queryKeys } from "../api/queryKeys";
 
 const homeQuery = {
   retry: 1,
@@ -40,6 +39,11 @@ export type HomeInUseTypeChip = {
   count: number;
 };
 
+/**
+ * Groups the fetched in-use page by entity + type. The page endpoint caps at 50
+ * items, so past that point chip counts understate `page.total`; callers show a
+ * truncation note when the total exceeds the fetched length.
+ */
 export function groupInUseByType(items: HomeInUseItem[]): HomeInUseTypeChip[] {
   const grouped = new Map<string, HomeInUseTypeChip>();
   for (const item of items) {
@@ -98,12 +102,12 @@ function mapInUseItems(
 function useHomeCatalogTypes() {
   const documentTypes = useQuery({
     ...catalogCountQuery,
-    queryKey: queryKeys.home.documentTypes,
+    queryKey: ["home", "overview", "document-types"],
     queryFn: ({ signal }) => listDocumentTypes(signal),
   });
   const billTypes = useQuery({
     ...catalogCountQuery,
-    queryKey: queryKeys.home.billTypes,
+    queryKey: ["home", "overview", "bill-types"],
     queryFn: ({ signal }) => listBillTypes(signal),
   });
 
@@ -122,17 +126,17 @@ function useHomeCatalogTypes() {
 export function useHomeOverview() {
   const profiles = useQuery({
     ...homeQuery,
-    queryKey: queryKeys.home.profiles,
+    queryKey: ["home", "overview", "profiles"],
     queryFn: ({ signal }) => getProfileListTotals(signal),
   });
   const documentsInUse = useQuery({
     ...homeQuery,
-    queryKey: queryKeys.home.documentsInUse,
+    queryKey: ["home", "overview", "documents-in-use"],
     queryFn: ({ signal }) => listDocumentsInUse(signal),
   });
   const billsInUse = useQuery({
     ...homeQuery,
-    queryKey: queryKeys.home.billsInUse,
+    queryKey: ["home", "overview", "bills-in-use"],
     queryFn: ({ signal }) => listBillsInUse(signal),
   });
   const catalog = useHomeCatalogTypes();
@@ -144,6 +148,7 @@ export function useHomeOverview() {
     profileTotal: profiles.data?.page.total ?? null,
     documentsInUse: documentsInUse.data?.page.total ?? null,
     billsInUse: billsInUse.data?.page.total ?? null,
+    /** How many in-use items the fixed-size pages actually returned. */
     inUseFetched,
     inUseTypeChips,
     documentTypes: catalog.documentTypes.map((type) => ({
@@ -177,6 +182,3 @@ export function useHomeOverview() {
       ]),
   };
 }
-
-export type HomeOverviewResult = ReturnType<typeof useHomeOverview>;
-

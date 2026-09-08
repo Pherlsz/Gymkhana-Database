@@ -23,6 +23,11 @@
   gap: var(--gym-space-3);
 }
 
+/* One surface treatment for every top-level cadastro work block. Hairline
+   border + soft shadow + raised paper: the card, not the canvas, is the unit
+   of the flow. Applied to the three outermost blocks only (.cadastro-catalog,
+   .cadastro-panel, and the manual .cadastro-work wrapper) so nested blocks
+   like .cadastro-owner read as content inside a card, never cards-in-cards. */
 .cadastro-panel {
   display: flex;
   flex-direction: column;
@@ -39,13 +44,6 @@
     padding: 0.875rem;
     border-radius: var(--gym-radius-md);
   }
-}
-
-.cadastro-panel:has(> .state-card) {
-  padding: 0;
-  background: transparent;
-  border: none;
-  box-shadow: none;
 }
 
 .cadastro-manual__lead,
@@ -107,6 +105,9 @@
   overflow: visible;
 }
 
+/* The people flow renders the bare ProfilePanel, which ships with a flat
+   low-surface background and no shadow. Adopt the cadastro card surface so
+   the default view matches the documents/bills cards. */
 .cadastro-page .profile-panel {
   background: var(--md-surface-elevated);
   border-color: var(--md-outline-variant);
@@ -130,6 +131,10 @@
   }
 }
 
+/* Minimum-requirement indicator: a thin text line under the step trail.
+   Never an Alert/banner. Warn state uses the amber-11 text token (contrast
+   level, not the star fill --amber-9); ok state is nearly invisible
+   (muted ink). Same font-size as catalog hints so it reads as a note. */
 .cadastro-minreq {
   margin: 0;
   font-size: 0.875rem;
@@ -143,10 +148,15 @@
   color: var(--md-on-surface-variant);
 }
 
+/* Catalog groups sit inside the .cadastro-catalog card: drop their own
+   background so they read as sections of the card, not cards inside a card. */
 .cadastro-catalog .home-catalog__group {
   background: var(--md-surface);
 }
 
+/* ===== Entry screen (mock 011): inventory line + three entry cards.
+   The bare /cadastro landing shows this; picking a card swaps to the
+   workspace. Colors/radii/spacing from shell.css tokens only. ===== */
 .cadastro-entry {
   display: flex;
   flex-direction: column;
@@ -182,6 +192,157 @@
 
 .cadastro-entry__cards--automation {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+}
+
+.cadastro-entry__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-3);
+  padding: var(--gym-space-5);
+  background: var(--gym-color-surface);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-lg);
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-card);
+}
+
+html.dark .cadastro-entry__card {
+  background:
+    radial-gradient(
+      130% 130% at 0% 0%,
+      rgba(255, 255, 255, 0.035) 0%,
+      rgba(255, 255, 255, 0.008) 100%
+    ),
+    var(--gym-color-surface-raised);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+}
+
+.cadastro-entry__card:hover {
+  border-color: var(--brand-accent-border);
+  background: var(--gym-color-surface);
+  transform: translateY(-3px);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.08),
+    0 0 16px var(--brand-accent-surface);
+}
+
+html.dark .cadastro-entry__card:hover {
+  border-color: rgba(255, 197, 61, 0.38);
+  background:
+    radial-gradient(
+      130% 130% at 0% 0%,
+      rgba(255, 197, 61, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ),
+    var(--gym-color-surface-raised);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    0 0 24px rgba(255, 197, 61, 0.12);
+}
+
+.cadastro-entry__card:focus-visible {
+  outline: 2px solid var(--brand-accent-solid);
+  outline-offset: 2px;
+}
+
+.cadastro-entry__pill-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  color: var(--gym-color-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+html.dark .cadastro-entry__pill-badge {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.cadastro-entry__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--gym-radius-md);
+  background: color-mix(in oklch, var(--gym-color-text) 12%, transparent);
+  color: var(--gym-color-text);
+  transition: transform 0.2s ease;
+}
+
+.cadastro-entry__card:hover .cadastro-entry__icon {
+  transform: scale(1.05);
+}
+
+.cadastro-entry__card--people .cadastro-entry__icon {
+  background: var(--brand-accent-surface);
+  color: var(--brand-accent-icon);
+  border: 1px solid var(--brand-accent-border);
+}
+
+.cadastro-entry__card--documents .cadastro-entry__icon {
+  background: rgba(14, 116, 144, 0.1);
+  color: #0e7490;
+  border: 1px solid rgba(14, 116, 144, 0.25);
+}
+html.dark .cadastro-entry__card--documents .cadastro-entry__icon {
+  background: rgba(56, 189, 248, 0.14);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+}
+
+.cadastro-entry__card--bills .cadastro-entry__icon {
+  background: rgba(5, 150, 105, 0.1);
+  color: #059669;
+  border: 1px solid rgba(5, 150, 105, 0.25);
+}
+html.dark .cadastro-entry__card--bills .cadastro-entry__icon {
+  background: rgba(52, 211, 153, 0.14);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.28);
+}
+
+.cadastro-entry__card--forms .cadastro-entry__icon {
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+html.dark .cadastro-entry__card--forms .cadastro-entry__icon {
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.cadastro-entry__card--bulk .cadastro-entry__icon {
+  background: rgba(126, 34, 206, 0.1);
+  color: #7e22ce;
+  border: 1px solid rgba(126, 34, 206, 0.25);
+}
+html.dark .cadastro-entry__card--bulk .cadastro-entry__icon {
+  background: rgba(168, 85, 247, 0.14);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.28);
+}
+
+.cadastro-entry__title {
+  font-size: var(--gym-font-size-lg);
+  font-weight: 600;
+  color: var(--gym-color-text);
+}
+
+.cadastro-entry__body {
+  font-size: var(--gym-font-size-sm);
+  line-height: 1.5;
+  color: var(--gym-color-text-muted);
 }
 
 .cadastro-entry__foot {
@@ -246,6 +407,8 @@
   font-size: var(--gym-font-size-xs);
   color: var(--gym-color-text-muted);
 }
+
+/* ===== Single-Screen Unified Cadastro (Mock 011 + responsive-micro-ux) ===== */
 
 .cadastro-single {
   display: flex;
@@ -355,20 +518,6 @@ html.dark .cadastro-group--documents .cadastro-group__icon--documents {
   box-shadow: 0 0 16px rgba(56, 189, 248, 0.15);
 }
 
-/* Bill group icon & badge */
-.cadastro-group--bills .cadastro-group__icon--bills {
-  background: rgba(5, 150, 105, 0.12);
-  border: 1px solid rgba(5, 150, 105, 0.28);
-  color: #059669;
-}
-
-html.dark .cadastro-group--bills .cadastro-group__icon--bills {
-  background: rgba(52, 211, 153, 0.14);
-  border: 1px solid rgba(52, 211, 153, 0.32);
-  color: #34d399;
-  box-shadow: 0 0 16px rgba(52, 211, 153, 0.15);
-}
-
 .cadastro-group__title-wrap {
   display: flex;
   align-items: center;
@@ -402,18 +551,6 @@ html.dark .cadastro-group__badge--documents {
   background: rgba(56, 189, 248, 0.12);
   border: 1px solid rgba(56, 189, 248, 0.25);
   color: #38bdf8;
-}
-
-.cadastro-group__badge--bills {
-  background: rgba(5, 150, 105, 0.08);
-  border: 1px solid rgba(5, 150, 105, 0.2);
-  color: #059669;
-}
-
-html.dark .cadastro-group__badge--bills {
-  background: rgba(52, 211, 153, 0.12);
-  border: 1px solid rgba(52, 211, 153, 0.25);
-  color: #34d399;
 }
 
 .cadastro-group__chevron {

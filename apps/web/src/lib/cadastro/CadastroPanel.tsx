@@ -1,19 +1,16 @@
-import { lazy, Suspense } from "react";
-import { Spin } from "antd";
+import { StateCard } from "../../components/StateCard";
+import { useQuery } from "@tanstack/react-query";
+import { useI18n } from "../../i18n";
+import { getOCRCapability } from "../api/ocr";
+import type { AttachmentOwner } from "../api/attachments";
+import { CadastroImportWizard } from "./import/CadastroImportWizard";
 import type { CadastroMode } from "./cadastroSearch";
 import { moduleFromTable } from "./cadastroSearch";
 import type { OperationModule } from "../api/operations";
 import { CadastroManualPanel } from "./CadastroManualPanel";
-
-export { CadastroOcrSection } from "./CadastroOcrSection";
-
-const CadastroImportWizard = lazy(() =>
-  import("./import/CadastroImportWizard").then((m) => ({ default: m.CadastroImportWizard })),
-);
-
-const CadastroOcrWorkspace = lazy(() =>
-  import("./CadastroOcrWorkspace").then((m) => ({ default: m.CadastroOcrWorkspace })),
-);
+import { CadastroOcrWorkspace } from "./CadastroOcrWorkspace";
+import { OcrReviewPanel } from "./OcrReviewPanel";
+import { useAttachmentsEnabled } from "./useAttachmentsEnabled";
 
 export function CadastroPanel({
   table,
@@ -42,19 +39,6 @@ export function CadastroPanel({
 }) {
   const module = moduleFromTable(table) satisfies OperationModule;
 
-  if (cadastro === "xlsx") {
-    return (
-      <Suspense fallback={<Spin size="large" style={{ display: "block", margin: "3rem auto" }} />}>
-        <CadastroImportWizard
-          importId={importId}
-          module={module}
-          onClose={() => onImportChange(undefined)}
-          onImportCreated={(id) => onImportChange(id)}
-        />
-      </Suspense>
-    );
-  }
-
   return (
     <div className="cadastro-panel">
       {cadastro === "manual" && table !== "people" ? (
@@ -66,19 +50,48 @@ export function CadastroPanel({
         />
       ) : null}
 
+      {cadastro === "xlsx" ? (
+        <CadastroImportWizard
+          importId={importId}
+          module={module}
+          onClose={() => onImportChange(undefined)}
+          onImportCreated={(id) => onImportChange(id)}
+        />
+      ) : null}
+
       {cadastro === "ocr" ? (
-        <Suspense fallback={<Spin size="large" style={{ display: "block", margin: "3rem auto" }} />}>
-          <CadastroOcrWorkspace
-            ownerId={recordsOwner}
-            recordId={recordId}
-            table={table}
-            typeId={typeId}
-            onCreateInstead={onCreateInstead}
-            onOwner={onOwner}
-            onRecord={onRecord}
-          />
-        </Suspense>
+        <CadastroOcrWorkspace
+          ownerId={recordsOwner}
+          recordId={recordId}
+          table={table}
+          typeId={typeId}
+          onCreateInstead={onCreateInstead}
+          onOwner={onOwner}
+          onRecord={onRecord}
+        />
       ) : null}
     </div>
   );
+}
+
+export function CadastroOcrSection({ owner }: { owner: AttachmentOwner }) {
+  const { messages } = useI18n();
+  const copy = messages.tables.cadastro;
+  const attachmentsEnabled = useAttachmentsEnabled();
+  const ocrCapability = useQuery({
+    queryKey: ["ocr-capability"],
+    queryFn: ({ signal }) => getOCRCapability(signal),
+  });
+  const enabled = (attachmentsEnabled.data ?? false) && (ocrCapability.data?.enabled ?? false);
+  if (!enabled) {
+    return (
+      <StateCard
+        compact
+        description={copy.ocrUnavailableR2}
+        kind="warning"
+        title={copy.ocrUnavailable}
+      />
+    );
+  }
+  return <OcrReviewPanel owner={owner} />;
 }

@@ -6,6 +6,12 @@ import { getAntdLocale, I18nProvider, resolveAppLocale } from "./i18n";
 import "./styles.css";
 import "./shell.css";
 import "./components/components.css";
+import "./attachments.css";
+import "./search.css";
+import "./operations.css";
+import "./google-forms.css";
+import "./cadastro.css";
+import "./tables.css";
 
 const root = document.getElementById("root");
 

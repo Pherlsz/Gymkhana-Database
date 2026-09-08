@@ -1,3 +1,11 @@
+/*
+ * Ink and paper. The crest (`public/logo.png`) and the mascot (`public/Gampa.png`)
+ * are pure black on white with a single warm accent, and the crest's stars are
+ * where the gold comes from. So: high-contrast neutrals carry the structure,
+ * gold is reserved for what was earned or for "you are here", red is
+ * destructive. Neutrals hold hue 85 at chroma <=0.006 so gold never reads
+ * dirty against them; that is a hint of warmth, not a sand palette.
+ */
 @property --gray-1 {
   syntax: "<color>";
   inherits: true;
@@ -122,6 +130,7 @@
   --md-error-container: color-mix(in oklch, var(--md-error) 8%, var(--md-surface));
   --md-info-container: color-mix(in oklch, var(--md-info) 10%, var(--md-surface));
   --md-scrim: oklch(0.185 0.006 85 / 0.45);
+  /* Document presence marks, per Orchestration 12.1: F green, D blue. */
   --mark-physical: oklch(0.47 0.16 145);
   --mark-digital: oklch(0.46 0.17 250);
   --shape-xs: 4px;
@@ -331,8 +340,28 @@ html.theme-switching *::after {
   color: var(--md-on-surface);
 }
 
-/* Button tokens and interactions are governed by theme.tsx and components.css */
+/*
+ * M3 roles: --md-primary (amber-9) is fill gold, reserved for the owner disc.
+ * Text, icons, and outlines on surface are ink. Gold text (--md-primary-text)
+ * is only the "you are here" rule, the matching nav icon, and the focus ring.
+ * https://m3.material.io/styles/color/roles
+ */
+html .ant-btn.ant-btn-color-primary:not(.ant-btn-variant-solid) {
+  --ant-btn-color-base: var(--md-on-surface);
+  --ant-btn-color-hover: var(--md-on-surface);
+  --ant-btn-color-active: var(--md-on-surface);
+}
 
+html .ant-btn.ant-btn-color-primary.ant-btn-variant-solid {
+  --ant-btn-color-base: var(--md-on-surface);
+  --ant-btn-color-hover: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
+  --ant-btn-color-active: color-mix(in oklch, var(--md-on-surface) 76%, var(--md-surface));
+  --ant-btn-text-color: var(--md-surface);
+  --ant-btn-text-color-hover: var(--md-surface);
+  --ant-btn-text-color-active: var(--md-surface);
+  border-color: transparent;
+  box-shadow: none;
+}
 
 .page-measure {
   width: 100%;
@@ -358,36 +387,6 @@ html.theme-switching *::after {
   max-width: 28rem;
 }
 
-.app-shell__topbar-brand {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  border-radius: var(--gym-radius-sm);
-  transition:
-    opacity 150ms ease,
-    transform 120ms cubic-bezier(0.2, 0, 0, 1);
-}
-
-.app-shell__topbar-brand:active {
-  transform: scale(0.96);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .app-shell__topbar-brand:hover {
-    opacity: 0.85;
-  }
-}
-
-.app-shell__topbar-brand:focus-visible {
-  outline: 2px solid var(--md-primary-text);
-  outline-offset: 2px;
-}
-
-.app-shell__logo-img--topbar {
-  inline-size: 1.75rem;
-  block-size: 1.75rem;
-}
-
 .app-shell__menu {
   display: grid;
   place-items: center;
@@ -399,22 +398,14 @@ html.theme-switching *::after {
   color: var(--md-on-surface);
   cursor: pointer;
   transition:
-    transform 120ms cubic-bezier(0.2, 0, 0, 1),
     background-color 150ms ease,
     border-color 150ms ease,
     box-shadow 150ms ease;
 }
 
-.app-shell__menu:active {
-  transform: scale(0.96);
-  background: var(--md-state-pressed);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .app-shell__menu:hover {
-    background: var(--md-state-hover);
-    border-color: var(--md-outline);
-  }
+.app-shell__menu:hover {
+  background: var(--md-state-hover);
+  border-color: var(--md-outline);
 }
 
 .app-shell__menu:focus-visible {
@@ -488,21 +479,10 @@ html.theme-switching *::after {
   display: grid;
   place-items: center;
   flex: none;
-  cursor: pointer;
-  transition:
-    transform 120ms cubic-bezier(0.2, 0, 0, 1),
-    background-color 150ms ease;
 }
 
-.app-shell__collapse:active {
-  transform: scale(0.96);
-  background: var(--md-state-pressed);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .app-shell__collapse:hover {
-    background: var(--md-state-hover);
-  }
+.app-shell__collapse:hover {
+  background: var(--md-state-hover);
 }
 
 .app-shell__sidebar nav {
@@ -519,6 +499,21 @@ html.theme-switching *::after {
   margin: 0 1.25rem 1rem;
 }
 
+.coming-soon {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.coming-soon h1 {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
 
 .shell-search {
   display: block;
@@ -531,6 +526,8 @@ html.theme-switching *::after {
   min-width: 0;
 }
 
+/* Layout only: Ant Input's affix wrapper has an intrinsic min-width from
+   prefix + suffix (the Ctrl K hint) that otherwise overflows the rail. */
 .search-field .ant-input-affix-wrapper {
   min-width: 0;
   width: 100%;
@@ -650,7 +647,7 @@ html.theme-switching *::after {
 .nav-item--active {
   background: var(--md-surface-container);
   color: var(--md-primary-text);
-  font-weight: 500;
+  font-weight: 600;
   border-radius: var(--gym-radius-md);
   box-shadow: none;
   padding-inline-start: 0.7rem;
@@ -681,40 +678,34 @@ html.theme-switching *::after {
   min-width: 0;
 }
 
-.nav-item--toggle {
-  justify-content: flex-start;
-  user-select: none;
-}
-
 .nav-item--toggle .nav-item__chev {
   margin-inline-start: auto;
   color: var(--md-on-surface-variant);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.15s ease;
 }
 
 .nav-item--toggle[aria-expanded="false"] .nav-item__chev {
   transform: rotate(-90deg);
 }
 
-.nav-item--parent-active {
-  color: var(--md-on-surface);
-}
-
-.nav-item--parent-active > svg {
-  color: var(--md-primary-text);
-}
-
 .nav-sub-wrap {
   display: grid;
   grid-template-rows: 1fr;
   min-height: 0;
-  overflow: hidden;
   transition: grid-template-rows 200ms ease;
 }
 
-.nav-sub-wrap[aria-hidden="true"],
 .nav-item--toggle[aria-expanded="false"] + .nav-sub-wrap {
-  display: none;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Margins on .nav-sub escape overflow:hidden on the element itself;
+   zero them when collapsed so the group fully disappears. */
+.nav-item--toggle[aria-expanded="false"] + .nav-sub-wrap .nav-sub {
+  margin: 0;
+  padding-block: 0;
 }
 
 .nav-sub-wrap > .nav-sub {
@@ -725,14 +716,10 @@ html.theme-switching *::after {
 .nav-sub {
   display: grid;
   gap: 0.2rem;
-  margin: 0.25rem 0 0.45rem 1.15rem;
-  padding: 0.2rem 0 0.2rem 0.65rem;
+  margin: 0.25rem 0 0.45rem 0.75rem;
+  padding: 0.25rem 0 0.25rem 0.5rem;
   border-inline-start: 2px solid color-mix(in oklch, var(--md-outline-variant) 30%, transparent);
   transition: border-color 150ms ease;
-}
-
-.nav-sub:has(.nav-sub__item--active) {
-  border-inline-start-color: var(--brand-accent-solid, var(--md-primary-text));
 }
 
 .nav-sub__item {
@@ -770,10 +757,6 @@ html.theme-switching *::after {
   color: var(--md-on-surface);
 }
 
-.nav-sub__item:hover .nav-sub__icon {
-  color: var(--md-on-surface);
-}
-
 .nav-sub__item--active {
   background: var(--md-surface-container);
   color: var(--md-primary-text);
@@ -785,6 +768,28 @@ html.theme-switching *::after {
   color: var(--md-primary-text);
 }
 
+.admin-tools {
+  display: grid;
+  gap: 0.5rem;
+  margin-block-end: 1.5rem;
+}
+
+.admin-tools a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--shape-sm);
+  text-decoration: none;
+  color: var(--md-on-surface);
+  font-weight: 500;
+}
+
+.admin-tools a:hover {
+  background: var(--md-state-hover);
+}
 
 .sidebar-theme-toggle {
   display: flex;
@@ -808,14 +813,8 @@ html.theme-switching *::after {
     border-color 150ms ease;
 }
 
-.sidebar-theme-toggle:active {
-  background: var(--md-state-pressed);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .sidebar-theme-toggle:hover {
-    background: var(--md-state-hover);
-  }
+.sidebar-theme-toggle:hover {
+  background: var(--md-state-hover);
 }
 
 .sidebar-theme-toggle:focus-visible {
@@ -831,39 +830,6 @@ html.theme-switching *::after {
   white-space: nowrap;
 }
 
-.sidebar-theme-toggle__switch {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  width: 2rem;
-  height: 1.125rem;
-  padding: 2px;
-  flex: none;
-  border-radius: var(--gym-radius-pill);
-  background: var(--md-outline-variant);
-  transition: background-color 150ms ease;
-}
-
-.sidebar-theme-toggle[aria-pressed="true"] .sidebar-theme-toggle__switch {
-  background: var(--amber-9);
-}
-
-.sidebar-theme-toggle__thumb {
-  width: 0.875rem;
-  height: 0.875rem;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  transition:
-    transform 150ms ease,
-    background-color 150ms ease;
-}
-
-.sidebar-theme-toggle[aria-pressed="true"] .sidebar-theme-toggle__thumb {
-  transform: translateX(0.875rem);
-  background: #141414;
-}
-
 .sidebar-account {
   margin-top: auto;
   flex: none;
@@ -872,6 +838,80 @@ html.theme-switching *::after {
 
 .sidebar-account__anchor {
   position: relative;
+}
+
+.sidebar-account-menu {
+  min-width: 220px;
+  padding: 0.3rem;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-md);
+  background: var(--md-surface-container);
+  box-shadow: var(--shadow-overlay);
+  color: var(--md-on-surface);
+}
+
+.sidebar-account-menu__item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.7rem;
+  border: 0;
+  border-radius: var(--gym-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.sidebar-account-menu__item:hover:not(:disabled) {
+  background: var(--md-state-hover);
+}
+
+.sidebar-account-menu__item:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.sidebar-account-menu__appearance {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* The unchecked antd Switch track is colorTextQuaternary — nearly invisible on
+   the menu surface. antd re-declares its component token vars on the Switch's
+   own root node, so a --ant-* scope on this ancestor loses the cascade; the
+   override must target the concrete property on the component class. */
+.sidebar-account-menu__appearance .ant-switch:not(.ant-switch-checked) {
+  background: var(--md-state-selected);
+  box-shadow: inset 0 0 0 1px var(--md-outline);
+}
+
+.sidebar-account-menu__appearance:focus-visible {
+  outline: 2px solid var(--md-primary-text);
+  outline-offset: 2px;
+}
+
+.sidebar-account-menu__switch {
+  display: inline-flex;
+  flex: none;
+}
+
+.sidebar-account-menu__appearance:hover {
+  background: var(--md-state-hover);
+}
+
+.sidebar-account-menu__appearance > span:not(.sidebar-account-menu__switch) {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-account-menu__divider {
+  height: 1px;
+  margin: 0.25rem 0.4rem;
+  background: var(--md-outline-variant);
 }
 
 .sidebar-account__trigger {
@@ -894,15 +934,9 @@ html.theme-switching *::after {
     border-color 150ms ease;
 }
 
-.sidebar-account__trigger:active {
-  background: var(--md-state-pressed);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .sidebar-account__trigger:hover {
-    background: var(--md-state-hover);
-    border-color: color-mix(in oklch, var(--md-outline-variant) 40%, transparent);
-  }
+.sidebar-account__trigger:hover {
+  background: var(--md-state-hover);
+  border-color: color-mix(in oklch, var(--md-outline-variant) 40%, transparent);
 }
 
 .sidebar-account__trigger:focus-visible {
@@ -981,9 +1015,8 @@ html.theme-switching *::after {
   .app-shell {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
-    gap: 0;
-    padding: 0;
+    gap: var(--shell-inset);
+    padding: var(--shell-inset);
     box-sizing: border-box;
     height: 100dvh;
     max-height: 100dvh;
@@ -993,7 +1026,6 @@ html.theme-switching *::after {
     display: flex;
     overflow: hidden;
     width: 18.5rem;
-    margin: var(--shell-inset);
   }
   .app-shell--collapsed .app-shell__sidebar {
     width: 4.5rem;
@@ -1076,13 +1108,9 @@ html.theme-switching *::after {
     margin: 0;
     transform: translate(-50%, -50%);
   }
-  .app-shell--collapsed .nav-item--active,
-  .app-shell--collapsed .nav-item--parent-active {
+  .app-shell--collapsed .nav-item--active {
     padding-inline-start: 0;
     background: var(--md-surface-container);
-    color: var(--md-primary-text);
-  }
-  .app-shell--collapsed .nav-item--parent-active > svg {
     color: var(--md-primary-text);
   }
   .app-shell--collapsed .app-shell__sidebar .shell-search {
@@ -1134,7 +1162,7 @@ html.theme-switching *::after {
     border-color: transparent;
   }
   .app-shell--collapsed .sidebar-theme-toggle__label,
-  .app-shell--collapsed .sidebar-theme-toggle__switch {
+  .app-shell--collapsed .sidebar-theme-toggle .ant-switch {
     display: none;
   }
   .app-shell--collapsed .sidebar-account {
@@ -1179,10 +1207,7 @@ html.theme-switching *::after {
     overflow: hidden;
   }
   .app-shell__topbar {
-    padding-top: calc(0.35rem + env(safe-area-inset-top));
-    padding-bottom: 0.35rem;
-    padding-left: max(0.75rem, env(safe-area-inset-left));
-    padding-right: max(0.75rem, env(safe-area-inset-right));
+    padding: calc(0.35rem + env(safe-area-inset-top)) 0.75rem 0.35rem;
     gap: 0.5rem;
   }
   .app-shell__menu {
@@ -1202,7 +1227,9 @@ html.theme-switching *::after {
     z-index: var(--gym-z-scrim);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 200ms ease;
+    transition:
+      opacity 200ms ease,
+      backdrop-filter 200ms ease;
   }
   .app-shell--nav-open .app-shell__scrim {
     opacity: 1;
@@ -1218,9 +1245,7 @@ html.theme-switching *::after {
     border-radius: 0;
     border: none;
     border-inline-end: 1px solid var(--md-outline-variant);
-    padding-top: max(0.5rem, env(safe-area-inset-top));
     padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
-    padding-left: max(0rem, env(safe-area-inset-left));
     z-index: var(--gym-z-sidebar);
     transform: translateX(-100%);
     pointer-events: none;
@@ -1231,47 +1256,620 @@ html.theme-switching *::after {
     pointer-events: auto;
   }
   .nav-item,
-  .nav-sub__item,
-  .sidebar-theme-toggle,
-  .sidebar-account__trigger {
+  .nav-sub__item {
     min-height: 2.75rem;
-  }
-  .sidebar-theme-toggle {
-    padding: 0.55rem 0.75rem;
   }
   .app-shell__collapse {
     min-inline-size: 2.75rem;
     min-block-size: 2.75rem;
-  }
-  /* Prevent iOS Safari auto-zoom on input focus */
-  .search-field input,
-  .search-field .ant-input {
-    font-size: 1rem !important;
   }
 }
 
 @media (max-width: 599px) and (prefers-reduced-motion: reduce) {
   .app-shell__scrim,
   .app-shell__sidebar {
-    transition: none !important;
+    transition: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell__topbar-brand,
-  .app-shell__menu,
-  .app-shell__collapse,
   .app-shell__sidebar,
   .nav-item,
   .nav-item--toggle .nav-item__chev,
   .nav-sub-wrap,
-  .login-theme-toggle__icon,
-  .sidebar-theme-toggle,
-  .sidebar-theme-toggle__switch,
-  .sidebar-theme-toggle__thumb,
-  .sidebar-account__trigger {
-    transition: none !important;
+  .login-theme-toggle__icon {
+    transition: none;
   }
+}
+
+.home-page {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  max-width: 88rem;
+}
+
+.home-page__header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.home-section__title {
+  display: block;
+  margin: 0;
+  margin-bottom: 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+}
+
+.home-section__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.home-page a {
+  color: inherit;
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.quick-row {
+  display: contents;
+}
+
+.quick-actions .ant-dropdown-trigger,
+.quick-actions .ant-btn.quick-action {
+  width: 100%;
+}
+
+.quick-actions .ant-btn.quick-action {
+  height: auto;
+  min-height: 3.75rem;
+  justify-content: flex-start;
+  align-items: flex-start;
+  text-align: start;
+  padding: 0.75rem 0.9rem;
+  white-space: normal;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 120ms ease,
+    color 160ms ease;
+}
+
+.quick-actions .ant-btn.quick-action:not(.ant-btn-primary) {
+  --ant-btn-bg-color: var(--md-surface-container);
+  --ant-btn-bg-color-hover: var(--gray-4);
+  --ant-btn-bg-color-active: var(--gray-5);
+  --ant-btn-border-color: var(--md-outline-variant);
+  --ant-btn-border-color-hover: var(--md-on-surface);
+  --ant-btn-border-color-active: var(--md-on-surface);
+  --ant-btn-text-color: var(--md-on-surface);
+  --ant-btn-text-color-hover: var(--md-on-surface);
+  --ant-btn-text-color-active: var(--md-on-surface);
+  background-color: var(--md-surface-container);
+  border-color: var(--md-outline-variant);
+  color: var(--md-on-surface);
+}
+
+/*
+ * The primary quick action is ink, not gold. A full-width gold slab is the
+ * largest thing on the home page, and gold at furniture scale stops reading as
+ * an earned mark. Inverting to ink matches the crest and leaves the fill gold
+ * for document badges — the owner disc is the one gold fill that remains.
+ */
+.quick-actions .ant-btn.quick-action.ant-btn-primary {
+  --ant-btn-bg-color: var(--md-on-surface);
+  --ant-btn-bg-color-hover: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
+  --ant-btn-bg-color-active: color-mix(in oklch, var(--md-on-surface) 76%, var(--md-surface));
+  --ant-btn-text-color: var(--md-surface);
+  --ant-btn-text-color-hover: var(--md-surface);
+  --ant-btn-text-color-active: var(--md-surface);
+  background-color: var(--md-on-surface);
+  border-color: transparent;
+  color: var(--md-surface);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .quick-actions .ant-btn.quick-action:not(.ant-btn-primary):not(:disabled):hover {
+    background-color: var(--gray-4);
+    border-color: var(--md-on-surface);
+    color: var(--md-on-surface);
+  }
+
+  .quick-actions .ant-btn.quick-action:not(.ant-btn-primary):not(:disabled):hover .ant-btn-icon {
+    color: var(--md-on-surface);
+  }
+
+  .quick-actions .ant-btn.quick-action.ant-btn-primary:not(:disabled):hover {
+    background-color: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
+    border-color: transparent;
+    color: var(--md-surface);
+  }
+}
+
+.quick-actions .ant-btn.quick-action:not(:disabled):active {
+  transform: scale(0.99);
+  box-shadow: none;
+}
+
+.quick-actions .ant-btn.quick-action.ant-btn-primary[aria-expanded="true"] {
+  background-color: color-mix(in oklch, var(--md-on-surface) 86%, var(--md-surface));
+  color: var(--md-surface);
+}
+
+.quick-actions .ant-btn.quick-action:focus-visible {
+  outline: 2px solid var(--md-primary-text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-actions .ant-btn.quick-action {
+    transition: none;
+  }
+
+  .quick-actions .ant-btn.quick-action:not(:disabled):active {
+    transform: none;
+  }
+}
+
+.quick-actions .ant-btn.quick-action .ant-btn-icon {
+  margin-block-start: 0.125rem;
+}
+
+.quick-action__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+}
+
+.quick-action__label {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.quick-action__hint {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--md-on-surface-variant);
+}
+
+.quick-action--primary .quick-action__hint {
+  color: color-mix(in oklch, var(--md-surface) 78%, var(--md-on-surface));
+}
+
+.home-complement {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.home-page__rail {
+  display: grid;
+  align-content: start;
+  gap: 0;
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-lg);
+  background: var(--md-surface-low);
+}
+
+.home-complement__metrics {
+  display: grid;
+  gap: 0;
+  margin-top: 0.85rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--md-outline-variant);
+}
+
+.home-attention,
+.home-hero {
+  border: 0;
+  border-radius: var(--gym-radius-md);
+  background: transparent;
+}
+
+.home-attention {
+  display: grid;
+  grid-template-columns: min-content minmax(0, 1fr);
+  grid-template-areas:
+    "copy copy"
+    "value chips";
+  gap: 0.55rem 0.75rem;
+  align-items: start;
+  min-width: 0;
+  padding: 0.8rem 0.45rem;
+}
+
+.home-attention--warning {
+  background: color-mix(in oklch, var(--md-warning) 8%, transparent);
+}
+
+.home-attention--empty {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "copy"
+    "none";
+}
+
+.home-attention__copy {
+  grid-area: copy;
+  padding-inline-end: 3.5rem;
+}
+
+.home-attention__title.ant-typography {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.home-attention__copy .ant-typography {
+  font-size: 0.75rem;
+}
+
+.home-attention__open {
+  grid-area: copy;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: flex-end;
+  align-self: start;
+}
+
+.home-attention__chips .home-attention__more.ant-btn {
+  height: auto;
+  min-height: 0;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--md-outline);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  color: var(--md-on-surface-variant);
+}
+
+.home-attention__chips .home-attention__more.ant-btn:focus-visible {
+  outline: 2px solid var(--md-primary-text);
+  outline-offset: 2px;
+}
+
+.home-attention__value {
+  grid-area: value;
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--md-on-surface);
+}
+
+.home-attention__chips {
+  grid-area: chips;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.home-attention__chip {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--md-outline);
+  border-radius: 999px;
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  text-decoration: none;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.home-attention__chip:hover {
+  background: var(--md-state-hover);
+}
+
+.home-attention__chip:focus-visible {
+  outline: 2px solid var(--md-primary-text);
+  outline-offset: 2px;
+}
+
+.home-attention__chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-attention__chip-count {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.home-attention__none {
+  grid-area: none;
+}
+
+.home-attention .ant-skeleton {
+  grid-column: 1 / -1;
+}
+
+.home-hero {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 0.45rem;
+  border-top: 1px solid var(--md-outline-variant);
+  border-radius: 0;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.home-hero:hover {
+  background: var(--md-state-hover);
+}
+
+.home-hero:hover .home-hero__open {
+  color: var(--md-on-surface);
+}
+
+.home-hero:focus-visible {
+  outline: 2px solid var(--md-primary-text);
+  outline-offset: 2px;
+}
+
+.home-hero__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--md-on-surface-variant);
+}
+
+.home-hero__copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.home-hero__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+}
+
+.home-hero__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.home-hero__unit {
+  margin-left: 0.3rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--md-on-surface-variant);
+}
+
+.home-hero__empty {
+  font-size: 1rem;
+  font-style: italic;
+  color: var(--md-on-surface-variant);
+}
+
+.home-hero__open {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  margin-inline-start: auto;
+  color: var(--md-on-surface-variant);
+}
+
+/*
+ * Catalog = grouped cards. Column count follows the container (not the
+ * viewport): by the time this column renders, the rail already consumed
+ * ~40% of the screen. Badges-only counts keep 2-up cells truncation-free.
+ */
+.home-catalog {
+  container-type: inline-size;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.home-catalog__group {
+  overflow: hidden;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-md);
+  background: var(--md-surface-low);
+}
+
+.home-catalog__heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.home-catalog__trigger.ant-btn {
+  display: flex;
+  width: 100%;
+  height: auto;
+  justify-content: flex-start;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+  border-radius: 0;
+}
+
+.home-catalog__trigger.ant-btn:hover,
+.home-catalog__trigger.ant-btn:focus-visible {
+  background: var(--md-state-hover);
+}
+
+.home-catalog__trigger.ant-btn:active {
+  background: var(--md-state-pressed);
+}
+
+.home-catalog__trigger-label {
+  flex: 1;
+  text-align: start;
+}
+
+.home-catalog__trigger-extra {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.home-catalog__chevron {
+  font-size: 0.75rem;
+  transition: transform 160ms ease;
+}
+
+.home-catalog__chevron--open {
+  transform: rotate(90deg);
+}
+
+.home-catalog__body {
+  padding: 0;
+}
+
+.home-catalog__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.home-catalog__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.75rem;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--md-outline-variant);
+  border-radius: 0;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.home-catalog__row:last-child {
+  margin-bottom: 0;
+}
+
+.home-catalog__row:hover {
+  background: var(--md-state-hover);
+  border-color: var(--md-outline-variant);
+}
+
+.home-catalog__row:active {
+  background: var(--md-state-pressed);
+}
+
+.home-catalog__row:hover .home-catalog__row-open {
+  color: var(--md-on-surface);
+}
+
+.home-catalog__row:focus-visible {
+  outline: 2px solid var(--md-primary-text);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero,
+  .home-catalog__row,
+  .home-catalog__chevron {
+    transition: none;
+  }
+}
+
+.home-catalog__row-icon {
+  display: inline-flex;
+  color: var(--md-on-surface-variant);
+}
+
+.home-catalog__row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-catalog__row-count {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--gym-radius-pill);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--md-on-surface);
+}
+
+.home-catalog__row-count--empty {
+  color: inherit;
+  border-color: transparent;
+}
+
+.home-catalog__row-count--none {
+  border: 0;
+}
+
+.home-attention__note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--md-on-surface-variant);
+}
+
+.home-catalog__row-open {
+  flex-shrink: 0;
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
 }
 
 .login-theme-toggle {
@@ -1308,4 +1906,74 @@ html.theme-switching *::after {
   transition:
     opacity 200ms ease,
     transform 200ms ease;
+}
+
+/*
+ * Quick-action dropdown: antd gives the item-group list an 8px margin per
+ * side, so "Importação em lote" rendered narrower than the sibling items.
+ * Zero it so every clickable row shares the same width. (The popup renders
+ * inside .quick-actions via getPopupContainer, keeping the rule scoped.)
+ */
+.quick-actions .ant-dropdown .ant-dropdown-menu-item-group-list {
+  margin-inline: 0;
+}
+
+@media (min-width: 600px) {
+  .home-page__header h1 {
+    font-size: 1.5rem;
+  }
+  .quick-actions {
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 840px) {
+  .home-page {
+    grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
+    align-items: start;
+    column-gap: 1.25rem;
+  }
+  .home-page__header,
+  .home-page > .ant-alert {
+    grid-column: 1 / -1;
+  }
+  .home-page__rail {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .home-complement {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+  }
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+  .home-complement__metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Columns follow the catalog's own width (rail already took ~40% of the
+ * viewport), not the viewport. Two cells need ~42rem to keep names whole. */
+@container (min-width: 42rem) {
+  .home-catalog__rows {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+  }
+}
+
+@media (min-width: 1500px) {
+  .home-page {
+    grid-template-columns: minmax(17rem, 19.5rem) minmax(0, 1fr);
+    column-gap: 1.5rem;
+  }
+}
+
+@media (max-width: 599px) {
+  .home-catalog__row {
+    flex-wrap: wrap;
+    row-gap: 0.2rem;
+  }
 }

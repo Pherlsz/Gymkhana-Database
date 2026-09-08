@@ -1,4 +1,4 @@
-import { AutoComplete, Button, DatePicker, Input } from "antd";
+import { AutoComplete, DatePicker, Input } from "antd";
 import dayjs from "dayjs";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
@@ -71,8 +71,6 @@ export function PersonDemographicsGroup({
   copy: customCopy,
 }: PersonDemographicsProps) {
   const { messages } = useI18n();
-  const labels = messages.common.labels;
-  const placeholders = messages.common.placeholders;
   const copy = { ...messages.tables.cadastro, ...customCopy };
   const [showMoreDetails, setShowMoreDetails] = useState(false);
   const isDisabled = Boolean(disabled);
@@ -85,6 +83,7 @@ export function PersonDemographicsGroup({
   return (
     <>
       <div className="cadastro-grid">
+        {/* Nome Completo */}
         <div className="cadastro-col-8">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-p-holder">
@@ -94,38 +93,40 @@ export function PersonDemographicsGroup({
             <Input
               disabled={isDisabled}
               id="cad-p-holder"
-              placeholder={placeholders.holderName}
+              placeholder={copy.fieldHolderPlaceholder}
               value={state.fullName}
               onChange={(e) => onChange({ fullName: e.target.value })}
             />
           </div>
         </div>
 
+        {/* CPF */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-p-cpf">
-              {labels.cpf}
+              {copy.fieldCpf}
             </label>
             <Input
               disabled={isDisabled}
               id="cad-p-cpf"
               maxLength={14}
-              placeholder={placeholders.cpf}
+              placeholder={copy.placeholderCpf}
               value={state.cpf}
               onChange={(e) => onChange({ cpf: maskCpf(e.target.value) })}
             />
           </div>
         </div>
 
+        {/* Email */}
         <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-p-email">
-              {labels.email}
+              {copy.fieldEmail}
             </label>
             <Input
               disabled={isDisabled}
               id="cad-p-email"
-              placeholder={placeholders.email}
+              placeholder={copy.placeholderEmail}
               type="email"
               value={state.email}
               onChange={(e) => onChange({ email: e.target.value })}
@@ -133,6 +134,7 @@ export function PersonDemographicsGroup({
           </div>
         </div>
 
+        {/* Celular */}
         <div className="cadastro-col-3">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-p-phone">
@@ -142,17 +144,18 @@ export function PersonDemographicsGroup({
               disabled={isDisabled}
               id="cad-p-phone"
               maxLength={15}
-              placeholder={placeholders.phone}
+              placeholder={copy.placeholderPhone}
               value={state.phone}
               onChange={(e) => onChange({ phone: maskPhone(e.target.value) })}
             />
           </div>
         </div>
 
+        {/* Data de Nascimento */}
         <div className="cadastro-col-3">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-p-birth">
-              {labels.birthDate}
+              {copy.fieldBirthDate}
             </label>
             <DatePicker
               disabled={isDisabled}
@@ -166,6 +169,7 @@ export function PersonDemographicsGroup({
           </div>
         </div>
 
+        {/* Endereço */}
         <div className="cadastro-col-9">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-p-addr">
@@ -181,28 +185,30 @@ export function PersonDemographicsGroup({
           </div>
         </div>
 
+        {/* CEP */}
         <div className="cadastro-col-3">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-p-cep">
-              {labels.cep}
+              {copy.fieldPostalCode}
             </label>
             <Input
               disabled={isDisabled}
               id="cad-p-cep"
               maxLength={9}
-              placeholder={placeholders.cep}
+              placeholder={copy.placeholderPostalCode}
               value={state.postalCode}
               onChange={(e) => onChange({ postalCode: maskCep(e.target.value) })}
             />
           </div>
         </div>
 
+        {/* Mais Detalhes (Demográficos e Identificação) */}
         {showMoreDetails && (
           <>
             <div className="cadastro-col-6">
               <div className="cadastro-field">
                 <label className="cadastro-field__label" htmlFor="cad-p-soc">
-                  {labels.socialName}
+                  {copy.fieldSocialName}
                 </label>
                 <Input
                   disabled={isDisabled}
@@ -216,12 +222,12 @@ export function PersonDemographicsGroup({
             <div className="cadastro-col-6">
               <div className="cadastro-field">
                 <label className="cadastro-field__label" htmlFor="cad-p-land">
-                  {labels.landline}
+                  {copy.fieldLandline}
                 </label>
                 <Input
                   disabled={isDisabled}
                   id="cad-p-land"
-                  placeholder={placeholders.landline}
+                  placeholder={copy.placeholderLandline}
                   value={state.landline}
                   onChange={(e) => onChange({ landline: e.target.value })}
                 />
@@ -231,7 +237,7 @@ export function PersonDemographicsGroup({
             <div className="cadastro-col-4">
               <div className="cadastro-field">
                 <label className="cadastro-field__label" htmlFor="cad-demo-gender">
-                  {labels.gender}
+                  {copy.fieldGender}
                 </label>
                 <AutoComplete
                   allowClear
@@ -239,7 +245,7 @@ export function PersonDemographicsGroup({
                   filterOption={filterOpt}
                   id="cad-demo-gender"
                   options={genderOptions}
-                  placeholder={labels.notProvided}
+                  placeholder={copy.genderUninformed}
                   style={{ width: "100%" }}
                   value={state.gender || undefined}
                   onChange={(v) => onChange({ gender: v || undefined })}
@@ -250,7 +256,7 @@ export function PersonDemographicsGroup({
             <div className="cadastro-col-4">
               <div className="cadastro-field">
                 <label className="cadastro-field__label" htmlFor="cad-demo-marital">
-                  {labels.maritalStatus}
+                  {copy.fieldMaritalStatus}
                 </label>
                 <AutoComplete
                   allowClear
@@ -258,7 +264,7 @@ export function PersonDemographicsGroup({
                   filterOption={filterOpt}
                   id="cad-demo-marital"
                   options={maritalOptions}
-                  placeholder={labels.maritalStatus}
+                  placeholder={copy.fieldMaritalStatus}
                   style={{ width: "100%" }}
                   value={state.maritalStatus || undefined}
                   onChange={(v) => onChange({ maritalStatus: v || undefined })}
@@ -269,7 +275,7 @@ export function PersonDemographicsGroup({
             <div className="cadastro-col-4">
               <div className="cadastro-field">
                 <label className="cadastro-field__label" htmlFor="cad-demo-blood-type">
-                  {labels.bloodType}
+                  {copy.fieldBloodType}
                 </label>
                 <AutoComplete
                   allowClear
@@ -277,7 +283,7 @@ export function PersonDemographicsGroup({
                   filterOption={filterOpt}
                   id="cad-demo-blood-type"
                   options={bloodTypeOptions}
-                  placeholder={labels.bloodType}
+                  placeholder={copy.fieldBloodType}
                   style={{ width: "100%" }}
                   value={state.bloodType || undefined}
                   onChange={(v) => onChange({ bloodType: v || undefined })}
@@ -288,7 +294,7 @@ export function PersonDemographicsGroup({
             <div className="cadastro-col-3">
               <div className="cadastro-field">
                 <label className="cadastro-field__label" htmlFor="cad-demo-nationality">
-                  {labels.nationality}
+                  {copy.fieldNationality}
                 </label>
                 <AutoComplete
                   allowClear
@@ -296,7 +302,7 @@ export function PersonDemographicsGroup({
                   filterOption={filterOpt}
                   id="cad-demo-nationality"
                   options={nationalityOptions}
-                  placeholder={labels.nationality}
+                  placeholder={copy.fieldNationality}
                   style={{ width: "100%" }}
                   value={state.nationality}
                   onChange={(val) => onChange({ nationality: val })}
@@ -307,12 +313,12 @@ export function PersonDemographicsGroup({
             <div className="cadastro-col-3">
               <div className="cadastro-field">
                 <label className="cadastro-field__label" htmlFor="cad-demo-birth-city">
-                  {labels.birthCity}
+                  {copy.fieldBirthCity}
                 </label>
                 <Input
                   disabled={isDisabled}
                   id="cad-demo-birth-city"
-                  placeholder={labels.birthCity}
+                  placeholder={copy.fieldBirthCity}
                   value={state.birthCity}
                   onChange={(e) => onChange({ birthCity: e.target.value })}
                 />
@@ -322,12 +328,12 @@ export function PersonDemographicsGroup({
             <div className="cadastro-col-3">
               <div className="cadastro-field">
                 <label className="cadastro-field__label" htmlFor="cad-demo-birth-country">
-                  {labels.birthCountry}
+                  {copy.fieldBirthCountry}
                 </label>
                 <Input
                   disabled={isDisabled}
                   id="cad-demo-birth-country"
-                  placeholder={labels.birthCountry}
+                  placeholder={copy.fieldBirthCountry}
                   value={state.birthCountry}
                   onChange={(e) => onChange({ birthCountry: e.target.value })}
                 />
@@ -337,12 +343,12 @@ export function PersonDemographicsGroup({
             <div className="cadastro-col-3">
               <div className="cadastro-field">
                 <label className="cadastro-field__label" htmlFor="cad-demo-origin">
-                  {labels.placeOfOrigin}
+                  {copy.fieldPlaceOfOrigin}
                 </label>
                 <Input
                   disabled={isDisabled}
                   id="cad-demo-origin"
-                  placeholder={labels.placeOfOrigin}
+                  placeholder={copy.fieldPlaceOfOrigin}
                   value={state.placeOfOrigin}
                   onChange={(e) => onChange({ placeOfOrigin: e.target.value })}
                 />
@@ -352,20 +358,23 @@ export function PersonDemographicsGroup({
         )}
       </div>
 
-      <Button
+      <button
         className="cadastro-toggle-btn"
-        type="text"
-        icon={
-          showMoreDetails ? (
-            <ChevronUp size={14} strokeWidth={2} />
-          ) : (
-            <ChevronDown size={14} strokeWidth={2} />
-          )
-        }
+        type="button"
         onClick={() => setShowMoreDetails((prev) => !prev)}
       >
-        {showMoreDetails ? copy.toggleLessDetails : copy.toggleMoreDetails}
-      </Button>
+        {showMoreDetails ? (
+          <>
+            <ChevronUp size={14} strokeWidth={2} />
+            <span>{copy.toggleLessDetails}</span>
+          </>
+        ) : (
+          <>
+            <ChevronDown size={14} strokeWidth={2} />
+            <span>{copy.toggleMoreDetails}</span>
+          </>
+        )}
+      </button>
     </>
   );
 }

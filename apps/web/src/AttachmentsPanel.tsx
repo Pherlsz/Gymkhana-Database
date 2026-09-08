@@ -4,7 +4,6 @@ function toneToType(tone: string): "info" | "success" | "warning" | "error" {
 
 import { Alert, Button, Card, Checkbox, Flex, Tag } from "antd";
 import { InlineStatus } from "./components/InlineStatus";
-import "./attachments.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import {
@@ -17,7 +16,6 @@ import {
   type AttachmentRecord,
 } from "./lib/api/attachments";
 import { APIRequestError } from "./lib/api/client";
-import { queryKeys } from "./lib/api/queryKeys";
 import { formatBytes, formatDateTime as formatDate } from "./lib/formatters";
 
 const acceptedMIMEs = [
@@ -52,13 +50,13 @@ export function AttachmentsPanel({
   const [showTrash, setShowTrash] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const queryKey = queryKeys.attachments.byOwner(owner, showTrash);
+  const queryKey = ["attachments", owner, showTrash] as const;
   const query = useQuery({
     queryKey,
     queryFn: ({ signal }) => listAttachments(owner, showTrash, signal),
   });
   const refresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: queryKeys.attachments.byOwner(owner) });
+    await queryClient.invalidateQueries({ queryKey: ["attachments", owner] });
   };
   const upload = useMutation({
     mutationFn: (file: File) => uploadAttachment(owner, file, setProgress),

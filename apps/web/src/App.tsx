@@ -1,9 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
-const LoginScreen = lazy(() =>
-  import("./LoginScreen").then((m) => ({ default: m.LoginScreen })),
-);
+import { useCallback, useEffect, useState } from "react";
+import { LoginScreen } from "./LoginScreen";
 import {
   APIRequestError,
   apiURL,
@@ -74,9 +72,7 @@ export function App() {
 
   const tree =
     authentication.kind !== "authenticated" ? (
-      <Suspense fallback={null}>
-        <LoginScreen onLogin={() => window.location.assign(apiURL("/auth/login"))} />
-      </Suspense>
+      <LoginScreen onLogin={() => window.location.assign(apiURL("/auth/login"))} />
     ) : (
       <QueryClientProvider client={queryClient}>
         <SessionContext.Provider

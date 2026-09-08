@@ -1,7 +1,6 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { EmptyTab } from "../EmptyTab";
 
 export const Route = createFileRoute("/settings")({
-  beforeLoad: () => {
-    throw redirect({ to: "/" });
-  },
+  component: EmptyTab,
 });

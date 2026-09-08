@@ -1,7 +1,7 @@
 import { Segmented } from "antd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { CadastroStateCard } from "../../../components/StateCard";
+import { StateCard } from "../../../components/StateCard";
 import { useI18n } from "../../../i18n";
 import {
   getOperationsCatalog,
@@ -9,8 +9,7 @@ import {
   getOperationImportReport,
   type OperationModule,
 } from "../../api/operations";
-import { queryKeys } from "../../api/queryKeys";
-import { ImportCreator, ImportWorkspace } from "../../operations/ImportWorkspace";
+import { ImportCreator, ImportWorkspace } from "../../../OperationsPage";
 import { operationActive, operationTerminal } from "./importHelpers";
 
 export function CadastroImportWizard({
@@ -30,19 +29,19 @@ export function CadastroImportWizard({
   const [currentModule, setCurrentModule] = useState<OperationModule>(module);
 
   const catalog = useQuery({
-    queryKey: queryKeys.operations.catalog,
+    queryKey: ["operations-catalog"],
     queryFn: ({ signal }) => getOperationsCatalog(signal),
     staleTime: 60_000,
   });
   const selectedImport = useQuery({
-    queryKey: queryKeys.operations.import(importId),
+    queryKey: ["operation-import", importId],
     queryFn: ({ signal }) => getOperationImport(importId!, signal),
     enabled: Boolean(importId),
     refetchInterval: (query) =>
       query.state.data && operationActive(query.state.data.state) ? 1_500 : false,
   });
   const selectedReport = useQuery({
-    queryKey: queryKeys.operations.importReport(importId),
+    queryKey: ["operation-import-report", importId],
     queryFn: ({ signal }) => getOperationImportReport(importId!, signal),
     enabled: Boolean(
       importId && selectedImport.data && operationTerminal(selectedImport.data.state),
@@ -50,9 +49,9 @@ export function CadastroImportWizard({
   });
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.operations.importsList }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.operations.import(importId) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.operations.importReport(importId) }),
+      queryClient.invalidateQueries({ queryKey: ["operation-imports"] }),
+      queryClient.invalidateQueries({ queryKey: ["operation-import", importId] }),
+      queryClient.invalidateQueries({ queryKey: ["operation-import-report", importId] }),
     ]);
   };
   const modules = useMemo(
@@ -63,19 +62,18 @@ export function CadastroImportWizard({
 
   if (catalog.isError) {
     return (
-      <CadastroStateCard
-        backLabel={copy.formsBackToCadastro}
+      <StateCard
+        compact
         description={copy.massImportCatalogErrorDesc}
         kind="error"
-        onRetry={() => void refresh()}
         title={copy.massImportCatalogError}
       />
     );
   }
   if (!catalog.data) {
     return (
-      <CadastroStateCard
-        backToCadastro={false}
+      <StateCard
+        compact
         description={copy.massImportLoadingDesc}
         kind="loading"
         title={copy.massImportLoading}
@@ -84,8 +82,8 @@ export function CadastroImportWizard({
   }
   if (!isModuleAllowed) {
     return (
-      <CadastroStateCard
-        backLabel={copy.formsBackToCadastro}
+      <StateCard
+        compact
         description={copy.massImportForbiddenDesc}
         kind="warning"
         title={copy.massImportForbidden}
@@ -95,47 +93,43 @@ export function CadastroImportWizard({
 
   if (!importId) {
     return (
-      <div className="cadastro-panel">
-        <div className="cadastro-import-flow">
-          <div className="cadastro-import-scope">
-            <div className="cadastro-import-scope__header">
-              <span className="cadastro-import-scope__label">{copy.importTargetLabel}</span>
-              <Segmented
-                options={[
-                  { label: copy.people, value: "profiles" },
-                  { label: copy.documents, value: "documents" },
-                  { label: copy.bills, value: "bills" },
-                ]}
-                value={currentModule}
-                onChange={(val) => setCurrentModule(val as OperationModule)}
-              />
-            </div>
-            <p className="cadastro-import-scope__notice">{copy.importScopeNotice}</p>
+      <div className="cadastro-import-flow">
+        <div className="cadastro-import-scope">
+          <div className="cadastro-import-scope__header">
+            <span className="cadastro-import-scope__label">{copy.importTargetLabel}</span>
+            <Segmented
+              options={[
+                { label: copy.people, value: "profiles" },
+                { label: copy.documents, value: "documents" },
+                { label: copy.bills, value: "bills" },
+              ]}
+              value={currentModule}
+              onChange={(val) => setCurrentModule(val as OperationModule)}
+            />
           </div>
-          <ScopedImportCreator
-            catalog={catalog.data}
-            module={currentModule}
-            onCreated={(value) => onImportCreated(value.id)}
-          />
+          <p className="cadastro-import-scope__notice">{copy.importScopeNotice}</p>
         </div>
+        <ScopedImportCreator
+          catalog={catalog.data}
+          module={currentModule}
+          onCreated={(value) => onImportCreated(value.id)}
+        />
       </div>
     );
   }
 
   return (
-    <div className="cadastro-panel">
-      <ImportWorkspace
-        catalog={catalog.data.modules}
-        error={selectedImport.error}
-        loading={selectedImport.isLoading}
-        report={selectedReport.data}
-        reportError={selectedReport.error}
-        reportLoading={selectedReport.isLoading}
-        value={selectedImport.data}
-        onClose={onClose}
-        onUpdated={refresh}
-      />
-    </div>
+    <ImportWorkspace
+      catalog={catalog.data.modules}
+      error={selectedImport.error}
+      loading={selectedImport.isLoading}
+      report={selectedReport.data}
+      reportError={selectedReport.error}
+      reportLoading={selectedReport.isLoading}
+      value={selectedImport.data}
+      onClose={onClose}
+      onUpdated={refresh}
+    />
   );
 }
 

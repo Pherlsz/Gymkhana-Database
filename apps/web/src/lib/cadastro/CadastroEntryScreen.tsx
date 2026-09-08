@@ -1,100 +1,112 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button } from "antd";
 import { ClipboardList, FileSpreadsheet, IdCard, User, Zap } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { listGoogleFormsSources, refreshGoogleFormsSource } from "../api/googleForms";
 import type { OperationImport } from "../api/operations";
 import { listOperationImports } from "../api/operations";
-import {
-  normalizeCadastroPageSearch,
-  type TableKind,
-} from "./cadastroSearch";
-import { queryKeys } from "../api/queryKeys";
-import { AppCard } from "../../components/AppCard";
-import { useI18n } from "../../i18n";
-import { useApplicationSession } from "../../session";
-import { canManageUsers } from "../roles";
+import type { TableKind } from "./cadastroSearch";
 
-export interface CadastroEntryScreenProps {
-  onSelectTable?: (table: TableKind) => void;
-  onOpenForms?: () => void;
-  onOpenBulk?: () => void;
-  canUseForms?: boolean;
+/**
+ * Entry screen of mock 011: inventory counts plus three entry cards
+ * ("Por tipo", "Via formulário", "Em massa"). Counts are real totals from the
+ * list endpoints; the form badge uses the newest active source and the bulk
+ * footer the latest import. Palette and radii come from shell.css tokens.
+ */
+function EntryCard({
+  icon,
+  title,
+  body,
+  badge,
+  middle,
+  foot,
+  onActivate,
+  variant,
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+  badge?: string;
+  middle: ReactNode;
+  foot: ReactNode;
+  onActivate: () => void;
+  variant?: "people" | "documents" | "bills" | "forms" | "bulk";
+}) {
+  return (
+    <div
+      className={`cadastro-entry__card cadastro-entry__card--${variant ?? "default"}`}
+      role="button"
+      tabIndex={0}
+      onClick={onActivate}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onActivate();
+        }
+      }}
+    >
+      {badge ? <span className="cadastro-entry__pill-badge">{badge}</span> : null}
+      <span aria-hidden="true" className="cadastro-entry__icon">
+        {icon}
+      </span>
+      <span className="cadastro-entry__title">{title}</span>
+      <span className="cadastro-entry__body">{body}</span>
+      {middle}
+      <span className="cadastro-entry__foot">{foot}</span>
+    </div>
+  );
 }
 
 export function CadastroEntryScreen({
-  canUseForms: propCanUseForms,
+  copy,
+  canUseForms,
   onSelectTable,
   onOpenForms,
   onOpenBulk,
-}: CadastroEntryScreenProps = {}) {
-  const { messages, t } = useI18n();
-  const copy = messages.tables.cadastro;
-  const session = useApplicationSession();
-  const canUseForms = propCanUseForms ?? canManageUsers(session.user.role);
-  const navigate = useNavigate();
-
-  const handleSelectTable =
-    onSelectTable ??
-    ((table: TableKind) => {
-      void navigate({
-        to: "/cadastro",
-        search: (current) =>
-          normalizeCadastroPageSearch({
-            ...current,
-            table,
-            mode: "manual",
-            type: undefined,
-            owner: undefined,
-            record: undefined,
-            import: undefined,
-          }),
-      });
-    });
-
-  const handleOpenForms =
-    onOpenForms ??
-    (() => {
-      void navigate({
-        to: "/cadastro",
-        search: (current) =>
-          normalizeCadastroPageSearch({
-            ...current,
-            table: "people",
-            mode: "forms",
-            tab: "sources",
-            type: undefined,
-            owner: undefined,
-            record: undefined,
-            import: undefined,
-          }),
-      });
-    });
-
-  const handleOpenBulk =
-    onOpenBulk ??
-    (() => {
-      void navigate({
-        to: "/cadastro",
-        search: (current) =>
-          normalizeCadastroPageSearch({
-            ...current,
-            table: "people",
-            mode: "xlsx",
-            type: undefined,
-            owner: undefined,
-            record: undefined,
-            import: undefined,
-          }),
-      });
-    });
+}: {
+  copy: {
+    entryPeopleTitle: string;
+    entryPeopleBody: string;
+    entryDocsTitle: string;
+    entryDocsBody: string;
+    entryBillsTitle: string;
+    entryBillsBody: string;
+    entryDirectSection: string;
+    entryAutomationSection: string;
+    entryFormsTitle: string;
+    entryFormsBody: string;
+    entryFormsBadge: string;
+    entryFormsBadgeFallback: string;
+    entryFormsSync: string;
+    entryFormsFoot: string;
+    entryFormsFootNone: string;
+    entryFormsDisabled: string;
+    entryBulkTitle: string;
+    entryBulkBody: string;
+    entryBulkButton: string;
+    entryBulkFoot: string;
+    entryBulkFootNone: string;
+    people: string;
+    documents: string;
+    bills: string;
+    targetLabel: string;
+    cardDirectPersonBadge: string;
+    cardDirectDocumentBadge: string;
+    cardDirectBillBadge: string;
+    cardAutoFormsBadge: string;
+    cardAutoMassBadge: string;
+  };
+  canUseForms: boolean;
+  onSelectTable: (table: TableKind) => void;
+  onOpenForms: () => void;
+  onOpenBulk: () => void;
+}) {
   const queryClient = useQueryClient();
   const formsSources = useQuery({
-    queryKey: queryKeys.cadastro.entryFormsSources,
+    queryKey: ["cadastro-entry-forms-sources"],
     queryFn: ({ signal }) => listGoogleFormsSources(signal),
   });
   const imports = useQuery({
-    queryKey: queryKeys.cadastro.entryImports,
+    queryKey: ["cadastro-entry-imports"],
     queryFn: ({ signal }) => listOperationImports(signal),
   });
 
@@ -105,8 +117,8 @@ export function CadastroEntryScreen({
   const syncMutation = useMutation({
     mutationFn: (source: (typeof activeSources)[number]) => refreshGoogleFormsSource(source),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.googleForms.sources });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.googleForms.syncs });
+      void queryClient.invalidateQueries({ queryKey: ["google-forms-sources"] });
+      void queryClient.invalidateQueries({ queryKey: ["google-forms-syncs"] });
     },
   });
   const latestImport: OperationImport | undefined = (imports.data?.imports ?? []).toSorted((a, b) =>
@@ -116,121 +128,138 @@ export function CadastroEntryScreen({
 
   return (
     <section aria-label={copy.targetLabel} className="cadastro-entry">
+      {/* Seção 1: Ingestão Direta por Entidade */}
       <div className="cadastro-entry__section">
         <h3 className="cadastro-entry__section-title">{copy.entryDirectSection}</h3>
         <div className="cadastro-entry__cards cadastro-entry__cards--direct">
-          <AppCard
+          <EntryCard
             badge={copy.cardDirectPersonBadge}
+            body={copy.entryPeopleBody}
+            foot={
+              <>
+                <span aria-hidden="true" className="cadastro-entry__dot" />
+                <span>{copy.people}</span>
+              </>
+            }
             icon={<User size={22} strokeWidth={1.75} />}
-            onClick={() => handleSelectTable("people")}
+            middle={null}
+            onActivate={() => onSelectTable("people")}
             title={copy.entryPeopleTitle}
             variant="people"
-          >
-            <p className="app-card__desc">{copy.entryPeopleBody}</p>
-          </AppCard>
-          <AppCard
+          />
+          <EntryCard
             badge={copy.cardDirectDocumentBadge}
+            body={copy.entryDocsBody}
+            foot={
+              <>
+                <span aria-hidden="true" className="cadastro-entry__dot" />
+                <span>{copy.documents}</span>
+              </>
+            }
             icon={<IdCard size={22} strokeWidth={1.75} />}
-            onClick={() => handleSelectTable("documents")}
+            middle={null}
+            onActivate={() => onSelectTable("documents")}
             title={copy.entryDocsTitle}
             variant="documents"
-          >
-            <p className="app-card__desc">{copy.entryDocsBody}</p>
-          </AppCard>
-          <AppCard
+          />
+          <EntryCard
             badge={copy.cardDirectBillBadge}
+            body={copy.entryBillsBody}
+            foot={
+              <>
+                <span aria-hidden="true" className="cadastro-entry__dot" />
+                <span>{copy.bills}</span>
+              </>
+            }
             icon={<Zap size={22} strokeWidth={1.75} />}
-            onClick={() => handleSelectTable("bills")}
+            middle={null}
+            onActivate={() => onSelectTable("bills")}
             title={copy.entryBillsTitle}
             variant="bills"
-          >
-            <p className="app-card__desc">{copy.entryBillsBody}</p>
-          </AppCard>
+          />
         </div>
       </div>
 
+      {/* Seção 2: Canais de Ingestão e Automação */}
       <div className="cadastro-entry__section">
         <h3 className="cadastro-entry__section-title">{copy.entryAutomationSection}</h3>
         <div className="cadastro-entry__cards cadastro-entry__cards--automation">
-          <AppCard
+          <EntryCard
             badge={copy.cardAutoFormsBadge}
+            body={copy.entryFormsBody}
+            foot={
+              <>
+                <span aria-hidden="true" className="cadastro-entry__dot" />
+                {activeSources.length > 0
+                  ? copy.entryFormsFoot.replace("{n}", String(activeSources.length))
+                  : copy.entryFormsFootNone}
+              </>
+            }
             icon={<ClipboardList size={22} strokeWidth={1.75} />}
-            onClick={handleOpenForms}
+            middle={
+              canUseForms ? (
+                <span className="cadastro-entry__formsrow">
+                  <span className="cadastro-entry__badge">
+                    {latestSource
+                      ? copy.entryFormsBadge
+                          .replace("{title}", latestSource.title)
+                          .replace("{n}", String(activeSources.length))
+                      : copy.entryFormsBadgeFallback}
+                  </span>
+                  {latestSource ? (
+                    <button
+                      className="cadastro-entry__linkbtn"
+                      disabled={syncMutation.isPending}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        syncMutation.mutate(latestSource);
+                      }}
+                      type="button"
+                    >
+                      {copy.entryFormsSync}
+                    </button>
+                  ) : null}
+                </span>
+              ) : (
+                <span className="cadastro-entry__disabled">{copy.entryFormsDisabled}</span>
+              )
+            }
+            onActivate={onOpenForms}
             title={copy.entryFormsTitle}
             variant="forms"
-          >
-            <p className="app-card__desc">{copy.entryFormsBody}</p>
-            {canUseForms ? (
-              <span className="cadastro-entry__formsrow">
-                <span className="cadastro-entry__badge">
-                  {latestSource
-                    ? t(copy.entryFormsBadge, {
-                      title: latestSource.title,
-                      n: activeSources.length,
-                    })
-                    : copy.entryFormsBadgeFallback}
-                </span>
-                {latestSource ? (
-                  <Button
-                    className="cadastro-entry__linkbtn"
-                    disabled={syncMutation.isPending}
-                    loading={syncMutation.isPending}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      syncMutation.mutate(latestSource);
-                    }}
-                    size="small"
-                    type="link"
-                  >
-                    {copy.entryFormsSync}
-                  </Button>
-                ) : null}
-              </span>
-            ) : (
-              <span className="cadastro-entry__disabled">{copy.entryFormsDisabled}</span>
-            )}
-            <div className="app-card__foot">
-              <span aria-hidden="true" className="cadastro-entry__dot" />
-              {activeSources.length > 0
-                ? t(copy.entryFormsFoot, { n: activeSources.length })
-                : copy.entryFormsFootNone}
-            </div>
-          </AppCard>
-          <AppCard
+          />
+          <EntryCard
             badge={copy.cardAutoMassBadge}
+            body={copy.entryBulkBody}
+            foot={
+              <>
+                <span
+                  aria-hidden="true"
+                  className="cadastro-entry__dot cadastro-entry__dot--idle"
+                />
+                {latestImport
+                  ? copy.entryBulkFoot
+                      .replace("{n}", String(latestRowCount))
+                      .replace("{time}", timeAgo(latestImport.created_at))
+                  : copy.entryBulkFootNone}
+              </>
+            }
             icon={<FileSpreadsheet size={22} strokeWidth={1.75} />}
-            onClick={handleOpenBulk}
+            middle={
+              <span
+                className="cadastro-entry__bulkrow"
+                onClick={(event) => event.stopPropagation()}
+                role="presentation"
+              >
+                <button className="cadastro-entry__linkbtn" onClick={onOpenBulk} type="button">
+                  {copy.entryBulkButton}
+                </button>
+              </span>
+            }
+            onActivate={onOpenBulk}
             title={copy.entryBulkTitle}
             variant="bulk"
-          >
-            <p className="app-card__desc">{copy.entryBulkBody}</p>
-            <span
-              className="cadastro-entry__bulkrow"
-              onClick={(event) => event.stopPropagation()}
-              role="presentation"
-            >
-              <Button
-                className="cadastro-entry__linkbtn"
-                onClick={handleOpenBulk}
-                size="small"
-                type="link"
-              >
-                {copy.entryBulkButton}
-              </Button>
-            </span>
-            <div className="app-card__foot">
-              <span
-                aria-hidden="true"
-                className="cadastro-entry__dot cadastro-entry__dot--idle"
-              />
-              {latestImport
-                ? t(copy.entryBulkFoot, {
-                  n: latestRowCount,
-                  time: timeAgo(latestImport.created_at),
-                })
-                : copy.entryBulkFootNone}
-            </div>
-          </AppCard>
+          />
         </div>
       </div>
     </section>

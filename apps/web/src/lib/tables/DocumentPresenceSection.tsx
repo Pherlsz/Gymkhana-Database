@@ -8,8 +8,6 @@ import {
   type Profile,
   type ProfileDocumentPresence,
 } from "../api/client";
-import { queryKeys } from "../api/queryKeys";
-import { useI18n } from "../../i18n";
 import { DocumentBadges, documentTypeAcronym, type BadgeMarksCopy } from "./documentBadges";
 
 type PresenceCopy = {
@@ -29,20 +27,17 @@ const UNSPECIFIED = "";
 export function DocumentPresenceSection({
   profile,
   editable,
-  copy: propCopy,
-  marks: propMarks,
+  copy,
+  marks,
 }: {
   profile: Profile;
   editable: boolean;
-  copy?: PresenceCopy;
-  marks?: BadgeMarksCopy;
+  copy: PresenceCopy;
+  marks: BadgeMarksCopy;
 }) {
-  const { messages } = useI18n();
-  const copy = propCopy ?? messages.tables.inspector.presence;
-  const marks = propMarks ?? (messages.tables.badges as BadgeMarksCopy);
   const queryClient = useQueryClient();
   const types = useQuery({
-    queryKey: queryKeys.types.documents,
+    queryKey: ["document-types"],
     queryFn: ({ signal }) => listDocumentTypes(signal),
   });
   const [error, setError] = useState<string | null>(null);
@@ -63,8 +58,8 @@ export function DocumentPresenceSection({
     onSuccess: async () => {
       setError(null);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.tables.profiles() }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.profiles.detail(profile.id) }),
+        queryClient.invalidateQueries({ queryKey: ["tables", "profiles"] }),
+        queryClient.invalidateQueries({ queryKey: ["profile", profile.id] }),
       ]);
     },
     onError: (caught) => {
@@ -77,6 +72,8 @@ export function DocumentPresenceSection({
     (type) =>
       (type.active || presenceFor(profile, type.id)) && !isRepeatedIdentity(type.technical_key),
   );
+  // Badges are no longer filtered against the readout: this section is now the
+  // only place they render, so hiding CPF and RG here would drop them entirely.
   const visibleBadges = profile.document_badges ?? [];
   if (
     !editable &&

@@ -2,9 +2,12 @@ import { FileText } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { useI18n } from "../../../i18n";
 import type { DocumentType, Profile } from "../../api/client";
-import { CadastroHolderSection } from "../components/CadastroHolderSection";
-import { CadastroSection } from "../components/CadastroSection";
-import { DocumentFormFields, type DocumentFormFieldsState } from "../components/DocumentFormFields";
+import {
+  CadastroHolderSection,
+  CadastroSection,
+  DocumentFormFields,
+  type DocumentFormFieldsState,
+} from "../components";
 
 export interface DocumentModeProps {
   docFields: DocumentFormFieldsState;

@@ -4,7 +4,6 @@ import { Link } from "@tanstack/react-router";
 import { DocumentPresenceSection } from "../tables/DocumentPresenceSection";
 import { tableLinkProps } from "../tables/tableRoutes";
 import { getProfile } from "../api/client";
-import { queryKeys } from "../api/queryKeys";
 import { useI18n } from "../../i18n";
 import { normalizeProfileSearch, ProfileReadout, ProfileReadoutSkeleton } from "../../ProfilePanel";
 import { groupAsResult, profileSearchForResult, shouldFetchPreview } from "./groupResults";
@@ -24,9 +23,10 @@ export function ProfileSearchExpand({
 }) {
   const { messages } = useI18n();
   const searchMessages = messages.search;
+  const inspector = messages.tables.inspector;
   const enabled = shouldFetchPreview(preview, card.profileId);
   const profileQuery = useQuery({
-    queryKey: queryKeys.profiles.detail(card.profileId),
+    queryKey: ["profile", card.profileId],
     queryFn: ({ signal }) => getProfile(card.profileId, signal),
     enabled,
   });
@@ -54,10 +54,22 @@ export function ProfileSearchExpand({
         ) : null}
         {profileQuery.data ? (
           <ProfileReadout
-            documentPresence={
-              <DocumentPresenceSection editable={false} profile={profileQuery.data} />
-            }
+            boolean={messages.tables.boolean}
+            columns={messages.tables.columns}
+            empty={inspector.empty}
+            fields={inspector.fields}
             profile={profileQuery.data}
+            sections={inspector.sections}
+            showLessLabel={inspector.showLess}
+            showMoreLabel={inspector.showMore}
+            documentPresence={
+              <DocumentPresenceSection
+                copy={inspector.presence}
+                editable={false}
+                marks={messages.tables.badges}
+                profile={profileQuery.data}
+              />
+            }
           />
         ) : null}
 

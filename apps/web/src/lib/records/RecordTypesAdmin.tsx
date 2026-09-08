@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Checkbox, Flex, Input, Select } from "antd";
+import { Alert, Button, Card, Checkbox, Flex } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { ConfirmDelete } from "../../components/ConfirmDelete";
@@ -141,23 +141,18 @@ function RecordTypesAdmin<
       onBack={props.onBack}
       title={props.title}
       list={query.data?.types.map((type) => (
-        <Button
-          className="type-list-item"
-          key={type.id}
-          onClick={() => setSelected(type)}
-          type="text"
-        >
+        <button className="type-list-item" key={type.id} onClick={() => setSelected(type)}>
           <strong>{type.label}</strong>
           <span>
             {`${type.technical_key} · ${type.active ? messages.common.status.active : messages.common.status.inactive}`}
           </span>
-        </Button>
+        </button>
       ))}
       form={
         <>
           <label>
             {messages.common.labels.technicalKey}
-            <Input
+            <input
               disabled={Boolean(selected)}
               onChange={(e) => updatePatch({ technical_key: e.target.value } as Partial<V>)}
               value={values.technical_key}
@@ -165,7 +160,7 @@ function RecordTypesAdmin<
           </label>
           <label>
             {messages.common.labels.name}
-            <Input
+            <input
               onChange={(e) => updatePatch({ label: e.target.value } as Partial<V>)}
               value={values.label}
             />
@@ -253,23 +248,23 @@ export function DocumentTypesAdmin(props: {
         <>
           <label>
             {messages.common.labels.uniqueness}
-            <Select
-              onChange={(value) =>
+            <select
+              onChange={(e) =>
                 updatePatch({
-                  uniqueness_policy: value as DocumentTypeValuesRequest["uniqueness_policy"],
+                  uniqueness_policy: e.target
+                    .value as DocumentTypeValuesRequest["uniqueness_policy"],
                 })
               }
-              options={[
-                { value: "NONE", label: messages.records.types.uniqueness.none },
-                { value: "PER_PROFILE", label: messages.records.types.uniqueness.perProfile },
-                { value: "GLOBAL_BY_TYPE", label: messages.records.types.uniqueness.global },
-              ]}
               value={values.uniqueness_policy}
-            />
+            >
+              <option value="NONE">{messages.records.types.uniqueness.none}</option>
+              <option value="PER_PROFILE">{messages.records.types.uniqueness.perProfile}</option>
+              <option value="GLOBAL_BY_TYPE">{messages.records.types.uniqueness.global}</option>
+            </select>
           </label>
           <label>
             {messages.common.labels.validationRegex}
-            <Input
+            <input
               onChange={(e) => updatePatch({ validation_regex: e.target.value })}
               value={values.validation_regex}
             />

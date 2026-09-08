@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { APIRequestError, jsonRequest, requestJSON } from "../api/client";
-import { queryKeys } from "../api/queryKeys";
 
 /** Probes private storage by attempting an upload intent; validation errors imply storage is up. */
 export function useAttachmentsEnabled() {
   return useQuery({
-    queryKey: queryKeys.attachments.enabled,
+    queryKey: ["attachments-enabled"],
     queryFn: async ({ signal }) => {
       try {
         await requestJSON("/api/v1/attachment-upload-intents", {

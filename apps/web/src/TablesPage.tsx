@@ -1,5 +1,5 @@
 import { Alert, Modal } from "antd";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { memo, startTransition, useCallback, useMemo, useState } from "react";
 import { getRouteApi } from "@tanstack/react-router";
 import { useApplicationSession } from "./session";
@@ -10,18 +10,28 @@ import {
   tableFromSection,
 } from "./lib/tables/tableRoutes";
 import {
+  APIRequestError,
   deleteProfile,
+  getProfile,
+  listBillTypes,
+  listBills,
+  listCustomFields,
+  listCustomOptions,
+  listDistinctCities,
+  listDocumentTypes,
+  listDocuments,
+  listProfiles,
+  type BillRecord,
+  type DocumentRecord,
   type Profile,
   type ProfileListSearch,
 } from "./lib/api/client";
-import { queryKeys } from "./lib/api/queryKeys";
 import { useI18n } from "./i18n";
 import { PageHeader } from "./components/PageHeader";
 import { StateCard } from "./components/StateCard";
-import "./tables.css";
 import { SpreadsheetTable } from "./lib/tables/SpreadsheetTable";
 import { TablesToolbar } from "./lib/tables/TablesToolbar";
-import { cellKeyForFilter, localDateMatches } from "./lib/tables/tableFilters";
+import { cellKeyForFilter, distinctValues, localDateMatches } from "./lib/tables/tableFilters";
 import {
   columnGroup,
   columnLabel,
@@ -33,31 +43,39 @@ import {
   withColumnLayout,
   type TableSheetScope,
 } from "./lib/tables/columnVisibility";
-import { buildPeopleColumns } from "./lib/tables/peopleColumns";
+import { buildPeopleColumns, PEOPLE_DOC_KEY_SET } from "./lib/tables/peopleColumns";
 import { buildBillColumns, buildDocumentColumns } from "./lib/tables/recordColumns";
-import { activeFilterChips } from "./lib/tables/sheetFilters";
+import { activeFilterChips, buildSheetFilters } from "./lib/tables/sheetFilters";
 import { TableInspectorDrawer } from "./lib/tables/TableInspectorDrawer";
 import {
+  billSearch,
   clearFilters,
+  documentSearch,
   pagePatch,
+  profileListKey,
   resetPage,
 } from "./lib/tables/sheetQuery";
 import { useInspectorSheet } from "./lib/tables/useInspectorSheet";
 import {
+  billRow,
   cellText,
+  documentRow,
   paginationRange,
+  personRow,
+  uniqueCustomFields,
+  type RecordSheetLabels,
   type TableRow,
 } from "./lib/tables/tableRows";
+import { groupedTypeFilterOptions } from "./lib/tables/typeFilterOptions";
 import { DEFAULT_SHEET_PREFERENCES } from "./lib/tables/sheetPreferences";
 import { clampSpreadsheetPageSize } from "./lib/tables/spreadsheetViewport";
-import { useTableSheetData } from "./lib/tables/useTableSheetData";
 
 const tablesRoute = getRouteApi("/tables/$table");
 
 const MemoSpreadsheetTable = memo(SpreadsheetTable) as typeof SpreadsheetTable;
 
 export function TablesPage() {
-  const { messages, t } = useI18n();
+  const { messages } = useI18n();
   const copy = messages.tables;
   const session = useApplicationSession();
   const { table } = tablesRoute.useParams();
@@ -92,6 +110,12 @@ export function TablesPage() {
     },
     [navigate, table],
   );
+  const tableSearch = {
+    ...search,
+    limit: clampSpreadsheetPageSize(search.limit),
+    document_limit: clampSpreadsheetPageSize(search.document_limit),
+    bill_limit: clampSpreadsheetPageSize(search.bill_limit),
+  };
 
   const [searchInput, setSearchInput] = useState(search.q);
   const [prevSearchQ, setPrevSearchQ] = useState(search.q);
@@ -99,35 +123,306 @@ export function TablesPage() {
     setPrevSearchQ(search.q);
     setSearchInput(search.q);
   }
+  const peopleQuery = useQuery({
+    queryKey: ["tables", "profiles", profileListKey(tableSearch)],
+    queryFn: ({ signal }) => listProfiles(tableSearch, signal),
+    enabled: section === "profile",
+  });
+  const citiesQuery = useQuery({
+    queryKey: ["profile-city-options", search.full_name, search.cpf, search.email, search.state],
+    queryFn: ({ signal }) =>
+      listDistinctCities(
+        {
+          full_name: search.full_name,
+          cpf: search.cpf,
+          email: search.email,
+          state: search.state,
+        },
+        signal,
+      ),
+    enabled: section === "profile",
+    staleTime: 5 * 60 * 1000,
+  });
+  const documentQuery = useQuery({
+    queryKey: ["tables", "documents", documentSearch(tableSearch), tableSearch.records_owner],
+    queryFn: ({ signal }) =>
+      listDocuments(tableSearch.records_owner, documentSearch(tableSearch), signal),
+    enabled: section === "documents",
+  });
+  const billQuery = useQuery({
+    queryKey: ["tables", "bills", billSearch(tableSearch), tableSearch.records_owner],
+    queryFn: ({ signal }) => listBills(tableSearch.records_owner, billSearch(tableSearch), signal),
+    enabled: section === "bills",
+  });
+  const documentTypes = useQuery({
+    queryKey: ["document-types"],
+    queryFn: ({ signal }) => listDocumentTypes(signal),
+    enabled: section === "documents" || section === "profile",
+  });
+  const billTypes = useQuery({
+    queryKey: ["bill-types"],
+    queryFn: ({ signal }) => listBillTypes(signal),
+    enabled: section === "bills",
+  });
+  const selectedProfileQuery = useQuery({
+    queryKey: ["profile", search.selected],
+    queryFn: ({ signal }) => getProfile(search.selected!, signal),
+    enabled: Boolean(search.mode && search.selected),
+  });
+  const profileFieldsQuery = useQuery({
+    queryKey: ["custom-fields", "PROFILE"],
+    queryFn: () => listCustomFields("PROFILE"),
+    enabled: section === "profile",
+  });
+  const documentTypeList = documentTypes.data?.types ?? [];
+  const billTypeList = billTypes.data?.types ?? [];
+  const documentFieldQueries = useQueries({
+    queries: documentTypeList.map((type) => ({
+      queryKey: ["custom-fields", "DOCUMENT_TYPE", type.id],
+      queryFn: () => listCustomFields("DOCUMENT_TYPE", type.id),
+      enabled: section === "documents",
+    })),
+  });
+  const billFieldQueries = useQueries({
+    queries: billTypeList.map((type) => ({
+      queryKey: ["custom-fields", "BILL_TYPE", type.id],
+      queryFn: () => listCustomFields("BILL_TYPE", type.id),
+      enabled: section === "bills",
+    })),
+  });
+  const documentFieldsStamp = queriesStamp(documentFieldQueries);
+  const billFieldsStamp = queriesStamp(billFieldQueries);
+  const columnMetadataLoading =
+    section === "profile"
+      ? profileFieldsQuery.isPending
+      : section === "documents"
+        ? documentTypes.isPending || documentFieldQueries.some((query) => query.isPending)
+        : billTypes.isPending || billFieldQueries.some((query) => query.isPending);
+
+  const recordLabels: RecordSheetLabels = {
+    boolean: copy.boolean,
+    status: copy.status,
+    medium: copy.medium,
+    idleCustody: copy.idleCustody,
+  };
+
+  const typeGroups = useMemo(() => {
+    if (section === "documents") {
+      return groupedTypeFilterOptions(
+        documentTypeList.map((type) => ({
+          id: type.id,
+          label: type.label,
+          technicalKey: type.technical_key,
+        })),
+        "document",
+        messages.home.tables,
+      );
+    }
+    if (section === "bills") {
+      return groupedTypeFilterOptions(
+        billTypeList.map((type) => ({
+          id: type.id,
+          label: type.label,
+          technicalKey: type.technical_key,
+        })),
+        "bill",
+        messages.home.tables,
+      );
+    }
+    return [];
+  }, [billTypeList, documentTypeList, messages.home.tables, section]);
+
+  const extraFields = useMemo(() => {
+    if (section === "profile") return uniqueCustomFields(profileFieldsQuery.data?.fields ?? []);
+    if (section === "documents") {
+      const selectedType = search.document_type;
+      const fields = documentTypeList.flatMap((type, index) => {
+        if (selectedType && type.id !== selectedType) return [];
+        return documentFieldQueries[index]?.data?.fields ?? [];
+      });
+      return uniqueCustomFields(fields);
+    }
+    const selectedType = search.bill_type;
+    const fields = billTypeList.flatMap((type, index) => {
+      if (selectedType && type.id !== selectedType) return [];
+      return billFieldQueries[index]?.data?.fields ?? [];
+    });
+    return uniqueCustomFields(fields);
+    // Stamps replace the useQueries array identity, which changes every render.
+  }, [
+    billFieldsStamp,
+    billTypeList,
+    documentFieldsStamp,
+    documentTypeList,
+    profileFieldsQuery.data,
+    search.bill_type,
+    search.document_type,
+    section,
+  ]);
+
+  const identifierTypes = useMemo(() => {
+    if (section !== "profile") return [];
+    const grouped = groupedTypeFilterOptions(
+      documentTypeList.map((type) => ({
+        id: type.id,
+        label: type.label,
+        technicalKey: type.technical_key,
+      })),
+      "document",
+      messages.home.tables,
+    );
+    const ordered = grouped.flatMap((group) =>
+      group.options.map((option) => documentTypeList.find((type) => type.id === option.value)),
+    );
+    return ordered.filter(
+      (type): type is NonNullable<typeof type> =>
+        type != null && PEOPLE_DOC_KEY_SET.has(type.technical_key),
+    );
+  }, [documentTypeList, messages.home.tables, section]);
+
+  const baseRows: TableRow[] = useMemo(() => {
+    if (section === "documents") {
+      return (documentQuery.data?.documents ?? []).map((record: DocumentRecord) =>
+        documentRow(record, recordLabels, extraFields),
+      );
+    }
+    if (section === "bills") {
+      return (billQuery.data?.bills ?? []).map((record: BillRecord) =>
+        billRow(record, recordLabels, extraFields),
+      );
+    }
+    return (peopleQuery.data?.profiles ?? []).map((profile) =>
+      personRow(profile, extraFields, copy.boolean),
+    );
+  }, [
+    billQuery.data,
+    copy.boolean,
+    documentQuery.data,
+    extraFields,
+    peopleQuery.data,
+    recordLabels,
+    section,
+  ]);
+
+  const selectCustomFields = useMemo(
+    () =>
+      extraFields.filter(
+        (field) => field.field_kind === "SINGLE_SELECT" || field.field_kind === "MULTI_SELECT",
+      ),
+    [extraFields],
+  );
+  const optionQueries = useQueries({
+    queries: selectCustomFields.map((field) => ({
+      queryKey: ["custom-options", field.id],
+      queryFn: ({ signal }) => listCustomOptions(field.id, signal),
+    })),
+  });
+  const optionStamp = queriesStamp(optionQueries);
+  const optionsByFieldId = useMemo(() => {
+    const map = new Map<string, { value: string; label: string }[]>();
+    selectCustomFields.forEach((field, index) => {
+      const options = (optionQueries[index]?.data?.options ?? [])
+        .filter((option) => option.active)
+        .map((option) => ({ value: option.label, label: option.label }));
+      if (options.length) map.set(field.id, options);
+    });
+    return map;
+  }, [optionStamp, selectCustomFields]);
+
+  const distinctByKey = useMemo(() => {
+    const result: Record<string, string[]> = {};
+    for (const field of extraFields)
+      result[field.technical_key] = distinctValues(baseRows, field.technical_key);
+    return result;
+  }, [baseRows, extraFields]);
 
   const setLocal = useCallback((key: string, value: string) => {
     setLocalFilters((current) => ({ ...current, [key]: value }));
   }, []);
 
-  const {
-    extraFields,
-    baseRows,
-    allFilters,
-    loading,
-    errorDescription,
-    total,
-    page,
-    pageSize,
-    sortField,
-    sortOrder,
-    selectedProfile,
-    selectedProfileLoading,
-    recordsOwnerName,
-    columnMetadataLoading,
-  } = useTableSheetData({
-    section,
-    search,
-    copy,
-    messages,
-    localFilters,
-    setLocal,
-    updateSearch,
-  });
+  const cityOptions = useMemo(
+    () =>
+      (citiesQuery.data?.values ?? []).map((city) => ({
+        value: city,
+        label: city,
+      })),
+    [citiesQuery.data],
+  );
+
+  const allFilters = useMemo(
+    () =>
+      buildSheetFilters({
+        section,
+        search,
+        copy,
+        localFilters,
+        extraFields,
+        optionsByFieldId,
+        distinctByKey,
+        typeGroups,
+        identifierTypes,
+        cityOptions,
+        setLocal,
+        updateSearch,
+      }),
+    [
+      cityOptions,
+      copy,
+      distinctByKey,
+      extraFields,
+      identifierTypes,
+      localFilters,
+      optionsByFieldId,
+      search,
+      section,
+      setLocal,
+      typeGroups,
+      updateSearch,
+    ],
+  );
+  const loading =
+    section === "documents"
+      ? documentQuery.isLoading
+      : section === "bills"
+        ? billQuery.isLoading
+        : peopleQuery.isLoading;
+  const error =
+    section === "documents"
+      ? documentQuery.error
+      : section === "bills"
+        ? billQuery.error
+        : peopleQuery.error;
+  const errorDescription = tableErrorDescription(error);
+  const total =
+    section === "documents"
+      ? (documentQuery.data?.page.total ?? 0)
+      : section === "bills"
+        ? (billQuery.data?.page.total ?? 0)
+        : (peopleQuery.data?.page.total ?? 0);
+  const page =
+    section === "documents"
+      ? search.document_page
+      : section === "bills"
+        ? search.bill_page
+        : search.page;
+  const pageSize =
+    section === "documents"
+      ? tableSearch.document_limit
+      : section === "bills"
+        ? tableSearch.bill_limit
+        : tableSearch.limit;
+  const sortField =
+    section === "documents"
+      ? search.document_sort
+      : section === "bills"
+        ? search.bill_sort
+        : search.sort;
+  const sortOrder =
+    section === "documents"
+      ? search.document_order
+      : section === "bills"
+        ? search.bill_order
+        : search.order;
 
   const onTablePage = useCallback(
     (nextPage: number, nextSize: number) => {
@@ -191,6 +486,8 @@ export function TablesPage() {
         }
         apply();
       };
+      // Each table opens its own record. Documents and bills used to set
+      // `selected` to the owner, so clicking a document showed the person.
       if (section === "documents") {
         confirmIfEditing(undefined, () =>
           startTransition(() => {
@@ -255,7 +552,20 @@ export function TablesPage() {
     );
   }, [allFilters, baseRows, localFilters]);
   const canDelete = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN";
-
+  const selectedProfile =
+    peopleQuery.data?.profiles.find((value) => value.id === search.selected) ??
+    selectedProfileQuery.data;
+  const recordsOwnerName =
+    (section === "documents"
+      ? documentQuery.data?.documents.find(
+          (value) => value.owner_profile_id === search.records_owner,
+        )?.owner_full_name
+      : billQuery.data?.bills.find((value) => value.owner_profile_id === search.records_owner)
+          ?.owner_full_name) ??
+    (search.records_owner && selectedProfile?.id === search.records_owner
+      ? selectedProfile?.full_name
+      : undefined) ??
+    copy.inspector.ownerChip;
   const activeChips = [
     ...(search.records_owner
       ? [
@@ -272,8 +582,8 @@ export function TablesPage() {
   ];
 
   const refreshPeople = async () => {
-    await queryClient.invalidateQueries({ queryKey: queryKeys.tables.profiles() });
-    await queryClient.invalidateQueries({ queryKey: queryKeys.profiles.all });
+    await queryClient.invalidateQueries({ queryKey: ["tables", "profiles"] });
+    await queryClient.invalidateQueries({ queryKey: ["profile"] });
   };
   const deleteMutation = useMutation({
     mutationFn: ({ value, confirmation }: { value: Profile; confirmation: string }) =>
@@ -369,7 +679,7 @@ export function TablesPage() {
         removeFilterLabel={copy.filters.removeFilter}
         appliedFiltersLabel={copy.filters.appliedFilters}
         noFieldsLabel={copy.filters.noFields}
-        moreChipsLabel={(count) => t(copy.filters.moreChips, { count })}
+        moreChipsLabel={(count) => copy.filters.moreChips.replace("{count}", String(count))}
         moreChipsCollapseLabel={copy.filters.moreChipsCollapse}
         chips={activeChips}
         clearLabel={copy.filters.clear}
@@ -389,7 +699,9 @@ export function TablesPage() {
           lockedLabel: copy.columnPicker.locked,
           emptyLabel: copy.columnPicker.empty,
           visibleCountLabel: (visible, totalCount) =>
-            t(copy.columnPicker.visibleCount, { visible, total: totalCount }),
+            copy.columnPicker.visibleCount
+              .replace("{visible}", String(visible))
+              .replace("{total}", String(totalCount)),
           hiddenCount: columnMetadataLoading ? 0 : columns.length - visibleColumns.length,
           items: columnPickerItems,
           onToggle: handleColumnToggle,
@@ -435,7 +747,7 @@ export function TablesPage() {
           search={search}
           section={section}
           selectedProfile={selectedProfile}
-          selectedProfileLoading={selectedProfileLoading}
+          selectedProfileLoading={selectedProfileQuery.isLoading}
           selectedRecordRow={selectedRecordRow}
           userRole={session.user.role}
           onCancelEditProfile={() => updateSearch({ mode: "view" })}
@@ -455,4 +767,24 @@ export function TablesPage() {
       </div>
     </div>
   );
+}
+
+function queriesStamp(queries: { dataUpdatedAt: number }[]): string {
+  return queries.map((query) => String(query.dataUpdatedAt)).join(",");
+}
+
+function tableErrorDescription(error: unknown) {
+  if (!error || isAbortError(error)) return undefined;
+  if (error instanceof APIRequestError) {
+    const fields = error.fieldErrors
+      .map((field) => (field.field ? `${field.field}: ${field.message}` : field.message))
+      .filter(Boolean)
+      .join(" · ");
+    return fields ? `${error.message} (${fields})` : error.message;
+  }
+  return error instanceof Error ? error.message : undefined;
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof Error && error.name === "AbortError";
 }

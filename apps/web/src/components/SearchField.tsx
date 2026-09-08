@@ -11,7 +11,6 @@ import {
   suggestSearchValues,
   type SearchCatalogResponse,
 } from "../lib/api/client";
-import { queryKeys } from "../lib/api/queryKeys";
 import { useI18n } from "../i18n";
 
 export type SearchFieldMode = "local" | "suggest" | "text";
@@ -148,14 +147,14 @@ function RemoteSearchField({
   const slashOpen = !lookup && token.startsWith("/");
   const fieldHint = lookup ? "" : fieldOf(token);
   const catalog = useQuery({
-    queryKey: queryKeys.search.catalog,
+    queryKey: ["search-catalog"],
     queryFn: ({ signal }) => getSearchCatalog(signal),
     enabled: !lookup && (slashOpen || Boolean(fieldHint)),
     staleTime: 60_000,
   });
   const suggestQ = useDebouncedValue(fieldHint ? valueAfterColon(token) : "", 300);
   const suggestions = useQuery({
-    queryKey: queryKeys.search.suggest(grain, fieldHint, suggestQ),
+    queryKey: ["search-suggest", grain, fieldHint, suggestQ],
     queryFn: ({ signal }) =>
       suggestSearchValues(
         { field: fieldHint, q: suggestQ, limit: 50, ...(grain ? { grain } : {}) },
@@ -166,7 +165,7 @@ function RemoteSearchField({
   });
   const lookupQ = useDebouncedValue(lookup ? value : "", 300);
   const people = useQuery({
-    queryKey: queryKeys.profiles.lookup(lookupQ),
+    queryKey: ["profiles", "lookup", lookupQ],
     queryFn: ({ signal }) => listProfilesLookup(lookupQ, signal),
     enabled: Boolean(lookup) && open,
     staleTime: 15_000,

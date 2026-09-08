@@ -12,49 +12,16 @@ const catalogs = {
 export type AppLocale = keyof typeof catalogs;
 export type AppMessages = (typeof catalogs)[AppLocale];
 
-export function formatMessage(
-  template: string,
-  params?: Record<string, string | number | boolean | null | undefined>,
-): string {
-  if (!params) return template;
-  return template.replace(/\{(\w+)\}/g, (match, key) => {
-    const value = params[key];
-    return value !== undefined && value !== null ? String(value) : match;
-  });
-}
-
-export const t = formatMessage;
-
-const pluralRulesCache = new Map<string, Intl.PluralRules>();
-
-export function plural(
-  count: number,
-  one: string,
-  other: string,
-  locale: AppLocale = DEFAULT_LOCALE,
-): string {
-  let pr = pluralRulesCache.get(locale);
-  if (!pr) {
-    pr = new Intl.PluralRules(locale);
-    pluralRulesCache.set(locale, pr);
-  }
-  return pr.select(count) === "one" ? one : other;
-}
-
 type I18nContextValue = {
   version: typeof I18N_CATALOG_VERSION;
   locale: AppLocale;
   messages: AppMessages;
-  t: typeof formatMessage;
-  plural: typeof plural;
 };
 
 const defaultContextValue: I18nContextValue = {
   version: I18N_CATALOG_VERSION,
   locale: DEFAULT_LOCALE,
   messages: catalogs[DEFAULT_LOCALE],
-  t: formatMessage,
-  plural,
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -79,8 +46,6 @@ export function I18nProvider({ locale, children }: PropsWithChildren<{ locale: A
       version: I18N_CATALOG_VERSION,
       locale,
       messages: catalogs[locale],
-      t: formatMessage,
-      plural,
     }),
     [locale],
   );
@@ -90,4 +55,3 @@ export function I18nProvider({ locale, children }: PropsWithChildren<{ locale: A
 export function useI18n(): I18nContextValue {
   return useContext(I18nContext) ?? defaultContextValue;
 }
-

@@ -129,6 +129,7 @@ export function groupAsResult(group: ResultGroup): SearchResult {
   };
 }
 
+/** Closed-card evidence: up to 6 cells, title echoes omitted, related fills gaps. */
 export function evidenceRowsForCard(card: ProfileCard): MatchRow[] {
   const title = normalizeEvidenceText(card.profileLabel);
   const seen = new Set<string>();
