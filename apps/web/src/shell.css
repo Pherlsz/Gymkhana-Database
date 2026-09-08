@@ -696,14 +696,27 @@ html.theme-switching *::after {
   min-width: 0;
 }
 
+.nav-item--toggle {
+  justify-content: flex-start;
+  user-select: none;
+}
+
 .nav-item--toggle .nav-item__chev {
   margin-inline-start: auto;
   color: var(--md-on-surface-variant);
-  transition: transform 0.15s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nav-item--toggle[aria-expanded="false"] .nav-item__chev {
   transform: rotate(-90deg);
+}
+
+.nav-item--parent-active {
+  color: var(--md-on-surface);
+}
+
+.nav-item--parent-active > svg {
+  color: var(--md-primary-text);
 }
 
 .nav-sub-wrap {
@@ -714,8 +727,8 @@ html.theme-switching *::after {
   transition: grid-template-rows 200ms ease;
 }
 
-.nav-item--toggle[aria-expanded="false"] + .nav-sub-wrap,
-.nav-sub-wrap[aria-hidden="true"] {
+.nav-sub-wrap[aria-hidden="true"],
+.nav-item--toggle[aria-expanded="false"] + .nav-sub-wrap {
   display: none;
 }
 
@@ -727,9 +740,14 @@ html.theme-switching *::after {
 .nav-sub {
   display: grid;
   gap: 0.2rem;
-  margin: 0.25rem 0 0.45rem 0.75rem;
-  padding: 0.25rem 0;
-  border: none;
+  margin: 0.25rem 0 0.45rem 1.15rem;
+  padding: 0.2rem 0 0.2rem 0.65rem;
+  border-inline-start: 2px solid color-mix(in oklch, var(--md-outline-variant) 30%, transparent);
+  transition: border-color 150ms ease;
+}
+
+.nav-sub:has(.nav-sub__item--active) {
+  border-inline-start-color: var(--brand-accent-solid, var(--md-primary-text));
 }
 
 .nav-sub__item {
@@ -767,10 +785,14 @@ html.theme-switching *::after {
   color: var(--md-on-surface);
 }
 
+.nav-sub__item:hover .nav-sub__icon {
+  color: var(--md-on-surface);
+}
+
 .nav-sub__item--active {
   background: var(--md-surface-container);
   color: var(--md-primary-text);
-  font-weight: 500;
+  font-weight: 600;
   border-radius: var(--gym-radius-md);
 }
 
@@ -1161,9 +1183,13 @@ html.theme-switching *::after {
     margin: 0;
     transform: translate(-50%, -50%);
   }
-  .app-shell--collapsed .nav-item--active {
+  .app-shell--collapsed .nav-item--active,
+  .app-shell--collapsed .nav-item--parent-active {
     padding-inline-start: 0;
     background: var(--md-surface-container);
+    color: var(--md-primary-text);
+  }
+  .app-shell--collapsed .nav-item--parent-active > svg {
     color: var(--md-primary-text);
   }
   .app-shell--collapsed .app-shell__sidebar .shell-search {

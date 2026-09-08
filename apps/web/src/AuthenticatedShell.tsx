@@ -227,25 +227,26 @@ function AuthenticatedShellLayout() {
             </Link>
           </RailTip>
           <RailTip label={entities.tables} rail={rail}>
-            <Button
+            <button
               aria-controls="shell-tables"
               aria-expanded={tablesOpen && !rail}
-              className={`nav-item nav-item--action${activeTable ? " nav-item--active" : ""}`}
-              icon={<Folder aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
-              type="text"
+              className={`nav-item nav-item--toggle${activeTable ? " nav-item--parent-active" : ""}`}
               onClick={toggleTables}
+              type="button"
             >
+              <Folder aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
               <span className="nav-item__label">{entities.tables}</span>
               <ChevronDown
                 aria-hidden
-                className={`nav-chevron${tablesOpen && !rail ? " nav-chevron--open" : ""}`}
+                className="nav-item__chev"
                 size={ICON.sm}
                 strokeWidth={ICON_STROKE}
               />
-            </Button>
+            </button>
           </RailTip>
           <div
-            className={`nav-collapsible${tablesOpen && !rail ? " nav-collapsible--open" : ""}`}
+            aria-hidden={!tablesOpen || rail}
+            className="nav-sub-wrap"
             inert={!tablesOpen || rail}
           >
             <div className="nav-sub" id="shell-tables">
