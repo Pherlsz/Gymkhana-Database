@@ -4,8 +4,8 @@ import "testing"
 
 func TestSuggestColumnProfiles(t *testing.T) {
 	cases := []struct {
-		header string
-		want   string
+		header  string
+		want    string
 		discard bool
 	}{
 		{"Nome", "full_name", false},
