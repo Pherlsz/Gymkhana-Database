@@ -11,7 +11,6 @@ on:
       - "scripts/configure-private-go.sh"
       - "scripts/configure-worker-schedule.sh"
       - "scripts/create-recovery-point.sh"
-      - "scripts/export-legacy-sqlite.py"
       - "scripts/promote-cloud-run.sh"
       - "scripts/rehearse-restore.sh"
       - "scripts/render-cloud-run.py"
@@ -45,7 +44,7 @@ jobs:
             scripts/promote-cloud-run.sh \
             scripts/rehearse-restore.sh \
             scripts/rollback-cloud-run.sh
-          python3 -m py_compile scripts/export-legacy-sqlite.py scripts/render-cloud-run.py
+          python3 -m py_compile scripts/render-cloud-run.py
           python3 -m json.tool vercel.json >/dev/null
 
       - name: Render Cloud Run contracts with immutable fixtures

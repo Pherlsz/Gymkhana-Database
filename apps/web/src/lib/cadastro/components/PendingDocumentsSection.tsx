@@ -25,15 +25,18 @@ export function PendingDocumentsSection({
   open,
   onToggleOpen,
 }: PendingDocumentsSectionProps) {
-  const { messages } = useI18n();
+  const { messages, t } = useI18n();
   const copy = messages.tables.cadastro;
+  const labels = messages.common.labels;
+  const actions = messages.common.actions;
+  const entities = messages.common.entities;
 
   const [addingDoc, setAddingDoc] = useState(false);
   const [docState, setDocState] = useState<DocumentFormFieldsState>(INITIAL_DOC_FIELDS);
   const inlineDocFileId = useId();
 
   const handleConfirmAdd = () => {
-    const type = documentTypes.find((t) => t.id === docState.docTypeId);
+    const type = documentTypes.find((dt) => dt.id === docState.docTypeId);
     const typeName = type?.label || copy.docFallbackDefault;
     const newDoc: PendingDoc = {
       id: String(Date.now()),
@@ -61,7 +64,7 @@ export function PendingDocumentsSection({
       typeId: docState.docTypeId || fallbackType?.id || "",
       typeName: fallbackType?.label || copy.docFallbackDefault,
       number: "01234567890",
-      notes: copy.ocrExtractedNote.replace("{filename}", file.name),
+      notes: t(copy.ocrExtractedNote, { filename: file.name }),
       medium: "DIGITAL",
       tag: "ocr",
     };
@@ -75,8 +78,8 @@ export function PendingDocumentsSection({
     <CadastroStagedSection
       addLabel={copy.btnAddDocument}
       adding={addingDoc}
-      cancelLabel={copy.btnCancelAdd}
-      confirmLabel={copy.btnConfirmAdd}
+      cancelLabel={actions.cancel}
+      confirmLabel={actions.add}
       count={documents.length}
       defaultOpen={defaultOpen}
       emptyText={copy.sectionDocumentsEmpty}
@@ -88,7 +91,7 @@ export function PendingDocumentsSection({
         subtitle: doc.number
           ? `nº ${doc.number}${doc.notes ? ` · ${doc.notes}` : ""}`
           : doc.notes || copy.docNumberEmpty,
-        tagText: doc.tag === "ocr" ? copy.tagOcr : copy.tagPhysical,
+        tagText: doc.tag === "ocr" ? labels.ocr : labels.physical,
         isOcr: doc.tag === "ocr",
       }))}
       modifier="documents"
@@ -107,8 +110,8 @@ export function PendingDocumentsSection({
       }}
       onToggleOpen={onToggleOpen}
       open={open}
-      removeLabel={copy.actionRemove}
-      title={copy.sectionDocumentsTitle}
+      removeLabel={actions.remove}
+      title={entities.documents}
     >
       <DocumentFormFields
         documentTypes={documentTypes}

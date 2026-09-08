@@ -12,15 +12,12 @@ export type { ToolbarFilterField } from "./FilterControl";
 
 export type ToolbarChip = {
   key: string;
-  /** The column name. Chips read "Campo: valor" so a screen reader hears both. */
   field: string;
   value: string;
-  /** True when the filter only sees the loaded page, so its scope is flagged. */
   local?: boolean | undefined;
   onClear: () => void;
 };
 
-/** Chips beyond this collapse behind a `+N` button, so the bar stays one row. */
 const CHIP_LIMIT = 4;
 
 export function TablesToolbar({
@@ -165,8 +162,6 @@ export function TablesToolbar({
                 chip.onClear();
               }}
             >
-              {/* The separator is a real text node: a CSS ::after colon is not
-                  reliably exposed, which left the chip reading "PessoaAna". */}
               <span className="tables-toolbar__chip-field">{chip.field}:</span>{" "}
               <span className="tables-toolbar__chip-value">{chip.value}</span>
               {chip.local ? (

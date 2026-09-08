@@ -48,10 +48,9 @@ export function PersonComplementaryGroup({
   state,
   onChange,
   disabled,
-  copy: customCopy,
 }: PersonComplementaryGroupProps) {
   const { messages } = useI18n();
-  const copy = { ...messages.tables.cadastro, ...customCopy } as any;
+  const labels = messages.common.labels;
 
   const vehicleColorOpts = toAutoCompleteOptions(VEHICLE_COLOR_OPTIONS);
   const healthPlanOpts = toAutoCompleteOptions(HEALTH_PLAN_OPTIONS);
@@ -68,16 +67,15 @@ export function PersonComplementaryGroup({
 
   return (
     <div className="cadastro-grid">
-      {/* Subseção: Veículo */}
       <div className="cadastro-col-3">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-vehicle-model">
-            {copy.fieldVehicleModel}
+            {labels.vehicleModel}
           </label>
           <Input
             disabled={isDisabled}
             id="cad-vehicle-model"
-            placeholder={copy.fieldVehicleModel}
+            placeholder={labels.vehicleModel}
             value={state.vehicleModel}
             onChange={(e) => onChange({ vehicleModel: e.target.value })}
           />
@@ -87,7 +85,7 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-3">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-vehicle-color">
-            {copy.fieldVehicleColor}
+            {labels.vehicleColor}
           </label>
           <AutoComplete
             allowClear
@@ -95,7 +93,7 @@ export function PersonComplementaryGroup({
             filterOption={filterOpt}
             id="cad-vehicle-color"
             options={vehicleColorOpts}
-            placeholder={copy.fieldVehicleColor}
+            placeholder={labels.vehicleColor}
             style={{ width: "100%" }}
             value={state.vehicleColor}
             onChange={(val) => onChange({ vehicleColor: val })}
@@ -106,12 +104,12 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-3">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-vehicle-plate">
-            {copy.fieldVehiclePlate}
+            {labels.vehiclePlate}
           </label>
           <Input
             disabled={isDisabled}
             id="cad-vehicle-plate"
-            placeholder={copy.fieldVehiclePlate}
+            placeholder={labels.vehiclePlate}
             value={state.vehiclePlate}
             onChange={(e) => onChange({ vehiclePlate: e.target.value })}
           />
@@ -121,23 +119,22 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-3">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-vehicle-year">
-            {copy.fieldVehicleYear}
+            {labels.vehicleYear}
           </label>
           <Input
             disabled={isDisabled}
             id="cad-vehicle-year"
-            placeholder={copy.fieldVehicleYear}
+            placeholder={labels.vehicleYear}
             value={state.vehicleYear}
             onChange={(e) => onChange({ vehicleYear: e.target.value })}
           />
         </div>
       </div>
 
-      {/* Subseção: Saúde */}
       <div className="cadastro-col-4">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-health-plan">
-            {copy.fieldHealthPlan}
+            {labels.healthPlan}
           </label>
           <AutoComplete
             allowClear
@@ -145,7 +142,7 @@ export function PersonComplementaryGroup({
             filterOption={filterOpt}
             id="cad-health-plan"
             options={healthPlanOpts}
-            placeholder={copy.fieldHealthPlan}
+            placeholder={labels.healthPlan}
             style={{ width: "100%" }}
             value={state.healthPlan}
             onChange={(val) => onChange({ healthPlan: val })}
@@ -156,13 +153,13 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-4">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-blood-donor">
-            {copy.fieldBloodDonor}
+            {labels.bloodDonor}
           </label>
           <Select
             allowClear
             disabled={isDisabled}
             id="cad-blood-donor"
-            placeholder={copy.placeholderNotProvided}
+            placeholder={labels.notProvided}
             style={{ width: "100%" }}
             value={state.bloodDonor === null ? undefined : state.bloodDonor ? "true" : "false"}
             onChange={(val) =>
@@ -171,8 +168,8 @@ export function PersonComplementaryGroup({
               })
             }
             options={[
-              { value: "true", label: copy.optionYes },
-              { value: "false", label: copy.optionNo },
+              { value: "true", label: labels.yes },
+              { value: "false", label: labels.no },
             ]}
           />
         </div>
@@ -181,13 +178,13 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-4">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-organ-donor">
-            {copy.fieldOrganDonor}
+            {labels.organDonor}
           </label>
           <Select
             allowClear
             disabled={isDisabled}
             id="cad-organ-donor"
-            placeholder={copy.placeholderNotProvided}
+            placeholder={labels.notProvided}
             style={{ width: "100%" }}
             value={state.organDonor === null ? undefined : state.organDonor ? "true" : "false"}
             onChange={(val) =>
@@ -196,18 +193,17 @@ export function PersonComplementaryGroup({
               })
             }
             options={[
-              { value: "true", label: copy.optionYes },
-              { value: "false", label: copy.optionNo },
+              { value: "true", label: labels.yes },
+              { value: "false", label: labels.no },
             ]}
           />
         </div>
       </div>
 
-      {/* Subseção: Gincana e Equipe */}
       <div className="cadastro-col-4">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-team">
-            {copy.fieldTeam}
+            {labels.team}
           </label>
           <AutoComplete
             allowClear
@@ -215,7 +211,7 @@ export function PersonComplementaryGroup({
             filterOption={filterOpt}
             id="cad-team"
             options={teamOpts}
-            placeholder={copy.fieldTeam}
+            placeholder={labels.team}
             style={{ width: "100%" }}
             value={state.team}
             onChange={(val) => onChange({ team: val })}
@@ -226,7 +222,7 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-4">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-sector">
-            {copy.fieldSector}
+            {labels.sector}
           </label>
           <AutoComplete
             allowClear
@@ -234,7 +230,7 @@ export function PersonComplementaryGroup({
             filterOption={filterOpt}
             id="cad-sector"
             options={sectorOpts}
-            placeholder={copy.fieldSector}
+            placeholder={labels.sector}
             style={{ width: "100%" }}
             value={state.sector}
             onChange={(val) => onChange({ sector: val })}
@@ -245,7 +241,7 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-4">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-club">
-            {copy.fieldClubMembership}
+            {labels.clubMembership}
           </label>
           <AutoComplete
             allowClear
@@ -253,7 +249,7 @@ export function PersonComplementaryGroup({
             filterOption={filterOpt}
             id="cad-club"
             options={clubOpts}
-            placeholder={copy.fieldClubMembership}
+            placeholder={labels.clubMembership}
             style={{ width: "100%" }}
             value={state.clubMembership}
             onChange={(val) => onChange({ clubMembership: val })}
@@ -264,7 +260,7 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-4">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-membership-type">
-            {copy.fieldMembershipType}
+            {labels.membershipType}
           </label>
           <AutoComplete
             allowClear
@@ -272,7 +268,7 @@ export function PersonComplementaryGroup({
             filterOption={filterOpt}
             id="cad-membership-type"
             options={membershipTypeOpts}
-            placeholder={copy.fieldMembershipType}
+            placeholder={labels.membershipType}
             style={{ width: "100%" }}
             value={state.membershipType}
             onChange={(val) => onChange({ membershipType: val })}
@@ -283,12 +279,12 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-4">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-collections">
-            {copy.fieldCollections}
+            {labels.collections}
           </label>
           <Input
             disabled={isDisabled}
             id="cad-collections"
-            placeholder={copy.fieldCollections}
+            placeholder={labels.collections}
             value={state.collections}
             onChange={(e) => onChange({ collections: e.target.value })}
           />
@@ -298,7 +294,7 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-4">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-pet">
-            {copy.fieldPet}
+            {labels.pet}
           </label>
           <AutoComplete
             allowClear
@@ -306,7 +302,7 @@ export function PersonComplementaryGroup({
             filterOption={filterOpt}
             id="cad-pet"
             options={petOpts}
-            placeholder={copy.fieldPet}
+            placeholder={labels.pet}
             style={{ width: "100%" }}
             value={state.pet}
             onChange={(val) => onChange({ pet: val })}
@@ -314,11 +310,10 @@ export function PersonComplementaryGroup({
         </div>
       </div>
 
-      {/* Subseção: Diversos / Financeiro */}
       <div className="cadastro-col-3">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-supermarket">
-            {copy.fieldSupermarketClub}
+            {labels.supermarketClub}
           </label>
           <AutoComplete
             allowClear
@@ -326,7 +321,7 @@ export function PersonComplementaryGroup({
             filterOption={filterOpt}
             id="cad-supermarket"
             options={supermarketOpts}
-            placeholder={copy.fieldSupermarketClub}
+            placeholder={labels.supermarketClub}
             style={{ width: "100%" }}
             value={state.supermarketClub}
             onChange={(val) => onChange({ supermarketClub: val })}
@@ -337,12 +332,12 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-3">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-travel-countries">
-            {copy.fieldTravelCountries}
+            {labels.travelCountries}
           </label>
           <Input
             disabled={isDisabled}
             id="cad-travel-countries"
-            placeholder={copy.fieldTravelCountries}
+            placeholder={labels.travelCountries}
             value={state.travelCountries}
             onChange={(e) => onChange({ travelCountries: e.target.value })}
           />
@@ -352,7 +347,7 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-3">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-card-brand">
-            {copy.fieldCardBrand}
+            {labels.cardBrand}
           </label>
           <AutoComplete
             allowClear
@@ -360,7 +355,7 @@ export function PersonComplementaryGroup({
             filterOption={filterOpt}
             id="cad-card-brand"
             options={cardBrandOpts}
-            placeholder={copy.fieldCardBrand}
+            placeholder={labels.cardBrand}
             style={{ width: "100%" }}
             value={state.cardBrand}
             onChange={(val) => onChange({ cardBrand: val })}
@@ -371,7 +366,7 @@ export function PersonComplementaryGroup({
       <div className="cadastro-col-3">
         <div className="cadastro-field">
           <label className="cadastro-field__label" htmlFor="cad-card-bank">
-            {copy.fieldCardBank}
+            {labels.cardBank}
           </label>
           <AutoComplete
             allowClear
@@ -379,7 +374,7 @@ export function PersonComplementaryGroup({
             filterOption={filterOpt}
             id="cad-card-bank"
             options={cardBankOpts}
-            placeholder={copy.fieldCardBank}
+            placeholder={labels.cardBank}
             style={{ width: "100%" }}
             value={state.cardBank}
             onChange={(val) => onChange({ cardBank: val })}

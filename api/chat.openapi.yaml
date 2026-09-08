@@ -529,7 +529,16 @@ components:
     ChatCapability:
       type: object
       additionalProperties: false
-      required: [enabled, maximum_tool_calls, maximum_rows, maximum_result_bytes, maximum_usage, maximum_duration_seconds, maximum_message_runes]
+      required:
+        [
+          enabled,
+          maximum_tool_calls,
+          maximum_rows,
+          maximum_result_bytes,
+          maximum_usage,
+          maximum_duration_seconds,
+          maximum_message_runes,
+        ]
       properties:
         enabled:
           type: boolean
@@ -666,7 +675,19 @@ components:
     ChatRun:
       type: object
       additionalProperties: false
-      required: [id, thread_id, state, tool_call_count, input_usage, output_usage, result_bytes, version, created_at, updated_at]
+      required:
+        [
+          id,
+          thread_id,
+          state,
+          tool_call_count,
+          input_usage,
+          output_usage,
+          result_bytes,
+          version,
+          created_at,
+          updated_at,
+        ]
       properties:
         id:
           type: string
@@ -736,7 +757,8 @@ components:
     ChatResultReference:
       type: object
       additionalProperties: false
-      required: [id, thread_id, run_id, kind, label, row_count, column_count, expires_at, created_at]
+      required:
+        [id, thread_id, run_id, kind, label, row_count, column_count, expires_at, created_at]
       properties:
         id:
           type: string
@@ -773,7 +795,19 @@ components:
     SearchEvidence:
       type: object
       additionalProperties: false
-      required: [module, entity_kind, entity_id, target_kind, target_id, entity_label, field_key, field_label, preview, score]
+      required:
+        [
+          module,
+          entity_kind,
+          entity_id,
+          target_kind,
+          target_id,
+          entity_label,
+          field_key,
+          field_label,
+          preview,
+          score,
+        ]
       properties:
         module:
           type: string
@@ -827,7 +861,19 @@ components:
           minimum: 0
     QueryValueKind:
       type: string
-      enum: [text, long_text, identifier, integer, decimal, boolean, civil_date, civil_month, timestamp, enum]
+      enum:
+        [
+          text,
+          long_text,
+          identifier,
+          integer,
+          decimal,
+          boolean,
+          civil_date,
+          civil_month,
+          timestamp,
+          enum,
+        ]
     QueryResultColumn:
       type: object
       additionalProperties: false
@@ -931,7 +977,18 @@ components:
           maximum: 20
     ChatEventKind:
       type: string
-      enum: [RUN_ACCEPTED, RUN_STARTED, TEXT_DELTA, TOOL_STARTED, TOOL_COMPLETED, RESULT_REFERENCE, RUN_COMPLETED, RUN_FAILED, RUN_CANCELLED]
+      enum:
+        [
+          RUN_ACCEPTED,
+          RUN_STARTED,
+          TEXT_DELTA,
+          TOOL_STARTED,
+          TOOL_COMPLETED,
+          RESULT_REFERENCE,
+          RUN_COMPLETED,
+          RUN_FAILED,
+          RUN_CANCELLED,
+        ]
     ChatEvent:
       type: object
       additionalProperties: false
@@ -1018,7 +1075,27 @@ components:
           properties:
             code:
               type: string
-              enum: [bad_request, invalid_json, unsupported_media_type, request_too_large, unauthorized, forbidden, not_found, rate_limited, chat_unavailable, chat_busy, chat_quota_exceeded, chat_timeout, chat_cancelled, chat_stale_context, chat_malformed_provider, chat_tool_failed, chat_unsafe_result, internal_error]
+              enum:
+                [
+                  bad_request,
+                  invalid_json,
+                  unsupported_media_type,
+                  request_too_large,
+                  unauthorized,
+                  forbidden,
+                  not_found,
+                  rate_limited,
+                  chat_unavailable,
+                  chat_busy,
+                  chat_quota_exceeded,
+                  chat_timeout,
+                  chat_cancelled,
+                  chat_stale_context,
+                  chat_malformed_provider,
+                  chat_tool_failed,
+                  chat_unsafe_result,
+                  internal_error,
+                ]
             message:
               type: string
         request_id:

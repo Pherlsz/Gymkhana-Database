@@ -194,7 +194,15 @@ components:
     SearchCatalogLimits:
       type: object
       additionalProperties: false
-      required: [maximum_terms, maximum_term_length, maximum_fields, maximum_page_size, maximum_offset, maximum_result_cardinality]
+      required:
+        [
+          maximum_terms,
+          maximum_term_length,
+          maximum_fields,
+          maximum_page_size,
+          maximum_offset,
+          maximum_result_cardinality,
+        ]
       properties:
         maximum_terms:
           type: integer

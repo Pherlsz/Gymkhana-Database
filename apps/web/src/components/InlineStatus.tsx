@@ -3,14 +3,6 @@ import { Inbox } from "lucide-react";
 
 export type InlineStatusKind = "loading" | "empty";
 
-/**
- * Lightweight in-panel status message for loading and empty states.
- * Use this inside cards, panels and list sections where the heavier
- * StateCard surface (card + glow badge) would be visually disproportionate.
- *
- * – `loading` renders a small spinner with a polite live region.
- * – `empty`   renders a muted paragraph with an optional inbox icon.
- */
 export function InlineStatus({
   kind,
   label,

@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { message } from "antd";
+import { Button, message } from "antd";
+import { ArrowLeft } from "lucide-react";
 import { type ChangeEvent, useId, useMemo, useState } from "react";
 import { useI18n } from "../../i18n";
 import {
@@ -10,11 +11,14 @@ import {
   listDocumentTypes,
   type Profile,
 } from "../api/client";
+import { queryKeys } from "../api/queryKeys";
 import { MINIMUM_REQUIREMENT_QUERY } from "./CadastroMinimumRequirement";
 import { announceSaved } from "./cadastroFeedback";
 import { buildProfilePayload, mapProfileToState } from "./cadastroPayloads";
-import { CadastroStickyBar } from "./components";
-import { BillMode, DocumentMode, PersonMode } from "./modes";
+import { CadastroStickyBar } from "./components/CadastroStickyBar";
+import { BillMode } from "./modes/BillMode";
+import { DocumentMode } from "./modes/DocumentMode";
+import { PersonMode } from "./modes/PersonMode";
 import {
   type CadastroSingleScreenProps,
   INITIAL_BILL_FIELDS,
@@ -34,43 +38,37 @@ export function CadastroSingleScreen({
   onCancel,
   onSuccess,
 }: CadastroSingleScreenProps) {
-  const { messages } = useI18n();
+  const { messages, t } = useI18n();
   const copy = messages.tables.cadastro;
   const queryClient = useQueryClient();
 
   const mode = targetTable;
 
-  // Types queries
   const documentTypes = useQuery({
-    queryKey: ["document-types"],
+    queryKey: queryKeys.types.documents,
     queryFn: ({ signal }) => listDocumentTypes(signal),
   });
   const billTypes = useQuery({
-    queryKey: ["bill-types"],
+    queryKey: queryKeys.types.bills,
     queryFn: ({ signal }) => listBillTypes(signal),
   });
 
-  // Selected profile state
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
 
-  // Compound domain states
   const [demographics, setDemographics] = useState(INITIAL_DEMOGRAPHICS);
   const [family, setFamily] = useState(INITIAL_FAMILY);
   const [complementary, setComplementary] = useState(INITIAL_COMPLEMENTARY);
   const [docFields, setDocFields] = useState(INITIAL_DOC_FIELDS);
   const [billFields, setBillFields] = useState(INITIAL_BILL_FIELDS);
 
-  // Staged Documents & Bills in Person mode
   const [documents, setDocuments] = useState<PendingDoc[]>([]);
   const [bills, setBills] = useState<PendingBill[]>([]);
 
   const [saving, setSaving] = useState(false);
 
-  // File input IDs
   const standaloneDocFileId = useId();
   const standaloneBillFileId = useId();
 
-  // Apply a selected profile's data across compound states
   const applyProfileToState = (p: Profile) => {
     setSelectedProfile(p);
     const mapped = mapProfileToState(p);
@@ -79,7 +77,6 @@ export function CadastroSingleScreen({
     setComplementary(mapped.complementary);
   };
 
-  // Profile lookup clear handler
   const handleClearProfile = () => {
     setSelectedProfile(null);
     setDemographics(INITIAL_DEMOGRAPHICS);
@@ -92,7 +89,6 @@ export function CadastroSingleScreen({
     setDemographics((prev) => ({ ...prev, fullName: name }));
   };
 
-  // Requisito Mínimo calculation for Person mode
   const matchingOfficialDocs = useMemo(() => {
     const list: string[] = [];
     if (selectedProfile?.document_identifiers) {
@@ -113,7 +109,6 @@ export function CadastroSingleScreen({
 
   const hasMinimumRequirement = matchingOfficialDocs.length > 0;
 
-  // Standalone OCR file drop handlers
   const handleStandaloneDocOcrDrop = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -150,7 +145,6 @@ export function CadastroSingleScreen({
     e.target.value = "";
   };
 
-  // Helper to ensure or create profile
   const resolveOrCreateProfile = async (fallbackName: string): Promise<string> => {
     if (mode !== "people" && selectedProfile) return selectedProfile.id;
     const payload = buildProfilePayload(
@@ -164,7 +158,6 @@ export function CadastroSingleScreen({
     return profile.id;
   };
 
-  // Save handler
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -186,15 +179,17 @@ export function CadastroSingleScreen({
           notes: docFields.docNotes.trim(),
         });
 
-        void queryClient.invalidateQueries({ queryKey: ["documents"] });
-        void queryClient.invalidateQueries({ queryKey: ["profiles"] });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.records.documents() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.tables.profiles() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.all });
         void queryClient.invalidateQueries({ queryKey: MINIMUM_REQUIREMENT_QUERY });
 
         const typeLabel =
-          documentTypes.data?.types?.find((t) => t.id === typeId)?.label || copy.docFallbackDefault;
-        const msg = copy.savedSuccessDoc
-          .replace("{type}", typeLabel)
-          .replace("{name}", demographics.fullName.trim() || copy.holderFallbackDefault);
+          documentTypes.data?.types?.find((type) => type.id === typeId)?.label || copy.docFallbackDefault;
+        const msg = t(copy.savedSuccessDoc, {
+          type: typeLabel,
+          name: demographics.fullName.trim() || copy.holderFallbackDefault,
+        });
         announceSaved(undefined, msg);
         if (onSuccess) onSuccess(demographics.fullName.trim());
         else onCancel();
@@ -225,8 +220,9 @@ export function CadastroSingleScreen({
           medium: billFields.billMedium,
         });
 
-        void queryClient.invalidateQueries({ queryKey: ["bills"] });
-        void queryClient.invalidateQueries({ queryKey: ["profiles"] });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.records.bills() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.tables.profiles() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.all });
 
         const msg = copy.savedSuccessBill.replace(
           "{name}",
@@ -240,9 +236,8 @@ export function CadastroSingleScreen({
         return;
       }
 
-      // mode === "people"
       if (!demographics.fullName.trim()) {
-        void message.error(copy.fieldHolderPlaceholder);
+        void message.error(messages.common.validation.fullNameRequired);
         setSaving(false);
         return;
       }
@@ -281,12 +276,15 @@ export function CadastroSingleScreen({
         }
       }
 
-      void queryClient.invalidateQueries({ queryKey: ["profiles"] });
-      void queryClient.invalidateQueries({ queryKey: ["documents"] });
-      void queryClient.invalidateQueries({ queryKey: ["bills"] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.tables.profiles() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records.documents() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.records.bills() });
       void queryClient.invalidateQueries({ queryKey: MINIMUM_REQUIREMENT_QUERY });
 
-      const successMsg = copy.savedSuccessPerson.replace("{name}", demographics.fullName.trim());
+      const successMsg = t(copy.savedSuccessPerson, {
+        name: demographics.fullName.trim(),
+      });
       announceSaved(undefined, successMsg);
 
       if (onSuccess) onSuccess(demographics.fullName.trim());
@@ -307,16 +305,20 @@ export function CadastroSingleScreen({
 
   return (
     <div className="cadastro-single">
-      {/* Breadcrumb navigation */}
       <nav aria-label={copy.crumbHome} className="cadastro-crumb">
-        <button className="cadastro-crumb__btn" type="button" onClick={onCancel}>
-          ← {copy.crumbHome}
-        </button>
+        <Button
+          className="cadastro-crumb__btn"
+          type="text"
+          size="small"
+          icon={<ArrowLeft size={13} />}
+          onClick={onCancel}
+        >
+          {copy.crumbHome}
+        </Button>
         <span className="cadastro-crumb__sep">/</span>
         <span className="cadastro-crumb__current">{crumbCurrentTitle}</span>
       </nav>
 
-      {/* MODE 1: DOCUMENT MODE */}
       {mode === "documents" && (
         <DocumentMode
           cpf={demographics.cpf}
@@ -335,7 +337,6 @@ export function CadastroSingleScreen({
         />
       )}
 
-      {/* MODE 2: BILL MODE */}
       {mode === "bills" && (
         <BillMode
           billFields={billFields}
@@ -362,7 +363,6 @@ export function CadastroSingleScreen({
         />
       )}
 
-      {/* MODE 3: PERSON MODE */}
       {mode === "people" && (
         <PersonMode
           billTypes={billTypes.data?.types ?? []}
@@ -384,9 +384,8 @@ export function CadastroSingleScreen({
         />
       )}
 
-      {/* Sticky Action Bar */}
       <CadastroStickyBar
-        cancelButtonText={copy.actionCancel}
+        cancelButtonText={messages.common.actions.cancel}
         onCancel={onCancel}
         onSave={handleSave}
         saveButtonText={
@@ -401,9 +400,10 @@ export function CadastroSingleScreen({
         saving={saving}
         summaryText={
           mode === "people"
-            ? copy.summaryCount
-                .replace("{docs}", String(documents.length))
-                .replace("{bills}", String(bills.length))
+            ? t(copy.summaryCount, {
+                docs: documents.length,
+                bills: bills.length,
+              })
             : undefined
         }
       />

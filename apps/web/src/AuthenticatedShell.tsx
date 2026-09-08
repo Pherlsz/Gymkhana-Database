@@ -1,4 +1,4 @@
-import { Avatar, Badge, Dropdown, Switch, Typography } from "antd";
+import { Avatar, Badge, Button, Dropdown, Typography } from "antd";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ChevronDown,
@@ -6,22 +6,22 @@ import {
   Folder,
   Home,
   LogOut,
+  Menu,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Receipt,
   Settings,
-  SlidersHorizontal,
   Sun,
   User,
   UserPlus,
+  X,
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useI18n } from "./i18n";
-import { canManageUsers } from "./lib/roles";
 import { TABLE_SEARCH_DEFAULTS } from "./lib/tables/tableRoutes";
 import { CADASTRO_SEARCH_DEFAULTS } from "./lib/cadastro/cadastroSearch";
-import { GLOBAL_SEARCH_DEFAULTS } from "./SearchPage";
+import { GLOBAL_SEARCH_DEFAULTS } from "./lib/search/urlState";
 import { useApplicationContext } from "./session";
 import { useTheme } from "./theme";
 import { ICON, ICON_STROKE } from "./components/icons";
@@ -37,9 +37,9 @@ export function AuthenticatedShell() {
 
 function AuthenticatedShellLayout() {
   const { messages } = useI18n();
-  const { session } = useApplicationContext();
   const navigate = useNavigate();
   const copy = messages.shell;
+  const entities = messages.common.entities;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [navOpen, setNavOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -49,7 +49,6 @@ function AuthenticatedShellLayout() {
     if (typeof window === "undefined") return true;
     return window.localStorage.getItem(NAV_TABLES_OPEN_KEY) !== "0";
   });
-  const admin = canManageUsers(session.user.role);
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(NAV_COLLAPSED_KEY) === "1");
@@ -67,7 +66,6 @@ function AuthenticatedShellLayout() {
     setNavOpen(false);
   }, [pathname]);
 
-  /* Keyboard escape route for the mobile drawer (mirrors the scrim click). */
   useEffect(() => {
     if (!navOpen) {
       return;
@@ -81,11 +79,6 @@ function AuthenticatedShellLayout() {
     return () => window.removeEventListener("keydown", onKey);
   }, [navOpen]);
 
-  /*
-   * The group never hides the current location: landing on a table with the
-   * group collapsed (deep link, Home shortcut) reopens it so the "you are
-   * here" rule stays visible.
-   */
   useEffect(() => {
     if (activeTable) {
       setTablesOpen(true);
@@ -94,12 +87,6 @@ function AuthenticatedShellLayout() {
 
   const rail = collapsed && !compact;
 
-  /*
-   * One Ctrl+K owner at the shell level. The two search inputs (topbar on
-   * mobile, sidebar on desktop) are mutually exclusive by breakpoint, so the
-   * visible one wins; when the rail hides both, the shortcut falls back to
-   * the global search page instead of focusing a display:none input.
-   */
   const topbarSearchRef = useRef<HTMLInputElement>(null);
   const sidebarSearchRef = useRef<HTMLInputElement>(null);
 
@@ -151,32 +138,41 @@ function AuthenticatedShellLayout() {
   return (
     <div className={shellClass}>
       <header className="app-shell__topbar">
-        <button
+        <Button
           aria-expanded={navOpen}
           aria-label={navOpen ? copy.navigation.closeNavigation : copy.navigation.openNavigation}
           className="app-shell__menu"
           onClick={() => setNavOpen((open) => !open)}
-          type="button"
+          type="text"
         >
           {navOpen ? (
-            <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+            <X aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
           ) : (
-            <PanelLeftOpen aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+            <Menu aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
           )}
-        </button>
-        {/* Theme lives in the account menu alone. The topbar carried a second
-            control that was reachable at the same time on mobile. */}
+        </Button>
+        <Link
+          aria-label={copy.productName}
+          className="app-shell__topbar-brand"
+          title={copy.productName}
+          to="/"
+        >
+          <img
+            alt=""
+            className="app-shell__logo-img app-shell__logo-img--topbar"
+            height={28}
+            src="/Gampa.png"
+            width={28}
+          />
+        </Link>
         <ShellSearch compact inputRef={topbarSearchRef} />
       </header>
-      <button
+      <div
         aria-hidden
         className="app-shell__scrim"
         onClick={() => setNavOpen(false)}
-        tabIndex={-1}
-        type="button"
+        role="presentation"
       />
-      {/* Inert only while the off-canvas drawer is closed on mobile — the
-          desktop sidebar is a permanent fixture and must stay interactive. */}
       <aside
         aria-label={copy.navigationLabel}
         className="app-shell__sidebar"
@@ -188,59 +184,58 @@ function AuthenticatedShellLayout() {
             <span className="brand-text">{copy.productName}</span>
           </Link>
           {compact ? (
-            <button
+            <Button
               aria-label={copy.navigation.closeNavigation}
               className="app-shell__collapse"
               onClick={() => setNavOpen(false)}
-              type="button"
+              type="text"
             >
-              <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-            </button>
+              <X aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+            </Button>
           ) : (
-            <button
+            <Button
               aria-label={rail ? copy.navigation.expandMenu : copy.navigation.collapseMenu}
               className="app-shell__collapse"
               onClick={toggleCollapsed}
               title={rail ? copy.navigation.expandMenu : copy.navigation.collapseMenu}
-              type="button"
+              type="text"
             >
               {rail ? (
                 <PanelLeftOpen aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
               ) : (
                 <PanelLeftClose aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
               )}
-            </button>
+            </Button>
           )}
         </div>
         {compact ? null : <ShellSearch inputRef={sidebarSearchRef} />}
         <nav>
-          <RailTip label={copy.navigation.home} rail={rail}>
+          <RailTip label={entities.home} rail={rail}>
             <Link
               activeOptions={{ exact: true }}
               activeProps={{ "aria-current": "page", className: "nav-item--active" }}
               className="nav-item"
-              title={copy.navigation.home}
+              title={entities.home}
               to="/"
             >
               <Home aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-              <span className="nav-item__label">{copy.navigation.home}</span>
+              <span className="nav-item__label">{entities.home}</span>
             </Link>
           </RailTip>
-          <hr className="nav-divider" />
-          <RailTip label={copy.navigation.tables} rail={rail}>
+          <RailTip label={entities.tables} rail={rail}>
             <button
               aria-controls="shell-tables"
-              aria-expanded={tablesOpen}
-              className="nav-item nav-item--toggle"
+              aria-expanded={tablesOpen && !rail}
+              className={`nav-item nav-item--toggle${activeTable ? " nav-item--parent-active" : ""}`}
               onClick={toggleTables}
               type="button"
             >
               <Folder aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-              <span className="nav-item__label">{copy.navigation.tables}</span>
+              <span className="nav-item__label">{entities.tables}</span>
               <ChevronDown
                 aria-hidden
                 className="nav-item__chev"
-                size={ICON.md}
+                size={ICON.sm}
                 strokeWidth={ICON_STROKE}
               />
             </button>
@@ -254,54 +249,40 @@ function AuthenticatedShellLayout() {
               <TableLink
                 active={activeTable === "people"}
                 icon={<User aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
-                label={copy.navigation.profiles}
+                label={entities.people}
                 rail={rail}
                 table="people"
               />
               <TableLink
                 active={activeTable === "documents"}
                 icon={<FileText aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
-                label={copy.navigation.documents}
+                label={entities.documents}
                 rail={rail}
                 table="documents"
               />
               <TableLink
                 active={activeTable === "bills"}
                 icon={<Receipt aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
-                label={copy.navigation.bills}
+                label={entities.bills}
                 rail={rail}
                 table="bills"
               />
             </div>
           </div>
           <hr className="nav-divider" />
-          <RailTip label={copy.navigation.cadastro} rail={rail}>
+          <RailTip label={entities.cadastro} rail={rail}>
             <Link
               activeOptions={{ exact: true, includeSearch: false }}
               activeProps={{ "aria-current": "page", className: "nav-item--active" }}
               className="nav-item"
               search={CADASTRO_SEARCH_DEFAULTS}
-              title={copy.navigation.cadastro}
+              title={entities.cadastro}
               to="/cadastro"
             >
               <UserPlus aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-              <span className="nav-item__label">{copy.navigation.cadastro}</span>
+              <span className="nav-item__label">{entities.cadastro}</span>
             </Link>
           </RailTip>
-          {admin ? (
-            <RailTip label={copy.navigation.admin} rail={rail}>
-              <Link
-                activeOptions={{ exact: true }}
-                activeProps={{ "aria-current": "page", className: "nav-item--active" }}
-                className="nav-item"
-                title={copy.navigation.admin}
-                to="/admin"
-              >
-                <SlidersHorizontal aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-                <span className="nav-item__label">{copy.navigation.admin}</span>
-              </Link>
-            </RailTip>
-          ) : null}
         </nav>
         <UserAccountCard rail={rail} />
       </aside>
@@ -327,9 +308,9 @@ function ShellSearch({
     <div className="shell-search">
       <SearchField
         inputRef={inputRef}
-        label={messages.shell.navigation.searchPlaceholder}
+        label={messages.search.inputPlaceholder}
         mode="text"
-        placeholder={messages.shell.navigation.searchPlaceholder}
+        placeholder={messages.search.inputPlaceholder}
         shortcutHint={compact ? undefined : "Ctrl K"}
         value={value}
         onChange={setValue}
@@ -344,10 +325,6 @@ function ShellSearch({
   );
 }
 
-/* Icon-only rail items get a CSS tooltip (see .rail-tip in shell.css): the
-   native `title` needs ~1s and never shows on touch, and antd Tooltip is
-   deliberately unused in this app. Expanded items already show their label,
-   so the wrapper only mounts in rail mode. */
 function RailTip({ label, rail, children }: { label: string; rail: boolean; children: ReactNode }) {
   if (!rail) {
     return <>{children}</>;
@@ -389,82 +366,33 @@ function TableLink({
   );
 }
 
-function AccountMenuPanel({
-  copy,
-  signingOut,
-  onLogout,
-  onSettings,
-}: {
-  copy: ReturnType<typeof useI18n>["messages"]["shell"];
-  signingOut: boolean;
-  onLogout: () => void;
-  onSettings: () => void;
-}) {
+
+function SidebarThemeToggle({ rail }: { rail: boolean }) {
   const { theme, toggleTheme } = useTheme();
+  const { messages } = useI18n();
   const isDark = theme === "dark";
+  const label = messages.shell.account.appearance;
+
   return (
-    <div
-      className="sidebar-account-menu"
-      onMouseDown={(event) => {
-        if ((event.target as HTMLElement | null)?.closest(".ant-switch, button")) return;
-        event.preventDefault();
-      }}
-      role="menu"
-    >
-      <button
-        className="sidebar-account-menu__item"
-        onClick={onSettings}
-        role="menuitem"
-        type="button"
-      >
-        <Settings aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-        {copy.account.settings}
-      </button>
-      {/* Whole-row toggle (menuitemcheckbox): clicking anywhere on the row
-          flips the theme. The Switch renders a <button role="switch"> (not a
-          checkbox), so a <label> would not forward clicks; instead the row
-          handles click/keyboard and the wrapper around the Switch stops the
-          event so a direct hit does not toggle twice (row + Switch onChange). */}
-      <div
-        aria-checked={isDark}
-        className="sidebar-account-menu__item sidebar-account-menu__appearance"
+    <RailTip label={label} rail={rail}>
+      <Button
+        aria-label={label}
+        aria-pressed={isDark}
+        className="sidebar-theme-toggle"
         onClick={toggleTheme}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            toggleTheme();
-          }
-        }}
-        role="menuitemcheckbox"
-        tabIndex={0}
+        type="text"
       >
         {isDark ? (
-          <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-        ) : (
           <Moon aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+        ) : (
+          <Sun aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
         )}
-        <span>{copy.account.appearance}</span>
-        <span className="sidebar-account-menu__switch" onClick={(event) => event.stopPropagation()}>
-          <Switch
-            aria-label={copy.account.appearance}
-            checked={isDark}
-            onChange={toggleTheme}
-            size="small"
-          />
+        <span className="sidebar-theme-toggle__label">{label}</span>
+        <span aria-hidden className="sidebar-theme-toggle__switch">
+          <span className="sidebar-theme-toggle__thumb" />
         </span>
-      </div>
-      <div className="sidebar-account-menu__divider" />
-      <button
-        className="sidebar-account-menu__item"
-        disabled={signingOut}
-        onClick={onLogout}
-        role="menuitem"
-        type="button"
-      >
-        <LogOut aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
-        {signingOut ? copy.signingOut : copy.signOut}
-      </button>
-    </div>
+      </Button>
+    </RailTip>
   );
 }
 
@@ -483,69 +411,89 @@ function UserAccountCard({ rail }: { rail: boolean }) {
 
   return (
     <div className="sidebar-account">
+      <SidebarThemeToggle rail={rail} />
       <div className="sidebar-account__anchor">
-        <Dropdown
-          getPopupContainer={() => document.body}
-          onOpenChange={(next, info) => {
-            if (!next && info.source === "menu") return;
-            setOpen(next);
-            if (next) return;
-            const active = document.activeElement;
-            if (active instanceof HTMLElement && active.closest(".sidebar-account__anchor")) {
-              active.blur();
-            }
-          }}
-          open={open}
-          placement={rail ? "rightBottom" : "topLeft"}
-          popupRender={() => (
-            <AccountMenuPanel
-              copy={copy}
-              signingOut={signingOut}
-              onLogout={() => {
-                setOpen(false);
-                signOut();
-              }}
-              onSettings={() => {
-                setOpen(false);
-                void navigate({ to: "/settings" });
-              }}
-            />
-          )}
-          trigger={["click"]}
-        >
-          <button
-            aria-label={copy.account.openMenu}
-            className="sidebar-account__trigger"
-            type="button"
+        <RailTip label={user.display_name} rail={rail}>
+          <Dropdown
+            getPopupContainer={() => document.body}
+            onOpenChange={(next, info) => {
+              if (!next && info.source === "menu") return;
+              setOpen(next);
+              if (next) return;
+              const active = document.activeElement;
+              if (active instanceof HTMLElement && active.closest(".sidebar-account__anchor")) {
+                active.blur();
+              }
+            }}
+            open={open}
+            placement={rail ? "rightBottom" : "topLeft"}
+            menu={{
+              onClick: ({ key }) => {
+                if (key === "settings") {
+                  setOpen(false);
+                  void navigate({ to: "/settings" });
+                  return;
+                }
+                if (key === "logout") {
+                  setOpen(false);
+                  signOut();
+                }
+              },
+              items: [
+                {
+                  key: "settings",
+                  icon: <Settings aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
+                  label: copy.account.settings,
+                },
+                {
+                  type: "divider",
+                },
+                {
+                  key: "logout",
+                  danger: true,
+                  disabled: signingOut,
+                  icon: <LogOut aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
+                  label: signingOut ? copy.signingOut : copy.signOut,
+                },
+              ],
+            }}
+            styles={{ root: { minWidth: rail ? 160 : 210 } }}
+            trigger={["click"]}
           >
-            <Badge className="sidebar-account__status" dot offset={rail ? [-1, 22] : [-2, 30]}>
-              <Avatar
-                size={rail ? 28 : 36}
-                src={user.avatar_url}
-                style={{
-                  backgroundColor: "var(--md-state-selected)",
-                  color: "var(--md-on-surface)",
-                }}
-              >
-                {initials(user.display_name)}
-              </Avatar>
-            </Badge>
-            <span className="sidebar-account__meta">
-              <Typography.Text className="sidebar-account__name" ellipsis strong>
-                {user.display_name}
-              </Typography.Text>
-              <Typography.Text className="sidebar-account__login" ellipsis>
-                {user.login}
-              </Typography.Text>
-            </span>
-            <ChevronDown
-              aria-hidden
-              className="sidebar-account__chev"
-              size={ICON.md}
-              strokeWidth={ICON_STROKE}
-            />
-          </button>
-        </Dropdown>
+            <Button
+              aria-label={copy.account.openMenu}
+              className="sidebar-account__trigger"
+              type="text"
+            >
+              <Badge className="sidebar-account__status" dot offset={rail ? [-1, 22] : [-2, 30]}>
+                <Avatar
+                  size={rail ? 28 : 36}
+                  src={user.avatar_url}
+                  style={{
+                    backgroundColor: "var(--md-state-selected)",
+                    color: "var(--md-on-surface)",
+                  }}
+                >
+                  {initials(user.display_name)}
+                </Avatar>
+              </Badge>
+              <span className="sidebar-account__meta">
+                <Typography.Text className="sidebar-account__name" ellipsis strong>
+                  {user.display_name}
+                </Typography.Text>
+                <Typography.Text className="sidebar-account__login" ellipsis>
+                  {user.login}
+                </Typography.Text>
+              </span>
+              <ChevronDown
+                aria-hidden
+                className="sidebar-account__chev"
+                size={ICON.md}
+                strokeWidth={ICON_STROKE}
+              />
+            </Button>
+          </Dropdown>
+        </RailTip>
       </div>
     </div>
   );

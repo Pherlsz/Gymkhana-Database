@@ -1,7 +1,6 @@
 import { Button } from "antd";
-import { StateCard } from "../../components/StateCard";
-import { ArrowLeft, ChevronRight } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { CadastroStateCard, StateCard } from "../../components/StateCard";
+import { ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ICON, ICON_STROKE } from "../../components/icons";
 import { useI18n } from "../../i18n";
@@ -12,8 +11,9 @@ import {
   type BillListSearch,
   type DocumentListSearch,
 } from "../api/client";
+import { queryKeys } from "../api/queryKeys";
 import { OcrReviewPanel } from "./OcrReviewPanel";
-import { CADASTRO_SEARCH_DEFAULTS, type TableKind } from "./cadastroSearch";
+import type { TableKind } from "./cadastroSearch";
 import { CadastroOwnerPicker } from "./CadastroOwnerPicker";
 import { useAttachmentsEnabled } from "./useAttachmentsEnabled";
 
@@ -63,7 +63,7 @@ export function CadastroOcrWorkspace({
   const copy = messages.tables.cadastro;
   const attachmentsEnabled = useAttachmentsEnabled();
   const capability = useQuery({
-    queryKey: ["ocr-capability"],
+    queryKey: queryKeys.ocr.capability,
     queryFn: ({ signal }) => getOCRCapability(signal),
   });
   const checking = !attachmentsEnabled.isFetched || capability.isLoading;
@@ -73,12 +73,8 @@ export function CadastroOcrWorkspace({
 
   if (blocked) {
     return (
-      <StateCard
-        action={
-          <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
-            <Button icon={<ArrowLeft size={14} />}>{copy.formsBackToCadastro}</Button>
-          </Link>
-        }
+      <CadastroStateCard
+        backLabel={copy.formsBackToCadastro}
         description={
           attachmentsEnabled.data === false ? copy.ocrUnavailableR2 : copy.ocrUnavailableProvider
         }
@@ -138,18 +134,18 @@ function CadastroRecordPicker({
   onSelect: (next: { table: "documents" | "bills"; id: string }) => void;
   onCreateInstead: () => void;
 }) {
-  const { messages } = useI18n();
+  const { messages, t } = useI18n();
   const copy = messages.tables.cadastro;
   const showDocuments = table !== "bills";
   const showBills = table !== "documents";
   const documents = useQuery({
-    queryKey: ["cadastro-ocr-documents", ownerId, typeId],
+    queryKey: queryKeys.records.documents(ownerId, { ...DOCUMENT_LIST_SEARCH, document_type: typeId ?? "" }),
     queryFn: ({ signal }) =>
       listDocuments(ownerId, { ...DOCUMENT_LIST_SEARCH, document_type: typeId ?? "" }, signal),
     enabled: showDocuments,
   });
   const bills = useQuery({
-    queryKey: ["cadastro-ocr-bills", ownerId, typeId],
+    queryKey: queryKeys.records.bills(ownerId, { ...BILL_LIST_SEARCH, bill_type: typeId ?? "" }),
     queryFn: ({ signal }) =>
       listBills(ownerId, { ...BILL_LIST_SEARCH, bill_type: typeId ?? "" }, signal),
     enabled: showBills,
@@ -168,7 +164,7 @@ function CadastroRecordPicker({
           ? copy.ocrCheckingHint
           : empty
             ? copy.ocrNoRecords
-            : copy.ocrRecordCount.replace("{n}", String(total))}
+            : t(copy.ocrRecordCount, { n: total })}
       </p>
       {showDocuments && documentRows.length ? (
         <section className="cadastro-ocr__group">
@@ -179,10 +175,10 @@ function CadastroRecordPicker({
             <section className="home-catalog__group">
               <div className="home-catalog__rows">
                 {documentRows.map((row) => (
-                  <button
+                  <Button
                     className="home-catalog__row"
                     key={row.id}
-                    type="button"
+                    type="text"
                     onClick={() => onSelect({ table: "documents", id: row.id })}
                   >
                     <span className="home-catalog__row-name">
@@ -194,7 +190,7 @@ function CadastroRecordPicker({
                       size={ICON.md}
                       strokeWidth={ICON_STROKE}
                     />
-                  </button>
+                  </Button>
                 ))}
               </div>
             </section>
@@ -210,10 +206,10 @@ function CadastroRecordPicker({
             <section className="home-catalog__group">
               <div className="home-catalog__rows">
                 {billRows.map((row) => (
-                  <button
+                  <Button
                     className="home-catalog__row"
                     key={row.id}
-                    type="button"
+                    type="text"
                     onClick={() => onSelect({ table: "bills", id: row.id })}
                   >
                     <span className="home-catalog__row-name">
@@ -225,7 +221,7 @@ function CadastroRecordPicker({
                       size={ICON.md}
                       strokeWidth={ICON_STROKE}
                     />
-                  </button>
+                  </Button>
                 ))}
               </div>
             </section>

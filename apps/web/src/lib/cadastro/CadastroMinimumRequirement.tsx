@@ -1,15 +1,10 @@
-// Minimum-requirement indicator for the manual cadastro flow.
-// A person needs at least one official document (CPF, RG, CNH, birth
-// certificate). Rendered as a thin text line under the step trail — never an
-// Alert/banner (that treatment was rejected in the 011 design review).
-// No official document: soft amber note naming the official list.
-// At least one: quiet "ok" line with the type label.
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "../../i18n";
 import { listDocuments, type DocumentListSearch } from "../api/client";
+import { queryKeys } from "../api/queryKeys";
 
 export const OFFICIAL_DOCUMENT_TYPE_KEYS = ["cpf", "rg", "cnh", "birth_certificate"];
-export const MINIMUM_REQUIREMENT_QUERY = ["cadastro-minimum-requirement"];
+export const MINIMUM_REQUIREMENT_QUERY = queryKeys.cadastro.minimumRequirement();
 
 const SEARCH: DocumentListSearch = {
   q: "",
@@ -24,10 +19,10 @@ const SEARCH: DocumentListSearch = {
 };
 
 export function CadastroMinimumRequirement({ ownerId }: { ownerId: string }) {
-  const { messages } = useI18n();
+  const { messages, t } = useI18n();
   const copy = messages.tables.cadastro;
   const query = useQuery({
-    queryKey: [...MINIMUM_REQUIREMENT_QUERY, ownerId],
+    queryKey: queryKeys.cadastro.minimumRequirement(ownerId),
     queryFn: ({ signal }) => listDocuments(ownerId, SEARCH, signal),
     staleTime: 5_000,
   });
@@ -39,7 +34,7 @@ export function CadastroMinimumRequirement({ ownerId }: { ownerId: string }) {
     const first = official[0]!;
     return (
       <p className="cadastro-minreq cadastro-minreq--ok">
-        {copy.minimumOk.replace("{label}", first.type.label)}
+        {t(copy.minimumOk, { label: first.type.label })}
       </p>
     );
   }

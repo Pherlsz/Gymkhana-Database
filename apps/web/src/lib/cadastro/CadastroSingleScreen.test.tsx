@@ -75,7 +75,7 @@ describe("CadastroSingleScreen", () => {
     it("calls onCancel when clicking breadcrumb back button", () => {
       const onCancel = vi.fn();
       renderSingleScreen("people", onCancel);
-      fireEvent.click(screen.getByRole("button", { name: /← Cadastro/i }));
+      fireEvent.click(screen.getByRole("button", { name: /^Cadastro$/i }));
       expect(onCancel).toHaveBeenCalled();
     });
 

@@ -25,7 +25,6 @@ const OWNER_ORDER: SearchModule[] = [
   "attachments",
 ];
 
-/** Module chips shown in Search — custom_data is not a user-facing grain. */
 export function searchModuleChips(
   modules: SearchCatalogResponse["modules"] | undefined,
 ): SearchCatalogResponse["modules"] {
@@ -49,7 +48,6 @@ function optionFromField(field: CatalogField): FieldFilterOption {
   };
 }
 
-/** Bucket for the fields Select: shared module label, or type/entity context. */
 export function fieldContextBucket(
   field: CatalogField,
   moduleLabels: Map<string, string>,

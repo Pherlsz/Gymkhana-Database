@@ -19,6 +19,21 @@ export default defineConfig({
       "/api": { target: "http://127.0.0.1:8080" },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/antd") || id.includes("node_modules/@ant-design")) {
+            return "vendor-antd";
+          }
+          if (id.includes("node_modules/@tanstack")) {
+            return "vendor-tanstack";
+          }
+        },
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     globals: true,

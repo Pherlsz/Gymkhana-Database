@@ -86,12 +86,6 @@ export type ColumnGroupKey =
   | "other"
   | "custom";
 
-/**
- * Which heading a column sits under in the picker. People alone carries ~57
- * columns, so a flat list is unreadable; the group names are shared across the
- * three sheets wherever the same concept exists, because Orchestration 12.1
- * forbids per-module divergence in the table chrome.
- */
 const COLUMN_GROUPS: Record<TableSheetScope, Record<string, ColumnGroupKey>> = {
   profiles: {
     full_name: "identity",

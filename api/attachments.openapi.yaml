@@ -20,24 +20,24 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AttachmentUploadIntentRequest'
+              $ref: "#/components/schemas/AttachmentUploadIntentRequest"
       responses:
-        '201':
+        "201":
           description: Upload intent and signed PUT request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AttachmentUploadGrant'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+                $ref: "#/components/schemas/AttachmentUploadGrant"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/attachment-upload-intents/{intent_id}/confirm:
     post:
       operationId: confirmAttachmentUpload
@@ -46,28 +46,28 @@ paths:
       security:
         - sessionCookie: []
       parameters:
-        - $ref: '#/components/parameters/IntentID'
+        - $ref: "#/components/parameters/IntentID"
       responses:
-        '201':
+        "201":
           description: Verified attachment metadata
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Attachment'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '410':
-          $ref: '#/components/responses/Gone'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+                $ref: "#/components/schemas/Attachment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "410":
+          $ref: "#/components/responses/Gone"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/attachments:
     get:
       operationId: listAttachments
@@ -80,7 +80,7 @@ paths:
           in: query
           required: true
           schema:
-            $ref: '#/components/schemas/AttachmentOwnerKind'
+            $ref: "#/components/schemas/AttachmentOwnerKind"
         - name: owner_id
           in: query
           required: true
@@ -90,7 +90,7 @@ paths:
         - name: custom_target_kind
           in: query
           schema:
-            $ref: '#/components/schemas/AttachmentCustomTargetKind'
+            $ref: "#/components/schemas/AttachmentCustomTargetKind"
         - name: field_definition_id
           in: query
           schema:
@@ -102,20 +102,20 @@ paths:
             type: boolean
             default: false
       responses:
-        '200':
+        "200":
           description: Attachment list
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AttachmentListResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+                $ref: "#/components/schemas/AttachmentListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/attachments/{attachment_id}/download:
     post:
       operationId: createAttachmentDownload
@@ -124,26 +124,26 @@ paths:
       security:
         - sessionCookie: []
       parameters:
-        - $ref: '#/components/parameters/AttachmentID'
+        - $ref: "#/components/parameters/AttachmentID"
       responses:
-        '200':
+        "200":
           description: Signed GET request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SignedRequest'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+                $ref: "#/components/schemas/SignedRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/attachments/{attachment_id}:
     delete:
       operationId: trashAttachment
@@ -152,32 +152,32 @@ paths:
       security:
         - sessionCookie: []
       parameters:
-        - $ref: '#/components/parameters/AttachmentID'
+        - $ref: "#/components/parameters/AttachmentID"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TrashAttachmentRequest'
+              $ref: "#/components/schemas/TrashAttachmentRequest"
       responses:
-        '200':
+        "200":
           description: Trashed attachment metadata
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Attachment'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+                $ref: "#/components/schemas/Attachment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /api/v1/attachments/{attachment_id}/restore:
     post:
       operationId: restoreAttachment
@@ -186,32 +186,32 @@ paths:
       security:
         - sessionCookie: []
       parameters:
-        - $ref: '#/components/parameters/AttachmentID'
+        - $ref: "#/components/parameters/AttachmentID"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RestoreAttachmentRequest'
+              $ref: "#/components/schemas/RestoreAttachmentRequest"
       responses:
-        '200':
+        "200":
           description: Restored attachment metadata
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Attachment'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+                $ref: "#/components/schemas/Attachment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 components:
   securitySchemes:
     sessionCookie:
@@ -249,18 +249,18 @@ components:
       required: [owner_kind, owner_id]
       properties:
         owner_kind:
-          $ref: '#/components/schemas/AttachmentOwnerKind'
+          $ref: "#/components/schemas/AttachmentOwnerKind"
         owner_id:
           type: string
           format: uuid
         custom_target_kind:
-          $ref: '#/components/schemas/AttachmentCustomTargetKind'
+          $ref: "#/components/schemas/AttachmentCustomTargetKind"
         field_definition_id:
           type: string
           format: uuid
     AttachmentUploadIntentRequest:
       allOf:
-        - $ref: '#/components/schemas/AttachmentOwnerRequest'
+        - $ref: "#/components/schemas/AttachmentOwnerRequest"
         - type: object
           additionalProperties: false
           required: [original_filename, declared_mime, expected_size]
@@ -304,7 +304,7 @@ components:
           type: string
           format: uuid
         upload:
-          $ref: '#/components/schemas/SignedRequest'
+          $ref: "#/components/schemas/SignedRequest"
         expires_at:
           type: string
           format: date-time
@@ -329,12 +329,12 @@ components:
           type: string
           format: uuid
         owner_kind:
-          $ref: '#/components/schemas/AttachmentOwnerKind'
+          $ref: "#/components/schemas/AttachmentOwnerKind"
         owner_id:
           type: string
           format: uuid
         custom_target_kind:
-          $ref: '#/components/schemas/AttachmentCustomTargetKind'
+          $ref: "#/components/schemas/AttachmentCustomTargetKind"
         field_definition_id:
           type: string
           format: uuid
@@ -350,9 +350,9 @@ components:
           minimum: 1
         sha256:
           type: string
-          pattern: '^[a-f0-9]{64}$'
+          pattern: "^[a-f0-9]{64}$"
         lifecycle_state:
-          $ref: '#/components/schemas/AttachmentLifecycleState'
+          $ref: "#/components/schemas/AttachmentLifecycleState"
         deleted_at:
           type: string
           format: date-time
@@ -377,7 +377,7 @@ components:
         attachments:
           type: array
           items:
-            $ref: '#/components/schemas/Attachment'
+            $ref: "#/components/schemas/Attachment"
     TrashAttachmentRequest:
       type: object
       additionalProperties: false
@@ -425,59 +425,59 @@ components:
       required: [error, request_id]
       properties:
         error:
-          $ref: '#/components/schemas/ErrorDetail'
+          $ref: "#/components/schemas/ErrorDetail"
         request_id:
           type: string
         field_errors:
           type: array
           items:
-            $ref: '#/components/schemas/FieldError'
+            $ref: "#/components/schemas/FieldError"
   responses:
     BadRequest:
       description: Invalid attachment request
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
     Unauthorized:
       description: Authentication is required
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
     Forbidden:
       description: Attachment operation is forbidden
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
     NotFound:
       description: Attachment resource was not found
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
     Conflict:
       description: Attachment version or lifecycle state conflict
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
     Gone:
       description: Upload intent expired
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
     ValidationError:
       description: Attachment field validation failed
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
     ServiceUnavailable:
       description: Private storage or another required dependency is unavailable
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"

@@ -1,5 +1,5 @@
 import type { CustomField, ProfileListSearch } from "../api/client";
-import type { CatalogV1 } from "../../i18n/v1/catalog";
+import type { CatalogV1 } from "../../i18n/v1/pt-BR";
 import {
   brazilStateOptions,
   customFieldFilter,
@@ -69,9 +69,6 @@ export function buildSheetFilters({
 
   if (section === "documents") {
     return [
-      // Tipo leads the list on documents and bills alike. It used to be a
-      // persistent Select on bills only, which is exactly the cross-module
-      // inconsistency Orchestration 12.1 forbids.
       selectFilter(
         "type",
         copy.columns.type,
@@ -313,13 +310,6 @@ export function buildSheetFilters({
   ];
 }
 
-/**
- * Chips come straight from the filter fields, so a chip always carries the
- * column's own label and clears through the same `onChange` that set it. The
- * previous hand-maintained list had to restate every label and could drift from
- * the field it described. `local` marks filters that only see the loaded page,
- * so the toolbar can flag their scope.
- */
 export function activeFilterChips(fields: ToolbarFilterField[]): {
   key: string;
   field: string;

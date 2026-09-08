@@ -14,12 +14,6 @@ import { useMediaQuery } from "../useMediaQuery";
 import { SHEET_INSPECTOR_SHEET_SIZE } from "./sheetDefaults";
 import { ICON, ICON_STROKE } from "../../components/icons";
 
-/**
- * One surface per toolbar subject, so opening Colunas or Filtros never pushes
- * the grid down. Anchored to its trigger from `sm` up and a bottom sheet below
- * it, with the same body in both — which is what lets the column funnel in
- * Orchestration 12.1.1 mount this body in a header cell later without a rewrite.
- */
 export function ToolbarSurface({
   label,
   title,
@@ -43,8 +37,6 @@ export function ToolbarSurface({
   const anchored = useMediaQuery(atLeast("sm"));
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  // Ant moves focus into a Drawer on its own; a Popover leaves it on the
-  // trigger, so keyboard users would tab through the page to reach the panel.
   useEffect(() => {
     if (!open || !anchored) return;
     const frame = requestAnimationFrame(() => {
@@ -86,9 +78,6 @@ export function ToolbarSurface({
 
   const trigger = (
     <Button
-      // The name stays the subject alone. Folding the badge in would rename the
-      // control every time the count moves, and the surfaces already announce
-      // their own state once opened.
       aria-controls={open ? surfaceId : undefined}
       aria-expanded={open}
       aria-haspopup="dialog"
@@ -122,7 +111,7 @@ export function ToolbarSurface({
         <Drawer
           className="toolbar-surface__drawer"
           destroyOnClose
-          height={SHEET_INSPECTOR_SHEET_SIZE}
+          size={SHEET_INSPECTOR_SHEET_SIZE}
           open={open}
           placement="bottom"
           title={undefined}

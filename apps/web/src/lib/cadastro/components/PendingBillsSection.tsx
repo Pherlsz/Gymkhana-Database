@@ -25,15 +25,17 @@ export function PendingBillsSection({
   open,
   onToggleOpen,
 }: PendingBillsSectionProps) {
-  const { messages } = useI18n();
+  const { messages, t } = useI18n();
   const copy = messages.tables.cadastro;
+  const actions = messages.common.actions;
+  const labels = messages.common.labels;
 
   const [addingBill, setAddingBill] = useState(false);
   const [billState, setBillState] = useState<BillFormFieldsState>(INITIAL_BILL_FIELDS);
   const inlineBillFileId = useId();
 
   const handleConfirmAdd = () => {
-    const type = billTypes.find((t) => t.id === billState.billTypeId);
+    const type = billTypes.find((bt) => bt.id === billState.billTypeId);
     const serviceName = type?.label || copy.billFallbackDefault;
     const newBill: PendingBill = {
       id: String(Date.now()),
@@ -68,7 +70,7 @@ export function PendingBillsSection({
       competence: "2026-09",
       amount: "150,00",
       medium: "DIGITAL",
-      notes: copy.ocrExtractedNote.replace("{filename}", file.name),
+      notes: t(copy.ocrExtractedNote, { filename: file.name }),
       tag: "ocr",
     };
     onAddBill(newBill);
@@ -81,8 +83,8 @@ export function PendingBillsSection({
     <CadastroStagedSection
       addLabel={copy.btnAddBill}
       adding={addingBill}
-      cancelLabel={copy.btnCancelAdd}
-      confirmLabel={copy.btnConfirmAdd}
+      cancelLabel={actions.cancel}
+      confirmLabel={actions.add}
       count={bills.length}
       defaultOpen={defaultOpen}
       emptyText={copy.sectionBillsEmpty}
@@ -92,7 +94,7 @@ export function PendingBillsSection({
         id: b.id,
         title: b.provider ? `${b.serviceName} — ${b.provider}` : b.serviceName,
         subtitle: `${b.installation ? `${copy.fieldBillInstallation} ${b.installation}` : copy.docNumberEmpty}${b.amount ? ` · R$ ${b.amount}` : ""}`,
-        tagText: b.tag === "ocr" ? copy.tagOcr : copy.tagActive,
+        tagText: b.tag === "ocr" ? labels.ocr : copy.tagActive,
         isOcr: b.tag === "ocr",
       }))}
       modifier="bills"
@@ -111,7 +113,7 @@ export function PendingBillsSection({
       }}
       onToggleOpen={onToggleOpen}
       open={open}
-      removeLabel={copy.actionRemove}
+      removeLabel={actions.remove}
       title={copy.sectionBillsTitle}
     >
       <BillFormFields

@@ -10,7 +10,6 @@ export type GlobalSearchState = {
   limit: 25 | 50 | 100;
   sort: "relevance" | "updated_at";
   order: "asc" | "desc";
-  /** Profile id whose in-flow ficha is open; empty when none. */
   preview: string;
 };
 
@@ -18,11 +17,9 @@ export type MatchRow = {
   fieldKey: string;
   fieldLabel: string;
   preview: string;
-  /** Optional module key for related hits (documents, bills, …). */
   module?: string;
 };
 
-/** One row per matched field, grouped so the record is the unit of answer. */
 export type ResultGroup = {
   key: string;
   module: SearchResult["module"];
@@ -33,7 +30,6 @@ export type ResultGroup = {
   matches: MatchRow[];
 };
 
-/** One card per profile; person fields + related document/bill/custom hits. */
 export type ProfileCard = {
   key: string;
   profileId: string;
@@ -44,6 +40,12 @@ export type ProfileCard = {
   relatedGroups: ResultGroup[];
 };
 
+export type SearchPagination = {
+  page: number;
+  limit: number;
+  total: number;
+};
+
 export const SEARCH_MODULE_VALUES: SearchModule[] = [
   "profiles",
   "documents",
@@ -51,3 +53,4 @@ export const SEARCH_MODULE_VALUES: SearchModule[] = [
   "custom_data",
   "attachments",
 ];
+

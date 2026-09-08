@@ -12,17 +12,17 @@
 
 ## Review findings (evidence)
 
-| # | Finding | Evidence | Severity |
-|---|---------|----------|----------|
-| R1 | Success notice never seen: `onSaved` sets `notice` then `goToRecord()` navigates away | `CadastroPage.tsx:300-303` | High |
-| R2 | No progress indication Tipo → Dono → Registro | `CadastroPage.tsx:234-348`; `pages/mode-picker.md` itself lists this anti-pattern | Medium |
-| R3 | Header tools row mixes `SegmentedTabs` with a text `Button` ("Trocar tipo") — different volumes in one scope | `CadastroPage.tsx:200-224`; Pedro's UI rule | Medium |
-| R4 | OCR/Forms disabled reasons only in `title` tooltips | `CadastroPage.tsx:175-187` | Medium |
-| V1 | **Flat, harsh page**: work blocks stack as bare columns with no surface hierarchy; everything sits at the same visual level on gray canvas | `cadastro.css` (107 lines, mostly flex/gap only) | High (visual) |
-| V2 | **Crowded header**: two Segmented controls + a text button jammed into `PageHeader` actions with a 0.5rem gap | `CadastroPage.tsx:200-224` | Medium |
-| V3 | **No rhythm between steps**: catalog → owner → record blocks appear/disappear with no container to anchor the eye | `CadastroPage.tsx:234-348` | Medium |
-| R5 | Dead `manual + people` null branch in `CadastroPanel.tsx:42-44` | — | Low |
-| R6 | Catalog loading reuses OCR copy (`ocrCheckingHint`) | `CadastroTypePicker.tsx:124-125` | Low |
+| #   | Finding                                                                                                                                    | Evidence                                                                          | Severity      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ------------- |
+| R1  | Success notice never seen: `onSaved` sets `notice` then `goToRecord()` navigates away                                                      | `CadastroPage.tsx:300-303`                                                        | High          |
+| R2  | No progress indication Tipo → Dono → Registro                                                                                              | `CadastroPage.tsx:234-348`; `pages/mode-picker.md` itself lists this anti-pattern | Medium        |
+| R3  | Header tools row mixes `SegmentedTabs` with a text `Button` ("Trocar tipo") — different volumes in one scope                               | `CadastroPage.tsx:200-224`; Pedro's UI rule                                       | Medium        |
+| R4  | OCR/Forms disabled reasons only in `title` tooltips                                                                                        | `CadastroPage.tsx:175-187`                                                        | Medium        |
+| V1  | **Flat, harsh page**: work blocks stack as bare columns with no surface hierarchy; everything sits at the same visual level on gray canvas | `cadastro.css` (107 lines, mostly flex/gap only)                                  | High (visual) |
+| V2  | **Crowded header**: two Segmented controls + a text button jammed into `PageHeader` actions with a 0.5rem gap                              | `CadastroPage.tsx:200-224`                                                        | Medium        |
+| V3  | **No rhythm between steps**: catalog → owner → record blocks appear/disappear with no container to anchor the eye                          | `CadastroPage.tsx:234-348`                                                        | Medium        |
+| R5  | Dead `manual + people` null branch in `CadastroPanel.tsx:42-44`                                                                            | —                                                                                 | Low           |
+| R6  | Catalog loading reuses OCR copy (`ocrCheckingHint`)                                                                                        | `CadastroTypePicker.tsx:124-125`                                                  | Low           |
 
 Already good (keep): URL-search state machine + tests, owner combobox via `SearchField lookup suggest`, `.home-catalog` rows, `.page-measure` form-page layout.
 
@@ -35,6 +35,7 @@ Already good (keep): URL-search state machine + tests, owner combobox via `Searc
 **Objective:** After creating a record the user actually sees the success message.
 
 **Files:**
+
 - Modify: `apps/web/src/CadastroPage.tsx` (~lines 230-232, 299, 326)
 - Create: `apps/web/src/lib/cadastro/cadastroFeedback.ts`
 - Test: `apps/web/src/lib/cadastro/cadastroFeedback.test.tsx`
@@ -129,6 +130,7 @@ methodDisabledForms: "Formulários exigem permissão de administração.", // re
 **Objective:** Give every work block a quiet surface — hairline border, soft shadow, generous padding — so steps read as separate, calm cards instead of a flat stack.
 
 **Files:**
+
 - Modify: `apps/web/src/cadastro.css`
 - Modify: `apps/web/src/CadastroPage.tsx`
 - Modify: `apps/web/src/lib/cadastro/CadastroTypePicker.tsx`, `CadastroManualPanel.tsx`, `CadastroOwnerPicker.tsx` (add `className="cadastro-card"` to their roots where they own a root element; otherwise wrap in `CadastroPage`)
@@ -156,7 +158,10 @@ Append to `cadastro.css`:
 }
 
 @media (max-width: 600px) {
-  .cadastro-card { padding: 0.875rem; border-radius: var(--gym-radius-md); }
+  .cadastro-card {
+    padding: 0.875rem;
+    border-radius: var(--gym-radius-md);
+  }
 }
 ```
 
@@ -184,6 +189,7 @@ git commit -m "feat(cadastro): card surface treatment for work blocks"
 **Objective:** One visible trail — Tipo → Método → Dono → Registro — with numbered markers; clickable completed steps replace the floating "Trocar tipo" button.
 
 **Files:**
+
 - Create: `apps/web/src/lib/cadastro/CadastroSteps.tsx`
 - Create: `apps/web/src/lib/cadastro/CadastroSteps.test.tsx`
 - Modify: `apps/web/src/cadastro.css`
@@ -347,7 +353,9 @@ CSS (append to `cadastro.css`; ink/paper only — marker numbers in ink, active 
   background: var(--md-state-selected);
   color: var(--md-on-surface);
 }
-.cadastro-steps__link--done:hover { color: var(--md-on-surface); }
+.cadastro-steps__link--done:hover {
+  color: var(--md-on-surface);
+}
 .cadastro-steps__link--done:hover .cadastro-steps__marker {
   background: var(--md-state-pressed);
 }
@@ -431,12 +439,16 @@ In `cadastro.css` update `.cadastro-page__tools`:
 Directly under `PageHeader`, when `work !== "catalog"`:
 
 ```tsx
-{work !== "catalog" && ocrBlocked && search.table !== "people" ? (
-  <p className="cadastro-catalog__hint">{ocrReason}</p>
-) : null}
-{work !== "catalog" && !canUseForms ? (
-  <p className="cadastro-catalog__hint">{copy.formsDisabled}</p>
-) : null}
+{
+  work !== "catalog" && ocrBlocked && search.table !== "people" ? (
+    <p className="cadastro-catalog__hint">{ocrReason}</p>
+  ) : null;
+}
+{
+  work !== "catalog" && !canUseForms ? (
+    <p className="cadastro-catalog__hint">{copy.formsDisabled}</p>
+  ) : null;
+}
 ```
 
 Keep the `title` tooltips as well. (Render only the hint for the method the user is looking at if both conditions overlap — check `work === "ocr"` / `"forms"` to pick.)
@@ -490,6 +502,7 @@ Keep the `title` tooltips as well. (Render only the hint for the method the user
 **Step 1:** `pnpm dev` (web workspace), open `/cadastro`.
 
 **Step 2:** Walk every path at 375 / 768 / 1024px:
+
 - people → manual create → toast visible → lands on profile.
 - documents → catalog card → type → manual → owner card → record card; trail numbers/checks/back-clicks all correct.
 - xlsx wizard; OCR when enabled; forms admin vs non-admin (inline hint).
@@ -503,19 +516,19 @@ Keep the `title` tooltips as well. (Render only the hint for the method the user
 
 ## Files likely to change (summary)
 
-| File | Change |
-|---|---|
-| `apps/web/src/CadastroPage.tsx` | feedback wiring, steps integration, delete change-type button, hints |
-| `apps/web/src/cadastro.css` | `.cadastro-card`, `.cadastro-steps`, header spacing, catalog group softening |
-| `apps/web/src/lib/cadastro/CadastroSteps.tsx` | new |
-| `apps/web/src/lib/cadastro/CadastroSteps.test.tsx` | new |
-| `apps/web/src/lib/cadastro/cadastroFeedback.ts` | new |
-| `apps/web/src/lib/cadastro/cadastroFeedback.test.tsx` | new |
-| `apps/web/src/lib/cadastro/CadastroTypePicker.tsx` | card class + loading copy |
-| `apps/web/src/lib/cadastro/CadastroManualPanel.tsx` | card class |
-| `apps/web/src/lib/cadastro/CadastroOwnerPicker.tsx` | card class |
-| `apps/web/src/lib/cadastro/CadastroPanel.tsx` | dead branch removal |
-| `apps/web/src/i18n/v1/*` | new keys |
+| File                                                  | Change                                                                       |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `apps/web/src/CadastroPage.tsx`                       | feedback wiring, steps integration, delete change-type button, hints         |
+| `apps/web/src/cadastro.css`                           | `.cadastro-card`, `.cadastro-steps`, header spacing, catalog group softening |
+| `apps/web/src/lib/cadastro/CadastroSteps.tsx`         | new                                                                          |
+| `apps/web/src/lib/cadastro/CadastroSteps.test.tsx`    | new                                                                          |
+| `apps/web/src/lib/cadastro/cadastroFeedback.ts`       | new                                                                          |
+| `apps/web/src/lib/cadastro/cadastroFeedback.test.tsx` | new                                                                          |
+| `apps/web/src/lib/cadastro/CadastroTypePicker.tsx`    | card class + loading copy                                                    |
+| `apps/web/src/lib/cadastro/CadastroManualPanel.tsx`   | card class                                                                   |
+| `apps/web/src/lib/cadastro/CadastroOwnerPicker.tsx`   | card class                                                                   |
+| `apps/web/src/lib/cadastro/CadastroPanel.tsx`         | dead branch removal                                                          |
+| `apps/web/src/i18n/v1/*`                              | new keys                                                                     |
 
 ## Validation
 

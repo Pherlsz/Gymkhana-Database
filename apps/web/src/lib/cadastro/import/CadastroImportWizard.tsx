@@ -1,18 +1,16 @@
-import { Button, Segmented } from "antd";
-import { ArrowLeft } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Segmented } from "antd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { StateCard } from "../../../components/StateCard";
+import { CadastroStateCard } from "../../../components/StateCard";
 import { useI18n } from "../../../i18n";
-import { CADASTRO_SEARCH_DEFAULTS } from "../cadastroSearch";
 import {
   getOperationsCatalog,
   getOperationImport,
   getOperationImportReport,
   type OperationModule,
 } from "../../api/operations";
-import { ImportCreator, ImportWorkspace } from "../../../OperationsPage";
+import { queryKeys } from "../../api/queryKeys";
+import { ImportCreator, ImportWorkspace } from "../../operations/ImportWorkspace";
 import { operationActive, operationTerminal } from "./importHelpers";
 
 export function CadastroImportWizard({
@@ -32,19 +30,19 @@ export function CadastroImportWizard({
   const [currentModule, setCurrentModule] = useState<OperationModule>(module);
 
   const catalog = useQuery({
-    queryKey: ["operations-catalog"],
+    queryKey: queryKeys.operations.catalog,
     queryFn: ({ signal }) => getOperationsCatalog(signal),
     staleTime: 60_000,
   });
   const selectedImport = useQuery({
-    queryKey: ["operation-import", importId],
+    queryKey: queryKeys.operations.import(importId),
     queryFn: ({ signal }) => getOperationImport(importId!, signal),
     enabled: Boolean(importId),
     refetchInterval: (query) =>
       query.state.data && operationActive(query.state.data.state) ? 1_500 : false,
   });
   const selectedReport = useQuery({
-    queryKey: ["operation-import-report", importId],
+    queryKey: queryKeys.operations.importReport(importId),
     queryFn: ({ signal }) => getOperationImportReport(importId!, signal),
     enabled: Boolean(
       importId && selectedImport.data && operationTerminal(selectedImport.data.state),
@@ -52,9 +50,9 @@ export function CadastroImportWizard({
   });
   const refresh = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["operation-imports"] }),
-      queryClient.invalidateQueries({ queryKey: ["operation-import", importId] }),
-      queryClient.invalidateQueries({ queryKey: ["operation-import-report", importId] }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.operations.importsList }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.operations.import(importId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.operations.importReport(importId) }),
     ]);
   };
   const modules = useMemo(
@@ -65,21 +63,19 @@ export function CadastroImportWizard({
 
   if (catalog.isError) {
     return (
-      <StateCard
-        action={
-          <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
-            <Button icon={<ArrowLeft size={14} />}>{copy.formsBackToCadastro}</Button>
-          </Link>
-        }
+      <CadastroStateCard
+        backLabel={copy.formsBackToCadastro}
         description={copy.massImportCatalogErrorDesc}
         kind="error"
+        onRetry={() => void refresh()}
         title={copy.massImportCatalogError}
       />
     );
   }
   if (!catalog.data) {
     return (
-      <StateCard
+      <CadastroStateCard
+        backToCadastro={false}
         description={copy.massImportLoadingDesc}
         kind="loading"
         title={copy.massImportLoading}
@@ -88,12 +84,8 @@ export function CadastroImportWizard({
   }
   if (!isModuleAllowed) {
     return (
-      <StateCard
-        action={
-          <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
-            <Button icon={<ArrowLeft size={14} />}>{copy.formsBackToCadastro}</Button>
-          </Link>
-        }
+      <CadastroStateCard
+        backLabel={copy.formsBackToCadastro}
         description={copy.massImportForbiddenDesc}
         kind="warning"
         title={copy.massImportForbidden}

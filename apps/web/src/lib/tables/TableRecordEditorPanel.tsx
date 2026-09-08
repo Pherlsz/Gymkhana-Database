@@ -18,9 +18,11 @@ import {
   type ProfileListSearch,
   type UserRole,
 } from "../api/client";
-import { BillEditor, DocumentEditor } from "../../ProfileRecordsPanel";
+import { queryKeys } from "../api/queryKeys";
+import { BillEditor } from "../records/BillEditor";
+import { DocumentEditor } from "../records/DocumentEditor";
 import { AttachmentsPanel } from "../../AttachmentsPanel";
-import { CadastroOcrSection } from "../cadastro/CadastroPanel";
+import { CadastroOcrSection } from "../cadastro/CadastroOcrSection";
 import { billSearch, documentSearch } from "./sheetQuery";
 
 export function TableRecordEditorPanel({
@@ -62,19 +64,19 @@ function DocumentTableEditor({
   if (!mode || mode === "types") return null;
 
   const recordsQuery = useQuery({
-    queryKey: ["table-record-editor", "documents", search.records_owner, documentSearch(search)],
+    queryKey: queryKeys.tables.documents(documentSearch(search), search.records_owner),
     queryFn: ({ signal }) => listDocuments(search.records_owner, documentSearch(search), signal),
     enabled: Boolean(mode === "create" ? search.records_owner : selectedID || search.records_owner),
   });
   const selected = recordsQuery.data?.documents.find((value) => value.id === selectedID);
   const ownerID = search.records_owner ?? selected?.owner_profile_id;
   const ownerQuery = useQuery({
-    queryKey: ["profile", ownerID],
+    queryKey: queryKeys.profiles.detail(ownerID),
     queryFn: ({ signal }) => getProfile(ownerID!, signal),
     enabled: Boolean(ownerID && mode),
   });
   const typesQuery = useQuery({
-    queryKey: ["document-types"],
+    queryKey: queryKeys.types.documents,
     queryFn: ({ signal }) => listDocumentTypes(signal),
     enabled: Boolean(mode),
   });
@@ -90,19 +92,19 @@ function DocumentTableEditor({
       onClose={() => onSearch({ document_selected: undefined, document_mode: undefined })}
       onDelete={async (value, confirmation) => {
         await deleteDocument(value.id, value.version, confirmation);
-        await queryClient.invalidateQueries({ queryKey: ["tables", "documents"] });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.tables.documents() });
         onNotice(messages.records.panel.docDeletedNotice);
         onSearch({ document_selected: undefined, document_mode: undefined });
       }}
       onDuplicate={async (id) => {
         const value = await duplicateDocument(id);
-        await queryClient.invalidateQueries({ queryKey: ["tables", "documents"] });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.tables.documents() });
         onNotice(messages.records.panel.docDuplicatedNotice);
         onSearch({ document_selected: value.id, document_mode: "edit" });
       }}
       onEdit={() => onSearch({ document_mode: "edit" })}
       onSaved={async (value, message) => {
-        await queryClient.invalidateQueries({ queryKey: ["tables", "documents"] });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.tables.documents() });
         onNotice(message);
         onSearch({ document_selected: value.id, document_mode: "view" });
       }}
@@ -150,19 +152,19 @@ function BillTableEditor({
   if (!mode || mode === "types") return null;
 
   const recordsQuery = useQuery({
-    queryKey: ["table-record-editor", "bills", search.records_owner, billSearch(search)],
+    queryKey: queryKeys.tables.bills(billSearch(search), search.records_owner),
     queryFn: ({ signal }) => listBills(search.records_owner, billSearch(search), signal),
     enabled: Boolean(mode === "create" ? search.records_owner : selectedID || search.records_owner),
   });
   const selected = recordsQuery.data?.bills.find((value) => value.id === selectedID);
   const ownerID = search.records_owner ?? selected?.owner_profile_id;
   const ownerQuery = useQuery({
-    queryKey: ["profile", ownerID],
+    queryKey: queryKeys.profiles.detail(ownerID),
     queryFn: ({ signal }) => getProfile(ownerID!, signal),
     enabled: Boolean(ownerID && mode),
   });
   const typesQuery = useQuery({
-    queryKey: ["bill-types"],
+    queryKey: queryKeys.types.bills,
     queryFn: ({ signal }) => listBillTypes(signal),
     enabled: Boolean(mode),
   });
@@ -178,19 +180,19 @@ function BillTableEditor({
       onClose={() => onSearch({ bill_selected: undefined, bill_mode: undefined })}
       onDelete={async (value, confirmation) => {
         await deleteBill(value.id, value.version, confirmation);
-        await queryClient.invalidateQueries({ queryKey: ["tables", "bills"] });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.tables.bills() });
         onNotice(messages.records.panel.billDeletedNotice);
         onSearch({ bill_selected: undefined, bill_mode: undefined });
       }}
       onDuplicate={async (id) => {
         const value = await duplicateBill(id);
-        await queryClient.invalidateQueries({ queryKey: ["tables", "bills"] });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.tables.bills() });
         onNotice(messages.records.panel.billDuplicatedNotice);
         onSearch({ bill_selected: value.id, bill_mode: "edit" });
       }}
       onEdit={() => onSearch({ bill_mode: "edit" })}
       onSaved={async (value, message) => {
-        await queryClient.invalidateQueries({ queryKey: ["tables", "bills"] });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.tables.bills() });
         onNotice(message);
         onSearch({ bill_selected: value.id, bill_mode: "view" });
       }}

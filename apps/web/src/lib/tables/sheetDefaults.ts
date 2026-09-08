@@ -1,5 +1,3 @@
-/** Product defaults for gymkhana sheets. Account overlays go through `resolveSheetPreferences`. */
-
 import { BREAKPOINT } from "../breakpoints";
 
 export const SHEET_PAGE_SIZES = [50, 100, 250, 500] as const;
@@ -14,7 +12,6 @@ export const SHEET_COLUMN_WIDTH = {
 } as const;
 
 export const SHEET_SEARCH_DEBOUNCE_MS = 450;
-/** Derived from the breakpoint ladder so CSS and JS cannot disagree. */
 export const SHEET_INSPECTOR_MAX_WIDTH_PX = BREAKPOINT.md - 1;
 export const SHEET_INSPECTOR_SHEET_SIZE = "min(60dvh, 36rem)";
 export const SHEET_MIN_BODY_HEIGHT_PX = 160;

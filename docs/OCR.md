@@ -21,15 +21,15 @@ Do not reuse `fake`, add a provider SDK, invent credential variables, or select 
 
 ## Configuration contract
 
-| Variable                          | Contract                                                                      |
-| --------------------------------- | ----------------------------------------------------------------------------- |
-| `OCR_ENABLED`                     | Explicit switch; defaults to `false`                                          |
-| `OCR_PROVIDER`                    | Required when enabled; currently only `fake` in `APP_ENV=test`                |
-| `OCR_MODEL`                       | Required when enabled; nonempty identifier, at most 120 characters            |
-| `OCR_TIMEOUT`                     | Extraction deadline from `1s` through `5m`; defaults to `90s`                 |
+| Variable                          | Contract                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------ |
+| `OCR_ENABLED`                     | Explicit switch; defaults to `false`                                           |
+| `OCR_PROVIDER`                    | Required when enabled; currently only `fake` in `APP_ENV=test`                 |
+| `OCR_MODEL`                       | Required when enabled; nonempty identifier, at most 120 characters             |
+| `OCR_TIMEOUT`                     | Extraction deadline from `1s` through `5m`; defaults to `90s`                  |
 | `OCR_MAX_REQUESTS_PER_HOUR`       | Persistent per-user request limit from 1 through 1,000; defaults to 10         |
 | `OCR_MAX_PROVIDER_USAGE_PER_HOUR` | Persistent per-user provider-usage limit through 100,000,000; defaults 500,000 |
-| `OCR_MAX_SOURCE_BYTES`            | Source limit through 20 MiB; defaults to 20 MiB                               |
+| `OCR_MAX_SOURCE_BYTES`            | Source limit through 20 MiB; defaults to 20 MiB                                |
 
 OCR also requires authentication, PostgreSQL, private attachment storage, and the Profile, Document, Bill, and Custom Data services. A missing dependency stops startup. While disabled, the authenticated capability endpoint reports `enabled=false` and safe fixed limits; lifecycle routes return `ocr_unavailable`.
 
@@ -103,7 +103,7 @@ Each group produces durable per-suggestion `APPLIED`, `STALE`, or `FAILED` resul
 | --------------------------------------------- | -------------------------------------------------------------------------------- |
 | Disabled runtime                              | Capability says disabled; lifecycle routes fail closed; no provider call         |
 | Missing/revoked session or role               | Source/job/suggestion/application denied without content disclosure              |
-| Trashed, purged, changed, spoofed source      | Not found or `ocr_unsafe_source`; provider is not called                          |
+| Trashed, purged, changed, spoofed source      | Not found or `ocr_unsafe_source`; provider is not called                         |
 | Oversized, encrypted, corrupt, or mismatched  | Deterministic source rejection before provider execution                         |
 | Unknown/duplicate field or malformed evidence | Whole provider result rejected; no suggestion or canonical mutation is committed |
 | Prompt/instruction markup in evidence/value   | Preserved only as bounded inert data and rendered as text                        |
@@ -113,9 +113,9 @@ Each group produces durable per-suggestion `APPLIED`, `STALE`, or `FAILED` resul
 | Partial target failure                        | Durable per-item results; successful unrelated targets remain explicit           |
 | Duplicate start/apply request                 | Same fingerprint replays one job/receipt; changed payload conflicts              |
 | Transient pre-provider outage                 | At most three automatic attempts with reauthorization                            |
-| Provider-phase ambiguity or worker loss       | Terminal safe failure; only an explicit linked retry may run again                |
-| Attachment trash/purge                        | Hidden/denied immediately; generated content cascades on purge; audit survives    |
-| Logs and audits                               | IDs, logical field/action, counts, outcomes, and stable codes only                |
+| Provider-phase ambiguity or worker loss       | Terminal safe failure; only an explicit linked retry may run again               |
+| Attachment trash/purge                        | Hidden/denied immediately; generated content cascades on purge; audit survives   |
+| Logs and audits                               | IDs, logical field/action, counts, outcomes, and stable codes only               |
 
 The unit, HTTP, frontend, PostgreSQL integration, migration, generated-contract, race, static-analysis, and security suites enforce these cases without a production provider credential.
 

@@ -36,6 +36,7 @@ export function BillFormFields({
   copy: customCopy,
 }: BillFormFieldsProps) {
   const { messages } = useI18n();
+  const labels = messages.common.labels;
   const copy = { ...messages.tables.cadastro, ...customCopy };
   return (
     <div className="cadastro-bill-fields">
@@ -52,7 +53,6 @@ export function BillFormFields({
       />
 
       <div className="cadastro-grid">
-        {/* Tipo de Serviço */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-type">
@@ -71,7 +71,6 @@ export function BillFormFields({
           </div>
         </div>
 
-        {/* Fornecedor / Concessionária */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-prov">
@@ -86,7 +85,6 @@ export function BillFormFields({
           </div>
         </div>
 
-        {/* Instalação / Código do Cliente */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-inst">
@@ -101,7 +99,6 @@ export function BillFormFields({
           </div>
         </div>
 
-        {/* Competência / Mês */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-comp">
@@ -116,7 +113,6 @@ export function BillFormFields({
           </div>
         </div>
 
-        {/* Vencimento */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-due">
@@ -133,7 +129,6 @@ export function BillFormFields({
           </div>
         </div>
 
-        {/* Valor (R$) */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-val">
@@ -155,7 +150,6 @@ export function BillFormFields({
           </div>
         </div>
 
-        {/* Nome impresso no boleto */}
         <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-print-holder">
@@ -170,7 +164,6 @@ export function BillFormFields({
           </div>
         </div>
 
-        {/* Endereço impresso */}
         <div className="cadastro-col-6">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-print-addr">
@@ -185,15 +178,14 @@ export function BillFormFields({
           </div>
         </div>
 
-        {/* Meio (Físico / Digital) */}
         <div className="cadastro-col-4">
           <div className="cadastro-field">
-            <label className="cadastro-field__label">{copy.fieldDocMedium}</label>
+            <label className="cadastro-field__label">{labels.medium}</label>
             <Segmented
               block
               options={[
-                { label: copy.tagPhysical, value: "PHYSICAL" },
-                { label: copy.tagDigital, value: "DIGITAL" },
+                { label: labels.physical, value: "PHYSICAL" },
+                { label: labels.digital, value: "DIGITAL" },
               ]}
               value={state.billMedium}
               onChange={(v) => onChange({ billMedium: v as "PHYSICAL" | "DIGITAL" })}
@@ -201,11 +193,10 @@ export function BillFormFields({
           </div>
         </div>
 
-        {/* Observações */}
         <div className="cadastro-col-8">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-bill-notes">
-              {copy.fieldBillNotes ?? "Observações da conta"}
+              {labels.notes}
             </label>
             <Input
               id="cad-bill-notes"
