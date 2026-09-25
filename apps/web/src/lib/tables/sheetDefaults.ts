@@ -9,6 +9,7 @@ export const SHEET_COLUMN_WIDTH = {
   default: 140,
   identity: 220,
   documents: 240,
+  actions: 48,
 } as const;
 
 export const SHEET_SEARCH_DEBOUNCE_MS = 450;

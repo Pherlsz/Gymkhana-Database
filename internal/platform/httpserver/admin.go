@@ -12,6 +12,8 @@ import (
 
 type administrationService interface {
 	ListUsers(context.Context, auth.Session, int32, int32, string) ([]auth.ManagedUser, error)
+	ProvisionUser(context.Context, auth.Session, auth.ProvisionUserParams, string) (auth.ManagedUser, error)
+	DeleteUser(context.Context, auth.Session, auth.Identifier, string) error
 	UpdateUserAccess(context.Context, auth.Session, auth.UpdateUserAccessParams, string) (auth.ManagedUser, error)
 	GrantCapability(context.Context, auth.Session, auth.CapabilityGrant, string) error
 	RevokeCapability(context.Context, auth.Session, auth.CapabilityGrant, string) error
@@ -36,9 +38,11 @@ type adminUserResponse struct {
 }
 
 type updateUserAccessRequest struct {
-	Role    auth.Role `json:"role"`
-	Active  bool      `json:"active"`
-	Version int64     `json:"version"`
+	Role        auth.Role `json:"role"`
+	Active      bool      `json:"active"`
+	Version     int64     `json:"version"`
+	DisplayName string    `json:"display_name"`
+	Email       string    `json:"email"`
 }
 
 func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService) {
@@ -84,6 +88,89 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 		writeJSON(w, http.StatusOK, response)
 	})
 
+	mux.HandleFunc("POST /api/admin/users", func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if administration == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "User administration is not configured"})
+			return
+		}
+
+		var request struct {
+			Email        string            `json:"email"`
+			DisplayName  string            `json:"display_name"`
+			Role         auth.Role         `json:"role"`
+			Capabilities []auth.Capability `json:"capabilities"`
+		}
+		if problem := DecodeJSON(w, r, &request); problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+
+		created, err := administration.ProvisionUser(r.Context(), actor, auth.ProvisionUserParams{
+			Email:        request.Email,
+			DisplayName:  request.DisplayName,
+			Role:         request.Role,
+			Capabilities: request.Capabilities,
+		}, requestIDFromContext(r.Context()))
+		if err != nil {
+			switch {
+			case errors.Is(err, auth.ErrForbidden):
+				writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "Administrative access is required"})
+			case errors.Is(err, auth.ErrUserAlreadyExists):
+				writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "A user with this email already exists"})
+			case errors.Is(err, auth.ErrMemberNeedsCapability):
+				writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "A member needs a role and at least one permission"})
+			case errors.Is(err, auth.ErrInvalidUserAccess), errors.Is(err, auth.ErrCapabilityConflict):
+				writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "User access values are invalid"})
+			default:
+				logger.Error("provision application user", "request_id", requestIDFromContext(r.Context()), "error", err)
+				writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "User could not be created"})
+			}
+			return
+		}
+		writeJSON(w, http.StatusCreated, adminUser(created))
+	})
+
+	mux.HandleFunc("DELETE /api/admin/users/{userID}", func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if administration == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "User administration is not configured"})
+			return
+		}
+		userID, err := auth.ParseIdentifier(r.PathValue("userID"))
+		if err != nil {
+			writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "User identifier is invalid"})
+			return
+		}
+		if err := administration.DeleteUser(r.Context(), actor, userID, requestIDFromContext(r.Context())); err != nil {
+			switch {
+			case errors.Is(err, auth.ErrForbidden):
+				writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "Administrative access is required"})
+			case errors.Is(err, auth.ErrUserNotFound):
+				writeProblem(w, r, Problem{Status: http.StatusNotFound, Code: ErrorCodeNotFound, Message: "Application user was not found"})
+			case errors.Is(err, auth.ErrSelfAccessChange):
+				writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "You cannot change your own access"})
+			case errors.Is(err, auth.ErrProtectedSuperadmin):
+				writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "The superadmin access is protected"})
+			case errors.Is(err, auth.ErrUserInUse):
+				writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "User has linked records"})
+			default:
+				logger.Error("delete application user", "request_id", requestIDFromContext(r.Context()), "error", err)
+				writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "User could not be deleted"})
+			}
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	mux.HandleFunc("PATCH /api/admin/users/{userID}/access", func(w http.ResponseWriter, r *http.Request) {
 		actor, problem := authenticatedSession(r, authentication)
 		if problem != nil {
@@ -107,10 +194,12 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 		}
 
 		updated, err := administration.UpdateUserAccess(r.Context(), actor, auth.UpdateUserAccessParams{
-			UserID:  userID,
-			Role:    request.Role,
-			Active:  request.Active,
-			Version: request.Version,
+			UserID:      userID,
+			Role:        request.Role,
+			Active:      request.Active,
+			Version:     request.Version,
+			DisplayName: request.DisplayName,
+			Email:       request.Email,
 		}, requestIDFromContext(r.Context()))
 		if err != nil {
 			switch {
@@ -221,6 +310,8 @@ func registerAdministrationRoutes(mux *http.ServeMux, logger *slog.Logger, authe
 				writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "Administrative access is required"})
 			case errors.Is(err, auth.ErrSelfAccessChange):
 				writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "Cannot revoke capabilities from yourself"})
+			case errors.Is(err, auth.ErrMemberNeedsCapability):
+				writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "A member needs at least one permission"})
 			case errors.Is(err, auth.ErrCapabilityNotFound):
 				writeProblem(w, r, Problem{Status: http.StatusNotFound, Code: ErrorCodeNotFound, Message: "Capability not found"})
 			default:

@@ -1,10 +1,19 @@
-import { Alert, Button, Flex, Form, Input, Segmented, Skeleton } from "antd";
-import { ChevronDown, ChevronRight, FileText, Receipt } from "lucide-react";
+import { Button, Flex, Segmented, Skeleton } from "antd";
+import { ChevronDown } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { ConfirmDelete } from "./components/ConfirmDelete";
+import { StateCard } from "./components/StateCard";
+import { StatusBanner } from "./components/StatusBanner";
 import { ProfileRecordsPanel } from "./ProfileRecordsPanel";
 import { useI18n } from "./i18n";
-import { DocumentPresenceSection } from "./lib/tables/DocumentPresenceSection";
+import { PersonOwnedCollections } from "./lib/cadastro/components/PersonOwnedCollections";
+import { PersonRecordFields } from "./lib/cadastro/components/PersonRecordFields";
+import {
+  buildProfilePayload,
+  demographicsHasMoreDetails,
+  mapProfileToState,
+} from "./lib/cadastro/cadastroPayloads";
+import { INITIAL_COMPLEMENTARY, INITIAL_DEMOGRAPHICS, INITIAL_FAMILY } from "./lib/cadastro/types";
 import {
   createProfile,
   updateProfile,
@@ -19,6 +28,7 @@ import {
   normalizeProfileSearch,
   validateProfileForm,
 } from "./lib/profile/profileSearch";
+import "./cadastro.css";
 
 export { emptyValues, normalizeProfileSearch, validateProfileForm };
 
@@ -32,7 +42,6 @@ export function ProfilePanel(props: {
   role: UserRole;
   hideSections?: boolean;
   embedded?: boolean | undefined;
-  recordLinks?: boolean;
   loading?: boolean;
   onSearch: (patch: Partial<ProfileListSearch>) => void;
   onNotice: (message: string) => void;
@@ -41,30 +50,49 @@ export function ProfilePanel(props: {
   onCancelEdit?: () => void;
   onSaved: (value: Profile, message: string) => Promise<void>;
   onDelete: (value: Profile, confirmation: string) => void;
-  onOpenDocuments?: (value: Profile) => void;
-  onOpenBills?: (value: Profile) => void;
+  onOpenOwnedDocument?: (id: string) => void;
+  onOpenOwnedBill?: (id: string) => void;
 }) {
   const { messages } = useI18n();
   const copy = messages.tables.inspector;
-  const fields = copy.fields;
-  const [form] = Form.useForm<ProfileValuesRequest>();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const initialFields = props.profile
+    ? mapProfileToState(props.profile)
+    : {
+        demographics: INITIAL_DEMOGRAPHICS,
+        family: INITIAL_FAMILY,
+        complementary: INITIAL_COMPLEMENTARY,
+      };
+  const [demographics, setDemographics] = useState(initialFields.demographics);
+  const [family, setFamily] = useState(initialFields.family);
+  const [complementary, setComplementary] = useState(initialFields.complementary);
   const editable = props.mode === "create" || props.mode === "edit";
   const profileId = props.profile?.id;
   const profileVersion = props.profile?.version;
 
   useEffect(() => {
-    if (editable) {
-      form.setFieldsValue(props.profile ? profileValues(props.profile) : emptyValues);
-    }
+    const mapped = props.profile
+      ? mapProfileToState(props.profile)
+      : {
+          demographics: INITIAL_DEMOGRAPHICS,
+          family: INITIAL_FAMILY,
+          complementary: INITIAL_COMPLEMENTARY,
+        };
+    setDemographics(mapped.demographics);
+    setFamily(mapped.family);
+    setComplementary(mapped.complementary);
     setConfirmingDelete(false);
     setError(null);
-  }, [editable, form, profileId, profileVersion, props.mode, props.profile]);
+  }, [profileId, profileVersion, props.mode, props.profile]);
 
-  const submit = async (values: ProfileValuesRequest) => {
-    const parsed = validateProfileForm(values, messages.common.validation);
+  const submit = async () => {
+    const payload: ProfileValuesRequest = {
+      ...buildProfilePayload(demographics, family, complementary, demographics.fullName, ""),
+      notes: props.profile?.notes ?? "",
+    };
+    const parsed = validateProfileForm(payload, messages.common.validation);
     if (!parsed.success) {
       setError(parsed.issues.map((issue) => issue.message).join(" "));
       return;
@@ -74,8 +102,8 @@ export function ProfilePanel(props: {
     try {
       const saved = props.profile
         ? await updateProfile(props.profile.id, {
-            ...profileValues(props.profile),
             ...parsed.output,
+            notes: props.profile.notes,
             version: props.profile.version,
           })
         : await createProfile(parsed.output);
@@ -120,7 +148,7 @@ export function ProfilePanel(props: {
           <Button onClick={props.onClose}>{copy.close}</Button>
         </div>
         <div className="profile-panel__body">
-          <Alert description={copy.notFoundHint} message={copy.notFound} type="error" />
+          <StateCard compact description={copy.notFoundHint} kind="error" title={copy.notFound} />
         </div>
       </aside>
     );
@@ -166,40 +194,6 @@ export function ProfilePanel(props: {
             />
           </nav>
         ) : null}
-        {props.profile && props.recordLinks && props.mode !== "create" ? (
-          <nav aria-label={copy.personRecords} className="profile-panel__links">
-            {props.section === "documents" || !props.onOpenDocuments ? null : (
-              <Button
-                className="profile-panel__record-link"
-                icon={<FileText aria-hidden size={16} strokeWidth={1.75} />}
-                onClick={() => props.onOpenDocuments?.(props.profile!)}
-              >
-                {copy.documentsLink}
-                <ChevronRight
-                  aria-hidden
-                  className="profile-panel__link-arrow"
-                  size={15}
-                  strokeWidth={1.75}
-                />
-              </Button>
-            )}
-            {props.section === "bills" || !props.onOpenBills ? null : (
-              <Button
-                className="profile-panel__record-link"
-                icon={<Receipt aria-hidden size={16} strokeWidth={1.75} />}
-                onClick={() => props.onOpenBills?.(props.profile!)}
-              >
-                {copy.billsLink}
-                <ChevronRight
-                  aria-hidden
-                  className="profile-panel__link-arrow"
-                  size={15}
-                  strokeWidth={1.75}
-                />
-              </Button>
-            )}
-          </nav>
-        ) : null}
         {showRecords && (props.section === "documents" || props.section === "bills") ? (
           <ProfileRecordsPanel
             profile={props.profile!}
@@ -212,76 +206,35 @@ export function ProfilePanel(props: {
         ) : (
           <>
             {error ? (
-              <Alert description={<>{error}</>} message={copy.saveError} type="error" />
+              <StatusBanner description={error} title={copy.saveError} tone="error" />
             ) : null}
-            {props.mode === "view" && props.profile ? (
-              <ProfileReadout
-                documentPresence={
-                  <DocumentPresenceSection editable={false} profile={props.profile} />
+            <div className={editable ? "cadastro-single" : "cadastro-single cadastro-record--view"}>
+              <PersonRecordFields
+                key={profileId ?? "new"}
+                complementary={complementary}
+                defaultShowMoreDetails={demographicsHasMoreDetails(demographics)}
+                demographics={demographics}
+                disabled={!editable}
+                family={family}
+                onChangeComplementary={(patch) =>
+                  setComplementary((current) => ({ ...current, ...patch }))
                 }
-                profile={props.profile}
+                onChangeDemographics={(patch) =>
+                  setDemographics((current) => ({ ...current, ...patch }))
+                }
+                onChangeFamily={(patch) => setFamily((current) => ({ ...current, ...patch }))}
               />
-            ) : (
-              <Form
-                className="profile-form"
-                form={form}
-                initialValues={props.profile ? profileValues(props.profile) : emptyValues}
-                layout="vertical"
-                onFinish={(values) => void submit(values)}
-              >
-                <Form.Item label={fields.fullName} name="full_name">
-                  <Input />
-                </Form.Item>
-                <Form.Item label={fields.socialName} name="social_name">
-                  <Input />
-                </Form.Item>
-                <Form.Item label={fields.cpf} name="cpf">
-                  <Input inputMode="numeric" />
-                </Form.Item>
-                <Form.Item label={fields.email} name="email">
-                  <Input type="email" />
-                </Form.Item>
-                <Form.Item label={fields.mobile} name="mobile_phone">
-                  <Input />
-                </Form.Item>
-                <Form.Item label={fields.landline} name="landline_phone">
-                  <Input />
-                </Form.Item>
-                <Form.Item label={fields.street} name={["address", "street"]}>
-                  <Input />
-                </Form.Item>
-                <div className="profile-form__pair">
-                  <Form.Item label={fields.number} name={["address", "number"]}>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item
-                    label={fields.state}
-                    name={["address", "state"]}
-                    normalize={(value) => String(value).toUpperCase()}
-                  >
-                    <Input maxLength={2} />
-                  </Form.Item>
-                </div>
-                <Form.Item label={fields.complement} name={["address", "complement"]}>
-                  <Input />
-                </Form.Item>
-                <Form.Item label={fields.neighborhood} name={["address", "neighborhood"]}>
-                  <Input />
-                </Form.Item>
-                <Form.Item label={fields.city} name={["address", "city"]}>
-                  <Input />
-                </Form.Item>
-                <Form.Item label={fields.postalCode} name={["address", "postal_code"]}>
-                  <Input inputMode="numeric" />
-                </Form.Item>
-                <Form.Item label={fields.notes} name="notes">
-                  <Input.TextArea rows={4} />
-                </Form.Item>
-              </Form>
-            )}
-            {props.profile && props.mode === "edit" ? (
-              <DocumentPresenceSection editable profile={props.profile} />
-            ) : null}
+              {props.profile ? (
+                <PersonOwnedCollections
+                  editable={editable}
+                  profile={props.profile}
+                  {...(props.onOpenOwnedDocument
+                    ? { onOpenDocument: props.onOpenOwnedDocument }
+                    : {})}
+                  {...(props.onOpenOwnedBill ? { onOpenBill: props.onOpenOwnedBill } : {})}
+                />
+              ) : null}
+            </div>
           </>
         )}
       </div>
@@ -304,7 +257,7 @@ export function ProfilePanel(props: {
           ) : (
             <Flex className="profile-panel__actions">
               {editable ? (
-                <Button disabled={saving} onClick={() => form.submit()} type="primary">
+                <Button disabled={saving} onClick={() => void submit()} type="primary">
                   {saving ? copy.saving : copy.save}
                 </Button>
               ) : (
@@ -560,56 +513,4 @@ function displayProfileValue(
 function humanizeKey(value: string) {
   const label = value.replaceAll("_", " ").replaceAll("-", " ").trim();
   return label ? `${label[0]?.toLocaleUpperCase("pt-BR") ?? ""}${label.slice(1)}` : value;
-}
-
-function profileValues(value: Profile): ProfileValuesRequest {
-  const request: ProfileValuesRequest = {
-    full_name: value.full_name,
-    social_name: value.social_name,
-    cpf: value.cpf,
-    email: value.email,
-    mobile_phone: value.mobile_phone,
-    landline_phone: value.landline_phone,
-    address: { ...value.address },
-    notes: value.notes,
-  };
-  const extras: Array<[keyof ProfileValuesRequest, unknown]> = [
-    ["birth_date", value.birth_date],
-    ["gender", value.gender],
-    ["blood_type", value.blood_type],
-    ["nationality", value.nationality],
-    ["birth_city", value.birth_city],
-    ["marital_status", value.marital_status],
-    ["wedding_date", value.wedding_date],
-    ["father_name", value.father_name],
-    ["father_birth_date", value.father_birth_date],
-    ["mother_name", value.mother_name],
-    ["mother_birth_date", value.mother_birth_date],
-    ["health_plan", value.health_plan],
-    ["blood_donor", value.blood_donor],
-    ["organ_donor", value.organ_donor],
-    ["team", value.team],
-    ["sector", value.sector],
-    ["collections", value.collections],
-    ["vehicle_model", value.vehicle_model],
-    ["vehicle_color", value.vehicle_color],
-    ["vehicle_plate", value.vehicle_plate],
-    ["vehicle_year", value.vehicle_year],
-    ["club_membership", value.club_membership],
-    ["membership_type", value.membership_type],
-    ["place_of_origin", value.place_of_origin],
-    ["birth_country", value.birth_country],
-    ["parents_wedding_date", value.parents_wedding_date],
-    ["supermarket_club", value.supermarket_club],
-    ["pet", value.pet],
-    ["travel_countries", value.travel_countries],
-    ["card_brand", value.card_brand],
-    ["card_bank", value.card_bank],
-  ];
-  for (const [key, extra] of extras) {
-    if (extra !== undefined) {
-      (request as Record<string, unknown>)[key] = extra;
-    }
-  }
-  return request;
 }

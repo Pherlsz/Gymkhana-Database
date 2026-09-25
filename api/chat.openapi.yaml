@@ -394,6 +394,106 @@ paths:
           $ref: "#/components/responses/UnsafeUpstream"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /api/v1/chat/result-references/{reference_id}/recorte:
+    get:
+      operationId: getChatTableRecorte
+      summary: Compile one query reference into the open table
+      description: Returns grid filters and column keys the sheet already understands. Stored logical requests, SQL, physical names, and result rows are never returned. A reference the grid cannot express is rejected.
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ReferenceID"
+      responses:
+        "200":
+          description: Compiled table recorte
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatTableRecorte"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/StaleContext"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/chat/result-references/{reference_id}/page:
+    get:
+      operationId: getChatResultPage
+      summary: Reauthorize and page one assistant result into the open grid
+      description: Recomputes the stored plan with the caller's permission. The page size follows the open sheet, up to 500 rows. Rows may mix people, documents, and bills.
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ReferenceID"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 500
+        - $ref: "#/components/parameters/ResultOffset"
+      responses:
+        "200":
+          description: One page of the assistant result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResultGrid"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/StaleContext"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /api/v1/chat/result-references/{reference_id}/xlsx:
+    get:
+      operationId: exportChatResultXlsx
+      summary: Download the on-grid recorte as XLSX
+      description: Recomputes the stored recorte with the caller's permission and returns a spreadsheet of every row in that recorte. It does not export the rest of the table.
+      tags: [AI Chat]
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ReferenceID"
+      responses:
+        "200":
+          description: Recorte workbook
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          $ref: "#/components/responses/StaleContext"
+        "503":
+          $ref: "#/components/responses/Unavailable"
 components:
   securitySchemes:
     sessionCookie:
@@ -751,6 +851,75 @@ components:
           $ref: "#/components/schemas/ChatMessage"
         created:
           type: boolean
+    ChatResultGrid:
+      type: object
+      additionalProperties: false
+      required: [columns, rows, total, limit, offset]
+      properties:
+        columns:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [key, label]
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, entity_kind, entity_id, entity_label, cells]
+            properties:
+              id:
+                type: string
+              entity_kind:
+                type: string
+              entity_id:
+                type: string
+              entity_label:
+                type: string
+              cells:
+                type: object
+                additionalProperties:
+                  type: string
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        summary:
+          type: string
+        truncated:
+          type: boolean
+    ChatTableRecorte:
+      type: object
+      additionalProperties: false
+      required: [table, filters, columns]
+      properties:
+        table:
+          type: string
+          enum: [people, documents, bills]
+        filters:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 120
+        columns:
+          type: array
+          items:
+            type: string
+            maxLength: 80
+        sort:
+          type: string
+          maxLength: 80
+        order:
+          type: string
+          enum: [asc, desc]
     ChatResultReferenceKind:
       type: string
       enum: [SEARCH, QUERY]

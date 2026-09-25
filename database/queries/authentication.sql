@@ -32,6 +32,10 @@ UPDATE app_users
 SET email = $2,
     display_name = $3,
     avatar_url = $4,
+    subject = CASE
+      WHEN $5 <> '' AND subject LIKE 'pending:%' THEN $5
+      ELSE subject
+    END,
     updated_at = now(),
     version = version + 1
 WHERE id = $1
@@ -41,10 +45,12 @@ RETURNING id, email, subject, display_name, avatar_url, role, active, version, c
 UPDATE app_users
 SET role = $2,
     active = $3,
+    email = $4,
+    display_name = $5,
     updated_at = now(),
     version = version + 1
 WHERE id = $1
-  AND version = $4
+  AND version = $6
 RETURNING id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at;
 
 -- name: CountActiveSuperadmins :one

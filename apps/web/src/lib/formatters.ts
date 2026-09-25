@@ -64,3 +64,13 @@ export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return "Ocorreu um erro inesperado.";
 }
+
+export function errorAlertProps(
+  title: string,
+  error: unknown,
+): { message: string; description?: string } {
+  const detail = errorMessage(error).trim();
+  const fold = (value: string) => value.replace(/[.]+$/u, "").trim();
+  if (!detail || fold(detail) === fold(title)) return { message: title };
+  return { message: title, description: detail };
+}

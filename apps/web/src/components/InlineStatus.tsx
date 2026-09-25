@@ -7,14 +7,21 @@ export function InlineStatus({
   kind,
   label,
   showIcon = true,
+  className = "",
 }: {
   kind: InlineStatusKind;
   label: string;
   showIcon?: boolean;
+  className?: string;
 }) {
+  const extra = className ? ` ${className}` : "";
   if (kind === "loading") {
     return (
-      <p aria-live="polite" className="inline-status inline-status--loading" role="status">
+      <p
+        aria-live="polite"
+        className={`inline-status inline-status--loading${extra}`}
+        role="status"
+      >
         <Spin aria-hidden size="small" />
         <span>{label}</span>
       </p>
@@ -22,7 +29,7 @@ export function InlineStatus({
   }
 
   return (
-    <p className="inline-status inline-status--empty">
+    <p className={`inline-status inline-status--empty${extra}`}>
       {showIcon ? <Inbox aria-hidden size={14} strokeWidth={1.75} /> : null}
       <span>{label}</span>
     </p>

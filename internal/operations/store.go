@@ -129,6 +129,7 @@ type Store interface {
 	CompleteImport(context.Context, Identifier, time.Time) (Import, error)
 	FailImport(context.Context, Identifier, ImportState, string, time.Time) (bool, error)
 	CancelImport(context.Context, Identifier, auth.Identifier, int64, time.Time) (Import, error)
+	DeleteImport(context.Context, Identifier, auth.Identifier) error
 	CreateExport(context.Context, Export, Limits) (Export, error)
 	GetExport(context.Context, Identifier, auth.Identifier) (Export, error)
 	GetExportForWorker(context.Context, Identifier) (Export, error)
@@ -143,6 +144,7 @@ type Store interface {
 	BulkDelete(context.Context, auth.Identifier, Module, []BulkItem, string, time.Time) (int, error)
 	CustomFields(context.Context, Module) ([]CustomFieldDefinition, error)
 	CanonicalValues(context.Context, Module, Identifier) (map[string]string, error)
+	FindProfileIDsByCPF(context.Context, string) ([]Identifier, error)
 	DocumentType(context.Context, document.Identifier) (document.TypeDefinition, error)
 	BillType(context.Context, bill.Identifier) (bill.TypeDefinition, error)
 	GetActor(context.Context, auth.Identifier) (auth.Session, error)

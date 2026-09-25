@@ -26,7 +26,7 @@ This is an implementation inventory, not a live tracker. Current work and next a
 | Partial                   | AI Assistente (shared Administração model key, not per-user BYOK), OCR model path fake-only, Query/task tools inside Chat                                                                                                                                                                                                                                         |
 | Deferred by Orchestration | Objects module, full usage/gymkhana-team history, redo of Neon import, Profile matching UI (last module; no `/matching` route)                                                                                                                                                                                                                                    |
 | Missing vs Orchestration  | Shared Administração model key for Assistente/OCR, Chat query v2 + task interpretation, Gemini-only OCR flag gated on that key, import column/value catalogs (§16.2)                                                                                                                                                                                              |
-| Bugs / wiring             | EXTERNAL capability checker not passed into `cmd/api`                                                                                                                                                                                                                                                                                                             |
+| Bugs / wiring             | —                                                                                                                                                                                                                                                                                                                                                                 |
 | Out of product            | User Tasks workspace (`/tasks`, `TASKS` capability); gymkhana team or football club as a module or User field; per-user model keys; `/matching` as a destination                                                                                                                                                                                                  |
 
 The rebuild is **ahead of legacy** on Query Engine (typed plans, no client SQL), generic custom entities, document/bill types, presence vs exemplar, and current-use on bills. It is **behind legacy** on a production model provider for Assistente/OCR. Neon 18 Dev/Prod have schema version 30 and empty cadastro; the older Postgres 17 projects still hold the imported copy with gaps (no bills/attachments). Reimport is later work.
@@ -35,20 +35,19 @@ The rebuild is **ahead of legacy** on Query Engine (typed plans, no client SQL),
 
 ## 1. Auth, sessions, roles, capabilities
 
-**Rebuild: Partial** (product is implemented; EXTERNAL grants do not take effect in the API process)
+**Rebuild: Implemented** (product is implemented; EXTERNAL grants are checked in the API process)
 
 - Google OAuth, email allowlist (`allowed_emails` plus env bootstrap), opaque 24h hashed sessions, roles `EXTERNAL` / `ADMIN` / `SUPERADMIN`, admin user/allowlist/capability APIs, audits.
 - Account lookup is by email (`internal/auth/service.go` `FindUserByEmail`). Google subject is stored as metadata.
 - `internal/auth/postgres_store.go` implements `UserHasCapability`.
-- `cmd/api/main.go` sets `RequireCapabilityCheck: cfg.Auth.Enabled` but **does not set `CapabilityCheck`**. `httpserver.New` then installs `unavailableCapabilityChecker`. EXTERNAL users receive **503** on gated routes even when grants exist. ADMIN/SUPERADMIN bypass the checker and work.
+- `cmd/api/main.go` sets `RequireCapabilityCheck` and `CapabilityCheck` to the auth store when authentication is enabled. EXTERNAL users need an explicit grant. ADMIN/SUPERADMIN bypass the checker.
 
-**Orchestration §3:** Google OAuth, email allowlist, roles `EXTERNAL` / `ADMIN` / `SUPERADMIN`. Matches, except the unwired EXTERNAL gate.
+**Orchestration §3:** Google OAuth, email allowlist, roles `EXTERNAL` / `ADMIN` / `SUPERADMIN`. Matches.
 
 **Legacy:** NextAuth Google, allowlist by `User.email` + `active`, roles `MEMBER`/`ADMIN`/`SUPERADMIN`. No capability table; MEMBER can edit data, admin routes are role-gated. Cap of 10 users.
 
 **Still to do**
 
-- Pass `*auth.PostgresStore` as `httpserver.Options.CapabilityCheck` in `cmd/api`.
 - Session payload does not list capabilities.
 
 ---
@@ -283,12 +282,7 @@ The rebuild is **ahead of legacy** on Query Engine (typed plans, no client SQL),
 
 ## 17. Gymkhana tasks
 
-**Rebuild: Done** — user Tasks workspace retired. HTTP `/api/v1/tasks`, capability `TASKS`, and `task_*` tables are gone. `internal/taskengine` remains for a future Chat-internal solver.
-
-Code (`internal/taskengine/`):
-
-- Typed `TaskSpec`, human review, solver job on Query v2.
-- Chat does not import taskengine.
+**Rebuild: Done** — user Tasks workspace retired. HTTP `/api/v1/tasks`, capability `TASKS`, `task_*` tables, and the former `internal/taskengine` package are gone (migration `034_retire_task_workspace.sql`).
 
 **Orchestration §20:** Chat-only capability. Requirement lists, per-step results. No menu/route/workspace.
 
@@ -296,8 +290,7 @@ Code (`internal/taskengine/`):
 
 **Still to do**
 
-- Expose interpretation only through Chat tools.
-- Keep any solver internal to Chat/Query.
+- Expose interpretation only through Chat tools when product needs structured gymkhana steps beyond ad-hoc assistant SQL.
 
 ---
 
@@ -345,10 +338,9 @@ Neon (survey 2026-08-16, counts only, no row payloads):
 
 These are the gaps that block product use, not a milestone list:
 
-1. Wire `CapabilityCheck` so EXTERNAL grants work.
-2. Continue the Assistente with the shared Administração model key, with Query and gymkhana-task tools inside Chat (no user Tasks module, no per-user keys).
-3. Optional Gemini-only OCR flag gated on that shared key.
-4. Matching review UI last, in Administração or the people grid — no `/matching` route.
+1. Continue the Assistente with the shared Administração model key, with Query and gymkhana-task tools inside Chat (no user Tasks module, no per-user keys).
+2. Optional Gemini-only OCR flag gated on that shared key.
+3. Matching review UI last, in Administração or the people grid — no `/matching` route.
 5. Neon 18 reimport later, not now.
 
 Do not start Objects, usage history, or executable formulas. Orchestration already deferred or rejected them.

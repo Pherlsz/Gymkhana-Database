@@ -123,13 +123,6 @@
   background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, var(--md-surface) 100%);
 }
 
-.login-page__theme {
-  position: absolute;
-  top: 1.25rem;
-  right: 1.25rem;
-  z-index: 20;
-}
-
 .login-main {
   position: relative;
   z-index: 10;

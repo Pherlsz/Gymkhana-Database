@@ -1054,14 +1054,14 @@ Esta seção resume as invariantes. A seção “Arquitetura escolhida e raciona
 - Cloud Scheduler pode executar recovery e housekeeping.
 - Anexos utilizam Cloudflare R2.
 - Railway não faz parte da infraestrutura aprovada.
-- Local não usa Docker em nenhuma forma: nenhum container, Compose ou imagem. Banco de dados somente Neon, injetado via lokeys run -p gymkhana --env dev.
+- Local não usa Docker em nenhuma forma: nenhum container, Compose ou imagem. Banco de dados somente Neon, via `DATABASE_URL` em `.env`.
 - MinIO, Redis e serviços sem uso real não são adicionados por conveniência.
 - Migrations rodam via make migrate contra o Neon; nunca dentro de container.
 - Local, staging e production são separados.
 - Staging usa somente dados sintéticos.
 - Dados de produção não são copiados para staging.
 - Secrets ficam no secret manager/configuração da plataforma e nunca no repositório.
-- Localmente, secrets entram no processo via lokeys (`lokeys run -p gymkhana --env dev`) e não via arquivo `.env`.
+- Localmente, secrets entram pelo arquivo `.env` (gitignored) ou pelo secret manager da plataforma.
 - Testes básicos não exigem credenciais externas reais.
 
 ## 25. Limites entre repositórios
@@ -1084,7 +1084,7 @@ Responsável por lógica Go reutilizável e independente de infraestrutura, como
 
 ### Gymkhana-Database-Vercel
 
-Aplicação legado Next.js ainda em produção. Não é dependência do rebuild. Pode ser executada em paralelo no local apenas para comparação; lê `.env` / `.env.local` (Prisma `dotenv/config` e Next), usa Neon Dev; não há banco de dados local em nenhum dos dois repositórios. Não usar `lokeys run` nesse processo.
+Aplicação legado Next.js ainda em produção. Não é dependência do rebuild. Pode ser executada em paralelo no local apenas para comparação; lê `.env` / `.env.local` (Prisma `dotenv/config` e Next), usa Neon Dev; não há banco de dados local em nenhum dos dois repositórios.
 
 ### Regras de dependência
 

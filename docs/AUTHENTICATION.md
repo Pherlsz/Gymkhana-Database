@@ -69,7 +69,7 @@ GET /api/admin/users/{userID}/capabilities
 
 | Variable                     | Purpose                                                                                                                        |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `APP_ENV`                    | `local`, `test`, `staging`, or `production`. lokeys `--env dev` injects `development`, which the application treats as `local` |
+| `APP_ENV`                    | `local`, `test`, `staging`, or `production`. `development` / `dev` are treated as `local` |
 | `DATABASE_URL`               | PostgreSQL connection string; required whenever authentication is enabled                                                      |
 | `AUTH_ENABLED`               | Must be `true` in staging and production                                                                                       |
 | `GOOGLE_OAUTH_CLIENT_ID`     | Google OAuth client ID                                                                                                         |
@@ -81,34 +81,31 @@ GET /api/admin/users/{userID}/capabilities
 
 The email allowlist is now stored in the `allowed_emails` table and managed via admin endpoints, not environment variables.
 
-Never commit real client secrets, database credentials, session values, or production URLs containing credentials. Locally, inject them with `lokeys run -p gymkhana --env dev`; do not copy `.env.example` to `.env`.
+Never commit real client secrets, database credentials, session values, or production URLs containing credentials. Locally, put them in gitignored `.env` (see `.env.example`).
 
 ## Local setup
 
 1. Register a Google OAuth client with:
    - Authorized JavaScript origins: `http://localhost:5173`
    - Authorized redirect URIs: `http://localhost:8080/auth/callback`
-2. Put the OAuth credentials, database URL, and superadmin email in the lokeys `gymkhana` profile. `.env.example` lists the names; do not copy it to `.env`.
+2. Put the OAuth credentials, database URL, and superadmin email in `.env`. `.env.example` lists the names.
 3. Validate the effective environment without printing secrets:
 
-```powershell
-$env:LOKEYS_AGENT = "1"
-lokeys run -p gymkhana --env dev -- make check-config
+```bash
+make check-config
 ```
 
 4. Apply migrations to Neon Dev:
 
-```powershell
-$env:LOKEYS_AGENT = "1"
-lokeys run -p gymkhana --env dev -- make migrate
+```bash
+make migrate
 ```
 
 5. Start the API and web application in separate terminals:
 
-```powershell
-$env:LOKEYS_AGENT = "1"
-lokeys run -p gymkhana --env dev -- make dev-api
-lokeys run -p gymkhana --env dev -- make dev-web
+```bash
+make dev-api
+make dev-web
 ```
 
 6. Sign in first with `AUTH_SUPERADMIN_EMAIL`. The first successful login creates the protected `SUPERADMIN` user.
@@ -128,30 +125,9 @@ The API fails closed outside local/test when the database or authentication conf
 
 ### Grant initial access
 
-1. Add the user's email to the allowlist via the admin API:
-
-```http
-POST /api/admin/allowed-emails
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "reason": "New team member for gincana"
-}
-```
-
-2. Ask the user to sign in once. A new allowlisted account is created as `EXTERNAL`.
-3. Grant required capabilities to the user:
-
-```http
-POST /api/admin/users/{userID}/capabilities
-{
-  "capability": "search",
-  "reason": "Initial access"
-}
-```
-
-4. An `ADMIN` or `SUPERADMIN` may promote that user to `ADMIN` through the user-administration panel.
+1. Create the user in Administração with a role (`EXTERNAL` or `ADMIN`). A member also needs at least one capability. This also adds the email to the allowlist.
+2. Ask the user to sign in with Google. Login binds the Google identity to that existing user and keeps the role you set. An allowlisted email without a provisioned user is denied.
+3. The configured `AUTH_SUPERADMIN_EMAIL` is the only account created on first Google login, always as `SUPERADMIN`. It may sign in even when missing from `allowed_emails` so a fresh database can be recovered. No other login path creates a user.
 
 ### Remove access immediately
 

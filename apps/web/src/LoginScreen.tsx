@@ -2,7 +2,6 @@ import { Button } from "antd";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useI18n } from "./i18n";
 import { apiURL } from "./lib/api/client";
-import { ThemeToggle } from "./theme";
 import "./login.css";
 
 type LoginAction = "google" | "development" | null;
@@ -85,7 +84,6 @@ export function LoginScreen({ onLogin }: { onLogin: () => void }) {
 function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
   const { messages } = useI18n();
   const copy = messages.auth.login;
-  const themeCopy = messages.theme;
   const [loading, setLoading] = useState<LoginAction>(null);
   const [error, setError] = useState("");
 
@@ -152,15 +150,6 @@ function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
       </svg>
 
       <div className="login-vignette" aria-hidden />
-
-      <header className="login-page__theme">
-        <ThemeToggle
-          activateLight={themeCopy.activateLight}
-          activateDark={themeCopy.activateDark}
-          lightLabel={themeCopy.light}
-          darkLabel={themeCopy.dark}
-        />
-      </header>
 
       <main className="login-main">
         <h1 className="visually-hidden">{copy.title}</h1>

@@ -19,6 +19,8 @@ const RECORD_CARD_OMITTED_KEYS: ReadonlySet<string> = new Set([
   "type_key",
   "current_holder_id",
   "document_badges",
+  "status_key",
+  "medium_key",
 ]);
 
 export interface TableInspectorDrawerProps {
@@ -28,6 +30,9 @@ export interface TableInspectorDrawerProps {
   selectedProfile?: Profile | undefined;
   selectedProfileLoading: boolean;
   selectedRecordRow?: TableRow | undefined;
+  assistantRecord?:
+    | { kind: "document" | "bill"; row: TableRow; columns: { key: string; label: string }[] }
+    | undefined;
   columns: SpreadsheetColumn<TableRow>[];
   loading: boolean;
   canDelete: boolean;
@@ -51,6 +56,7 @@ export function TableInspectorDrawer({
   selectedProfile,
   selectedProfileLoading,
   selectedRecordRow,
+  assistantRecord,
   columns,
   loading,
   canDelete,
@@ -69,6 +75,22 @@ export function TableInspectorDrawer({
   const { messages } = useI18n();
   const copy = messages.tables;
   const recordCopy = copy.record;
+  const assistantInspector: ReactNode = assistantRecord ? (
+    <RecordInspector
+      ariaLabel={assistantRecord.kind === "bill" ? recordCopy.billAria : recordCopy.documentAria}
+      closeLabel={copy.inspector.close}
+      eyebrow={
+        assistantRecord.kind === "bill" ? recordCopy.billEyebrow : recordCopy.documentEyebrow
+      }
+      fields={recordInspectorFields(assistantRecord.row, assistantRecord.columns, new Set())}
+      onClose={onCloseRecord}
+      onOpenOwner={undefined}
+      openOwnerLabel={recordCopy.openOwner}
+      ownerLabel={recordCopy.owner}
+      ownerName=""
+      title={String(assistantRecord.row.cells.entityLabel ?? "").trim() || recordCopy.untitled}
+    />
+  ) : null;
 
   const selectedRecordId =
     section === "documents"
@@ -125,15 +147,20 @@ export function TableInspectorDrawer({
     )
   ) : null;
 
-  const recordFormOpen =
-    (section === "documents" && search.document_mode && search.document_mode !== "view") ||
-    (section === "bills" && search.bill_mode && search.bill_mode !== "view");
+  const documentFormOpen = Boolean(search.document_mode && search.document_mode !== "types");
+  const billFormOpen = Boolean(search.bill_mode && search.bill_mode !== "types");
+  const recordFormOpen = documentFormOpen || billFormOpen;
 
   const recordForm: ReactNode = recordFormOpen ? (
     <TableRecordEditorPanel
+      fallbackOwnerId={
+        selectedRecordRow?.cells.owner_id
+          ? String(selectedRecordRow.cells.owner_id)
+          : selectedProfile?.id
+      }
       role={userRole}
       search={search}
-      section={section === "bills" ? "bills" : "documents"}
+      section={billFormOpen ? "bills" : "documents"}
       onNotice={onNotice}
       onSearch={onSearch}
     />
@@ -144,7 +171,6 @@ export function TableInspectorDrawer({
       key={search.mode === "create" ? "create" : "inspector"}
       canDelete={canDelete}
       hideSections
-      recordLinks={Boolean(selectedProfile)}
       mode={search.mode}
       pending={deletePending}
       loading={!selectedProfile && selectedProfileLoading}
@@ -157,40 +183,42 @@ export function TableInspectorDrawer({
       onEdit={onEditProfile}
       onCancelEdit={onCancelEditProfile}
       onNotice={onNotice}
-      onOpenDocuments={(value) => {
-        const apply = () =>
-          onSearch({
-            section: "documents",
-            selected: value.id,
-            mode: "view",
-            records_owner: value.id,
-            document_page: 1,
-            document_selected: undefined,
-            document_mode: undefined,
-          });
-        if (search.mode === "edit") onConfirmDiscardEdit(apply);
-        else apply();
-      }}
-      onOpenBills={(value) => {
-        const apply = () =>
-          onSearch({
-            section: "bills",
-            selected: value.id,
-            mode: "view",
-            records_owner: value.id,
-            bill_page: 1,
-            bill_selected: undefined,
-            bill_mode: undefined,
-          });
-        if (search.mode === "edit") onConfirmDiscardEdit(apply);
-        else apply();
-      }}
+      {...(selectedProfile
+        ? {
+            onOpenOwnedDocument: (documentId: string) => {
+              const apply = () =>
+                onSearch({
+                  selected: selectedProfile.id,
+                  mode: "view" as const,
+                  document_selected: documentId,
+                  document_mode: "view" as const,
+                  bill_selected: undefined,
+                  bill_mode: undefined,
+                });
+              if (search.mode === "edit") onConfirmDiscardEdit(apply);
+              else apply();
+            },
+            onOpenOwnedBill: (billId: string) => {
+              const apply = () =>
+                onSearch({
+                  selected: selectedProfile.id,
+                  mode: "view" as const,
+                  bill_selected: billId,
+                  bill_mode: "view" as const,
+                  document_selected: undefined,
+                  document_mode: undefined,
+                });
+              if (search.mode === "edit") onConfirmDiscardEdit(apply);
+              else apply();
+            },
+          }
+        : {})}
       onSaved={onSaveProfile}
       onSearch={onSearch}
     />
   ) : null;
 
-  const content = recordForm ?? recordInspector ?? inspector;
+  const content = recordForm ?? assistantInspector ?? recordInspector ?? inspector;
 
   if (inspectorSheet) {
     return (
@@ -202,7 +230,12 @@ export function TableInspectorDrawer({
         getContainer={false}
         size={DEFAULT_SHEET_PREFERENCES.inspectorSheetSize}
         mask={false}
-        open={Boolean(search.mode) || Boolean(recordInspector) || Boolean(recordForm)}
+        open={
+          Boolean(search.mode) ||
+          Boolean(assistantInspector) ||
+          Boolean(recordInspector) ||
+          Boolean(recordForm)
+        }
         placement="bottom"
         styles={{
           body: { display: "flex", height: "100%", overflow: "hidden", padding: 0 },
@@ -217,9 +250,11 @@ export function TableInspectorDrawer({
                   bill_selected: undefined,
                   bill_mode: undefined,
                 })
-            : recordInspector
+            : assistantInspector
               ? onCloseRecord
-              : onCloseInspector
+              : recordInspector
+                ? onCloseRecord
+                : onCloseInspector
         }
       >
         {content}

@@ -51,7 +51,7 @@ Generate a key without writing it to the repository:
 openssl rand -base64 32
 ```
 
-Local values belong in the lokeys `gymkhana` profile. `.env.example` lists the names; do not copy them into a `.env` file.
+Local values belong in gitignored `.env`. `.env.example` lists the names.
 
 ```dotenv
 GOOGLE_FORMS_ENABLED=true

@@ -26,6 +26,8 @@ export function clearFilters(section: ProfileListSearch["section"]): Partial<Pro
       document_medium: "",
       document_page: 1,
       records_owner: undefined,
+      recorte: "",
+      result: "",
     };
   }
   if (section === "bills") {
@@ -38,9 +40,21 @@ export function clearFilters(section: ProfileListSearch["section"]): Partial<Pro
       bill_competence: "",
       bill_page: 1,
       records_owner: undefined,
+      recorte: "",
+      result: "",
     };
   }
-  return { q: "", full_name: "", cpf: "", email: "", city: "", state: "", page: 1 };
+  return {
+    q: "",
+    full_name: "",
+    cpf: "",
+    email: "",
+    city: "",
+    state: "",
+    page: 1,
+    recorte: "",
+    result: "",
+  };
 }
 
 export function profileListKey(search: ProfileListSearch) {

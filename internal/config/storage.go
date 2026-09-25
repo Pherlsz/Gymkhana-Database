@@ -33,6 +33,7 @@ type StorageConfig struct {
 }
 
 func LoadStorage() (StorageConfig, error) {
+	LoadDotenv()
 	environment := parseEnvironment()
 	immutableRelease := environment == EnvironmentStaging || environment == EnvironmentProduction
 	if err := releaseinfo.Current().Validate(immutableRelease); err != nil {

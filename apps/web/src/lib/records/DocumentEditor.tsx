@@ -1,32 +1,35 @@
-import { Alert, Card, Input, Select } from "antd";
-import { useState } from "react";
+import { Flex } from "antd";
+import { FileText, UserRound } from "lucide-react";
+import { type ReactNode, useId, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ConfirmDelete } from "../../components/ConfirmDelete";
 import { useI18n } from "../../i18n";
+import { uploadAttachment } from "../api/attachments";
 import {
   createDocument,
   updateDocument,
   type DocumentRecord,
   type DocumentType,
-  type DocumentValuesRequest,
   type Profile,
 } from "../api/client";
+import { useAttachmentsEnabled } from "../cadastro/useAttachmentsEnabled";
 import {
-  RecordCustomFieldsSection,
   recordCustomFieldError,
   saveRecordCustomValues,
   useSeedRecordDraft,
   type CustomDraftValue,
 } from "../../RecordCustomFields";
+import { CadastroHolderSection } from "../cadastro/components/CadastroHolderSection";
+import { CadastroSection, CadastroSectionBadge } from "../cadastro/components/CadastroSection";
+import { StatusBanner } from "../../components/StatusBanner";
+import { DocumentFormFields } from "../cadastro/components/DocumentFormFields";
+import { RecordScreen } from "../cadastro/components/RecordScreen";
+import { documentFormFromValues, documentValuesFromForm } from "../cadastro/recordFieldMaps";
 import {
   CurrentUseControls,
   EditorActions,
-  EditorHeader,
   MissingRecord,
   documentValues,
-  media,
-  mediumLabel,
-  withRecordMedium,
 } from "./RecordEditorCommon";
 
 export function DocumentEditor(props: {
@@ -43,36 +46,44 @@ export function DocumentEditor(props: {
   onSaved: (value: DocumentRecord, message: string) => Promise<void>;
   onDuplicate: (value: DocumentRecord) => void;
   onDelete: (value: DocumentRecord, confirmation: string) => void;
+  onOpenOwner?: (() => void) | undefined;
+  children?: ReactNode;
 }) {
-  const [values, setValues] = useState<DocumentValuesRequest>(() =>
-    props.record
-      ? documentValues(props.record)
-      : {
-          owner_profile_id: props.profile.id,
-          document_type_id:
-            props.initialTypeId && props.types.some((value) => value.id === props.initialTypeId)
-              ? props.initialTypeId
-              : (props.types.find((value) => value.active)?.id ?? ""),
-          identifier_value: "",
-          document_date: "",
-          notes: "",
-          medium: "PHYSICAL",
-          idle_custody: "ORGANIZATION",
-        },
-  );
+  const fileInputId = useId();
+  const [fields, setFields] = useState(() => {
+    if (props.record) return documentFormFromValues(documentValues(props.record));
+    const typeId =
+      props.initialTypeId && props.types.some((value) => value.id === props.initialTypeId)
+        ? props.initialTypeId
+        : (props.types.find((value) => value.active)?.id ?? "");
+    return documentFormFromValues({
+      owner_profile_id: props.profile.id,
+      document_type_id: typeId,
+      identifier_value: "",
+      document_date: "",
+      notes: "",
+      medium: "PHYSICAL",
+      idle_custody: "ORGANIZATION",
+    });
+  });
   const { messages } = useI18n();
   const panel = messages.records.panel;
   const common = messages.common;
+  const recordCopy = messages.tables.record;
+  const cadastro = messages.tables.cadastro;
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [customDraft, setCustomDraft] = useState<Record<string, CustomDraftValue>>({});
-  useSeedRecordDraft("document", props.record?.id, setCustomDraft);
+  useSeedRecordDraft("document", props.record?.id, (draft: Record<string, CustomDraftValue>) =>
+    setFields((current) => ({ ...current, customDraft: draft })),
+  );
   const queryClient = useQueryClient();
+  const attachmentsEnabled = useAttachmentsEnabled();
   const editable = props.mode !== "view";
   const submit = async () => {
     setSaving(true);
     setError(null);
     try {
+      const values = documentValuesFromForm(props.profile.id, fields);
       const saved = props.record
         ? await updateDocument(props.record.id, { ...values, version: props.record.version })
         : await createDocument(values);
@@ -82,11 +93,18 @@ export function DocumentEditor(props: {
         definitionTargetId: saved.type.id,
         recordId: saved.id,
         recordVersion: saved.version,
-        draft: customDraft,
+        draft: fields.customDraft,
         force: Boolean(props.record),
       });
       if (updatedCustomValues) {
         queryClient.setQueryData(["custom-values", "document", saved.id], updatedCustomValues);
+      }
+      if (fields.file) {
+        await uploadAttachment(
+          { owner_kind: "DOCUMENT", owner_id: saved.id },
+          fields.file,
+          () => undefined,
+        );
       }
       await props.onSaved(saved, props.record ? panel.docUpdatedNotice : panel.docCreatedNotice);
     } catch (caught) {
@@ -97,141 +115,90 @@ export function DocumentEditor(props: {
   };
   if (props.mode !== "create" && !props.record) return <MissingRecord onClose={props.onClose} />;
   return (
-    <Card className="record-editor">
-      <EditorHeader
-        closeLabel={panel.closeRecord}
-        title={
-          props.record
-            ? `${props.record.type.label} · ${props.record.identifier_value}`
-            : panel.newDoc
-        }
-        onClose={props.onClose}
-      />
-      {error ? <Alert message={panel.saveError} type="error" description={<>{error}</>} /> : null}
-      <div className="record-form">
-        <label>
-          {common.labels.type}
-          <Select
-            disabled={!editable || Boolean(props.lockType)}
-            onChange={(value) => setValues({ ...values, document_type_id: value })}
-            options={[
-              { value: "", label: panel.selectPlaceholder },
-              ...props.types
-                .filter((value) => value.active || value.id === values.document_type_id)
-                .map((value) => ({
-                  value: value.id,
-                  label: value.label,
-                })),
-            ]}
-            value={values.document_type_id}
+    <RecordScreen
+      ariaLabel={recordCopy.documentAria}
+      closeLabel={messages.tables.inspector.close}
+      eyebrow={recordCopy.documentEyebrow}
+      footer={
+        <Flex className="profile-panel__actions" vertical gap="0.75rem">
+          <EditorActions
+            editable={editable}
+            saving={saving}
+            record={props.record}
+            onSave={() => void submit()}
+            onEdit={props.onEdit}
+            onDuplicate={props.onDuplicate}
           />
-        </label>
-        <label>
-          {common.labels.identifier}
-          <Input
-            disabled={!editable}
-            value={values.identifier_value}
-            onChange={(event) => setValues({ ...values, identifier_value: event.target.value })}
-          />
-        </label>
-        <label>
-          {common.labels.date}
-          <Input
-            disabled={!editable}
-            type="date"
-            value={values.document_date}
-            onChange={(event) => setValues({ ...values, document_date: event.target.value })}
-          />
-        </label>
-        <label>
-          {common.labels.validUntil}
-          <Input
-            disabled={!editable}
-            type="date"
-            value={values.valid_until ?? ""}
-            onChange={(event) => setValues({ ...values, valid_until: event.target.value })}
-          />
-        </label>
-        <label>
-          {common.labels.medium}
-          <Select
-            disabled={!editable}
-            onChange={(value) =>
-              setValues(withRecordMedium(values, value as DocumentValuesRequest["medium"]))
-            }
-            options={media.map((value) => ({
-              value,
-              label: mediumLabel(value, messages),
-            }))}
-            value={values.medium}
-          />
-        </label>
-        {values.medium === "PHYSICAL" ? (
-          <label>
-            {common.labels.custody}
-            <Select
-              disabled={!editable}
-              onChange={(value) =>
-                setValues({
-                  ...values,
-                  idle_custody: value as NonNullable<DocumentValuesRequest["idle_custody"]>,
-                })
-              }
-              options={[
-                { value: "ORGANIZATION", label: panel.custodyOrg },
-                { value: "OWNER", label: panel.custodyOwner },
-              ]}
-              value={values.idle_custody ?? "ORGANIZATION"}
+          {props.record && props.canDelete ? (
+            <ConfirmDelete
+              cancelLabel={common.actions.cancel}
+              confirmLabel={panel.deleteTitle}
+              confirmationLabel={panel.deleteDocConfirmPrompt}
+              confirmationWord={common.actions.confirm}
+              description={panel.deleteDocDesc}
+              pending={props.pending}
+              title={panel.deleteTitle}
+              onCancel={props.onClose}
+              onConfirm={(word) => props.onDelete(props.record!, word)}
             />
-          </label>
-        ) : null}
-        <label className="record-form__wide">
-          {common.labels.notes}
-          <Input.TextArea
-            disabled={!editable}
-            rows={4}
-            value={values.notes}
-            onChange={(event) => setValues({ ...values, notes: event.target.value })}
-          />
-        </label>
-        <RecordCustomFieldsSection
-          definitionTargetKind="DOCUMENT_TYPE"
-          definitionTargetId={values.document_type_id || undefined}
+          ) : null}
+        </Flex>
+      }
+      onClose={props.onClose}
+      onOpenOwner={props.onOpenOwner}
+      openOwnerLabel={recordCopy.openOwner}
+      ownerLabel={recordCopy.owner}
+      ownerName={props.profile.full_name}
+      title={props.record ? props.record.identifier_value : panel.newDoc}
+    >
+      {error ? <StatusBanner description={error} title={panel.saveError} tone="error" /> : null}
+      <CadastroSection
+        badge={
+          <CadastroSectionBadge modifier="documents">{cadastro.badgeOfficial}</CadastroSectionBadge>
+        }
+        defaultOpen
+        hint={cadastro.sectionDocDataHint}
+        icon={<FileText size={18} strokeWidth={1.75} />}
+        modifier="documents"
+        title={cadastro.sectionDocData}
+      >
+        <DocumentFormFields
+          attachmentsEnabled={attachmentsEnabled.data !== false}
           disabled={!editable}
-          draft={customDraft}
-          onDraftChange={setCustomDraft}
+          documentTypes={props.types.filter(
+            (value) => value.active || value.id === fields.docTypeId,
+          )}
+          fileInputId={fileInputId}
+          lockType={props.lockType}
+          showDropzone={editable}
+          state={fields}
+          onChange={(patch) => setFields((current) => ({ ...current, ...patch }))}
         />
-      </div>
-      <EditorActions
-        editable={editable}
-        saving={saving}
-        record={props.record}
-        onSave={submit}
-        onEdit={props.onEdit}
-        onDuplicate={props.onDuplicate}
+      </CadastroSection>
+      <CadastroHolderSection
+        defaultOpen
+        holderName={props.profile.full_name}
+        inputId="record-doc-holder"
+        locked
+        selectedProfile={props.profile}
       />
       {props.record && props.record.medium === "PHYSICAL" ? (
-        <CurrentUseControls
-          kind="document"
-          record={props.record}
-          onChanged={async (message) => {
-            await props.onSaved(props.record!, message);
-          }}
-        />
+        <CadastroSection
+          defaultOpen
+          icon={<UserRound size={18} strokeWidth={1.75} />}
+          title={panel.currentUseTitle}
+        >
+          <CurrentUseControls
+            framed={false}
+            kind="document"
+            record={props.record}
+            onChanged={async (message) => {
+              await props.onSaved(props.record!, message);
+            }}
+          />
+        </CadastroSection>
       ) : null}
-      {props.record && props.canDelete ? (
-        <ConfirmDelete
-          cancelLabel={common.actions.cancel}
-          confirmLabel={panel.deleteTitle}
-          confirmationLabel={panel.deleteDocConfirmPrompt}
-          confirmationWord={common.actions.confirm}
-          description={panel.deleteDocDesc}
-          pending={props.pending}
-          title={panel.deleteTitle}
-          onCancel={props.onClose}
-          onConfirm={(word) => props.onDelete(props.record!, word)}
-        />
-      ) : null}
-    </Card>
+      {props.children}
+    </RecordScreen>
   );
 }

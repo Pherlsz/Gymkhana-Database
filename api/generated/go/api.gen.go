@@ -439,6 +439,21 @@ func (e IdleCustody) Valid() bool {
 	}
 }
 
+// Defines values for ModelProvider.
+const (
+	Google ModelProvider = "google"
+)
+
+// Valid indicates whether the value is a known member of the ModelProvider enum.
+func (e ModelProvider) Valid() bool {
+	switch e {
+	case Google:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProfileSortField.
 const (
 	ProfileSortFieldAddressCity         ProfileSortField = "address_city"
@@ -1107,6 +1122,17 @@ type HealthResponseStatus string
 // IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
 type IdleCustody string
 
+// ModelKeyStatus defines model for ModelKeyStatus.
+type ModelKeyStatus struct {
+	Configured bool          `json:"configured"`
+	Model      *string       `json:"model,omitempty"`
+	Provider   ModelProvider `json:"provider"`
+	UpdatedAt  *time.Time    `json:"updated_at,omitempty"`
+}
+
+// ModelProvider defines model for ModelProvider.
+type ModelProvider string
+
 // OwnerCandidate defines model for OwnerCandidate.
 type OwnerCandidate struct {
 	FullName string             `json:"full_name"`
@@ -1285,6 +1311,14 @@ type ProfileValuesRequest struct {
 type ReplaceCustomValuesRequest struct {
 	Values  []CustomValueInput `json:"values"`
 	Version int64              `json:"version"`
+}
+
+// SetModelKeyRequest defines model for SetModelKeyRequest.
+type SetModelKeyRequest struct {
+	Model string `json:"model"`
+
+	// Secret Provider API key. Write-only; never returned.
+	Secret string `json:"secret"`
 }
 
 // SortOrder defines model for SortOrder.
@@ -1603,6 +1637,9 @@ type CompleteGitHubLoginParams struct {
 	State string `form:"state" json:"state"`
 }
 
+// SetModelKeyJSONRequestBody defines body for SetModelKey for application/json ContentType.
+type SetModelKeyJSONRequestBody = SetModelKeyRequest
+
 // UpdateApplicationUserAccessJSONRequestBody defines body for UpdateApplicationUserAccess for application/json ContentType.
 type UpdateApplicationUserAccessJSONRequestBody = UpdateUserAccessRequest
 
@@ -1701,6 +1738,15 @@ type UpdateProfileJSONRequestBody = UpdateProfileRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Remove the shared Assistente model key
+	// (DELETE /api/admin/model-keys/{provider})
+	ClearModelKey(w http.ResponseWriter, r *http.Request, provider ModelProvider)
+	// Shared Assistente model key status (never the secret)
+	// (GET /api/admin/model-keys/{provider})
+	GetModelKeyStatus(w http.ResponseWriter, r *http.Request, provider ModelProvider)
+	// Store or rotate the shared Assistente model key
+	// (PUT /api/admin/model-keys/{provider})
+	SetModelKey(w http.ResponseWriter, r *http.Request, provider ModelProvider)
 	// List application users for administration
 	// (GET /api/admin/users)
 	ListApplicationUsers(w http.ResponseWriter, r *http.Request, params ListApplicationUsersParams)
@@ -1900,6 +1946,102 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ClearModelKey operation middleware
+func (siw *ServerInterfaceWrapper) ClearModelKey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider ModelProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearModelKey(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetModelKeyStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetModelKeyStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider ModelProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetModelKeyStatus(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetModelKey operation middleware
+func (siw *ServerInterfaceWrapper) SetModelKey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider ModelProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetModelKey(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListApplicationUsers operation middleware
 func (siw *ServerInterfaceWrapper) ListApplicationUsers(w http.ResponseWriter, r *http.Request) {
@@ -4751,6 +4893,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/admin/model-keys/{provider}", wrapper.ClearModelKey)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/admin/model-keys/{provider}", wrapper.GetModelKeyStatus)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/admin/model-keys/{provider}", wrapper.SetModelKey)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/admin/users", wrapper.ListApplicationUsers)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/admin/users/{user_id}/access", wrapper.UpdateApplicationUserAccess)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/auth/logout", wrapper.Logout)
@@ -4833,6 +4978,249 @@ type ServiceUnavailableJSONResponse ErrorResponse
 type UnauthorizedJSONResponse ErrorResponse
 
 type ValidationErrorJSONResponse ErrorResponse
+
+type ClearModelKeyRequestObject struct {
+	Provider ModelProvider `json:"provider"`
+}
+
+type ClearModelKeyResponseObject interface {
+	VisitClearModelKeyResponse(w http.ResponseWriter) error
+}
+
+type ClearModelKey204Response struct {
+}
+
+func (response ClearModelKey204Response) VisitClearModelKeyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ClearModelKey401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ClearModelKey401JSONResponse) VisitClearModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClearModelKey403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ClearModelKey403JSONResponse) VisitClearModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClearModelKey404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ClearModelKey404JSONResponse) VisitClearModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClearModelKey503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response ClearModelKey503JSONResponse) VisitClearModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModelKeyStatusRequestObject struct {
+	Provider ModelProvider `json:"provider"`
+}
+
+type GetModelKeyStatusResponseObject interface {
+	VisitGetModelKeyStatusResponse(w http.ResponseWriter) error
+}
+
+type GetModelKeyStatus200JSONResponse ModelKeyStatus
+
+func (response GetModelKeyStatus200JSONResponse) VisitGetModelKeyStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModelKeyStatus401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetModelKeyStatus401JSONResponse) VisitGetModelKeyStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModelKeyStatus403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetModelKeyStatus403JSONResponse) VisitGetModelKeyStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModelKeyStatus404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetModelKeyStatus404JSONResponse) VisitGetModelKeyStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModelKeyStatus503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response GetModelKeyStatus503JSONResponse) VisitGetModelKeyStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKeyRequestObject struct {
+	Provider ModelProvider `json:"provider"`
+	Body     *SetModelKeyJSONRequestBody
+}
+
+type SetModelKeyResponseObject interface {
+	VisitSetModelKeyResponse(w http.ResponseWriter) error
+}
+
+type SetModelKey200JSONResponse ModelKeyStatus
+
+func (response SetModelKey200JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKey400JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response SetModelKey400JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKey401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SetModelKey401JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKey403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SetModelKey403JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKey404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SetModelKey404JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKey503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response SetModelKey503JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type ListApplicationUsersRequestObject struct {
 	Params ListApplicationUsersParams
@@ -11186,6 +11574,15 @@ func (response GetReadyHealth503JSONResponse) VisitGetReadyHealthResponse(w http
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Remove the shared Assistente model key
+	// (DELETE /api/admin/model-keys/{provider})
+	ClearModelKey(ctx context.Context, request ClearModelKeyRequestObject) (ClearModelKeyResponseObject, error)
+	// Shared Assistente model key status (never the secret)
+	// (GET /api/admin/model-keys/{provider})
+	GetModelKeyStatus(ctx context.Context, request GetModelKeyStatusRequestObject) (GetModelKeyStatusResponseObject, error)
+	// Store or rotate the shared Assistente model key
+	// (PUT /api/admin/model-keys/{provider})
+	SetModelKey(ctx context.Context, request SetModelKeyRequestObject) (SetModelKeyResponseObject, error)
 	// List application users for administration
 	// (GET /api/admin/users)
 	ListApplicationUsers(ctx context.Context, request ListApplicationUsersRequestObject) (ListApplicationUsersResponseObject, error)
@@ -11404,6 +11801,91 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ClearModelKey operation middleware
+func (sh *strictHandler) ClearModelKey(w http.ResponseWriter, r *http.Request, provider ModelProvider) {
+	var request ClearModelKeyRequestObject
+
+	request.Provider = provider
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ClearModelKey(ctx, request.(ClearModelKeyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ClearModelKey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ClearModelKeyResponseObject); ok {
+		if err := validResponse.VisitClearModelKeyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetModelKeyStatus operation middleware
+func (sh *strictHandler) GetModelKeyStatus(w http.ResponseWriter, r *http.Request, provider ModelProvider) {
+	var request GetModelKeyStatusRequestObject
+
+	request.Provider = provider
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetModelKeyStatus(ctx, request.(GetModelKeyStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetModelKeyStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetModelKeyStatusResponseObject); ok {
+		if err := validResponse.VisitGetModelKeyStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetModelKey operation middleware
+func (sh *strictHandler) SetModelKey(w http.ResponseWriter, r *http.Request, provider ModelProvider) {
+	var request SetModelKeyRequestObject
+
+	request.Provider = provider
+
+	var body SetModelKeyJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetModelKey(ctx, request.(SetModelKeyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetModelKey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetModelKeyResponseObject); ok {
+		if err := validResponse.VisitSetModelKeyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ListApplicationUsers operation middleware

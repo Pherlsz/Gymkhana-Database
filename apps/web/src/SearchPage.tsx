@@ -1,6 +1,8 @@
-import { Alert, Button, Layout, Pagination, Select } from "antd";
+import { Button, Pagination, Select } from "antd";
 import { InlineStatus } from "./components/InlineStatus";
+import { PageShell } from "./components/PageShell";
 import { StateCard } from "./components/StateCard";
+import { StatusBanner } from "./components/StatusBanner";
 import "./search.css";
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
@@ -152,10 +154,7 @@ export function SearchPage() {
     !results.isFetching && search.q.trim().length > 0 && !results.isError && resultTotal >= 0;
 
   return (
-    <Layout className="search-page">
-      <header className="search-page__header">
-        <h1 className="page-title">{searchMessages.title}</h1>
-      </header>
+    <PageShell className="search-page" title={searchMessages.title}>
       <section className="search-toolbar">
         <SearchField
           label={searchMessages.title}
@@ -254,19 +253,17 @@ export function SearchPage() {
       </section>
 
       {results.isError ? (
-        <Alert
-          message={searchMessages.resultsErrorTitle}
-          type="error"
-          showIcon
-          description={<>{searchErrorMessage(results.error)}</>}
+        <StatusBanner
+          description={searchErrorMessage(results.error)}
+          title={searchMessages.resultsErrorTitle}
+          tone="error"
         />
       ) : null}
       {catalog.isError ? (
-        <Alert
-          message={searchMessages.catalogErrorTitle}
-          type="error"
-          showIcon
-          description={<>{searchErrorMessage(catalog.error)}</>}
+        <StatusBanner
+          description={searchErrorMessage(catalog.error)}
+          title={searchMessages.catalogErrorTitle}
+          tone="error"
         />
       ) : null}
 
@@ -317,7 +314,7 @@ export function SearchPage() {
           onChange={(page) => updateSearch({ page, preview: "" })}
         />
       ) : null}
-    </Layout>
+    </PageShell>
   );
 }
 

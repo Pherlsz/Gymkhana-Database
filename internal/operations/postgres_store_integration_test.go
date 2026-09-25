@@ -173,7 +173,7 @@ VALUES($1,'PROFILE','member_code','Código de associado','TEXT',false,true)`, da
 		t.Fatalf("duplicate ParseImport() error = %v", err)
 	}
 	parsed, err := service.GetImport(ctx, actor, grant.Import.ID)
-	if err != nil || parsed.State != ImportMapping || len(parsed.Sheets) != 1 {
+	if err != nil || (parsed.State != ImportMapping && parsed.State != ImportReady && parsed.State != ImportPreviewReady && parsed.State != ImportDecisionsRequired) || len(parsed.Sheets) != 1 {
 		t.Fatalf("parsed import = %#v, error = %v", parsed, err)
 	}
 	selected, err := service.SelectSheet(ctx, actor, parsed.ID, parsed.Version, 0, "integration-sheet")

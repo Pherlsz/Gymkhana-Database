@@ -140,6 +140,27 @@ export interface paths {
     patch: operations["updateApplicationUserAccess"];
     trace?: never;
   };
+  "/api/admin/model-keys/{provider}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
+    };
+    /** Shared Assistente model key status (never the secret) */
+    get: operations["getModelKeyStatus"];
+    /** Store or rotate the shared Assistente model key */
+    put: operations["setModelKey"];
+    post?: never;
+    /** Remove the shared Assistente model key */
+    delete: operations["clearModelKey"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/profiles": {
     parameters: {
       query?: never;
@@ -678,6 +699,23 @@ export interface components {
       active: boolean;
       /** Format: int64 */
       version: number;
+    };
+    /** @enum {string} */
+    ModelProvider: "google";
+    ModelKeyStatus: {
+      provider: components["schemas"]["ModelProvider"];
+      configured: boolean;
+      model?: string;
+      /** Format: date-time */
+      updated_at?: string;
+    };
+    SetModelKeyRequest: {
+      /**
+       * Format: password
+       * @description Provider API key. Write-only; never returned.
+       */
+      secret: string;
+      model: string;
     };
     DistinctCitiesResponse: {
       values: string[];
@@ -1840,6 +1878,87 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["Conflict"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  getModelKeyStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Model key status */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModelKeyStatus"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  setModelKey: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetModelKeyRequest"];
+      };
+    };
+    responses: {
+      /** @description Model key status after the update */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModelKeyStatus"];
+        };
+      };
+      400: components["responses"]["ValidationError"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  clearModelKey: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Model key removed or already absent */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["AuthUnavailable"];
     };
   };

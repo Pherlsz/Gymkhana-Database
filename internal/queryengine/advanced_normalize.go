@@ -80,8 +80,10 @@ func normalizeProjectionList(values []string, entity string, catalog resolvedCat
 			continue
 		}
 		if field.Public.Entity != entity {
-			validation.add(fmt.Sprintf("projections.%d", index), "entity_mismatch")
-			continue
+			if _, ok := findRelation(catalog, entity, field.Public.Entity, nil); !ok {
+				validation.add(fmt.Sprintf("projections.%d", index), "entity_mismatch")
+				continue
+			}
 		}
 		if _, duplicate := seen[key]; duplicate {
 			validation.add(fmt.Sprintf("projections.%d", index), "duplicate")
@@ -366,5 +368,57 @@ func normalizeCombination(value *CombinationSpec, catalog resolvedCatalog, valid
 			product = MaximumCombinationSize + 1
 		}
 	}
+	value.Aggregates = normalizeCombinationAggregates(value.Aggregates, value.Inputs, validation)
+	value.Having = normalizeHaving(value.Having, value.Aggregates, validation, "combination.having", 1)
 	return value
+}
+
+func normalizeCombinationAggregates(values []Aggregate, inputs []CombinationInput, validation *ValidationError) []Aggregate {
+	result := make([]Aggregate, 0, len(values))
+	seen := map[string]struct{}{}
+	for index, value := range values {
+		value.Key = strings.TrimSpace(value.Key)
+		value.Field = strings.TrimSpace(value.Field)
+		path := fmt.Sprintf("combination.aggregates.%d", index)
+		if !validLogicalSegment(value.Key) {
+			validation.add(path+".key", "invalid")
+			continue
+		}
+		if _, duplicate := seen[value.Key]; duplicate {
+			validation.add(path+".key", "duplicate")
+			continue
+		}
+		seen[value.Key] = struct{}{}
+		if value.Function == AggregateCount && value.Field == "" {
+			result = append(result, value)
+			continue
+		}
+		if !combinationFieldExists(inputs, value.Field) {
+			validation.add(path+".field", "unsupported")
+			continue
+		}
+		result = append(result, value)
+	}
+	return result
+}
+
+func combinationFieldExists(inputs []CombinationInput, field string) bool {
+	name := field
+	key := ""
+	if strings.HasPrefix(field, "*:") {
+		name = strings.TrimPrefix(field, "*:")
+	} else if cut, rest, ok := strings.Cut(field, ":"); ok {
+		key, name = cut, rest
+	}
+	for _, input := range inputs {
+		if input.Plan == nil || (key != "" && input.Key != key) {
+			continue
+		}
+		for _, projection := range input.Plan.Projections {
+			if projection == name {
+				return true
+			}
+		}
+	}
+	return false
 }

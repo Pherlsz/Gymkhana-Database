@@ -358,7 +358,7 @@ func parseWorksheet(index int, name string, content []byte, shared []string, dat
 	if err := decodeXML(content, &worksheet); err != nil {
 		return WorkbookSheet{}, ErrUnsupportedWorkbook
 	}
-	if len(worksheet.Rows) > MaximumRows+1 {
+	if len(worksheet.Rows) > MaximumRows+headerRowSlack {
 		return WorkbookSheet{}, ErrWorkbookLimit
 	}
 	result := WorkbookSheet{Index: index, Name: name, Rows: make([]WorkbookRow, 0, len(worksheet.Rows))}
@@ -368,15 +368,13 @@ func parseWorksheet(index int, name string, content []byte, shared []string, dat
 		if rowNumber == 0 {
 			rowNumber = rowOffset + 1
 		}
-		if rowNumber <= lastRow || rowNumber > MaximumRows+1 || len(row.Cells) > MaximumColumns {
+		if rowNumber <= lastRow || rowNumber > MaximumRows+headerRowSlack || len(row.Cells) > MaximumColumns {
 			return WorkbookSheet{}, ErrWorkbookLimit
 		}
 		lastRow = rowNumber
-		if rowNumber > 1 {
-			*totalRows = *totalRows + 1
-			if *totalRows > MaximumRows {
-				return WorkbookSheet{}, ErrWorkbookLimit
-			}
+		*totalRows = *totalRows + 1
+		if *totalRows > MaximumRows+headerRowSlack {
+			return WorkbookSheet{}, ErrWorkbookLimit
 		}
 		mapped := WorkbookRow{Number: rowNumber, Cells: make([]WorkbookCell, 0, len(row.Cells))}
 		seenColumns := make(map[int]struct{}, len(row.Cells))

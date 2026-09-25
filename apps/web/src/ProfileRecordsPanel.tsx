@@ -9,7 +9,6 @@ import { DocumentEditor } from "./lib/records/DocumentEditor";
 import { BillEditor } from "./lib/records/BillEditor";
 import {
   RecordCard,
-  RecordsError,
   conflictMessage,
   createBillColumns,
   createDocumentColumns,
@@ -17,6 +16,7 @@ import {
   physicalCustody,
   recordSearch,
 } from "./lib/records/RecordEditorCommon";
+import { StatusBanner } from "./components/StatusBanner";
 import { useI18n } from "./i18n";
 import { queryKeys } from "./lib/api/queryKeys";
 import {
@@ -139,7 +139,7 @@ function DocumentsSection({ profile, role, search, onSearch, onNotice }: Props) 
         onCreate={() => onSearch({ document_selected: undefined, document_mode: "create" })}
         {...(canAdministerTypes ? { onTypes: () => onSearch({ document_mode: "types" }) } : {})}
       />
-      {records.isError ? <RecordsError title={panel.loadDocError} error={records.error} /> : null}
+      {records.isError ? <StatusBanner error={records.error} title={panel.loadDocError} /> : null}
       <DocumentFilters search={search} types={types.data?.types ?? []} onSearch={onSearch} />
       <DataGrid
         caption={`${panel.captionDocs} ${profile.full_name}`}
@@ -298,7 +298,7 @@ function BillsSection({ profile, role, search, onSearch, onNotice }: Props) {
         onCreate={() => onSearch({ bill_selected: undefined, bill_mode: "create" })}
         {...(canAdministerTypes ? { onTypes: () => onSearch({ bill_mode: "types" }) } : {})}
       />
-      {records.isError ? <RecordsError title={panel.loadBillError} error={records.error} /> : null}
+      {records.isError ? <StatusBanner error={records.error} title={panel.loadBillError} /> : null}
       <BillFilters search={search} types={types.data?.types ?? []} onSearch={onSearch} />
       <DataGrid
         caption={`${panel.captionBills} ${profile.full_name}`}

@@ -164,5 +164,28 @@ export function normalizeProfileSearch(search: Record<string, unknown>): Profile
         ? search.records_owner
         : undefined,
     cols: typeof search.cols === "string" ? search.cols : "",
+    recorte: normalizeRecorte(search.recorte),
+    result: normalizeResult(search.result),
   };
+}
+
+function normalizeResult(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const token = value.trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token)
+    ? token
+    : "";
+}
+
+function normalizeRecorte(value: unknown): string {
+  // The router parses a bare 1 as a number, so the marker is the word on.
+  if (value === 1 || value === "1" || value === "on") return "on";
+  if (typeof value !== "string") return "";
+  const token = value.trim();
+  if (token === "1" || token === "on") return "on";
+  const keys = token
+    .split(",")
+    .map((key) => key.trim())
+    .filter((key) => /^[a-z][a-z0-9_]*$/i.test(key));
+  return keys.join(",");
 }

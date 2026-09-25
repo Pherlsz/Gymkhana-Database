@@ -1,11 +1,9 @@
 import { Button, Tag } from "antd";
-import { Columns3, SlidersHorizontal } from "lucide-react";
+import { Columns3, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { SearchField } from "../../components/SearchField";
+import { SearchField, type SearchFieldMode } from "../../components/SearchField";
 import { ColumnPicker, type ColumnPickerItem } from "./ColumnPicker";
-import { FilterSurface } from "./FilterSurface";
 import { ToolbarSurface } from "./ToolbarSurface";
-import type { ToolbarFilterField } from "./FilterControl";
 import { ICON, ICON_STROKE } from "../../components/icons";
 
 export type { ToolbarFilterField } from "./FilterControl";
@@ -25,15 +23,10 @@ export function TablesToolbar({
   searchPlaceholder,
   searchValue,
   searchGrain,
+  searchMode = "suggest",
   onSearchChange,
   onSearchSubmit,
-  fieldFiltersLabel,
-  addFilterLabel,
-  chooseFieldLabel,
-  chooseValueLabel,
-  removeFilterLabel,
   appliedFiltersLabel,
-  noFieldsLabel,
   moreChipsLabel,
   moreChipsCollapseLabel,
   chips,
@@ -41,22 +34,17 @@ export function TablesToolbar({
   onClearAll,
   localHint,
   localScopeBadge,
-  filters,
   columnPicker,
+  assistant,
 }: {
   searchLabel: string;
   searchPlaceholder: string;
   searchValue: string;
   searchGrain: "profiles" | "documents" | "bills";
+  searchMode?: SearchFieldMode | undefined;
   onSearchChange: (value: string) => void;
   onSearchSubmit: (value: string) => void;
-  fieldFiltersLabel: string;
-  addFilterLabel: string;
-  chooseFieldLabel: string;
-  chooseValueLabel: string;
-  removeFilterLabel: string;
   appliedFiltersLabel: string;
-  noFieldsLabel: string;
   moreChipsLabel: (count: number) => string;
   moreChipsCollapseLabel: string;
   chips: ToolbarChip[];
@@ -64,7 +52,6 @@ export function TablesToolbar({
   onClearAll: () => void;
   localHint: string;
   localScopeBadge: string;
-  filters: ToolbarFilterField[];
   columnPicker?:
     | {
         label: string;
@@ -82,10 +69,16 @@ export function TablesToolbar({
         onReset: () => void;
       }
     | undefined;
+  assistant?:
+    | {
+        label: string;
+        active: boolean;
+        onClick: () => void;
+      }
+    | undefined;
 }) {
-  const [openSurface, setOpenSurface] = useState<"columns" | "filters" | null>(null);
+  const [openColumns, setOpenColumns] = useState(false);
   const [allChips, setAllChips] = useState(false);
-  const filterCount = filters.filter((field) => field.value.trim()).length;
   const shownChips = allChips ? chips : chips.slice(0, CHIP_LIMIT);
   const hiddenChips = chips.length - shownChips.length;
 
@@ -95,7 +88,7 @@ export function TablesToolbar({
         <SearchField
           grain={searchGrain}
           label={searchLabel}
-          mode="suggest"
+          mode={searchMode}
           placeholder={searchPlaceholder}
           value={searchValue}
           onChange={onSearchChange}
@@ -107,9 +100,9 @@ export function TablesToolbar({
             count={columnPicker.hiddenCount}
             icon={<Columns3 aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
             label={columnPicker.label}
-            open={openSurface === "columns"}
+            open={openColumns}
             title={columnPicker.title}
-            onOpenChange={(open) => setOpenSurface(open ? "columns" : null)}
+            onOpenChange={setOpenColumns}
           >
             <ColumnPicker
               emptyLabel={columnPicker.emptyLabel}
@@ -125,28 +118,18 @@ export function TablesToolbar({
             />
           </ToolbarSurface>
         ) : null}
-        {filters.length > 0 ? (
-          <ToolbarSurface
-            active={filterCount > 0}
-            count={filterCount}
-            icon={<SlidersHorizontal aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
-            label={fieldFiltersLabel}
-            open={openSurface === "filters"}
-            title={fieldFiltersLabel}
-            onOpenChange={(open) => setOpenSurface(open ? "filters" : null)}
-          >
-            <FilterSurface
-              addFilterLabel={addFilterLabel}
-              appliedLabel={appliedFiltersLabel}
-              chooseFieldLabel={chooseFieldLabel}
-              chooseValueLabel={chooseValueLabel}
-              clearLabel={clearLabel}
-              fields={filters}
-              localHint={localHint}
-              noFieldsLabel={noFieldsLabel}
-              removeFilterLabel={removeFilterLabel}
-            />
-          </ToolbarSurface>
+        {assistant ? (
+          <Button
+            aria-label={assistant.label}
+            className={
+              assistant.active
+                ? "toolbar-surface__trigger is-ai is-active"
+                : "toolbar-surface__trigger is-ai"
+            }
+            icon={<Sparkles aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />}
+            title={assistant.label}
+            onClick={assistant.onClick}
+          />
         ) : null}
       </div>
 
@@ -180,7 +163,7 @@ export function TablesToolbar({
               {moreChipsCollapseLabel}
             </Button>
           ) : null}
-          <Button size="small" type="link" onClick={onClearAll}>
+          <Button className="tables-toolbar__clear" size="small" type="text" onClick={onClearAll}>
             {clearLabel}
           </Button>
         </div>

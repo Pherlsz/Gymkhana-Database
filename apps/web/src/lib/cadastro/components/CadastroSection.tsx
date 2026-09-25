@@ -15,6 +15,17 @@ export interface CadastroSectionProps {
   children: ReactNode;
 }
 
+export function CadastroSectionBadge({
+  modifier,
+  children,
+}: {
+  modifier?: string | undefined;
+  children: ReactNode;
+}) {
+  const extra = modifier ? ` cadastro-group__badge--${modifier}` : "";
+  return <span className={`cadastro-group__badge${extra}`}>{children}</span>;
+}
+
 export function CadastroSection({
   icon,
   title,
@@ -46,12 +57,21 @@ export function CadastroSection({
             <div className="cadastro-group__title-wrap">
               <h2 className="cadastro-group__title">{title}</h2>
               {badge}
+              {extraTitle ? (
+                <div className="cadastro-group__extra" onClick={(event) => event.stopPropagation()}>
+                  {extraTitle}
+                </div>
+              ) : null}
             </div>
           ) : (
             <>
               <h2 className="cadastro-group__title">{title}</h2>
               {badge}
-              {extraTitle}
+              {extraTitle ? (
+                <div className="cadastro-group__extra" onClick={(event) => event.stopPropagation()}>
+                  {extraTitle}
+                </div>
+              ) : null}
             </>
           )}
         </div>

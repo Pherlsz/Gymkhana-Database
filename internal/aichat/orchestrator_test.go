@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
+	querydomain "github.com/Pherlsz/Gymkhana-Database/internal/queryengine"
 	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
 )
 
@@ -77,12 +78,42 @@ func TestOrchestratorExecutesReadOnlyToolAndPreservesAllAssistantText(t *testing
 			t.Fatalf("provider received trusted data message: %#v", message)
 		}
 	}
-	if !strings.Contains(requests[1].Policy, "somente leitura") || strings.Contains(requests[1].Policy, "UPDATE profiles") {
+	if !strings.Contains(requests[1].Policy, "somente leitura") || !strings.Contains(requests[1].Policy, "Número da casa") ||
+		!strings.Contains(requests[1].Policy, "conferir") || !strings.Contains(requests[1].Policy, "replaces") ||
+		strings.Contains(requests[1].Policy, "UPDATE profiles") {
 		t.Fatalf("provider policy = %q", requests[1].Policy)
 	}
 	events, _ := fixture.service.Events(context.Background(), fixture.actor, creation.Run.ID, 0, 100)
 	if !eventKindsContain(events.Events, EventToolStarted, EventToolCompleted, EventResultReference, EventRunCompleted) {
 		t.Fatalf("tool events = %#v", events.Events)
+	}
+}
+
+func TestOrchestratorInjectsCompactCatalogIntoPolicy(t *testing.T) {
+	provider := NewFakeProvider(FakeModelStep{Deltas: []string{"Há pessoas."}, Usage: ModelUsage{InputUnits: 2, OutputUnits: 1}})
+	fixture := newOrchestratorFixture(t, 1000, provider)
+	fixture.query.catalog = querydomain.Catalog{
+		Version:  strings.Repeat("c", 64),
+		Entities: []querydomain.EntityDefinition{{Key: "profiles", Label: "Pessoas"}},
+		Fields: []querydomain.FieldDefinition{{
+			Key: "profile.full_name", Entity: "profiles", Label: "Nome", Kind: querydomain.ValueText,
+			Projectable: true, Filterable: true, Operators: []querydomain.Operator{querydomain.OperatorEqual},
+		}},
+		Operators: []querydomain.OperatorDefinition{{Key: querydomain.OperatorEqual, Label: "igual"}},
+		Limits:    querydomain.CatalogLimits{MaximumRows: 100},
+	}
+	creation := fixture.startTurn(t, "Quantas pessoas?", "compact-catalog-turn")
+	if err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "run-compact"); err != nil {
+		t.Fatalf("RunTurn() error = %v", err)
+	}
+	requests := provider.Requests()
+	if len(requests) != 1 {
+		t.Fatalf("provider requests = %#v", requests)
+	}
+	policy := requests[0].Policy
+	if !strings.Contains(policy, compactCatalogNotePrefix) || !strings.Contains(policy, fixture.query.catalog.Version) ||
+		!strings.Contains(policy, `"ops"`) || strings.Contains(policy, `"projectable"`) || strings.Contains(policy, `"search"`) {
+		t.Fatalf("policy missing compact catalog: %q", policy)
 	}
 }
 
@@ -99,6 +130,8 @@ func TestOrchestratorRejectsMalformedUnknownToolsAndRedactsProviderFailures(t *t
 		{name: "oversized usage", step: FakeModelStep{Usage: ModelUsage{OutputUnits: maximumProviderUsage + 1}}, wantError: ErrMalformedProvider, wantCode: "malformed_provider"},
 		{name: "provider unavailable", step: FakeModelStep{Err: errors.New("provider payload: secret-token")}, wantError: ErrUnavailable, wantCode: "unavailable"},
 		{name: "provider timeout", step: FakeModelStep{Err: ErrProviderTimeout}, wantError: ErrTimeout, wantCode: "timeout"},
+		{name: "gemini rate limit", step: FakeModelStep{Err: ErrRateLimited}, wantError: ErrRateLimited, wantCode: "rate_limited"},
+		{name: "gemini quota", step: FakeModelStep{Err: ErrQuotaExceeded}, wantError: ErrQuotaExceeded, wantCode: "quota_exceeded"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			fixture := newOrchestratorFixture(t, 1000, NewFakeProvider(test.step))
@@ -117,6 +150,40 @@ func TestOrchestratorRejectsMalformedUnknownToolsAndRedactsProviderFailures(t *t
 				}
 			}
 		})
+	}
+}
+
+func TestOrchestratorFeedsInvalidQueryPlanBackToTheModel(t *testing.T) {
+	provider := NewFakeProvider(
+		FakeModelStep{ToolCall: &ToolCall{ID: "call-query", Name: "query", Arguments: json.RawMessage(`{"plan":{"version":"v1","catalog_version":"short","root_entity":"profile","projections":["name"],"maximum_rows":10}}`)}},
+		FakeModelStep{Deltas: []string{"Três pessoas."}, Usage: ModelUsage{InputUnits: 2, OutputUnits: 2}},
+	)
+	fixture := newOrchestratorFixture(t, 1000, provider)
+	fixture.query.err = &querydomain.ValidationError{Fields: []querydomain.FieldError{{Field: "catalog_version", Code: "invalid"}}}
+	creation := fixture.startTurn(t, "Quantas pessoas?", "invalid-plan-turn")
+	if err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "invalid-plan"); err != nil {
+		t.Fatalf("RunTurn() error = %v", err)
+	}
+	run, _ := fixture.service.Run(context.Background(), fixture.actor, creation.Run.ID)
+	if run.State != RunCompleted {
+		t.Fatalf("run = %#v", run)
+	}
+	requests := provider.Requests()
+	if len(requests) != 2 || len(requests[1].ToolResults) != 1 || !strings.Contains(string(requests[1].ToolResults[0].Data), `"catalog_version"`) {
+		t.Fatalf("provider requests = %#v", requests)
+	}
+	found := false
+	for _, step := range fixture.store.steps {
+		if step.RunID != run.ID {
+			continue
+		}
+		found = true
+		if step.State != ToolStepFailed || step.ErrorCode != "invalid_input" {
+			t.Fatalf("tool step = %#v", step)
+		}
+	}
+	if !found {
+		t.Fatal("invalid plan step was not recorded")
 	}
 }
 

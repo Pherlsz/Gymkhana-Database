@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,6 +28,27 @@ func TestCapabilityGateFailsClosedWhenAuthenticationHasNoChecker(t *testing.T) {
 	}
 }
 
+func TestCapabilityGateAllowsExternalWithGrant(t *testing.T) {
+	userID := auth.Identifier{1}
+	service := &fakeAuthenticationService{
+		session: auth.Session{User: auth.User{ID: userID, Role: auth.RoleExternal, Active: true}},
+	}
+	nextCalled := false
+	handler := requireCapability(auth.CapProfiles, grantChecker{userID: userID, cap: auth.CapProfiles}, service, func(w http.ResponseWriter, _ *http.Request) {
+		nextCalled = true
+		w.WriteHeader(http.StatusNoContent)
+	})
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/profiles", nil)
+	request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
+
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusNoContent || !nextCalled {
+		t.Fatalf("status = %d, nextCalled = %t", response.Code, nextCalled)
+	}
+}
+
 func TestCapabilityGateKeepsUnauthenticatedTestModeAvailable(t *testing.T) {
 	nextCalled := false
 	handler := requireCapability(auth.CapProfiles, nil, nil, func(w http.ResponseWriter, _ *http.Request) {
@@ -40,4 +62,13 @@ func TestCapabilityGateKeepsUnauthenticatedTestModeAvailable(t *testing.T) {
 	if response.Code != http.StatusNoContent || !nextCalled {
 		t.Fatalf("status = %d, nextCalled = %t", response.Code, nextCalled)
 	}
+}
+
+type grantChecker struct {
+	userID auth.Identifier
+	cap    auth.Capability
+}
+
+func (checker grantChecker) UserHasCapability(_ context.Context, userID auth.Identifier, cap auth.Capability) (bool, error) {
+	return userID == checker.userID && cap == checker.cap, nil
 }

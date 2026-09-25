@@ -548,6 +548,18 @@ func safeReturnPath(value string) (string, error) {
 	if err != nil || parsed.IsAbs() || parsed.Host != "" || parsed.Fragment != "" {
 		return "", ErrInvalidInput
 	}
+	if parsed.Path == "/admin" {
+		query := parsed.Query()
+		for key, values := range query {
+			if len(values) != 1 || values[0] == "" {
+				return "", ErrInvalidInput
+			}
+			if key != "tab" || values[0] != "integrations" {
+				return "", ErrInvalidInput
+			}
+		}
+		return "/admin?tab=integrations", nil
+	}
 	switch parsed.Path {
 	case "/cadastro", "/forms", "/google-forms":
 	default:

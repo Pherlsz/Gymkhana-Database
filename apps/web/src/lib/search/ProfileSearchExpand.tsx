@@ -1,4 +1,4 @@
-import { Alert, Button } from "antd";
+import { Button } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { DocumentPresenceSection } from "../tables/DocumentPresenceSection";
@@ -6,6 +6,7 @@ import { tableLinkProps } from "../tables/tableRoutes";
 import { getProfile } from "../api/client";
 import { queryKeys } from "../api/queryKeys";
 import { useI18n } from "../../i18n";
+import { StatusBanner } from "../../components/StatusBanner";
 import { normalizeProfileSearch, ProfileReadout, ProfileReadoutSkeleton } from "../../ProfilePanel";
 import { groupAsResult, profileSearchForResult, shouldFetchPreview } from "./groupResults";
 import type { ProfileCard } from "./types";
@@ -37,11 +38,10 @@ export function ProfileSearchExpand({
     <div aria-busy={profileQuery.isFetching} className="search-card__expand" id={expandId}>
       <div className="search-card__expand-body">
         {profileQuery.isError ? (
-          <Alert
-            message={searchMessages.previewErrorTitle}
-            type="error"
-            showIcon
-            description={<>{searchErrorMessage(profileQuery.error)}</>}
+          <StatusBanner
+            description={searchErrorMessage(profileQuery.error)}
+            title={searchMessages.previewErrorTitle}
+            tone="error"
           />
         ) : null}
         {profileQuery.isFetching && !profileQuery.data ? (
@@ -55,7 +55,7 @@ export function ProfileSearchExpand({
         {profileQuery.data ? (
           <ProfileReadout
             documentPresence={
-              <DocumentPresenceSection editable={false} profile={profileQuery.data} />
+              <DocumentPresenceSection profile={profileQuery.data} />
             }
             profile={profileQuery.data}
           />

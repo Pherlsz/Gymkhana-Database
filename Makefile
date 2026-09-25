@@ -19,28 +19,34 @@ setup:
 	@$(GO) mod download
 
 services-up:
-	@echo "services-up is retired: the rebuild uses Neon, not local containers. Inject DATABASE_URL with lokeys."
+	@echo "services-up is retired: the rebuild uses Neon, not local containers. Set DATABASE_URL in .env."
 	@exit 1
 
 services-down:
 	@echo "services-down is retired: the rebuild uses Neon, not local containers."
 	@exit 1
 
+# Source gitignored .env into this recipe when the file exists.
+with-env = set -a; \
+	if [ -f "$(CURDIR)/.env" ]; then . "$(CURDIR)/.env"; fi; \
+	set +a;
+
 require-database-url:
-	@if [ -z "$$DATABASE_URL" ]; then \
-		echo "DATABASE_URL is required. Inject Neon with: lokeys run -p gymkhana --env dev -- make migrate"; \
+	@$(with-env) \
+	if [ -z "$$DATABASE_URL" ]; then \
+		echo "DATABASE_URL is required. Copy .env.example to .env and set the Neon URL."; \
 		exit 1; \
 	fi
 
 migrate: require-database-url
-	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --migrations database/migrations --conn-string "$$DATABASE_URL"
+	@$(with-env) $(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --migrations database/migrations --conn-string "$$DATABASE_URL"
 	@$(GO) run ./cmd/river-migrate -action migrate
 
 migrate-down-one: require-database-url
-	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --destination -1 --migrations database/migrations --conn-string "$$DATABASE_URL"
+	@$(with-env) $(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --destination -1 --migrations database/migrations --conn-string "$$DATABASE_URL"
 
 migrate-status: require-database-url
-	@$(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) status --migrations database/migrations --conn-string "$$DATABASE_URL"
+	@$(with-env) $(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) status --migrations database/migrations --conn-string "$$DATABASE_URL"
 	@$(GO) run ./cmd/river-migrate -action validate
 
 reset-db:
@@ -49,9 +55,9 @@ reset-db:
 	@exit 1
 
 dev:
-	@echo "Inject secrets with lokeys, then run API and web in separate terminals:"
-	@echo "  lokeys run -p gymkhana --env dev -- make dev-api"
-	@echo "  lokeys run -p gymkhana --env dev -- make dev-web"
+	@echo "Run API and web in separate terminals:"
+	@echo "  make dev-api"
+	@echo "  make dev-web"
 
 dev-api:
 	@$(GO) run ./cmd/api

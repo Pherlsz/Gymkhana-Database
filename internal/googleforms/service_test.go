@@ -28,6 +28,8 @@ func TestSafeReturnPathAllowsOnlyGoogleFormsState(t *testing.T) {
 		{value: "/cadastro?mode=forms&tab=history", want: "/cadastro?mode=forms&tab=history"},
 		{value: "/google-forms?source=" + sourceID.String() + "&tab=sources", want: "/cadastro?mode=forms&source=" + sourceID.String() + "&tab=sources"},
 		{value: "/cadastro?mode=forms&table=documents&tab=sources", want: "/cadastro?mode=forms&tab=sources&table=documents"},
+		{value: "/admin", want: "/admin?tab=integrations"},
+		{value: "/admin?tab=integrations", want: "/admin?tab=integrations"},
 	}
 	for _, test := range tests {
 		got, err := safeReturnPath(test.value)
@@ -41,6 +43,8 @@ func TestSafeReturnPathAllowsOnlyGoogleFormsState(t *testing.T) {
 		"/operations",
 		"/google-forms#fragment",
 		"/cadastro?mode=xlsx",
+		"/admin?tab=access",
+		"/admin?redirect=https://evil.test",
 		"/cadastro?mode=forms&tab=unknown",
 		"/google-forms?tab=",
 		"/google-forms?redirect=https://evil.test",

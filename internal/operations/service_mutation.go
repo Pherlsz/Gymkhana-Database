@@ -14,14 +14,11 @@ import (
 type rowNormalizer func(ctx context.Context, service *Service, effective map[string]string) (Mutation, error)
 
 func normalizeProfileMutation(_ context.Context, _ *Service, effective map[string]string) (Mutation, error) {
-	normalized, err := profile.Normalize(profile.Values{
-		FullName: effective["full_name"], SocialName: effective["social_name"], CPF: effective["cpf"],
-		Email: effective["email"], MobilePhone: effective["mobile_phone"], LandlinePhone: effective["landline_phone"],
-		Address: profile.Address{Street: effective["address_street"], Number: effective["address_number"],
-			Complement: effective["address_complement"], Neighborhood: effective["address_neighborhood"],
-			City: effective["address_city"], State: effective["address_state"], PostalCode: effective["address_postal_code"]},
-		Notes: effective["notes"],
-	})
+	values, err := profileValuesFromImport(effective)
+	if err != nil {
+		return Mutation{}, err
+	}
+	normalized, err := profile.Normalize(values)
 	if err != nil {
 		return Mutation{}, err
 	}
@@ -84,7 +81,7 @@ func (service *Service) mutationForRow(ctx context.Context, module Module, value
 	for field, value := range values {
 		effective[field] = value
 	}
-	targetID, _, action, err := targetFromValues(values)
+	targetID, _, action, err := service.resolveTarget(ctx, module, values)
 	if err != nil {
 		return Mutation{}, 0, err
 	}
@@ -183,6 +180,28 @@ func customValueInput(definition customdata.FieldDefinition, raw string) (custom
 		return customdata.ValueInput{}, err
 	}
 	return normalized, nil
+}
+
+func (service *Service) resolveTarget(ctx context.Context, module Module, values map[string]string) (*Identifier, int64, Action, error) {
+	id, version, action, err := targetFromValues(values)
+	if err != nil || action != ActionCreate || module != ModuleProfiles {
+		return id, version, action, err
+	}
+	digits := profile.CanonicalCPFDigits(values["cpf"])
+	if digits == "" {
+		return nil, 0, ActionCreate, nil
+	}
+	matches, err := service.store.FindProfileIDsByCPF(ctx, digits)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	if len(matches) == 0 {
+		return nil, 0, ActionCreate, nil
+	}
+	if len(matches) > 1 {
+		return nil, 0, "", ErrAmbiguousCPF
+	}
+	return &matches[0], 0, ActionUpdate, nil
 }
 
 func targetFromValues(values map[string]string) (*Identifier, int64, Action, error) {

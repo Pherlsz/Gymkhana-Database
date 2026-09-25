@@ -7,6 +7,7 @@ import (
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/postgres/dbgen"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -71,12 +72,94 @@ func (store *PostgresStore) CreateUser(ctx context.Context, params CreateUserPar
 	return userFromDatabase(value), nil
 }
 
+func (store *PostgresStore) ProvisionUser(ctx context.Context, params ProvisionUserParams) (ManagedUser, error) {
+	tx, err := store.pool.Begin(ctx)
+	if err != nil {
+		return ManagedUser{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	// ponytail: pending subject until Google login binds the real one. Nullable subject if these rows need a SQL predicate.
+	created, err := store.queries.WithTx(tx).CreateAppUser(ctx, dbgen.CreateAppUserParams{
+		ID:          databaseUUID(params.ID),
+		Email:       params.Email,
+		Subject:     "pending:" + params.ID.String(),
+		DisplayName: params.DisplayName,
+		Role:        string(params.Role),
+		Active:      true,
+	})
+	if err != nil {
+		return ManagedUser{}, mapUserWriteError(err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO allowed_emails (email, added_by, added_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT DO NOTHING
+	`, params.Email, databaseUUID(params.ActorID)); err != nil {
+		return ManagedUser{}, mapUserWriteError(err)
+	}
+	for _, capability := range params.Capabilities {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO app_user_capabilities (user_id, capability, granted_by)
+			VALUES ($1, $2, $3)
+		`, databaseUUID(params.ID), string(capability), databaseUUID(params.ActorID)); err != nil {
+			return ManagedUser{}, mapUserWriteError(err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return ManagedUser{}, err
+	}
+	return managedUserFromDatabase(created), nil
+}
+
+func (store *PostgresStore) DeleteUser(ctx context.Context, userID Identifier, email string) error {
+	tx, err := store.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `DELETE FROM app_sessions WHERE user_id = $1`, databaseUUID(userID)); err != nil {
+		return mapDeleteError(err)
+	}
+	deleted, err := tx.Exec(ctx, `DELETE FROM app_users WHERE id = $1`, databaseUUID(userID))
+	if err != nil {
+		return mapDeleteError(err)
+	}
+	if deleted.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM allowed_emails WHERE email = $1`, email); err != nil {
+		return mapDeleteError(err)
+	}
+	return tx.Commit(ctx)
+}
+
+func mapDeleteError(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+		return ErrUserInUse
+	}
+	return err
+}
+
+func mapUserWriteError(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && (pgErr.Code == "23505" || pgErr.Code == "23514") {
+		if pgErr.Code == "23505" {
+			return ErrUserAlreadyExists
+		}
+		return ErrInvalidUserAccess
+	}
+	return err
+}
+
 func (store *PostgresStore) UpdateUserIdentity(ctx context.Context, userID Identifier, identity GoogleIdentity) (User, error) {
 	value, err := store.queries.UpdateAppUserIdentity(ctx, dbgen.UpdateAppUserIdentityParams{
 		ID:          databaseUUID(userID),
 		Email:       identity.Email,
 		DisplayName: identity.DisplayName,
 		AvatarUrl:   optionalString(identity.AvatarURL),
+		Subject:     identity.Subject,
 	})
 	if err != nil {
 		return User{}, err
@@ -86,13 +169,19 @@ func (store *PostgresStore) UpdateUserIdentity(ctx context.Context, userID Ident
 
 func (store *PostgresStore) UpdateUserAccess(ctx context.Context, params UpdateUserAccessParams) (ManagedUser, error) {
 	value, err := store.queries.UpdateAppUserAccess(ctx, dbgen.UpdateAppUserAccessParams{
-		ID:      databaseUUID(params.UserID),
-		Role:    string(params.Role),
-		Active:  params.Active,
-		Version: params.Version,
+		ID:          databaseUUID(params.UserID),
+		Role:        string(params.Role),
+		Active:      params.Active,
+		Email:       params.Email,
+		DisplayName: params.DisplayName,
+		Version:     params.Version,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ManagedUser{}, ErrUserAccessConflict
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && (pgErr.Code == "23505" || pgErr.Code == "23514") {
+		return ManagedUser{}, ErrInvalidUserAccess
 	}
 	if err != nil {
 		return ManagedUser{}, err
@@ -167,21 +256,40 @@ func (store *PostgresStore) GrantCapability(ctx context.Context, userID Identifi
 }
 
 func (store *PostgresStore) RevokeCapability(ctx context.Context, userID Identifier, cap Capability) error {
-	query := `
+	tx, err := store.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	result, err := tx.Exec(ctx, `
 		DELETE FROM app_user_capabilities
 		WHERE user_id = $1 AND capability = $2
-	`
-	result, err := store.pool.Exec(ctx, query, databaseUUID(userID), cap)
+	`, databaseUUID(userID), cap)
 	if err != nil {
 		return err
 	}
 	if result.RowsAffected() == 0 {
 		return ErrCapabilityNotFound
 	}
-	return nil
+
+	var role string
+	var remaining int64
+	if err := tx.QueryRow(ctx, `
+		SELECT app_users.role,
+		       (SELECT COUNT(*) FROM app_user_capabilities WHERE user_id = $1)
+		FROM app_users
+		WHERE app_users.id = $1
+	`, databaseUUID(userID)).Scan(&role, &remaining); err != nil {
+		return err
+	}
+	if role == string(RoleExternal) && remaining == 0 {
+		return ErrMemberNeedsCapability
+	}
+	return tx.Commit(ctx)
 }
 
-func (store *PostgresStore) ListUserCapabilities(ctx context.Context, userID Identifier) ([]Capability, error) {
+func (store *PostgresStore) ListCapabilities(ctx context.Context, userID Identifier) ([]Capability, error) {
 	query := `
 		SELECT capability
 		FROM app_user_capabilities

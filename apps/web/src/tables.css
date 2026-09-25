@@ -40,7 +40,8 @@
 
 /* Keep in sync with SHEET_INSPECTOR_MAX_WIDTH_PX (drawer below this width). */
 @media (min-width: 840px) {
-  .tables-page__workspace:has(> .profile-panel) {
+  .tables-page__workspace:has(> .profile-panel),
+  .tables-page__workspace:has(> .table-record-editor) {
     grid-template-columns: minmax(0, 1fr) minmax(24rem, min(36%, 32rem));
   }
 
@@ -50,7 +51,8 @@
     width: 100%;
   }
 
-  .tables-page__workspace > .profile-panel {
+  .tables-page__workspace > .profile-panel,
+  .tables-page__workspace > .table-record-editor {
     grid-column: 2;
     grid-row: 1;
     width: auto;
@@ -64,6 +66,7 @@
 
 .tables-page > .page-header,
 .tables-toolbar,
+.tables-page > .assistant-banner,
 .tables-page > .ant-alert,
 .tables-page > .ant-typography {
   flex: none;
@@ -89,11 +92,13 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  container-type: inline-size;
+  container-name: tables-toolbar;
 }
 
 .tables-toolbar__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 0.4rem;
   width: 100%;
@@ -118,6 +123,13 @@
   border-color: var(--brand-accent-solid);
   background-color: var(--brand-accent-surface);
   color: var(--brand-accent-text);
+}
+
+.toolbar-surface__trigger.is-ai.ant-btn {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  justify-content: center;
+  padding-inline: 0;
 }
 
 /* Below `sm` the label would force the bar to wrap, so the icon carries it. */
@@ -198,8 +210,6 @@
   min-height: 0;
 }
 
-/* Filter surface: one row per condition (field + value). */
-.filter-surface,
 .column-picker {
   display: flex;
   width: 100%;
@@ -216,52 +226,6 @@
   flex: none;
 }
 
-.filter-surface__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.15rem 0.2rem 0.4rem;
-  border-bottom: 1px solid var(--md-outline-variant);
-}
-
-.filter-surface__header-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--md-on-surface);
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.filter-surface__header-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  background: var(--md-state-hover, rgba(255, 255, 255, 0.08));
-  color: var(--md-on-surface-variant);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.filter-surface__header-badge.is-active {
-  background: var(--brand-accent-surface);
-  color: var(--brand-accent-text);
-  border: 1px solid var(--brand-accent-border);
-}
-
-.filter-surface__clear-btn {
-  color: var(--md-on-surface-variant) !important;
-  font-size: 0.75rem !important;
-}
-
-.filter-surface__clear-btn:hover {
-  color: #f66d62 !important;
-}
-
-.filter-surface__list,
 .column-picker__groups {
   display: flex;
   flex-direction: column;
@@ -279,89 +243,11 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Instantaneous hover and zero animation queue across both filter panels */
 .column-picker__item,
-.column-picker__item *,
-.filter-surface__row,
-.filter-surface__row * {
+.column-picker__item * {
   transition: none !important;
 }
 
-.filter-surface__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 2rem;
-  grid-template-areas:
-    "field remove"
-    "value value";
-  gap: 0.45rem;
-  align-items: center;
-  min-width: 0;
-  padding: 0.4rem 0.55rem;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--gym-radius-md);
-  background: var(--md-surface, #1e1e1e);
-}
-
-.filter-surface__row:hover {
-  border-color: var(--md-outline);
-}
-
-.filter-surface__row.is-applied {
-  background: var(--brand-accent-surface);
-  border-color: var(--brand-accent-border);
-}
-
-.filter-surface__row.is-applied:hover {
-  background: color-mix(in oklch, var(--brand-accent-surface) 150%, transparent);
-  border-color: var(--brand-accent-solid);
-}
-
-.filter-surface__field-select {
-  grid-area: field;
-  min-width: 0;
-}
-
-.filter-surface__control {
-  grid-area: value;
-  min-width: 0;
-}
-
-.filter-surface__remove {
-  grid-area: remove;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 2rem !important;
-  height: 2rem !important;
-  padding: 0 !important;
-  border-radius: var(--gym-radius-sm, 4px) !important;
-  color: var(--md-on-surface-variant) !important;
-  transition: all 0.15s ease !important;
-}
-
-.filter-surface__remove:hover:not(:disabled) {
-  background: rgba(246, 109, 98, 0.15) !important;
-  color: #f66d62 !important;
-}
-
-.filter-surface__remove:disabled {
-  opacity: 0.25 !important;
-  cursor: not-allowed !important;
-}
-
-.filter-surface__control .ant-select,
-.filter-surface__control .ant-input-affix-wrapper,
-.filter-surface__control .ant-input,
-.filter-surface__field-select {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.filter-surface__control .ant-input-affix-wrapper {
-  align-items: center;
-}
-
-.filter-surface__footer,
 .column-picker__footer {
   display: flex;
   flex: none;
@@ -371,25 +257,6 @@
   gap: 0.5rem;
   padding-top: 0.45rem;
   border-top: 1px solid var(--md-outline-variant);
-}
-
-.filter-surface__hint-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--md-outline-variant);
-  color: var(--md-on-surface-variant);
-  font-size: 0.6875rem;
-  font-weight: 500;
-}
-
-.filter-surface__hint {
-  margin: 0;
-  color: var(--md-on-surface-variant);
-  font-size: 0.75rem;
 }
 
 /* Column picker: grouped, counted, and scannable at ~57 columns. */
@@ -571,11 +438,25 @@
   opacity: 0.72;
 }
 
+.tables-toolbar__clear.ant-btn {
+  height: auto;
+  min-height: 1.75rem;
+  padding-inline: 0.4rem;
+  color: var(--md-on-surface) !important;
+  font-size: 0.8125rem;
+}
+
+.tables-toolbar__clear.ant-btn:hover {
+  color: var(--brand-accent-text) !important;
+}
+
 @media (min-width: 600px) {
   .tables-toolbar__row {
     gap: 0.5rem;
   }
+}
 
+@container tables-toolbar (min-width: 40rem) {
   .toolbar-surface__label,
   .toolbar-surface__chevron {
     display: inline-flex;
@@ -645,6 +526,8 @@
 
 .spreadsheet-table.ant-table-wrapper {
   --rc-virtual-list-scrollbar-bg: var(--gym-scrollbar-thumb);
+  /* Keep in sync with SHEET_ROW_HEIGHT_PX — virtual listItemHeight. */
+  --spreadsheet-row-height: 44px;
 }
 
 .spreadsheet-table .ant-table-header {
@@ -675,6 +558,28 @@
 
 .spreadsheet-table .ant-table-tbody-virtual-holder-inner {
   will-change: transform;
+}
+
+.spreadsheet-table .ant-table-tbody-virtual-holder-inner > .ant-table-row {
+  align-items: stretch;
+  box-sizing: border-box;
+  height: var(--spreadsheet-row-height);
+  max-height: var(--spreadsheet-row-height);
+  min-height: var(--spreadsheet-row-height);
+}
+
+.spreadsheet-table.ant-table-wrapper
+  .ant-table.ant-table-small
+  .ant-table-tbody-virtual
+  .ant-table-cell {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  padding-block: 0;
+  padding-inline: 0.55rem;
 }
 
 .spreadsheet-table.ant-table-virtual .ant-table-body {
@@ -761,7 +666,8 @@
   overflow: hidden;
 }
 
-.tables-inspector-sheet .profile-panel {
+.tables-inspector-sheet .profile-panel,
+.tables-inspector-sheet .table-record-editor {
   flex: 1 1 auto;
   width: 100%;
   max-width: none;
@@ -800,7 +706,20 @@
   font-size: 0.8125rem;
 }
 
-.spreadsheet-table .ant-table-tbody .ant-table-cell:not(.spreadsheet-table__badges) {
+/* Single hairline divider (virtual table drops Ant's vertical borders). */
+.spreadsheet-table .ant-table-thead .ant-table-cell:not(.spreadsheet-table__actions),
+.spreadsheet-table .ant-table-tbody .ant-table-cell:not(.spreadsheet-table__actions) {
+  box-shadow: inset -1px 0 0 var(--md-outline-variant);
+}
+
+/* Ant paints its own 1px ::before splitter on header cells — stacks on our hairline. */
+.spreadsheet-table .ant-table-thead .ant-table-cell::before {
+  display: none;
+}
+
+.spreadsheet-table
+  .ant-table-tbody
+  .ant-table-cell:not(.spreadsheet-table__badges):not(.spreadsheet-table__actions) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -823,7 +742,33 @@
   .ant-table-tbody
   .ant-table-row[aria-selected="true"]
   > .ant-table-cell:first-child {
-  box-shadow: inset 2px 0 0 var(--md-primary-text);
+  box-shadow:
+    inset 2px 0 0 var(--md-primary-text),
+    inset -1px 0 0 var(--md-outline-variant);
+}
+
+.spreadsheet-table .ant-table-cell.spreadsheet-table__actions,
+.spreadsheet-table.ant-table-wrapper
+  .ant-table-tbody-virtual
+  .ant-table-cell.spreadsheet-table__actions,
+.spreadsheet-table .ant-table-header .ant-table-cell.spreadsheet-table__actions {
+  justify-content: center;
+  overflow: visible;
+  padding: 0;
+  text-align: center;
+}
+
+.spreadsheet-table__row-actions-trigger.ant-btn {
+  flex: none;
+  height: 1.75rem;
+  padding: 0;
+  width: 1.75rem;
+}
+
+.spreadsheet-table__row-actions-menu.ant-dropdown {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
 }
 
 .spreadsheet-table-card--empty .ant-card-body {
@@ -861,9 +806,9 @@
 
 .document-badges {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.2rem;
-  max-height: 2.1rem;
+  max-width: 100%;
   overflow: hidden;
   align-items: center;
 }
@@ -1013,7 +958,6 @@
   height: 100%;
 }
 
-.filter-surface__row,
 .column-picker__item {
   min-height: 2.75rem;
 }
@@ -1126,21 +1070,6 @@
     font-size: 0.875rem;
   }
 
-  .filter-surface__field-select .ant-select-selector,
-  .filter-surface__control .ant-select .ant-select-selector,
-  .filter-surface__control .ant-input-affix-wrapper,
-  .filter-surface__control .ant-input:not(.ant-input-affix-wrapper *) {
-    height: 2rem !important;
-    min-height: 2rem !important;
-  }
-
-  .filter-surface__row {
-    grid-template-columns: minmax(8.5rem, 11.5rem) minmax(0, 1fr) 2rem;
-    grid-template-areas: "field value remove";
-    gap: 0.5rem;
-  }
-
-  .filter-surface__row,
   .column-picker__item {
     min-height: 2.25rem;
   }
@@ -1222,3 +1151,214 @@
 .tables-toolbar__chip.is-local.ant-tag {
   border-style: dashed;
 }
+
+.tables-inspector-sheet .table-record-editor,
+.tables-page__workspace > .table-record-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.tables-page__workspace > .table-record-editor {
+  overflow: hidden;
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md, 12px);
+  background: var(--md-surface-low);
+}
+
+.tables-inspector-sheet .table-record-editor > .profile-panel,
+.tables-page__workspace > .table-record-editor > .profile-panel {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.spreadsheet-table__head {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.spreadsheet-table__head-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Resize hit strip on the cell divider — keep clear of the funnel control. */
+.spreadsheet-table .ant-table-thead .ant-table-cell:not(.spreadsheet-table__actions) {
+  position: relative;
+}
+
+.spreadsheet-table .ant-table-thead .ant-table-cell:not(.spreadsheet-table__actions)::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: 12px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+/* One accent edge while dragging — replaces the hairline on header and body. */
+.spreadsheet-table .ant-table-thead .ant-table-cell.is-resizing,
+.spreadsheet-table .ant-table-tbody .ant-table-cell.is-resizing {
+  box-shadow: inset -2px 0 0 var(--brand-accent-solid, #e8b84a);
+}
+
+body.spreadsheet-col-resizing,
+body.spreadsheet-col-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+/* Sorter / filter hover only when the pointer is on that control — not the whole th. */
+.spreadsheet-table .ant-table-thead .ant-table-column-sorters:hover .ant-table-column-sorter,
+.spreadsheet-table .ant-table-thead th:hover .ant-table-column-sorter {
+  color: inherit;
+}
+
+.spreadsheet-table .ant-table-thead .ant-table-column-sorter:hover {
+  color: var(--md-on-surface);
+}
+
+.column-funnel__anchor {
+  display: inline-flex;
+  flex: none;
+  margin-left: auto;
+  margin-right: 0.85rem;
+}
+
+.column-funnel__trigger {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--gym-radius-sm, 4px);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+  opacity: 0.45;
+}
+
+.column-funnel__trigger:hover,
+.column-funnel__trigger.is-active,
+.column-funnel__trigger[aria-expanded="true"] {
+  opacity: 1;
+  background: var(--md-state-hover);
+  color: var(--md-on-surface);
+}
+
+.column-funnel__overlay {
+  animation-duration: 0s !important;
+  transition: none !important;
+}
+
+.column-funnel__overlay .ant-popover-container {
+  padding: 0;
+  overflow: visible;
+  border: 1px solid var(--md-outline);
+  border-radius: 8px;
+  background: var(--md-surface-elevated, var(--md-surface-container));
+  box-shadow: var(--shadow-overlay);
+}
+
+.column-funnel__overlay .ant-popover-content {
+  padding: 0;
+}
+
+.column-funnel {
+  display: grid;
+  gap: 0.75rem;
+  width: 20.5rem;
+  max-width: calc(100vw - 1.25rem);
+  padding: 0.9rem 0.8rem 0.75rem;
+}
+
+.column-funnel__row {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.column-funnel__field {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.column-funnel__label {
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.column-funnel__field .ant-select,
+.column-funnel__field .ant-input {
+  width: 100%;
+}
+
+.column-funnel__range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+.column-funnel__fx {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--md-outline-variant);
+}
+
+.column-funnel__formula.ant-input {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+}
+
+.column-funnel__ghost.ant-btn {
+  justify-self: start;
+  min-height: 1.35rem;
+  height: auto;
+  padding: 0;
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.column-funnel__ghost.ant-btn:hover {
+  color: var(--md-on-surface);
+}
+
+.column-funnel__error {
+  margin: 0;
+  color: var(--md-error);
+  font-size: 0.7rem;
+}
+
+.column-funnel__hint {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.column-funnel__spacer {
+  min-height: 2.35rem;
+}
+

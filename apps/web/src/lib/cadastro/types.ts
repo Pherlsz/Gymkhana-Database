@@ -1,36 +1,44 @@
+import type { CustomDraftValue } from "../../RecordCustomFields";
 import type { BillFormFieldsState } from "./components/BillFormFields";
 import type { DocumentFormFieldsState } from "./components/DocumentFormFields";
 import type { PersonComplementaryState } from "./components/PersonComplementaryGroup";
 import type { PersonDemographicsState } from "./components/PersonDemographicsGroup";
 import type { PersonFamilyState } from "./components/PersonFamilyGroup";
+import { OFFICIAL_DOCUMENT_TYPE_KEYS } from "./cadastroMinimumRequirement";
+
+export type PendingTag = "manual" | "queued";
 
 export interface PendingDoc {
   id: string;
   typeId: string;
   typeName: string;
+  typeKey: string;
   number: string;
   date?: string | undefined;
   validUntil?: string | undefined;
   medium: "PHYSICAL" | "DIGITAL";
   custody?: "ORGANIZATION" | "OWNER" | undefined;
   notes: string;
-  tag: "manual" | "ocr";
+  tag: PendingTag;
+  customDraft: Record<string, CustomDraftValue>;
+  file?: File | undefined;
 }
 
 export interface PendingBill {
   id: string;
   typeId: string;
   serviceName: string;
-  provider: string;
+  typeKey: string;
   installation: string;
   competence: string;
-  dueDate?: string | undefined;
   amount: string;
   printedHolder?: string | undefined;
   printedAddress?: string | undefined;
   medium: "PHYSICAL" | "DIGITAL";
   notes: string;
-  tag: "manual" | "ocr";
+  tag: PendingTag;
+  customDraft: Record<string, CustomDraftValue>;
+  file?: File | undefined;
 }
 
 export const INITIAL_DEMOGRAPHICS: PersonDemographicsState = {
@@ -41,7 +49,12 @@ export const INITIAL_DEMOGRAPHICS: PersonDemographicsState = {
   email: "",
   phone: "",
   landline: "",
-  address: "",
+  street: "",
+  number: "",
+  complement: "",
+  neighborhood: "",
+  city: "",
+  state: "",
   postalCode: "",
   gender: undefined,
   maritalStatus: undefined,
@@ -89,33 +102,40 @@ export const INITIAL_DOC_FIELDS: DocumentFormFieldsState = {
   docMedium: "PHYSICAL",
   docCustody: "ORGANIZATION",
   docNotes: "",
+  customDraft: {},
+  file: undefined,
 };
 
 export const INITIAL_BILL_FIELDS: BillFormFieldsState = {
   billTypeId: "",
-  billProvider: "",
   billInstallation: "",
   billCompetence: "",
-  billDueDate: undefined,
   billAmount: "",
   billPrintedHolder: "",
   billPrintedAddress: "",
   billMedium: "DIGITAL",
   billNotes: "",
+  customDraft: {},
+  file: undefined,
 };
 
-const OFFICIAL_DOC_PATTERNS = ["cpf", "rg", "cnh", "certid", "nascimento", "casamento"];
+export function isOfficialDocKey(technicalKey: string): boolean {
+  return (OFFICIAL_DOCUMENT_TYPE_KEYS as readonly string[]).includes(technicalKey);
+}
 
 export function isOfficialDoc(typeName: string): boolean {
   const norm = typeName
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-  return OFFICIAL_DOC_PATTERNS.some((pattern) => norm.includes(pattern));
+  return ["cpf", "rg", "cnh", "certid", "nascimento", "casamento"].some((pattern) =>
+    norm.includes(pattern),
+  );
 }
 
 export interface CadastroSingleScreenProps {
   targetTable?: "people" | "documents" | "bills";
+  typeId?: string | undefined;
   onCancel: () => void;
   onSuccess?: (savedName: string) => void;
 }

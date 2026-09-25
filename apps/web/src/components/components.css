@@ -793,6 +793,26 @@ html.dark .app-card--other .app-card__icon {
   background: var(--md-state-pressed, rgba(255, 255, 255, 0.1));
 }
 
+.ant-btn-link:not(.ant-btn-dangerous),
+.ant-btn-variant-link:not(.ant-btn-dangerous) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--md-on-surface, #e7e5e4);
+  box-shadow: none;
+}
+
+.ant-btn-link:not(.ant-btn-dangerous):hover,
+.ant-btn-variant-link:not(.ant-btn-dangerous):hover {
+  background: var(--md-state-hover, rgba(255, 255, 255, 0.06));
+  border-color: transparent;
+  color: var(--md-on-surface, #ffffff);
+}
+
+.ant-btn-link:not(.ant-btn-dangerous):active,
+.ant-btn-variant-link:not(.ant-btn-dangerous):active {
+  background: var(--md-state-pressed, rgba(255, 255, 255, 0.1));
+}
+
 /* 4. Dashed Variant */
 .ant-btn-dashed:not(.ant-btn-dangerous) {
   background: transparent;

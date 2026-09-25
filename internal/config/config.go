@@ -60,6 +60,22 @@ type AIChatConfig struct {
 	Provider  string
 	Model     string
 	Retention time.Duration
+	// The shared Administração model key is sealed with the same versioned
+	// AES-256-GCM material as Google Forms tokens (GOOGLE_FORMS_TOKEN_*).
+	KeyEncryptionKeys map[uint16][32]byte
+	KeyVersion        uint16
+}
+
+// AIChatProviders lists the model providers with a production adapter.
+var AIChatProviders = map[string]bool{"google": true}
+
+// OCRProviders lists extractors that use the shared Administração model key.
+var OCRProviders = map[string]bool{"google": true}
+
+// UsesSharedModelKey reports whether Assistente or OCR needs ai_model_keys.
+func (cfg Config) UsesSharedModelKey() bool {
+	return cfg.AIChat.Enabled && AIChatProviders[cfg.AIChat.Provider] ||
+		cfg.OCR.Enabled && OCRProviders[cfg.OCR.Provider]
 }
 
 type OCRConfig struct {
@@ -86,6 +102,7 @@ type Config struct {
 }
 
 func Load() (Config, error) {
+	LoadDotenv()
 	environment := parseEnvironment()
 	shutdownTimeout, err := envDuration("SHUTDOWN_TIMEOUT", "10s")
 	if err != nil {
@@ -188,6 +205,7 @@ func Load() (Config, error) {
 		AIChat: AIChatConfig{
 			Enabled: aiChatEnabled, Provider: strings.ToLower(strings.TrimSpace(os.Getenv("AI_CHAT_PROVIDER"))),
 			Model: strings.TrimSpace(os.Getenv("AI_CHAT_MODEL")), Retention: aiChatRetention,
+			KeyEncryptionKeys: googleFormsKeys, KeyVersion: googleFormsKeyVersion,
 		},
 		OCR: OCRConfig{
 			Enabled: ocrEnabled, Provider: strings.ToLower(strings.TrimSpace(os.Getenv("OCR_PROVIDER"))),
@@ -328,8 +346,17 @@ func (cfg Config) validate() error {
 		if cfg.AIChat.Retention < time.Hour || cfg.AIChat.Retention > 365*24*time.Hour {
 			return errors.New("AI_CHAT_RETENTION must be between 1h and 8760h")
 		}
-		if cfg.Environment != EnvironmentTest || cfg.AIChat.Provider != "fake" {
-			return errors.New("AI Chat has no production provider adapter; keep AI_CHAT_ENABLED=false until the owner selects and configures one")
+		switch {
+		case cfg.AIChat.Provider == "fake":
+			if cfg.Environment != EnvironmentTest {
+				return errors.New("AI_CHAT_PROVIDER=fake is accepted only with APP_ENV=test")
+			}
+		case AIChatProviders[cfg.AIChat.Provider]:
+			if cfg.AIChat.KeyEncryptionKeys[cfg.AIChat.KeyVersion] == ([32]byte{}) {
+				return errors.New("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY is required to seal the shared model key when AI Chat is enabled")
+			}
+		default:
+			return fmt.Errorf("unsupported AI_CHAT_PROVIDER %q", cfg.AIChat.Provider)
 		}
 	}
 	if cfg.OCR.Enabled {
@@ -339,8 +366,17 @@ func (cfg Config) validate() error {
 		if len(cfg.OCR.Model) > 120 {
 			return errors.New("OCR_MODEL cannot exceed 120 characters")
 		}
-		if cfg.Environment != EnvironmentTest || cfg.OCR.Provider != "fake" {
-			return errors.New("OCR has no production provider adapter; keep OCR_ENABLED=false until the owner selects and configures one")
+		switch {
+		case cfg.OCR.Provider == "fake":
+			if cfg.Environment != EnvironmentTest {
+				return errors.New("OCR_PROVIDER=fake is accepted only with APP_ENV=test")
+			}
+		case OCRProviders[cfg.OCR.Provider]:
+			if cfg.AIChat.KeyEncryptionKeys[cfg.AIChat.KeyVersion] == ([32]byte{}) {
+				return errors.New("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY is required to seal the shared model key when OCR is enabled")
+			}
+		default:
+			return fmt.Errorf("unsupported OCR_PROVIDER %q", cfg.OCR.Provider)
 		}
 	}
 	if !cfg.GoogleForms.Enabled {
@@ -429,7 +465,6 @@ func parseEnvironment() Environment {
 	raw := strings.ToLower(valueOrDefault("APP_ENV", string(EnvironmentLocal)))
 	switch raw {
 	case "development", "dev":
-		// lokeys --env dev injects APP_ENV=development.
 		return EnvironmentLocal
 	default:
 		return Environment(raw)

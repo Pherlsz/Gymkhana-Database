@@ -23,6 +23,43 @@ export function scalarFieldsOf(fields: CustomField[]): CustomField[] {
   return fields.filter((field) => field.active && field.field_kind !== "ATTACHMENT");
 }
 
+/** ponytail: seeded bill keys only; unknown extras keep label order. */
+const FIELD_CONTEXT_RANK: Record<string, number> = {
+  utility_company: 10,
+  uc: 11,
+  client_code: 11,
+  property_code: 12,
+  billing_code: 13,
+  issue_month_year: 20,
+  due_month_year: 21,
+  current_reading: 30,
+  previous_reading: 31,
+  reading_route: 32,
+  water_meter: 33,
+  nf: 40,
+  invoice_number: 41,
+  collection_code: 42,
+  category: 50,
+  location: 51,
+};
+
+export function sortCustomFieldsByContext(fields: CustomField[]): CustomField[] {
+  return [...fields].sort((left, right) => {
+    const rank = customFieldContextRank(left) - customFieldContextRank(right);
+    return rank !== 0 ? rank : left.label.localeCompare(right.label, "pt-BR");
+  });
+}
+
+function customFieldContextRank(field: CustomField): number {
+  const known = FIELD_CONTEXT_RANK[field.technical_key];
+  if (known != null) return known;
+  if (field.field_kind === "LONG_TEXT" || field.field_kind === "MULTI_SELECT") return 90;
+  const text = `${field.technical_key} ${field.label}`.toLowerCase();
+  if (/emiss|issue/.test(text)) return 20;
+  if (/venciment|due/.test(text)) return 21;
+  return 80;
+}
+
 export function useTypeCustomFields(
   definitionTargetKind: CustomTargetKind,
   definitionTargetId: string | undefined,
@@ -59,7 +96,7 @@ export function CustomFieldInputGrid(props: {
 }) {
   return (
     <div className="custom-values__grid">
-      {props.fields.map((field) => (
+      {sortCustomFieldsByContext(props.fields).map((field) => (
         <CustomFieldControl
           key={field.id}
           disabled={props.disabled}
@@ -92,8 +129,8 @@ function CustomFieldControl(props: {
   if (props.field.field_kind === "ATTACHMENT") return null;
   if (props.field.field_kind === "BOOLEAN") {
     return (
-      <label>
-        {label}
+      <label className="cadastro-field">
+        <span className="cadastro-field__label">{label}</span>
         <Select
           disabled={props.disabled}
           onChange={(value) => props.onChange(value === "" ? null : value === "true")}
@@ -110,8 +147,8 @@ function CustomFieldControl(props: {
   if (props.field.field_kind === "SINGLE_SELECT") {
     const selected = Array.isArray(props.value) ? (props.value[0] ?? "") : "";
     return (
-      <label>
-        {label}
+      <label className="cadastro-field">
+        <span className="cadastro-field__label">{label}</span>
         <Select
           disabled={props.disabled || options.isLoading}
           onChange={(value) => props.onChange(value ? [value] : [])}
@@ -131,8 +168,11 @@ function CustomFieldControl(props: {
   if (props.field.field_kind === "MULTI_SELECT") {
     const selected = Array.isArray(props.value) ? props.value : [];
     return (
-      <fieldset className="custom-values__choices" disabled={props.disabled || options.isLoading}>
-        <legend>{label}</legend>
+      <fieldset
+        className="custom-values__choices cadastro-field"
+        disabled={props.disabled || options.isLoading}
+      >
+        <legend className="cadastro-field__label">{label}</legend>
         {options.data?.options.map((option) => (
           <Checkbox
             checked={selected.includes(option.id)}
@@ -155,8 +195,8 @@ function CustomFieldControl(props: {
   }
   if (props.field.field_kind === "LONG_TEXT") {
     return (
-      <label className="custom-values__wide">
-        {label}
+      <label className="custom-values__wide cadastro-field">
+        <span className="cadastro-field__label">{label}</span>
         <Input.TextArea
           disabled={props.disabled}
           maxLength={props.field.maximum_length || undefined}
@@ -180,8 +220,8 @@ function CustomFieldControl(props: {
               ? "number"
               : "text";
   return (
-    <label>
-      {label}
+    <label className="cadastro-field">
+      <span className="cadastro-field__label">{label}</span>
       <Input
         disabled={props.disabled}
         maxLength={props.field.maximum_length || undefined}

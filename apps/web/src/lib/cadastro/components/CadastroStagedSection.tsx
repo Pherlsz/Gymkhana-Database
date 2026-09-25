@@ -1,7 +1,9 @@
 import { Button } from "antd";
 import { Plus, Trash2 } from "lucide-react";
-import type { ReactNode } from "react";
-import { CadastroSection } from "./CadastroSection";
+import type { KeyboardEvent, ReactNode } from "react";
+import { StatusBanner } from "../../../components/StatusBanner";
+import { useI18n } from "../../../i18n";
+import { CadastroSection, CadastroSectionBadge } from "./CadastroSection";
 
 export interface StagedItem {
   id: string;
@@ -16,56 +18,81 @@ export interface CadastroStagedSectionProps {
   hint: string;
   icon: ReactNode;
   modifier?: "documents" | "bills" | undefined;
+  extraTitle?: ReactNode | undefined;
   count: number;
   items: StagedItem[];
   emptyText: string;
-  addLabel: string;
-  confirmLabel: string;
-  cancelLabel: string;
+  allowAdd?: boolean | undefined;
+  addLabel?: string | undefined;
+  confirmLabel?: string | undefined;
+  cancelLabel?: string | undefined;
   removeLabel?: string | undefined;
-  adding: boolean;
-  onStartAdd: () => void;
-  onCancelAdd: () => void;
-  onConfirmAdd: () => void;
-  onRemoveItem: (id: string) => void;
+  adding?: boolean | undefined;
+  onStartAdd?: (() => void) | undefined;
+  onCancelAdd?: (() => void) | undefined;
+  onConfirmAdd?: (() => void) | undefined;
+  onRemoveItem?: ((id: string) => void) | undefined;
+  onOpenItem?: ((id: string) => void) | undefined;
+  extra?: ReactNode | undefined;
+  error?: string | undefined;
   defaultOpen?: boolean | undefined;
   open?: boolean | undefined;
   onToggleOpen?: (() => void) | undefined;
-  children: ReactNode;
+  children?: ReactNode | undefined;
 }
 
 /**
- * Standardized staged collection section used across person mode for
- * managing pending documents and utility bills before persistence.
+ * Collection strip used on Cadastro (pending add/remove) and on the person
+ * inspector (existing documents/bills, optional add when editing).
  */
 export function CadastroStagedSection({
   title,
   hint,
   icon,
   modifier,
+  extraTitle,
   count,
   items,
   emptyText,
+  allowAdd = true,
   addLabel,
   confirmLabel,
   cancelLabel,
-  removeLabel = "Remover",
-  adding,
+  removeLabel,
+  adding = false,
   onStartAdd,
   onCancelAdd,
   onConfirmAdd,
   onRemoveItem,
+  onOpenItem,
+  extra,
+  error,
   defaultOpen = true,
   open,
   onToggleOpen,
   children,
 }: CadastroStagedSectionProps) {
-  const badgeModifier = modifier ? ` cadastro-group__badge--${modifier}` : "";
+  const { messages } = useI18n();
+  const resolvedRemove = removeLabel ?? messages.common.actions.remove;
+  const showAdd = allowAdd && Boolean(addLabel) && Boolean(onStartAdd);
+
+  const openItem = (id: string) => {
+    onOpenItem?.(id);
+  };
+
+  const handleRowKey = (event: KeyboardEvent<HTMLDivElement>, id: string) => {
+    if (!onOpenItem) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openItem(id);
+    }
+  };
 
   return (
     <CadastroSection
-      badge={<span className={`cadastro-group__badge${badgeModifier}`}>{count}</span>}
+      badge={<CadastroSectionBadge modifier={modifier}>{count}</CadastroSectionBadge>}
       defaultOpen={defaultOpen}
+      extraTitle={extraTitle}
       hint={hint}
       icon={icon}
       modifier={modifier}
@@ -77,27 +104,54 @@ export function CadastroStagedSection({
         {items.length === 0 ? (
           <div className="emptyrow">{emptyText}</div>
         ) : (
-          items.map((item) => (
-            <div key={item.id} className="srow">
-              <span className="mk">{icon}</span>
-              <div className="tx">
-                <b>{item.title}</b>
-                {item.subtitle ? <span>{item.subtitle}</span> : null}
+          items.map((item) => {
+            const interactive = Boolean(onOpenItem);
+            return (
+              <div
+                className={interactive ? "srow srow--interactive" : "srow"}
+                key={item.id}
+                {...(interactive
+                  ? {
+                      "aria-label": [item.title, item.subtitle].filter(Boolean).join(" · "),
+                      onClick: () => openItem(item.id),
+                      onKeyDown: (event: KeyboardEvent<HTMLDivElement>) =>
+                        handleRowKey(event, item.id),
+                      role: "button" as const,
+                      tabIndex: 0,
+                    }
+                  : {})}
+              >
+                <span className="mk">{icon}</span>
+                <div className="tx">
+                  <b>{item.title}</b>
+                  {item.subtitle ? <span>{item.subtitle}</span> : null}
+                </div>
+                <span className="grow" />
+                <span className={`tag ${item.isOcr ? "gold" : ""}`}>{item.tagText}</span>
+                {onRemoveItem ? (
+                  <div className="acts">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onRemoveItem(item.id);
+                      }}
+                    >
+                      <Trash2 size={13} style={{ marginRight: 4 }} />
+                      {resolvedRemove}
+                    </button>
+                  </div>
+                ) : null}
               </div>
-              <span className="grow" />
-              <span className={`tag ${item.isOcr ? "gold" : ""}`}>{item.tagText}</span>
-              <div className="acts">
-                <button type="button" onClick={() => onRemoveItem(item.id)}>
-                  <Trash2 size={13} style={{ marginRight: 4 }} />
-                  {removeLabel}
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
-      {adding ? (
+      {error ? <StatusBanner title={error} tone="error" /> : null}
+      {extra}
+
+      {showAdd && adding ? (
         <div className="inline-addform">
           {children}
           <div className="inline-actions">
@@ -107,12 +161,14 @@ export function CadastroStagedSection({
             </Button>
           </div>
         </div>
-      ) : (
+      ) : null}
+
+      {showAdd && !adding ? (
         <button className="addrow" type="button" onClick={onStartAdd}>
           <Plus size={15} strokeWidth={2} />
           <span>{addLabel}</span>
         </button>
-      )}
+      ) : null}
     </CadastroSection>
   );
 }

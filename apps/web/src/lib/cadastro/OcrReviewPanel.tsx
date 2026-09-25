@@ -1,6 +1,8 @@
-import { Alert, Button, Flex, Input, Select, Tag } from "antd";
+import { Button, Flex, Input, Select, Tag } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { StateCard } from "../../components/StateCard";
+import { StatusBanner } from "../../components/StatusBanner";
 import { useI18n } from "../../i18n";
 import {
   applyOCRSuggestions,
@@ -88,25 +90,24 @@ export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
 
   if (!capability.data?.enabled) {
     return (
-      <Alert
-        message="OCR indisponível"
-        type="warning"
-        description="Ative OCR e anexos privados conforme docs/OCR.md e docs/CADASTRO_R2.md."
+      <StateCard
+        compact
+        description={messages.tables.cadastro.ocrUnavailableProvider}
+        kind="warning"
+        title={messages.tables.cadastro.ocrUnavailable}
       />
     );
   }
 
   return (
-    <section aria-label="Revisão OCR" className="ocr-review-panel">
-      <p className="ocr-review-panel__lead">
-        Extração gera sugestões com evidência. Nada é aplicado até você confirmar.
-      </p>
-      {notice ? <Alert showIcon type="success" title={notice} /> : null}
+    <section aria-label={copy.panelAria} className="ocr-review-panel">
+      <p className="ocr-review-panel__lead">{copy.lead}</p>
+      {notice ? <StatusBanner title={notice} tone="success" /> : null}
       {start.error ? (
-        <Alert
-          message={copy.startError}
-          type="error"
+        <StatusBanner
           description={ocrError(start.error, copy.unexpectedError)}
+          title={copy.startError}
+          tone="error"
         />
       ) : null}
       <label className="ocr-review-panel__field">
@@ -252,10 +253,10 @@ function OcrSuggestionList({
         {copy.applyAccepted}
       </Button>
       {apply.error ? (
-        <Alert
-          message={copy.applyError}
-          type="error"
+        <StatusBanner
           description={ocrError(apply.error, copy.unexpectedError)}
+          title={copy.applyError}
+          tone="error"
         />
       ) : null}
     </div>

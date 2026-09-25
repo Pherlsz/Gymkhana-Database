@@ -13,6 +13,7 @@ export interface HolderSearchSelectProps {
   selectedProfile: Profile | null;
   onSelectProfile: (profile: Profile) => void;
   onSelectNewName: (name: string) => void;
+  onDraftName?: (name: string) => void;
   onClear: () => void;
   placeholder: string;
   createNewOptionText: string;
@@ -50,6 +51,7 @@ export function HolderSearchSelect({
   selectedProfile,
   onSelectProfile,
   onSelectNewName,
+  onDraftName,
   onClear,
   placeholder,
   createNewOptionText,
@@ -67,7 +69,7 @@ export function HolderSearchSelect({
     const list: Array<{ value: string; label: ReactNode; profile?: Profile }> = [];
     const profiles = profilesLookup.data?.profiles ?? [];
 
-    const sortedProfiles = [...profiles].sort((a, b) => {
+    const sortedProfiles = profiles.toSorted((a, b) => {
       const scoreA = scoreProfile(a, searchQuery);
       const scoreB = scoreProfile(b, searchQuery);
       if (scoreA !== scoreB) return scoreA - scoreB;
@@ -152,7 +154,7 @@ export function HolderSearchSelect({
       onSearch={(query) => {
         setSearchQuery(query);
         if (!selectedProfile) {
-          onSelectNewName(query);
+          (onDraftName ?? onSelectNewName)(query);
         }
       }}
       onSelect={handleSelect}

@@ -15,20 +15,63 @@ afterEach(() => {
   activeClient = null;
 });
 
+vi.mock("./useAttachmentsEnabled", () => ({
+  useAttachmentsEnabled: () => ({ data: false, isFetched: true, isLoading: false }),
+}));
+
+vi.mock("../api/ocr", () => ({
+  getOCRCapability: vi.fn().mockResolvedValue({ enabled: false }),
+}));
+
+vi.mock("../api/attachments", () => ({
+  uploadAttachment: vi.fn(),
+}));
+
 vi.mock("../api/client", () => ({
   listDocumentTypes: vi.fn().mockResolvedValue({
     types: [
-      { id: "doc-type-rg", code: "rg", label: "RG", description: "" },
-      { id: "doc-type-cpf", code: "cpf", label: "CPF", description: "" },
+      {
+        id: "doc-type-rg",
+        technical_key: "rg",
+        label: "RG",
+        active: true,
+        uniqueness_policy: "PER_PROFILE",
+        validation_regex: "",
+        date_required: false,
+      },
+      {
+        id: "doc-type-cpf",
+        technical_key: "cpf",
+        label: "CPF",
+        active: true,
+        uniqueness_policy: "PER_PROFILE",
+        validation_regex: "",
+        date_required: false,
+      },
     ],
   }),
   listBillTypes: vi.fn().mockResolvedValue({
-    types: [{ id: "bill-type-luz", code: "luz", label: "Energia Elétrica", description: "" }],
+    types: [{ id: "bill-type-luz", technical_key: "luz", label: "Energia Elétrica", active: true }],
   }),
   listProfilesLookup: vi.fn().mockResolvedValue({ profiles: [] }),
-  createProfile: vi.fn().mockResolvedValue({ id: "profile-1", full_name: "Novo Usuário" }),
-  createDocument: vi.fn().mockResolvedValue({ id: "doc-1" }),
-  createBill: vi.fn().mockResolvedValue({ id: "bill-1" }),
+  listCustomFields: vi.fn().mockResolvedValue({ fields: [] }),
+  createProfile: vi.fn().mockResolvedValue({
+    id: "profile-1",
+    full_name: "Novo Usuário",
+    version: 1,
+  }),
+  updateProfile: vi.fn(),
+  createDocument: vi.fn().mockResolvedValue({
+    id: "doc-1",
+    version: 1,
+    type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+  }),
+  createBill: vi.fn().mockResolvedValue({
+    id: "bill-1",
+    version: 1,
+    type: { id: "bill-type-luz", technical_key: "luz", label: "Energia Elétrica" },
+  }),
+  APIRequestError: class APIRequestError extends Error {},
 }));
 
 function renderSingleScreen(
@@ -62,6 +105,14 @@ function renderSingleScreen(
   };
 }
 
+async function confirmSave() {
+  fireEvent.click(screen.getByRole("button", { name: /Salvar/i }));
+}
+
+function fillPersonMinimum(name: string) {
+  fireEvent.change(screen.getByLabelText(/Nome do titular/i), { target: { value: name } });
+}
+
 describe("CadastroSingleScreen", () => {
   describe("Person mode (targetTable='people')", () => {
     it("renders titular holder field, contact fields, and staged sections", async () => {
@@ -88,18 +139,26 @@ describe("CadastroSingleScreen", () => {
       renderSingleScreen("people");
       const addBtn = screen.getByRole("button", { name: /Adicionar documento/i });
       fireEvent.click(addBtn);
-      expect(await screen.findByText(/Número do documento/i)).not.toBeNull();
+      expect(await screen.findByText(/Preenchimento inteligente via OCR/i)).not.toBeNull();
+      expect(screen.getByText(/Número do documento/i)).not.toBeNull();
+    });
+
+    it("keeps Salvar disabled until the person name is filled", () => {
+      renderSingleScreen("people");
+      const save = screen.getByRole("button", { name: /Salvar/i });
+      expect(save).toBeDisabled();
+
+      fireEvent.change(screen.getByLabelText(/Nome do titular/i), { target: { value: "Ana" } });
+      expect(save).toBeEnabled();
     });
 
     it("saves new person when clicking save button", async () => {
       const onSuccess = vi.fn();
       renderSingleScreen("people", vi.fn(), onSuccess);
 
-      const nameInput = screen.getByLabelText(/Nome do titular/i);
-      fireEvent.change(nameInput, { target: { value: "Carlos Drummond" } });
+      fillPersonMinimum("Carlos Drummond");
 
-      const saveBtn = screen.getByRole("button", { name: /Salvar cadastro de pessoa/i });
-      fireEvent.click(saveBtn);
+      await confirmSave();
 
       await waitFor(() => {
         expect(createProfile).toHaveBeenCalledWith(
@@ -112,7 +171,6 @@ describe("CadastroSingleScreen", () => {
     it("renders family and complementary sections and saves extra fields", async () => {
       renderSingleScreen("people");
 
-      // Expand Family section
       const familyHeader = screen.getByRole("heading", { name: /Família/i });
       fireEvent.click(familyHeader);
       expect(await screen.findByLabelText(/Nome do pai/i)).not.toBeNull();
@@ -121,7 +179,6 @@ describe("CadastroSingleScreen", () => {
       const fatherInput = screen.getByLabelText(/Nome do pai/i);
       fireEvent.change(fatherInput, { target: { value: "Alberto Santos" } });
 
-      // Expand Complementary section
       const compHeader = screen.getByRole("heading", { name: /complementares/i });
       fireEvent.click(compHeader);
       expect(await screen.findByLabelText(/Modelo do veículo/i)).not.toBeNull();
@@ -129,11 +186,9 @@ describe("CadastroSingleScreen", () => {
       const vehicleInput = screen.getByLabelText(/Modelo do veículo/i);
       fireEvent.change(vehicleInput, { target: { value: "Toyota Corolla" } });
 
-      const nameInput = screen.getByLabelText(/Nome do titular/i);
-      fireEvent.change(nameInput, { target: { value: "Beatriz Santos" } });
+      fillPersonMinimum("Beatriz Santos");
 
-      const saveBtn = screen.getByRole("button", { name: /Salvar cadastro de pessoa/i });
-      fireEvent.click(saveBtn);
+      await confirmSave();
 
       await waitFor(() => {
         expect(createProfile).toHaveBeenCalledWith(
@@ -143,6 +198,83 @@ describe("CadastroSingleScreen", () => {
             vehicle_model: "Toyota Corolla",
           }),
         );
+      });
+    });
+
+    it("keeps typed CPF when the holder search changes", () => {
+      renderSingleScreen("people");
+      fireEvent.change(screen.getByLabelText(/^CPF$/i), { target: { value: "52998224725" } });
+      fillPersonMinimum("Ana Néri");
+      expect(screen.getByLabelText(/^CPF$/i)).toHaveValue("529.982.247-25");
+    });
+
+    it("updates an existing person without clearing notes", async () => {
+      const { listProfilesLookup, updateProfile } = await import("../api/client");
+      vi.mocked(listProfilesLookup).mockResolvedValue({
+        profiles: [
+          {
+            id: "profile-ana",
+            full_name: "Ana Néri",
+            notes: "Observação da mesa",
+            version: 3,
+          } as any,
+        ],
+        page: { total: 1, limit: 10, offset: 0, sort_field: "full_name", sort_order: "asc" },
+      });
+      vi.mocked(updateProfile).mockResolvedValue({
+        id: "profile-ana",
+        full_name: "Ana Néri",
+        notes: "Observação da mesa",
+        version: 4,
+      } as any);
+
+      renderSingleScreen("people");
+      const combobox = screen.getByRole("combobox", { name: /buscar pessoa/i });
+      fireEvent.mouseDown(combobox);
+      fireEvent.click(await screen.findByText(/^Ana Néri$/i));
+      await confirmSave();
+
+      await waitFor(() => {
+        expect(updateProfile).toHaveBeenCalledWith(
+          "profile-ana",
+          expect.objectContaining({ notes: "Observação da mesa", version: 3 }),
+        );
+      });
+    });
+
+    it("retries a failed document save against the person already created", async () => {
+      const { createDocument, createProfile, updateProfile } = await import("../api/client");
+      vi.mocked(createProfile).mockClear();
+      vi.mocked(updateProfile).mockClear();
+      vi.mocked(createDocument).mockClear();
+      vi.mocked(createDocument).mockRejectedValueOnce(new Error("mobile_phone: not_mobile"));
+      vi.mocked(updateProfile).mockResolvedValue({
+        id: "profile-1",
+        full_name: "Ana Néri",
+        version: 2,
+      } as any);
+
+      renderSingleScreen("documents");
+      fireEvent.mouseDown(screen.getByLabelText(/Tipo de documento/i));
+      fireEvent.click(await screen.findByText(/^RG$/));
+      fireEvent.change(screen.getByLabelText(/Número do documento/i), {
+        target: { value: "MG-12.345.678" },
+      });
+      fireEvent.change(screen.getByLabelText(/Nome do titular/i), { target: { value: "Ana Néri" } });
+      await confirmSave();
+      expect(await screen.findByText(/not_mobile/i)).not.toBeNull();
+      expect(createProfile).toHaveBeenCalledTimes(1);
+
+      vi.mocked(createDocument).mockResolvedValue({
+        id: "doc-1",
+        version: 1,
+        type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+      } as any);
+      await confirmSave();
+
+      await waitFor(() => {
+        expect(updateProfile).toHaveBeenCalled();
+        expect(createProfile).toHaveBeenCalledTimes(1);
       });
     });
 
@@ -183,16 +315,13 @@ describe("CadastroSingleScreen", () => {
       const option = await screen.findByText(/Pedro Henrique Silveira Lopes/i);
       fireEvent.click(option);
 
-      // Verify fields auto-filled
       await waitFor(() => {
         expect(screen.getByLabelText(/^CPF$/i)).toHaveValue("03650716097");
       });
 
-      // Click "Desvincular"
       const unlinkBtn = screen.getByRole("button", { name: /Desvincular/i });
       fireEvent.click(unlinkBtn);
 
-      // Verify fields cleared
       await waitFor(() => {
         expect(screen.getByLabelText(/^CPF$/i)).toHaveValue("");
       });
@@ -200,6 +329,7 @@ describe("CadastroSingleScreen", () => {
     it("renders document fields as primary and optional holder section", () => {
       renderSingleScreen("documents");
       expect(screen.getByRole("heading", { name: /Dados do documento/i })).not.toBeNull();
+      expect(screen.getByText(/Preenchimento inteligente via OCR/i)).not.toBeNull();
       expect(screen.getByLabelText(/Número do documento/i)).not.toBeNull();
       expect(screen.getByLabelText(/Data de emissão/i)).not.toBeNull();
       expect(screen.getByLabelText(/Validade/i)).not.toBeNull();
@@ -211,14 +341,16 @@ describe("CadastroSingleScreen", () => {
       const onSuccess = vi.fn();
       renderSingleScreen("documents", vi.fn(), onSuccess);
 
+      const typeSelect = screen.getByLabelText(/Tipo de documento/i);
+      fireEvent.mouseDown(typeSelect);
+      fireEvent.click(await screen.findByText(/^RG$/));
       const docNumberInput = screen.getByLabelText(/Número do documento/i);
       fireEvent.change(docNumberInput, { target: { value: "MG-12.345.678" } });
 
       const holderInput = screen.getByLabelText(/Nome do titular/i);
       fireEvent.change(holderInput, { target: { value: "Ana Néri" } });
 
-      const saveBtn = screen.getByRole("button", { name: /Salvar documento/i });
-      fireEvent.click(saveBtn);
+      await confirmSave();
 
       await waitFor(() => {
         expect(createProfile).toHaveBeenCalledWith(
@@ -242,7 +374,6 @@ describe("CadastroSingleScreen", () => {
       expect(screen.getByText("Consumo")).not.toBeNull();
       expect(screen.getByText(/Preenchimento inteligente via OCR/i)).not.toBeNull();
       expect(screen.getByText(/IA \/ OCR/i)).not.toBeNull();
-      expect(screen.getByLabelText(/Fornecedor \/ Concessionária/i)).not.toBeNull();
       expect(screen.getByLabelText(/Número de instalação \/ Conta/i)).not.toBeNull();
       expect(screen.getByLabelText(/Competência \/ Vencimento/i)).not.toBeNull();
       expect(screen.getByLabelText(/Valor \(R\$\)/i)).not.toBeNull();
@@ -254,20 +385,26 @@ describe("CadastroSingleScreen", () => {
       const onSuccess = vi.fn();
       renderSingleScreen("bills", vi.fn(), onSuccess);
 
-      const provInput = screen.getByLabelText(/Fornecedor \/ Concessionária/i);
-      fireEvent.change(provInput, { target: { value: "Sabesp" } });
-
+      const serviceSelect = screen.getByLabelText(/Serviço/i);
+      fireEvent.mouseDown(serviceSelect);
+      fireEvent.click(await screen.findByText(/Energia Elétrica/i));
       const instInput = screen.getByLabelText(/Número de instalação \/ Conta/i);
       fireEvent.change(instInput, { target: { value: "987654321" } });
 
+      const competenceInput = screen.getByLabelText(/Competência \/ Vencimento/i);
+      fireEvent.change(competenceInput, { target: { value: "2026-09" } });
+
+      const amountInput = screen.getByLabelText(/Valor \(R\$\)/i);
+      fireEvent.change(amountInput, { target: { value: "142,50" } });
+
+      fireEvent.click(screen.getByRole("button", { name: /\+ Dados extras da fatura/i }));
       const printHolderInput = screen.getByLabelText(/Nome impresso na fatura/i);
       fireEvent.change(printHolderInput, { target: { value: "Clarice Lispector" } });
 
       const cpfInput = screen.getByLabelText(/CPF/i);
       fireEvent.change(cpfInput, { target: { value: "123.456.789-00" } });
 
-      const saveBtn = screen.getByRole("button", { name: /Salvar conta/i });
-      fireEvent.click(saveBtn);
+      await confirmSave();
 
       await waitFor(() => {
         expect(createProfile).toHaveBeenCalledWith(
@@ -280,6 +417,8 @@ describe("CadastroSingleScreen", () => {
           expect.objectContaining({
             printed_holder_name: "Clarice Lispector",
             reference_value: "987654321",
+            competence: "2026-09",
+            amount: "142.50",
             owner_profile_id: "profile-1",
           }),
         );

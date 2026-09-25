@@ -1,10 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button } from "antd";
+import { useQuery } from "@tanstack/react-query";
 import { ClipboardList, FileSpreadsheet, IdCard, User, Zap } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { listGoogleFormsSources, refreshGoogleFormsSource } from "../api/googleForms";
+import { listGoogleFormsSources } from "../api/googleForms";
 import type { OperationImport } from "../api/operations";
 import { listOperationImports } from "../api/operations";
+import { APIRequestError } from "../api/client";
 import { normalizeCadastroPageSearch, type TableKind } from "./cadastroSearch";
 import { queryKeys } from "../api/queryKeys";
 import { AppCard } from "../../components/AppCard";
@@ -85,7 +85,6 @@ export function CadastroEntryScreen({
           }),
       });
     });
-  const queryClient = useQueryClient();
   const formsSources = useQuery({
     queryKey: queryKeys.cadastro.entryFormsSources,
     queryFn: ({ signal }) => listGoogleFormsSources(signal),
@@ -93,19 +92,13 @@ export function CadastroEntryScreen({
   const imports = useQuery({
     queryKey: queryKeys.cadastro.entryImports,
     queryFn: ({ signal }) => listOperationImports(signal),
+    retry: (count, error) =>
+      !(error instanceof APIRequestError && error.status === 503) && count < 2,
   });
 
   const activeSources = (formsSources.data?.sources ?? []).filter(
     (source) => source.state === "ACTIVE",
   );
-  const latestSource = activeSources[0];
-  const syncMutation = useMutation({
-    mutationFn: (source: (typeof activeSources)[number]) => refreshGoogleFormsSource(source),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.googleForms.sources });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.googleForms.syncs });
-    },
-  });
   const latestImport: OperationImport | undefined = (imports.data?.imports ?? []).toSorted((a, b) =>
     b.created_at.localeCompare(a.created_at),
   )[0];
@@ -157,33 +150,7 @@ export function CadastroEntryScreen({
             variant="forms"
           >
             <p className="app-card__desc">{copy.entryFormsBody}</p>
-            {canUseForms ? (
-              <span className="cadastro-entry__formsrow">
-                <span className="cadastro-entry__badge">
-                  {latestSource
-                    ? t(copy.entryFormsBadge, {
-                        title: latestSource.title,
-                        n: activeSources.length,
-                      })
-                    : copy.entryFormsBadgeFallback}
-                </span>
-                {latestSource ? (
-                  <Button
-                    className="cadastro-entry__linkbtn"
-                    disabled={syncMutation.isPending}
-                    loading={syncMutation.isPending}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      syncMutation.mutate(latestSource);
-                    }}
-                    size="small"
-                    type="link"
-                  >
-                    {copy.entryFormsSync}
-                  </Button>
-                ) : null}
-              </span>
-            ) : (
+            {canUseForms ? null : (
               <span className="cadastro-entry__disabled">{copy.entryFormsDisabled}</span>
             )}
             <div className="app-card__foot">
@@ -201,28 +168,16 @@ export function CadastroEntryScreen({
             variant="bulk"
           >
             <p className="app-card__desc">{copy.entryBulkBody}</p>
-            <span
-              className="cadastro-entry__bulkrow"
-              onClick={(event) => event.stopPropagation()}
-              role="presentation"
-            >
-              <Button
-                className="cadastro-entry__linkbtn"
-                onClick={handleOpenBulk}
-                size="small"
-                type="link"
-              >
-                {copy.entryBulkButton}
-              </Button>
-            </span>
             <div className="app-card__foot">
               <span aria-hidden="true" className="cadastro-entry__dot cadastro-entry__dot--idle" />
-              {latestImport
-                ? t(copy.entryBulkFoot, {
-                    n: latestRowCount,
-                    time: timeAgo(latestImport.created_at),
-                  })
-                : copy.entryBulkFootNone}
+              {imports.isError
+                ? copy.entryBulkFootUnavailable
+                : latestImport
+                  ? t(copy.entryBulkFoot, {
+                      n: latestRowCount,
+                      time: timeAgo(latestImport.created_at),
+                    })
+                  : copy.entryBulkFootNone}
             </div>
           </AppCard>
         </div>

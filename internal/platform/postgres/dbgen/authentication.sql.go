@@ -372,18 +372,22 @@ const updateAppUserAccess = `-- name: UpdateAppUserAccess :one
 UPDATE app_users
 SET role = $2,
     active = $3,
+    email = $4,
+    display_name = $5,
     updated_at = now(),
     version = version + 1
 WHERE id = $1
-  AND version = $4
+  AND version = $6
 RETURNING id, email, subject, display_name, avatar_url, role, active, version, created_at, updated_at
 `
 
 type UpdateAppUserAccessParams struct {
-	ID      pgtype.UUID `json:"id"`
-	Role    string      `json:"role"`
-	Active  bool        `json:"active"`
-	Version int64       `json:"version"`
+	ID          pgtype.UUID `json:"id"`
+	Role        string      `json:"role"`
+	Active      bool        `json:"active"`
+	Email       string      `json:"email"`
+	DisplayName string      `json:"display_name"`
+	Version     int64       `json:"version"`
 }
 
 func (q *Queries) UpdateAppUserAccess(ctx context.Context, arg UpdateAppUserAccessParams) (AppUser, error) {
@@ -391,6 +395,8 @@ func (q *Queries) UpdateAppUserAccess(ctx context.Context, arg UpdateAppUserAcce
 		arg.ID,
 		arg.Role,
 		arg.Active,
+		arg.Email,
+		arg.DisplayName,
 		arg.Version,
 	)
 	var i AppUser
@@ -414,6 +420,10 @@ UPDATE app_users
 SET email = $2,
     display_name = $3,
     avatar_url = $4,
+    subject = CASE
+      WHEN $5 <> '' AND subject LIKE 'pending:%' THEN $5
+      ELSE subject
+    END,
     updated_at = now(),
     version = version + 1
 WHERE id = $1
@@ -425,6 +435,7 @@ type UpdateAppUserIdentityParams struct {
 	Email       string      `json:"email"`
 	DisplayName string      `json:"display_name"`
 	AvatarUrl   *string     `json:"avatar_url"`
+	Subject     string      `json:"subject"`
 }
 
 func (q *Queries) UpdateAppUserIdentity(ctx context.Context, arg UpdateAppUserIdentityParams) (AppUser, error) {
@@ -433,6 +444,7 @@ func (q *Queries) UpdateAppUserIdentity(ctx context.Context, arg UpdateAppUserId
 		arg.Email,
 		arg.DisplayName,
 		arg.AvatarUrl,
+		arg.Subject,
 	)
 	var i AppUser
 	err := row.Scan(

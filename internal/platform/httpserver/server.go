@@ -43,6 +43,7 @@ type Options struct {
 	ChatResults            chatResultReader
 	ChatLauncher           chatRunLauncher
 	OCR                    ocrService
+	ModelKeys              modelKeyService
 	SecureCookies          bool
 	ApplicationURL         string
 	Release                releaseinfo.Info
@@ -92,6 +93,7 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	})
 	registerAuthRoutes(mux, logger, settings.Auth, settings.Development, settings.SecureCookies, settings.ApplicationURL)
 	registerAdministrationRoutes(mux, logger, settings.Auth)
+	registerModelKeyRoutes(mux, logger, settings.Auth, settings.ModelKeys)
 	registerProfileRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Profile, settings.Search, pool)
 	registerDocumentRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Document, settings.Search, pool)
 	registerBillRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Bill, settings.Search, pool)
@@ -134,9 +136,9 @@ func bodyLimitMiddleware(limit int64, next http.Handler) http.Handler {
 func browserOriginMiddleware(applicationOrigin string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := strings.TrimSpace(r.Header.Get("Origin"))
-		trustedOrigin := applicationOrigin != "" && origin == applicationOrigin
+		trustedOrigin := trustedBrowserOrigin(origin, applicationOrigin)
 		if trustedOrigin {
-			w.Header().Set("Access-Control-Allow-Origin", applicationOrigin)
+			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Add("Vary", "Origin")
 		}
@@ -165,6 +167,60 @@ func absoluteOrigin(value string) string {
 		return ""
 	}
 	return (&url.URL{Scheme: strings.ToLower(parsed.Scheme), Host: strings.ToLower(parsed.Host)}).String()
+}
+
+func trustedBrowserOrigin(origin, applicationOrigin string) bool {
+	if applicationOrigin == "" || origin == "" {
+		return false
+	}
+	if origin == applicationOrigin {
+		return true
+	}
+	return sameLoopbackOrigin(origin, applicationOrigin)
+}
+
+func sameLoopbackOrigin(origin, application string) bool {
+	left, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	right, err := url.Parse(application)
+	if err != nil {
+		return false
+	}
+	if !loopbackHost(left.Hostname()) || !loopbackHost(right.Hostname()) {
+		return false
+	}
+	if strings.EqualFold(left.Scheme, right.Scheme) && originPort(left) == originPort(right) {
+		return true
+	}
+	return false
+}
+
+func loopbackHost(host string) bool {
+	switch strings.ToLower(strings.TrimSpace(host)) {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	default:
+		return false
+	}
+}
+
+func originPort(value *url.URL) string {
+	if value == nil {
+		return ""
+	}
+	if port := value.Port(); port != "" {
+		return port
+	}
+	switch strings.ToLower(value.Scheme) {
+	case "https":
+		return "443"
+	case "http":
+		return "80"
+	default:
+		return ""
+	}
 }
 
 func isSafeMethod(method string) bool {

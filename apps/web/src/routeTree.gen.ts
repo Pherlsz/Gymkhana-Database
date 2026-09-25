@@ -15,7 +15,6 @@ import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as FormsRouteImport } from './routes/forms'
 import { Route as ProfilesRouteImport } from './routes/profiles'
 import { Route as SearchRouteImport } from './routes/search'
-import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TablesIndexRouteImport } from './routes/tables/index'
 import { Route as TablesTableRouteImport } from './routes/tables/$table'
 
@@ -49,11 +48,6 @@ const SearchRoute = SearchRouteImport.update({
   path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TablesIndexRoute = TablesIndexRouteImport.update({
   id: '/tables/',
   path: '/tables/',
@@ -72,7 +66,6 @@ export interface FileRoutesByFullPath {
   '/forms': typeof FormsRoute
   '/profiles': typeof ProfilesRoute
   '/search': typeof SearchRoute
-  '/settings': typeof SettingsRoute
   '/tables/$table': typeof TablesTableRoute
   '/tables/': typeof TablesIndexRoute
 }
@@ -83,7 +76,6 @@ export interface FileRoutesByTo {
   '/forms': typeof FormsRoute
   '/profiles': typeof ProfilesRoute
   '/search': typeof SearchRoute
-  '/settings': typeof SettingsRoute
   '/tables/$table': typeof TablesTableRoute
   '/tables': typeof TablesIndexRoute
 }
@@ -95,7 +87,6 @@ export interface FileRoutesById {
   '/forms': typeof FormsRoute
   '/profiles': typeof ProfilesRoute
   '/search': typeof SearchRoute
-  '/settings': typeof SettingsRoute
   '/tables/$table': typeof TablesTableRoute
   '/tables/': typeof TablesIndexRoute
 }
@@ -108,7 +99,6 @@ export interface FileRouteTypes {
     | '/forms'
     | '/profiles'
     | '/search'
-    | '/settings'
     | '/tables/$table'
     | '/tables/'
   fileRoutesByTo: FileRoutesByTo
@@ -119,7 +109,6 @@ export interface FileRouteTypes {
     | '/forms'
     | '/profiles'
     | '/search'
-    | '/settings'
     | '/tables/$table'
     | '/tables'
   id:
@@ -130,7 +119,6 @@ export interface FileRouteTypes {
     | '/forms'
     | '/profiles'
     | '/search'
-    | '/settings'
     | '/tables/$table'
     | '/tables/'
   fileRoutesById: FileRoutesById
@@ -142,7 +130,6 @@ export interface RootRouteChildren {
   FormsRoute: typeof FormsRoute
   ProfilesRoute: typeof ProfilesRoute
   SearchRoute: typeof SearchRoute
-  SettingsRoute: typeof SettingsRoute
   TablesTableRoute: typeof TablesTableRoute
   TablesIndexRoute: typeof TablesIndexRoute
 }
@@ -191,13 +178,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/tables/': {
       id: '/tables/'
       path: '/tables'
@@ -222,7 +202,6 @@ const rootRouteChildren: RootRouteChildren = {
   FormsRoute: FormsRoute,
   ProfilesRoute: ProfilesRoute,
   SearchRoute: SearchRoute,
-  SettingsRoute: SettingsRoute,
   TablesTableRoute: TablesTableRoute,
   TablesIndexRoute: TablesIndexRoute,
 }

@@ -10,10 +10,12 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/Pherlsz/Gymkhana-Database/internal/config"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo"
 )
 
 func main() {
+	config.LoadDotenv()
 	environment := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
 	immutableRelease := environment == "staging" || environment == "production"
 	if err := releaseinfo.Current().Validate(immutableRelease); err != nil {

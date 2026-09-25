@@ -71,7 +71,11 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 	if err != nil {
 		return err
 	}
-	request := ModelRequest{Policy: ReadOnlySystemPolicy, Messages: messages, Tools: orchestrator.tools.Schemas()}
+	policy := ReadOnlySystemPolicy
+	if note, err := orchestrator.tools.CompactCatalogNote(runContext, actor, requestID); err == nil && note != "" {
+		policy += "\n" + note
+	}
+	request := ModelRequest{Policy: policy, Messages: messages, Tools: orchestrator.tools.Schemas()}
 	if thread.ActiveResultReferenceID != nil {
 		request.ActiveResultReferenceID = thread.ActiveResultReferenceID.String()
 	}
@@ -163,6 +167,19 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 		}
 		output, err := orchestrator.tools.Execute(runContext, actor, currentThread.ActiveResultReferenceID, runID, step.Sequence, call, currentThread.RetentionExpiresAt, requestID)
 		if err != nil {
+			if payload, ok := correctableToolPayload(err); ok {
+				if _, stepErr := orchestrator.service.failTool(runContext, actor, step.ID, runID, "invalid_input", requestID); stepErr != nil {
+					return stepErr
+				}
+				request.ToolResults = append(request.ToolResults, ModelToolResult{
+					CallID: call.ID, ToolName: call.Name, Arguments: append([]byte(nil), call.Arguments...), Data: payload, Untrusted: true,
+				})
+				if roundAssistant.Len() > 0 {
+					request.Messages = append(request.Messages, ModelMessage{Role: MessageAssistant, Content: roundAssistant.String(), Untrusted: true})
+					roundAssistant.Reset()
+				}
+				continue
+			}
 			if errors.Is(err, ErrInvalidInput) {
 				err = ErrMalformedProvider
 			}
@@ -174,7 +191,7 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 			failStep(err)
 			return err
 		}
-		toolResult := ModelToolResult{CallID: call.ID, ToolName: call.Name, Data: append([]byte(nil), output.Payload...), Untrusted: true}
+		toolResult := ModelToolResult{CallID: call.ID, ToolName: call.Name, Arguments: append([]byte(nil), call.Arguments...), Data: append([]byte(nil), output.Payload...), Untrusted: true}
 		if reference != nil {
 			toolResult.ReferenceID = reference.ID.String()
 			request.ActiveResultReferenceID = reference.ID.String()
@@ -311,6 +328,9 @@ func validResultReferenceDraft(reference ResultReferenceDraft, output ToolOutput
 		reference.ContextFingerprint == ([sha256.Size]byte{}) || !reference.ExpiresAt.After(now) {
 		return false
 	}
+	if reference.Kind == ResultReferenceQuery && reference.QueryExecutionID == nil {
+		return referencePlanNeedsShape(reference.LogicalRequest)
+	}
 	return (reference.Kind == ResultReferenceQuery) == (reference.QueryExecutionID != nil)
 }
 
@@ -397,7 +417,8 @@ func toolKindFromName(value string) (ToolKind, bool) {
 		return ToolCatalog, true
 	case "search":
 		return ToolSearch, true
-	case "query":
+	case "query", "sequencia", "tarefa":
+		// ponytail: sequencia and tarefa are stored as QUERY. A dedicated kind needs a migration of tool_kind.
 		return ToolQuery, true
 	case "result":
 		return ToolResult, true
@@ -420,6 +441,10 @@ func normalizeProviderError(ctx context.Context, err error) error {
 		return ErrCancelled
 	case errors.Is(err, context.DeadlineExceeded), errors.Is(ctx.Err(), context.DeadlineExceeded), errors.Is(err, ErrProviderTimeout):
 		return ErrTimeout
+	case errors.Is(err, ErrRateLimited):
+		return ErrRateLimited
+	case errors.Is(err, ErrQuotaExceeded):
+		return ErrQuotaExceeded
 	case errors.Is(err, ErrMalformedProvider), errors.Is(err, ErrInvalidInput):
 		return ErrMalformedProvider
 	case errors.Is(err, ErrProviderUnavailable):

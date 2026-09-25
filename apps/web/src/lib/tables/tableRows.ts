@@ -93,7 +93,9 @@ const CANONICAL_KEYS = new Set([
   "owner",
   "owner_id",
   "status",
+  "status_key",
   "medium",
+  "medium_key",
   "idle_custody",
   "valid_until",
   "date",
@@ -194,7 +196,9 @@ export function documentRow(
     owner: record.owner_full_name,
     owner_id: record.owner_profile_id,
     status: labeled(record.status, labels.status),
+    status_key: record.status,
     medium: labeled(record.medium, labels.medium),
+    medium_key: record.medium,
     idle_custody: labeled(record.idle_custody, labels.idleCustody),
     valid_until: formatDate(record.valid_until ?? ""),
     date: formatDate(record.document_date),
@@ -224,7 +228,9 @@ export function billRow(
     amount: formatAmount(record.amount, record.currency),
     currency: record.currency,
     status: labeled(record.status, labels.status),
+    status_key: record.status,
     medium: labeled(record.medium, labels.medium),
+    medium_key: record.medium,
     idle_custody: labeled(record.idle_custody, labels.idleCustody),
     notes: record.notes,
     printed_holder_name: record.printed_holder_name,
@@ -241,7 +247,13 @@ export function billRow(
 function displayStringCells(cells: Record<string, unknown>): Record<string, unknown> {
   const next: Record<string, unknown> = { ...cells };
   for (const [key, value] of Object.entries(next)) {
-    if (key === "document_badges" || key.endsWith("_id")) continue;
+    if (
+      key === "document_badges" ||
+      key.endsWith("_id") ||
+      key === "status_key" ||
+      key === "medium_key"
+    )
+      continue;
     next[key] = displayCell(value);
   }
   return next;

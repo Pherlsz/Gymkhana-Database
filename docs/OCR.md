@@ -4,28 +4,19 @@ Multimodal OCR is a private, permission-aware extraction path for existing PDF, 
 
 ## Activation boundary
 
-The feature is disabled by default. The repository currently contains only a deterministic fake extractor, and configuration accepts it only in `APP_ENV=test`. Staging and production therefore fail closed if `OCR_ENABLED=true`.
+The feature is disabled by default. Production uses Gemini (`OCR_PROVIDER=google`) with the shared Administração model key — the same sealed secret Assistente uses. `fake` stays in `APP_ENV=test`. Staging and production fail closed if `OCR_ENABLED=true` without a supported provider, and the Gemini path stays off for everyone until an ADMIN/SUPERADMIN stores the key.
 
-Use a model (Gemini or equivalent) only when that is the adequate extraction path. An explicit Gemini-only feature flag may require the shared Administração model key; without that key the model path stays off for everyone. Do not send private attachments to Gemini unless the flag is on and the key is present.
+Use a model (Gemini) only when that is the adequate extraction path. Without the shared key the model path stays off. Do not send private attachments to Gemini unless the flag is on and the key is present.
 
-Production activation requires an owner decision and reviewed implementation for all of the following:
-
-1. select the provider, API, exact model, region, retention policy, and contractual privacy terms;
-2. confirm which private attachment classes may be transmitted outside the application boundary;
-3. implement a narrow adapter for the existing `Extractor` port using Gymkhana-Core `ocr` (`schema_guided` request/result; host still supplies authorized bytes);
-4. add credentials through lokeys locally or the deployment secret manager, never the repository or database;
-5. document provider deletion/incident procedures and validate them with the privacy owner;
-6. complete security, quota, timeout, malformed-output, cancellation, and staging smoke tests before enabling the switch.
-
-Do not reuse `fake`, add a provider SDK, invent credential variables, or select a provider/model by assumption.
+Production activation requires `OCR_ENABLED=true`, `OCR_PROVIDER=google`, `OCR_MODEL` as the default when Administração did not choose one, and `GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY` to seal the shared key. The extractor is `internal/modelprovider` over Gymkhana-Core `ocr` (`schema_guided`; host still supplies authorized bytes). Do not put the provider key in `.env`.
 
 ## Configuration contract
 
 | Variable                          | Contract                                                                       |
 | --------------------------------- | ------------------------------------------------------------------------------ |
 | `OCR_ENABLED`                     | Explicit switch; defaults to `false`                                           |
-| `OCR_PROVIDER`                    | Required when enabled; currently only `fake` in `APP_ENV=test`                 |
-| `OCR_MODEL`                       | Required when enabled; nonempty identifier, at most 120 characters             |
+| `OCR_PROVIDER`                    | Required when enabled; `google`, or `fake` in `APP_ENV=test`                   |
+| `OCR_MODEL`                       | Required when enabled; default model when Administração did not choose one     |
 | `OCR_TIMEOUT`                     | Extraction deadline from `1s` through `5m`; defaults to `90s`                  |
 | `OCR_MAX_REQUESTS_PER_HOUR`       | Persistent per-user request limit from 1 through 1,000; defaults to 10         |
 | `OCR_MAX_PROVIDER_USAGE_PER_HOUR` | Persistent per-user provider-usage limit through 100,000,000; defaults 500,000 |
@@ -117,7 +108,7 @@ Each group produces durable per-suggestion `APPLIED`, `STALE`, or `FAILED` resul
 | Attachment trash/purge                        | Hidden/denied immediately; generated content cascades on purge; audit survives   |
 | Logs and audits                               | IDs, logical field/action, counts, outcomes, and stable codes only               |
 
-The unit, HTTP, frontend, PostgreSQL integration, migration, generated-contract, race, static-analysis, and security suites enforce these cases without a production provider credential.
+The unit, HTTP, frontend, PostgreSQL integration, migration, generated-contract, race, static-analysis, and security suites enforce these cases. Gemini extractor tests use a local httptest double, never a production credential.
 
 ## Smoke test
 

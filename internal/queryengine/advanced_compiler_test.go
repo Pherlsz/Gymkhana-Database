@@ -108,6 +108,33 @@ func TestCompileAdvancedCombinationIsBounded(t *testing.T) {
 	}
 }
 
+func TestCompileCombinationAggregateFollowsTheJoin(t *testing.T) {
+	catalog := advancedTestCatalog()
+	amount := func(rows int) *QueryPlan {
+		return &QueryPlan{Version: PlanVersionV2, CatalogVersion: catalog.Public.Version, RootEntity: "bills", Projections: []string{"bill.amount"}, MaximumRows: rows}
+	}
+	plan := QueryPlan{Version: PlanVersionV2, CatalogVersion: catalog.Public.Version, MaximumRows: 100,
+		Combination: &CombinationSpec{
+			MaximumCombinations: 50,
+			RequireDistinctRows: true,
+			Inputs: []CombinationInput{
+				{Key: "water", Plan: amount(2), MinimumSelected: 1, MaximumSelected: 1},
+				{Key: "power", Plan: amount(2), MinimumSelected: 1, MaximumSelected: 1},
+				{Key: "phone", Plan: amount(2), MinimumSelected: 1, MaximumSelected: 1},
+			},
+			Aggregates: []Aggregate{{Key: "soma", Function: AggregateSum, Field: "*:bill.amount"}},
+			Having:     &AggregateFilterNode{Predicate: &AggregateReference{Aggregate: "soma", Operator: OperatorGreaterEq, Values: []string{"100.00"}}},
+		},
+	}
+	compiled, _, err := compileAdvancedPlan(plan, catalog, 10_000_000)
+	if err != nil {
+		t.Fatalf("compile: %v", err)
+	}
+	if !strings.Contains(compiled.SQL, "sum(") || !strings.Contains(compiled.SQL, "HAVING") || strings.Contains(compiled.SQL, "100.00") {
+		t.Fatalf("aggregate SQL = %s", compiled.SQL)
+	}
+}
+
 func advancedTestCatalog() resolvedCatalog {
 	catalog := resolvedCatalog{
 		Public:   Catalog{Version: strings.Repeat("a", 64)},

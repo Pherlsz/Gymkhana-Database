@@ -1,5 +1,6 @@
-import { Alert, Button, Flex, Input, Typography } from "antd";
+import { Button, Flex, Input, Typography } from "antd";
 import { useId, useState } from "react";
+import { StatusBanner } from "./StatusBanner";
 
 export function ConfirmDelete({
   title,
@@ -44,7 +45,7 @@ export function ConfirmDelete({
             value={confirmation}
           />
         </label>
-        {error ? <Alert message={error} showIcon type="error" /> : null}
+        {error ? <StatusBanner title={error} tone="error" /> : null}
         <Flex gap="0.5rem" wrap>
           <Button
             danger

@@ -70,9 +70,9 @@ describe("cadastroSearch", () => {
     );
   });
 
-  it("opens people and a chosen type as the form, not an empty picker", () => {
+  it("opens people, documents and bills as the form", () => {
     expect(cadastroWorkMode({ table: "people" })).toBe("manual");
-    expect(cadastroWorkMode({ table: "documents" })).toBe("catalog");
+    expect(cadastroWorkMode({ table: "documents" })).toBe("manual");
     expect(
       cadastroWorkMode({
         table: "documents",
@@ -83,12 +83,13 @@ describe("cadastroSearch", () => {
   });
 
   it("guards cadastro modes", () => {
-    expect(isCadastroMode("ocr")).toBe(true);
+    expect(isCadastroMode("xlsx")).toBe(true);
+    expect(isCadastroMode("ocr")).toBe(false);
     expect(isCadastroMode("pick")).toBe(false);
     expect(isCadastroMode("bulk")).toBe(false);
   });
 
-  it("keeps OCR record ids and document type on the picker URL", () => {
+  it("ignores the retired OCR mode and keeps document type on the form URL", () => {
     expect(
       normalizeCadastroPageSearch({
         table: "documents",
@@ -99,7 +100,6 @@ describe("cadastroSearch", () => {
       }),
     ).toEqual({
       table: "documents",
-      mode: "ocr",
       owner: "019bf789-4400-7f12-9abc-123456789abc",
       record: "019bf789-4400-7f12-9abc-123456789abd",
       type: "019bf789-4400-7f12-9abc-123456789abe",
@@ -115,12 +115,9 @@ describe("cadastroSearch", () => {
     expect(
       cadastroHref({
         table: "bills",
-        mode: "ocr",
+        mode: "xlsx",
         owner: "019bf789-4400-7f12-9abc-123456789abc",
-        record: "019bf789-4400-7f12-9abc-123456789abd",
       }),
-    ).toBe(
-      "/cadastro?table=bills&mode=ocr&owner=019bf789-4400-7f12-9abc-123456789abc&record=019bf789-4400-7f12-9abc-123456789abd",
-    );
+    ).toBe("/cadastro?table=bills&mode=xlsx&owner=019bf789-4400-7f12-9abc-123456789abc");
   });
 });

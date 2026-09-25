@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
@@ -337,7 +336,7 @@ func (store *PostgresStore) loadImportDetails(ctx context.Context, value *Import
 			return fmt.Errorf("scan import column: %w", err)
 		}
 		if target.Valid {
-			column.TargetField = target.String
+			column.TargetField = importcatalog.VisibleTarget(target.String)
 		}
 		value.Columns = append(value.Columns, column)
 	}
@@ -413,13 +412,14 @@ func (store *PostgresStore) StageWorkbook(ctx context.Context, id Identifier, wo
 		return fmt.Errorf("clear import staging: %w", err)
 	}
 	for _, sheet := range workbook.Sheets {
-		headers, columnCount, err := workbookHeaders(sheet)
+		layout, err := workbookLayout(sheet)
 		if err != nil {
 			return err
 		}
+		headers, columnCount, headerRow := layout.Headers, layout.ColumnCount, layout.HeaderRow
 		rowCount := 0
 		for _, row := range sheet.Rows {
-			if row.Number > 1 {
+			if isDataRow(row.Number, headerRow) {
 				rowCount++
 			}
 		}
@@ -436,21 +436,25 @@ VALUES ($1,$2,$3,$4,$5)`, databaseUUID(id), sheet.Index, sheet.Name, rowCount, c
 		}
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"operation_import_rows"},
 			[]string{"import_id", "sheet_index", "row_number"},
-			&workbookRowCopySource{importID: id, sheet: sheet}); err != nil {
+			&workbookRowCopySource{importID: id, sheet: sheet, headerRow: headerRow}); err != nil {
 			return mapPostgresError("stage import rows", err)
 		}
-		cellSource := &workbookCellCopySource{importID: id, sheet: sheet, columnCount: columnCount}
+		cellSource := &workbookCellCopySource{importID: id, sheet: sheet, columnCount: columnCount, headerRow: headerRow}
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"operation_import_cells"},
 			[]string{"import_id", "sheet_index", "row_number", "source_column", "raw_value", "value_kind", "formula_present"},
 			cellSource); err != nil {
 			return mapPostgresError("stage import cells", err)
 		}
 	}
+	var selected any
+	if len(workbook.Sheets) == 1 {
+		selected = workbook.Sheets[0].Index
+	}
 	command, err := tx.Exec(ctx, `UPDATE operation_imports
-   SET state='MAPPING', stage='MAP', selected_sheet_index=NULL,
+   SET state='MAPPING', stage='MAP', selected_sheet_index=$3,
        mapping_version=0, river_job_id=NULL, error_code=NULL,
        version=version+1, updated_at=$2
- WHERE id=$1 AND state='PARSING'`, databaseUUID(id), now)
+ WHERE id=$1 AND state='PARSING'`, databaseUUID(id), now, selected)
 	if err != nil {
 		return fmt.Errorf("finish workbook staging: %w", err)
 	}
@@ -461,17 +465,18 @@ VALUES ($1,$2,$3,$4,$5)`, databaseUUID(id), sheet.Index, sheet.Name, rowCount, c
 }
 
 type workbookRowCopySource struct {
-	importID Identifier
-	sheet    WorkbookSheet
-	position int
-	current  WorkbookRow
+	importID  Identifier
+	sheet     WorkbookSheet
+	headerRow int
+	position  int
+	current   WorkbookRow
 }
 
 func (source *workbookRowCopySource) Next() bool {
 	for source.position < len(source.sheet.Rows) {
 		source.current = source.sheet.Rows[source.position]
 		source.position++
-		if source.current.Number > 1 {
+		if isDataRow(source.current.Number, source.headerRow) {
 			return true
 		}
 	}
@@ -488,6 +493,7 @@ type workbookCellCopySource struct {
 	importID    Identifier
 	sheet       WorkbookSheet
 	columnCount int
+	headerRow   int
 	row         int
 	cell        int
 	currentRow  WorkbookRow
@@ -500,7 +506,7 @@ func (source *workbookCellCopySource) Next() bool {
 		if source.cell == 0 {
 			source.currentRow = source.sheet.Rows[source.row]
 		}
-		if source.currentRow.Number <= 1 || source.cell >= len(source.currentRow.Cells) {
+		if !isDataRow(source.currentRow.Number, source.headerRow) || source.cell >= len(source.currentRow.Cells) {
 			source.row++
 			source.cell = 0
 			continue
@@ -523,44 +529,6 @@ func (source *workbookCellCopySource) Values() ([]any, error) {
 
 func (source *workbookCellCopySource) Err() error { return source.err }
 
-func workbookHeaders(sheet WorkbookSheet) ([]string, int, error) {
-	var header *WorkbookRow
-	maximumColumn := -1
-	for index := range sheet.Rows {
-		row := &sheet.Rows[index]
-		if row.Number == 1 {
-			header = row
-		}
-		for _, cell := range row.Cells {
-			if cell.Column > maximumColumn {
-				maximumColumn = cell.Column
-			}
-		}
-	}
-	if header == nil || maximumColumn < 0 || maximumColumn >= MaximumColumns {
-		return nil, 0, ErrUnsupportedWorkbook
-	}
-	headers := make([]string, maximumColumn+1)
-	for _, cell := range header.Cells {
-		if cell.FormulaPresent {
-			return nil, 0, ErrUnsupportedWorkbook
-		}
-		headers[cell.Column] = strings.TrimSpace(cell.Value)
-	}
-	seen := make(map[string]struct{}, len(headers))
-	for _, value := range headers {
-		folded := strings.ToLower(value)
-		if value == "" || len(value) > 500 {
-			return nil, 0, ErrUnsupportedWorkbook
-		}
-		if _, exists := seen[folded]; exists {
-			return nil, 0, ErrUnsupportedWorkbook
-		}
-		seen[folded] = struct{}{}
-	}
-	return headers, len(headers), nil
-}
-
 func (store *PostgresStore) ApplySuggestedColumnMapping(ctx context.Context, id Identifier, module Module, sheetIndex *int) error {
 	query := `SELECT sheet_index, source_column, source_header FROM operation_import_columns WHERE import_id=$1`
 	args := []any{databaseUUID(id)}
@@ -568,40 +536,92 @@ func (store *PostgresStore) ApplySuggestedColumnMapping(ctx context.Context, id 
 		query += ` AND sheet_index=$2`
 		args = append(args, *sheetIndex)
 	}
+	query += ` ORDER BY sheet_index, source_column`
 	rows, err := store.pool.Query(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("load import columns for catalog: %w", err)
 	}
 	defer rows.Close()
-	type columnKey struct {
-		sheet  int
-		source int
+	type column struct {
+		sheet, source int
+		header        string
 	}
-	updates := make(map[columnKey]string)
+	bySheet := map[int][]column{}
 	for rows.Next() {
-		var sheet, source int
-		var header string
-		if err := rows.Scan(&sheet, &source, &header); err != nil {
+		var item column
+		if err := rows.Scan(&item.sheet, &item.source, &item.header); err != nil {
 			return fmt.Errorf("scan import column: %w", err)
 		}
-		suggestion := importcatalog.SuggestColumn(importcatalog.Module(module), header)
-		target := suggestion.TargetField
-		if target == "" {
-			continue
-		}
-		updates[columnKey{sheet: sheet, source: source}] = target
+		bySheet[item.sheet] = append(bySheet[item.sheet], item)
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("iterate import columns: %w", err)
 	}
-	for key, target := range updates {
-		if _, err := store.pool.Exec(ctx, `UPDATE operation_import_columns SET target_field=$4
+	for sheet, cols := range bySheet {
+		if len(cols) == 0 {
+			continue
+		}
+		columnCount := cols[len(cols)-1].source + 1
+		current := make([]string, columnCount)
+		for _, item := range cols {
+			current[item.source] = importcatalog.SuggestColumn(importcatalog.Module(module), item.header).TargetField
+		}
+		if module == ModuleProfiles {
+			samples, sampleErr := store.loadImportSampleGrid(ctx, id, sheet, columnCount)
+			if sampleErr != nil {
+				return sampleErr
+			}
+			current = importcatalog.FillUnmapped(current, samples)
+		}
+		for source, target := range current {
+			if target == "" {
+				continue
+			}
+			if _, err := store.pool.Exec(ctx, `UPDATE operation_import_columns SET target_field=$4
  WHERE import_id=$1 AND sheet_index=$2 AND source_column=$3`,
-			databaseUUID(id), key.sheet, key.source, target); err != nil {
-			return fmt.Errorf("apply catalog mapping: %w", err)
+				databaseUUID(id), sheet, source, target); err != nil {
+				return fmt.Errorf("apply catalog mapping: %w", err)
+			}
 		}
 	}
 	return nil
+}
+
+func (store *PostgresStore) loadImportSampleGrid(ctx context.Context, id Identifier, sheet, columnCount int) ([][]string, error) {
+	rows, err := store.pool.Query(ctx, `
+WITH sample_rows AS (
+  SELECT row_number FROM (
+    SELECT DISTINCT row_number FROM operation_import_cells WHERE import_id=$1 AND sheet_index=$2
+  ) numbered ORDER BY row_number LIMIT 50
+)
+SELECT c.row_number, c.source_column, c.raw_value
+  FROM operation_import_cells c
+  JOIN sample_rows sample ON sample.row_number = c.row_number
+ WHERE c.import_id=$1 AND c.sheet_index=$2
+ ORDER BY c.row_number, c.source_column`, databaseUUID(id), sheet)
+	if err != nil {
+		return nil, fmt.Errorf("load import samples: %w", err)
+	}
+	defer rows.Close()
+	indexByRow := map[int]int{}
+	var grid [][]string
+	for rows.Next() {
+		var rowNumber, source int
+		var raw string
+		if err := rows.Scan(&rowNumber, &source, &raw); err != nil {
+			return nil, fmt.Errorf("scan import sample: %w", err)
+		}
+		position, ok := indexByRow[rowNumber]
+		if !ok {
+			position = len(grid)
+			indexByRow[rowNumber] = position
+			grid = append(grid, make([]string, columnCount))
+		}
+		if source >= 0 && source < columnCount {
+			grid[position][source] = raw
+		}
+	}
+	return grid, rows.Err()
 }
 
 func (store *PostgresStore) SelectSheet(ctx context.Context, id Identifier, actorID auth.Identifier, version int64, sheetIndex int, now time.Time) (Import, error) {
@@ -830,7 +850,8 @@ func (store *PostgresStore) loadRows(ctx context.Context, id Identifier, preview
   JOIN operation_import_columns columns
     ON columns.import_id=c.import_id AND columns.sheet_index=c.sheet_index AND columns.source_column=c.source_column
  WHERE c.import_id=$1 AND c.row_number=ANY($2::integer[]) AND columns.target_field IS NOT NULL
- ORDER BY c.row_number, c.source_column`, databaseUUID(id), rowNumbers)
+   AND columns.target_field <> $3
+ ORDER BY c.row_number, c.source_column`, databaseUUID(id), rowNumbers, importcatalog.DiscardSentinel)
 	if err != nil {
 		return nil, fmt.Errorf("list mapped import cells: %w", err)
 	}

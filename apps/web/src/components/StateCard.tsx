@@ -1,25 +1,23 @@
 import { Button, Spin } from "antd";
-import { Link } from "@tanstack/react-router";
 import { AlertCircle, AlertTriangle, ArrowLeft, Inbox, RotateCcw } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
-import { CADASTRO_SEARCH_DEFAULTS } from "../lib/cadastro/cadastroSearch";
+import { useI18n } from "../i18n";
 
 export type StateCardKind = "loading" | "empty" | "warning" | "error";
 
 export interface StateCardProps {
   kind?: StateCardKind;
   title: ReactNode;
-  description?: ReactNode;
-  icon?: ReactNode;
-  action?: ReactNode;
-  compact?: boolean;
-  className?: string;
-  style?: CSSProperties;
-  backToCadastro?: boolean;
-  onBack?: () => void;
-  backLabel?: ReactNode;
-  onRetry?: () => void;
-  retryLabel?: ReactNode;
+  description?: ReactNode | undefined;
+  icon?: ReactNode | undefined;
+  action?: ReactNode | undefined;
+  compact?: boolean | undefined;
+  className?: string | undefined;
+  style?: CSSProperties | undefined;
+  onBack?: (() => void) | undefined;
+  backLabel?: ReactNode | undefined;
+  onRetry?: (() => void) | undefined;
+  retryLabel?: ReactNode | undefined;
 }
 
 function defaultIconForKind(kind: StateCardKind): ReactNode {
@@ -44,17 +42,16 @@ export function StateCard({
   compact = false,
   className = "",
   style,
-  backToCadastro = false,
   onBack,
   backLabel,
   onRetry,
   retryLabel,
 }: StateCardProps) {
+  const { messages } = useI18n();
   const renderedIcon = icon ?? defaultIconForKind(kind);
   const isPolite = kind === "loading";
   const isAlert = kind === "error";
-
-  const hasStandardActions = Boolean(backToCadastro || onBack || onRetry);
+  const hasStandardActions = Boolean(onBack || onRetry);
 
   return (
     <div
@@ -74,19 +71,13 @@ export function StateCard({
         <div className="state-card__actions">
           {onRetry ? (
             <Button icon={<RotateCcw size={14} />} onClick={onRetry}>
-              {retryLabel ?? "Tentar novamente"}
+              {retryLabel ?? messages.common.actions.retry}
             </Button>
           ) : null}
 
-          {backToCadastro ? (
-            <Link search={CADASTRO_SEARCH_DEFAULTS} to="/cadastro">
-              <Button icon={<ArrowLeft size={14} />}>
-                {backLabel ?? "Voltar para o Cadastro"}
-              </Button>
-            </Link>
-          ) : onBack ? (
+          {onBack ? (
             <Button icon={<ArrowLeft size={14} />} onClick={onBack}>
-              {backLabel ?? "Voltar"}
+              {backLabel ?? messages.common.actions.back}
             </Button>
           ) : null}
 
@@ -95,10 +86,4 @@ export function StateCard({
       ) : null}
     </div>
   );
-}
-
-export const StatusCard = StateCard;
-
-export function CadastroStateCard(props: StateCardProps) {
-  return <StateCard backToCadastro={props.backToCadastro ?? true} {...props} />;
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
 	"github.com/Pherlsz/Gymkhana-Database/internal/googleforms"
 	"github.com/Pherlsz/Gymkhana-Database/internal/matching"
+	"github.com/Pherlsz/Gymkhana-Database/internal/modelprovider"
 	"github.com/Pherlsz/Gymkhana-Database/internal/ocr"
 	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/httpserver"
@@ -58,6 +59,7 @@ func run() error {
 		defer pool.Close()
 	}
 	var authService *auth.Service
+	var authStore *auth.PostgresStore
 	if cfg.Auth.Enabled {
 		if pool == nil {
 			return errors.New("authentication requires a database connection")
@@ -70,11 +72,11 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("configure Google OAuth: %w", err)
 		}
-		postgresStore := auth.NewPostgresStore(pool)
-		authService, err = auth.NewService(provider, postgresStore, auth.ServiceOptions{
+		authStore = auth.NewPostgresStore(pool)
+		authService, err = auth.NewService(provider, authStore, auth.ServiceOptions{
 			AllowedEmails:   cfg.Auth.AllowedEmails,
 			SuperadminEmail: cfg.Auth.SuperadminEmail,
-			AllowlistStore:  postgresStore,
+			AllowlistStore:  authStore,
 			OnAuditFailure: func(_ context.Context, event auth.AuditEvent, auditErr error) {
 				logger.Error("authentication audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
 			},
@@ -96,6 +98,7 @@ func run() error {
 	var chatService *aichat.Service
 	var chatTools *aichat.ToolGateway
 	var chatCoordinator *aichat.Coordinator
+	var modelKeys *modelprovider.KeyService
 	var ocrService *ocr.Service
 	if pool != nil {
 		profileStore := profile.NewPostgresStore(pool)
@@ -200,12 +203,41 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("configure matching service: %w", err)
 		}
+		if cfg.UsesSharedModelKey() {
+			modelKeys, err = modelprovider.NewSealedKeyService(pool, cfg.AIChat.KeyVersion, cfg.AIChat.KeyEncryptionKeys, time.Now)
+			if err != nil {
+				return fmt.Errorf("configure model key service: %w", err)
+			}
+		}
 		if cfg.AIChat.Enabled {
 			if authService == nil || searchService == nil || queryService == nil {
 				return errors.New("AI Chat requires authentication, Search, Query Engine, and a database connection")
 			}
+			var provider aichat.ModelClient
+			var ready func(context.Context) bool
+			switch cfg.AIChat.Provider {
+			case "fake":
+				provider = aichat.NewRepeatingFakeProvider(aichat.FakeModelStep{Deltas: []string{"Resposta determinística do ambiente de teste."}})
+			case modelprovider.ProviderGoogle:
+				if modelKeys == nil {
+					return errors.New("AI Chat google provider requires the shared model key service")
+				}
+				adapter, err := modelprovider.NewGoogleAdapter(&http.Client{Timeout: 40 * time.Second}, modelprovider.KeyResolver(modelKeys, modelprovider.ProviderGoogle), "")
+				if err != nil {
+					return fmt.Errorf("configure Gemini adapter: %w", err)
+				}
+				provider, err = modelprovider.NewChatClient(adapter, modelKeys, modelprovider.ProviderGoogle, cfg.AIChat.Model, logger)
+				if err != nil {
+					return fmt.Errorf("configure AI Chat model client: %w", err)
+				}
+				keys := modelKeys
+				ready = func(ctx context.Context) bool { return keys.Configured(ctx, modelprovider.ProviderGoogle) }
+			default:
+				return errors.New("AI Chat production provider adapter is not configured")
+			}
 			chatService, err = aichat.NewService(aichat.NewPostgresStore(pool), aichat.ServiceOptions{
 				Retention: cfg.AIChat.Retention,
+				Ready:     ready,
 				OnAuditFailure: func(_ context.Context, event aichat.AuditEvent, auditErr error) {
 					logger.Error("AI Chat audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome,
 						"error_code", event.ErrorCode, "request_id", event.RequestID, "error_type", fmt.Sprintf("%T", auditErr))
@@ -217,13 +249,6 @@ func run() error {
 			chatTools, err = aichat.NewToolGateway(searchService, queryService, chatService, time.Now)
 			if err != nil {
 				return fmt.Errorf("configure AI Chat tools: %w", err)
-			}
-			var provider aichat.ModelClient
-			switch cfg.AIChat.Provider {
-			case "fake":
-				provider = aichat.NewRepeatingFakeProvider(aichat.FakeModelStep{Deltas: []string{"Resposta determinística do ambiente de teste."}})
-			default:
-				return errors.New("AI Chat production provider adapter is not configured")
 			}
 			orchestrator, err := aichat.NewOrchestrator(chatService, chatTools, provider)
 			if err != nil {
@@ -244,15 +269,27 @@ func run() error {
 				return fmt.Errorf("configure OCR targets: %w", err)
 			}
 			var extractor ocr.Extractor
+			var ocrReady func(context.Context) bool
 			switch cfg.OCR.Provider {
 			case "fake":
 				extractor = ocr.NewDeterministicFakeExtractor()
+			case modelprovider.ProviderGoogle:
+				if modelKeys == nil {
+					return errors.New("OCR google provider requires the shared model key service")
+				}
+				extractor, err = modelprovider.NewGoogleOCRExtractor(&http.Client{Timeout: cfg.OCR.Timeout}, modelKeys, cfg.OCR.Model)
+				if err != nil {
+					return fmt.Errorf("configure OCR Gemini extractor: %w", err)
+				}
+				keys := modelKeys
+				ocrReady = func(ctx context.Context) bool { return keys.Configured(ctx, modelprovider.ProviderGoogle) }
 			default:
 				return errors.New("OCR production provider adapter is not configured")
 			}
 			ocrService, _, err = ocr.NewRuntime(pool, attachmentService, targets, extractor, ocr.ServiceOptions{
 				Timeout: cfg.OCR.Timeout, MaximumRate: cfg.OCR.MaximumRequests,
 				MaximumProviderUsage: cfg.OCR.MaximumProviderUsage, MaximumSourceBytes: cfg.OCR.MaximumSourceBytes,
+				Ready: ocrReady,
 				OnAuditFailure: func(_ context.Context, event ocr.AuditEvent, auditErr error) {
 					logger.Error("OCR audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome,
 						"error_code", event.ErrorCode, "request_id", event.RequestID, "error_type", fmt.Sprintf("%T", auditErr))
@@ -263,33 +300,38 @@ func run() error {
 			}
 		}
 	}
+	serverOptions := httpserver.Options{
+		MaxBodyBytes:           cfg.HTTPMaxBodyBytes,
+		Auth:                   authService,
+		Profile:                profileService,
+		Document:               documentService,
+		Bill:                   billService,
+		CustomData:             customDataService,
+		Attachment:             attachmentService,
+		Search:                 searchService,
+		Operations:             operationsService,
+		GoogleForms:            googleFormsService,
+		Query:                  queryService,
+		Matching:               matchingService,
+		Chat:                   chatService,
+		ChatResults:            chatTools,
+		ChatLauncher:           chatCoordinator,
+		OCR:                    ocrService,
+		RequireCapabilityCheck: cfg.Auth.Enabled,
+		CapabilityCheck:        authStore,
+		Development:            cfg.Environment == config.EnvironmentLocal || cfg.Environment == config.EnvironmentTest,
+		SecureCookies:          cfg.Auth.SecureCookies,
+		ApplicationURL:         cfg.Auth.ApplicationURL,
+	}
+	if modelKeys != nil {
+		serverOptions.ModelKeys = modelKeys
+	}
 	server := &http.Server{
-		Addr: cfg.HTTPAddress,
-		Handler: httpserver.New(logger, pool, httpserver.Options{
-			MaxBodyBytes:           cfg.HTTPMaxBodyBytes,
-			Auth:                   authService,
-			Profile:                profileService,
-			Document:               documentService,
-			Bill:                   billService,
-			CustomData:             customDataService,
-			Attachment:             attachmentService,
-			Search:                 searchService,
-			Operations:             operationsService,
-			GoogleForms:            googleFormsService,
-			Query:                  queryService,
-			Matching:               matchingService,
-			Chat:                   chatService,
-			ChatResults:            chatTools,
-			ChatLauncher:           chatCoordinator,
-			OCR:                    ocrService,
-			RequireCapabilityCheck: cfg.Auth.Enabled,
-			Development:            cfg.Environment == config.EnvironmentLocal || cfg.Environment == config.EnvironmentTest,
-			SecureCookies:          cfg.Auth.SecureCookies,
-			ApplicationURL:         cfg.Auth.ApplicationURL,
-		}),
+		Addr:              cfg.HTTPAddress,
+		Handler:           httpserver.New(logger, pool, serverOptions),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      30 * time.Second,
+		WriteTimeout:      6 * time.Minute,
 		IdleTimeout:       60 * time.Second,
 	}
 	serverError := make(chan error, 1)

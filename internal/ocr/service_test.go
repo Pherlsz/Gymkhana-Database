@@ -86,6 +86,28 @@ func TestServiceRequiresReviewAndSeparateIdempotentApplication(t *testing.T) {
 	}
 }
 
+func TestServiceFailsClosedWhenSharedModelKeyIsMissing(t *testing.T) {
+	fixture := newOCRServiceFixture(t, NewDeterministicFakeExtractor())
+	now := time.Date(2026, time.July, 18, 12, 0, 0, 0, time.UTC)
+	service, err := NewService(fixture.store, fixture.jobs, fixture.source, fixture.targets, fixture.extractor, ServiceOptions{
+		Now: func() time.Time { return now }, Timeout: 30 * time.Second, MaximumRate: 10,
+		MaximumProviderUsage: 1000, MaximumSourceBytes: MaximumSourceBytes, RecoveryBatch: 10,
+		Ready: func(context.Context) bool { return false },
+	})
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	if service.Capability().Enabled {
+		t.Fatal("Capability().Enabled = true, want false when the shared key is absent")
+	}
+	if _, err := service.StartJob(context.Background(), fixture.actor, fixture.source.value.ID, "ocr-job-unready-0001", nil, "start"); !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("StartJob() error = %v, want ErrUnavailable", err)
+	}
+	if fixture.jobs.enqueued != 0 {
+		t.Fatalf("enqueued = %d, want 0", fixture.jobs.enqueued)
+	}
+}
+
 func TestServiceRetriesOnlyPreProviderUnavailableWorkAndBoundsAttempts(t *testing.T) {
 	fixture := newOCRServiceFixture(t, NewDeterministicFakeExtractor())
 	fixture.source.failGet = map[int]error{

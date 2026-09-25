@@ -199,6 +199,67 @@
                   "503": { "$ref": "#/components/responses/AuthUnavailable" },
                 },
             },
+          "post":
+            {
+              "operationId": "provisionApplicationUser",
+              "summary": "Create an application user with role and capabilities",
+              "tags": ["Administration"],
+              "security": [{ "sessionCookie": [] }],
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        { "schema": { "$ref": "#/components/schemas/ProvisionUserRequest" } },
+                    },
+                },
+              "responses":
+                {
+                  "201":
+                    {
+                      "description": "Created application user",
+                      "content":
+                        {
+                          "application/json":
+                            { "schema": { "$ref": "#/components/schemas/AdminUser" } },
+                        },
+                    },
+                  "400": { "$ref": "#/components/responses/BadRequest" },
+                  "401": { "$ref": "#/components/responses/Unauthorized" },
+                  "403": { "$ref": "#/components/responses/Forbidden" },
+                  "409": { "$ref": "#/components/responses/Conflict" },
+                  "503": { "$ref": "#/components/responses/AuthUnavailable" },
+                },
+            },
+        },
+      "/api/admin/users/{user_id}":
+        {
+          "delete":
+            {
+              "operationId": "deleteApplicationUser",
+              "summary": "Delete an application user",
+              "tags": ["Administration"],
+              "security": [{ "sessionCookie": [] }],
+              "parameters":
+                [
+                  {
+                    "name": "user_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": { "type": "string", "format": "uuid" },
+                  },
+                ],
+              "responses":
+                {
+                  "204": { "description": "User deleted" },
+                  "401": { "$ref": "#/components/responses/Unauthorized" },
+                  "403": { "$ref": "#/components/responses/Forbidden" },
+                  "404": { "$ref": "#/components/responses/NotFound" },
+                  "409": { "$ref": "#/components/responses/Conflict" },
+                  "503": { "$ref": "#/components/responses/AuthUnavailable" },
+                },
+            },
         },
       "/api/admin/users/{user_id}/access":
         {
@@ -242,6 +303,89 @@
                   "403": { "$ref": "#/components/responses/Forbidden" },
                   "404": { "$ref": "#/components/responses/NotFound" },
                   "409": { "$ref": "#/components/responses/Conflict" },
+                  "503": { "$ref": "#/components/responses/AuthUnavailable" },
+                },
+            },
+        },
+      "/api/admin/model-keys/{provider}":
+        {
+          "parameters":
+            [
+              {
+                "name": "provider",
+                "in": "path",
+                "required": true,
+                "schema": { "$ref": "#/components/schemas/ModelProvider" },
+              },
+            ],
+          "get":
+            {
+              "operationId": "getModelKeyStatus",
+              "summary": "Shared Assistente model key status (never the secret)",
+              "tags": ["Administration"],
+              "security": [{ "sessionCookie": [] }],
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Model key status",
+                      "content":
+                        {
+                          "application/json":
+                            { "schema": { "$ref": "#/components/schemas/ModelKeyStatus" } },
+                        },
+                    },
+                  "401": { "$ref": "#/components/responses/Unauthorized" },
+                  "403": { "$ref": "#/components/responses/Forbidden" },
+                  "404": { "$ref": "#/components/responses/NotFound" },
+                  "503": { "$ref": "#/components/responses/AuthUnavailable" },
+                },
+            },
+          "put":
+            {
+              "operationId": "setModelKey",
+              "summary": "Store or rotate the shared Assistente model key",
+              "tags": ["Administration"],
+              "security": [{ "sessionCookie": [] }],
+              "requestBody":
+                {
+                  "required": true,
+                  "content":
+                    {
+                      "application/json":
+                        { "schema": { "$ref": "#/components/schemas/SetModelKeyRequest" } },
+                    },
+                },
+              "responses":
+                {
+                  "200":
+                    {
+                      "description": "Model key status after the update",
+                      "content":
+                        {
+                          "application/json":
+                            { "schema": { "$ref": "#/components/schemas/ModelKeyStatus" } },
+                        },
+                    },
+                  "400": { "$ref": "#/components/responses/ValidationError" },
+                  "401": { "$ref": "#/components/responses/Unauthorized" },
+                  "403": { "$ref": "#/components/responses/Forbidden" },
+                  "404": { "$ref": "#/components/responses/NotFound" },
+                  "503": { "$ref": "#/components/responses/AuthUnavailable" },
+                },
+            },
+          "delete":
+            {
+              "operationId": "clearModelKey",
+              "summary": "Remove the shared Assistente model key",
+              "tags": ["Administration"],
+              "security": [{ "sessionCookie": [] }],
+              "responses":
+                {
+                  "204": { "description": "Model key removed or already absent" },
+                  "401": { "$ref": "#/components/responses/Unauthorized" },
+                  "403": { "$ref": "#/components/responses/Forbidden" },
+                  "404": { "$ref": "#/components/responses/NotFound" },
                   "503": { "$ref": "#/components/responses/AuthUnavailable" },
                 },
             },
@@ -2660,6 +2804,57 @@
                   "role": { "$ref": "#/components/schemas/UserRole" },
                   "active": { "type": "boolean" },
                   "version": { "type": "integer", "format": "int64", "minimum": 1 },
+                  "display_name": { "type": "string", "maxLength": 200 },
+                  "email": { "type": "string", "maxLength": 320 },
+                },
+            },
+          "ProvisionUserRequest":
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["email", "display_name", "role"],
+              "properties":
+                {
+                  "email": { "type": "string", "maxLength": 320 },
+                  "display_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+                  "role": { "type": "string", "enum": ["EXTERNAL", "ADMIN"] },
+                  "capabilities":
+                    {
+                      "type": "array",
+                      "items": { "type": "string" },
+                    },
+                },
+            },
+          "ModelProvider": { "type": "string", "enum": ["google"] },
+          "ModelKeyStatus":
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["provider", "configured"],
+              "properties":
+                {
+                  "provider": { "$ref": "#/components/schemas/ModelProvider" },
+                  "configured": { "type": "boolean" },
+                  "model": { "type": "string", "maxLength": 120 },
+                  "updated_at": { "type": "string", "format": "date-time" },
+                },
+            },
+          "SetModelKeyRequest":
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["secret", "model"],
+              "properties":
+                {
+                  "secret":
+                    {
+                      "type": "string",
+                      "format": "password",
+                      "minLength": 20,
+                      "maxLength": 512,
+                      "description": "Provider API key. Write-only; never returned.",
+                    },
+                  "model": { "type": "string", "minLength": 1, "maxLength": 120 },
                 },
             },
           "DistinctCitiesResponse":

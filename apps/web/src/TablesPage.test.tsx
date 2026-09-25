@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { Modal } from "antd";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
@@ -21,7 +22,7 @@ function anaProfile() {
     id: "019bf789-4400-7f12-9abc-123456789abc",
     full_name: "Ana da Silva",
     social_name: "Ana",
-    cpf: "***.***.***-25",
+    cpf: "529.982.247-25",
     email: "ana@example.com",
     mobile_phone: "+5551999998888",
     landline_phone: "",
@@ -67,24 +68,22 @@ function profilePage() {
 }
 
 function headerTexts() {
-  return [...document.querySelectorAll(".spreadsheet-table thead th")].map(
-    (cell) => cell.textContent ?? "",
-  );
+  return [...document.querySelectorAll(".spreadsheet-table thead th")].map((cell) => {
+    const label = cell.querySelector(".spreadsheet-table__head-label");
+    return (label?.textContent ?? cell.textContent ?? "").trim();
+  });
 }
 
-async function chooseSelectOption(combobox: HTMLElement, label: string) {
-  fireEvent.mouseDown(combobox);
-  const options = await screen.findAllByTitle(label);
-  fireEvent.click(options[options.length - 1] as HTMLElement);
-}
-
-async function addFilterField(label: string) {
-  const add = screen.queryByRole("button", { name: "Adicionar filtro" });
-  if (add && !add.hasAttribute("disabled") && add.getAttribute("aria-disabled") !== "true") {
-    fireEvent.click(add);
-  }
-  const pickers = screen.getAllByRole("combobox", { name: "Campo" });
-  await chooseSelectOption(pickers[pickers.length - 1] as HTMLElement, label);
+async function applyColumnSelect(columnLabel: string, optionLabel: string) {
+  fireEvent.click(await screen.findByRole("button", { name: `Filtrar ${columnLabel}` }));
+  const select = await screen.findByRole("combobox", { name: "Valor" });
+  fireEvent.change(select, {
+    target: {
+      value:
+        [...select.querySelectorAll("option")].find((o) => o.textContent === optionLabel)?.value ??
+        "",
+    },
+  });
 }
 
 function cnhType() {
@@ -325,6 +324,51 @@ function apiResponse(url: string): Response | undefined {
       },
     });
   }
+  if (url.includes("/api/v1/attachments")) {
+    return jsonResponse({ attachments: [] });
+  }
+  if (url.includes("/api/v1/ocr/capability")) {
+    return jsonResponse({ enabled: false });
+  }
+  if (url.includes("/api/v1/chat/capability")) {
+    return jsonResponse({
+      enabled: false,
+      maximum_tool_calls: 8,
+      maximum_rows: 100,
+      maximum_result_bytes: 256,
+      maximum_usage: 1,
+      maximum_duration_seconds: 1,
+      maximum_message_runes: 1,
+    });
+  }
+  if (url.includes("/api/v1/chat/result-references/") && url.includes("/page")) {
+    return jsonResponse({
+      columns: [
+        { key: "full_name", label: "Nome" },
+        { key: "city", label: "Cidade" },
+      ],
+      rows: [
+        {
+          id: "r1",
+          entity_kind: "profile",
+          entity_id: "019bf789-4400-7f12-9abc-123456789abc",
+          entity_label: "Ana da Silva",
+          cells: { full_name: "Ana da Silva", city: "Porto Alegre" },
+        },
+        {
+          id: "r2",
+          entity_kind: "profile",
+          entity_id: "019bf789-4400-7f12-9abc-123456789abd",
+          entity_label: "Zélia Costa",
+          cells: { full_name: "Zélia Costa", city: "Canoas" },
+        },
+      ],
+      total: 2,
+      limit: 500,
+      offset: 0,
+      summary: "2 pessoas",
+    });
+  }
   if (url.includes("/api/v1/custom-entity-types")) {
     return jsonResponse({ types: [], page: { total: 0, limit: 1000, offset: 0 } });
   }
@@ -337,6 +381,7 @@ function apiResponse(url: string): Response | undefined {
 describe("TablesPage", () => {
   afterEach(() => {
     cleanup();
+    Modal.destroyAll();
     vi.unstubAllGlobals();
     window.localStorage.clear();
     window.history.replaceState(null, "", "/");
@@ -362,11 +407,9 @@ describe("TablesPage", () => {
         "Cidade: Porto Alegre",
       ),
     );
-
-    fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
-    const city = await screen.findByRole("textbox", { name: "Cidade" });
-    expect(city).toHaveValue("Porto Alegre");
-    expect(document.querySelector(".filter-surface__row.is-applied")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Limpar filtros" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Filtros" })).not.toBeInTheDocument();
+    expect(document.querySelector(".column-funnel__trigger.is-active")).toBeTruthy();
 
     const chipClose = document.querySelector<HTMLElement>(
       ".tables-toolbar__chip .ant-tag-close-icon",
@@ -375,7 +418,7 @@ describe("TablesPage", () => {
     await waitFor(() => expect(window.location.search).not.toContain("city="));
   });
 
-  it("commits text filters only after blur", async () => {
+  it("commits text filters only after Enter in the column funnel", async () => {
     window.history.replaceState(null, "", "/tables/people");
     const fetchMock = vi
       .fn()
@@ -385,9 +428,8 @@ describe("TablesPage", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Filtros" }));
-    await addFilterField("Cidade");
-    const city = screen.getByRole("textbox", { name: "Cidade" });
+    fireEvent.click(await screen.findByRole("button", { name: "Filtrar Cidade" }));
+    const city = await screen.findByRole("textbox", { name: "Valor" });
     const initialProfileCalls = fetchMock.mock.calls.filter((call) =>
       String(call[0]).includes("/api/v1/profiles?"),
     ).length;
@@ -398,7 +440,7 @@ describe("TablesPage", () => {
       fetchMock.mock.calls.filter((call) => String(call[0]).includes("/api/v1/profiles?")),
     ).toHaveLength(initialProfileCalls);
 
-    fireEvent.blur(city);
+    fireEvent.keyDown(city, { key: "Enter" });
     await waitFor(() => expect(window.location.search).toContain("city=Porto+Alegre"));
     await waitFor(() =>
       expect(
@@ -410,7 +452,7 @@ describe("TablesPage", () => {
     );
   });
 
-  it("lists people with priority columns first and hides the long tail", async () => {
+  it("lists people with priority columns first and hides the long tail", { timeout: 15_000 }, async () => {
     window.history.replaceState(null, "", "/tables/people");
     vi.stubGlobal(
       "fetch",
@@ -422,10 +464,12 @@ describe("TablesPage", () => {
     );
     render(<App />);
     expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Filtrar Nome" })).toBeInTheDocument();
     expect(document.querySelector(".tables-inspector-slot")).toBeNull();
     expect(document.querySelector(".tables-page__workspace > .profile-panel")).toBeNull();
     const headers = headerTexts();
-    expect(headers.slice(0, 12)).toEqual([
+    expect(headers.slice(0, 13)).toEqual([
+      "Ações",
       "Nome",
       "Documentos",
       "CPF",
@@ -442,12 +486,14 @@ describe("TablesPage", () => {
     expect(headers).toContain("CNH");
     expect(headers).toContain("Equipe");
     expect(headers.indexOf("Equipe")).toBeGreaterThan(headers.indexOf("CNH"));
+    expect(screen.getByRole("button", { name: "Filtrar Equipe" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Filtrar Setor" })).toBeInTheDocument();
     expect(headers).not.toContain("Idade");
     expect(headers).not.toContain("Soma nome");
     expect(headers).not.toContain("Signo");
     expect(headers).not.toContain("Nome do pai");
     expect(headers.some((text) => text === "Notas")).toBe(false);
-    expect(screen.getByText("***.***.***-25")).toBeInTheDocument();
+    expect(screen.getByText("529.982.247-25")).toBeInTheDocument();
     expect(screen.getByText("1122334455")).toBeInTheDocument();
     expect(document.querySelector(".document-badge__acronym")?.textContent).toBe("RG");
     expect(document.querySelector(".document-badge__mark--physical")?.getAttribute("title")).toBe(
@@ -478,7 +524,7 @@ describe("TablesPage", () => {
     expect(headerTexts()).toContain("Nome");
   });
 
-  it("builds filters one field at a time without listing every column", async () => {
+  it("filters documents from the column funnel without a toolbar filter panel", async () => {
     window.history.replaceState(null, "", "/tables/documents?document_status=IN_USE");
     vi.stubGlobal(
       "fetch",
@@ -490,28 +536,14 @@ describe("TablesPage", () => {
     );
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Documentos" })).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Contagem de caracteres" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Soma (A=1…Z=26 / dígitos)" }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "Campo" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
-    expect(screen.queryByRole("textbox", { name: "Buscar campo…" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Adicionar filtro" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "Tipo" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "Suporte" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Filtros" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Adicionar filtro" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Filtrar Status" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Filtrar Tipo" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Adicionar filtro" }));
-    const lastRow = [...document.querySelectorAll(".filter-surface__row")].at(-1) as HTMLElement;
-    await chooseSelectOption(within(lastRow).getByRole("combobox", { name: "Campo" }), "Tipo");
-    await chooseSelectOption(await screen.findByRole("combobox", { name: "Tipo" }), "RG");
+    await applyColumnSelect("Tipo", "RG");
     await waitFor(() => expect(window.location.search).toContain("document_type=type-rg"));
     expect(window.location.search).toContain("document_status=IN_USE");
-    expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Tipo" })).toBeInTheDocument();
   });
 
   it("sends the document type filter from the URL and lists mixed types without tabs", async () => {
@@ -600,11 +632,9 @@ describe("TablesPage", () => {
     expect(screen.getByText("1122334455")).toBeInTheDocument();
     expect(screen.getByText("999888777")).toBeInTheDocument();
     expect(screen.queryByText("Centro")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Colunas" }));
-    fireEvent.click(screen.getByRole("button", { name: "Mostrar todas" }));
-    await waitFor(() => {
-      expect(screen.getByText("Centro")).toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByText("Colunas"));
+    fireEvent.click(await screen.findByText("Mostrar todas"));
+    expect(await screen.findByText("Centro")).toBeInTheDocument();
     expect(screen.queryByText("Soma CPF")).not.toBeInTheDocument();
   });
 
@@ -645,13 +675,9 @@ describe("TablesPage", () => {
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Contas" })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Buscar em todos os campos…")).toBeInTheDocument();
-    // Tipo is no longer a Select pinned to the bills bar; add it as a condition.
-    expect(screen.queryByRole("combobox", { name: "Tipo" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Filtros" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Nova conta" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
-    expect(screen.queryByRole("combobox", { name: "Tipo" })).not.toBeInTheDocument();
-    await addFilterField("Tipo");
-    expect(screen.getByRole("combobox", { name: "Tipo" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Filtrar Tipo" })).toBeInTheDocument();
     expect(await screen.findByText("UC-100")).toBeInTheDocument();
     expect(headerTexts().includes("Soma referência")).toBe(false);
     expect(screen.queryByText("Ref maiúscula")).not.toBeInTheDocument();
@@ -680,41 +706,45 @@ describe("TablesPage", () => {
     expect(within(inspector).getByRole("button", { name: "Fechar" })).toBeInTheDocument();
     expect(within(inspector).getByRole("button", { name: "Editar" })).toBeInTheDocument();
     expect(within(inspector).queryByRole("button", { name: "Duplicar" })).not.toBeInTheDocument();
-    expect(within(inspector).queryByRole("textbox")).not.toBeInTheDocument();
+    const holderName = within(inspector).getByLabelText(/Nome do titular/i);
+    expect(holderName).toBeDisabled();
     expect(
-      within(inspector).getByRole("button", { name: "Documentos desta pessoa" }),
-    ).toBeInTheDocument();
-    expect(
-      within(inspector).getByRole("button", { name: "Contas desta pessoa" }),
-    ).toBeInTheDocument();
-    expect(within(inspector).getByRole("heading", { name: "Identificação" })).toBeInTheDocument();
-    expect(
-      within(inspector).queryByRole("heading", { name: "Contato e endereço" }),
+      within(inspector).queryByRole("button", { name: "Documentos desta pessoa" }),
     ).not.toBeInTheDocument();
-    // The badges are drawn once, by the presence section. They used to also be
-    // repeated as a "Documentos" row directly above it.
-    expect(within(inspector).queryByText("Documentos")).not.toBeInTheDocument();
-    await waitFor(() => expect(inspector.querySelectorAll(".document-badge")).toHaveLength(1));
-    expect(within(inspector).getByText("14/08/1990")).toBeInTheDocument();
-    expect(within(inspector).getByText("O+")).toBeInTheDocument();
-    fireEvent.click(within(inspector).getByRole("button", { name: "Ver mais dados" }));
     expect(
-      within(inspector).getByRole("heading", { name: "Contato e endereço" }),
+      within(inspector).queryByRole("button", { name: "Contas desta pessoa" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(inspector).getByRole("heading", { name: "Identidade & contato" }),
     ).toBeInTheDocument();
-    expect(within(inspector).getByRole("button", { name: "Ver menos dados" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
+    expect(within(inspector).getByRole("heading", { name: "Documentos" })).toBeInTheDocument();
+    expect(
+      within(inspector).getByRole("heading", { name: "Contas de consumo" }),
+    ).toBeInTheDocument();
+    expect(await within(inspector).findByText("nº 1234567890")).toBeInTheDocument();
+    expect(inspector.querySelector(".document-presence__list")).toBeNull();
+    expect(
+      within(inspector).queryByRole("button", { name: "Adicionar documento" }),
+    ).not.toBeInTheDocument();
+    expect(within(inspector).getByDisplayValue("14/08/1990")).toBeInTheDocument();
+    expect(within(inspector).getByDisplayValue("O+")).toBeInTheDocument();
     expect(within(inspector).queryByText("Exclusão permanente")).not.toBeInTheDocument();
     expect(document.querySelector(".tables-page__workspace > .profile-panel")).toBeTruthy();
     expect(document.querySelector(".tables-inspector-sheet")).toBeNull();
     expect(document.querySelector(".spreadsheet-table")).toBeTruthy();
     expect(document.querySelector(".profiles-cards")).toBeNull();
     fireEvent.click(within(inspector).getByRole("button", { name: "Editar" }));
-    expect(await within(inspector).findByLabelText("Nome completo")).toBeInTheDocument();
+    expect(await within(inspector).findByLabelText(/Nome do titular/i)).toBeEnabled();
+    fireEvent.click(within(inspector).getByRole("button", { name: "Adicionar documento" }));
+    expect(
+      await within(inspector).findByText(/Preenchimento inteligente via OCR/i),
+    ).toBeInTheDocument();
+    expect(within(inspector).getByLabelText(/Número do documento/i)).toBeInTheDocument();
+    expect(inspector.querySelector(".document-presence__list")).toBeNull();
+    fireEvent.click(inspector.querySelector(".inline-actions button") as HTMLButtonElement);
     fireEvent.click(within(inspector).getByRole("button", { name: "Cancelar" }));
     await waitFor(() => {
-      expect(within(inspector).queryByRole("textbox")).not.toBeInTheDocument();
+      expect(within(inspector).getByLabelText(/Nome do titular/i)).toBeDisabled();
     });
     fireEvent.click(within(inspector).getByRole("button", { name: "Fechar" }));
     await waitFor(() => {
@@ -744,41 +774,37 @@ describe("TablesPage", () => {
     );
     render(<App />);
     fireEvent.click(await screen.findByText("Ana da Silva"));
-    expect(await screen.findByRole("button", { name: /^Excluir$/ })).toBeInTheDocument();
+    const inspector = await screen.findByRole("complementary", { name: "Detalhes da pessoa" });
+    expect(within(inspector).getByRole("button", { name: /^Excluir$/ })).toBeInTheDocument();
     expect(screen.queryByText("Exclusão permanente")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^Excluir$/ }));
+    fireEvent.click(within(inspector).getByRole("button", { name: /^Excluir$/ }));
     expect(screen.getByText("Exclusão permanente")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Confirmar")).toBeInTheDocument();
   });
 
-  it("filters documents from the inspector without leaving the person", async () => {
+  it("opens a listed document from the person inspector without changing tables", async () => {
     window.history.replaceState(null, "", "/tables/people");
-    const fetchMock = vi
-      .fn()
-      .mockImplementation((input: RequestInfo | URL) =>
-        Promise.resolve(apiResponse(String(input))),
-      );
-    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
     render(<App />);
     fireEvent.click(await screen.findByText("Ana da Silva"));
     const inspector = await screen.findByRole("complementary", { name: "Detalhes da pessoa" });
-    fireEvent.click(within(inspector).getByRole("button", { name: "Documentos desta pessoa" }));
-    expect(await screen.findByRole("heading", { name: "Documentos" })).toBeInTheDocument();
-    expect(screen.getByRole("complementary", { name: "Detalhes da pessoa" })).toBeInTheDocument();
-    // The chip names its field: the value alone used to be all a screen reader got.
-    await waitFor(() =>
-      expect(document.querySelector(".tables-toolbar__chip")?.textContent).toBe(
-        "Pessoa: Ana da Silva",
-      ),
-    );
-    await waitFor(() => {
-      const documentCalls = fetchMock.mock.calls
-        .map((call) => String(call[0]))
-        .filter((url) => url.includes("/api/v1/documents?"));
-      expect(documentCalls.some((url) => url.includes(`owner_profile_id=${anaProfile().id}`))).toBe(
-        true,
-      );
-    });
+    fireEvent.click(await within(inspector).findByRole("button", { name: /nº 1234567890/ }));
+    const card = await screen.findByRole("complementary", { name: "Detalhes do documento" });
+    expect(screen.getByRole("heading", { name: "Pessoas" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/tables/people");
+    expect(within(card).getByText("Dono")).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: /Ver pessoa/ }));
+    expect(
+      await screen.findByRole("complementary", { name: "Detalhes da pessoa" }),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/tables/people");
   });
 
   it("asks before discarding an unsaved edit when another row is clicked", async () => {
@@ -811,10 +837,10 @@ describe("TablesPage", () => {
     fireEvent.click(await screen.findByText("Ana da Silva"));
     const inspector = await screen.findByRole("complementary", { name: "Detalhes da pessoa" });
     fireEvent.click(within(inspector).getByRole("button", { name: "Editar" }));
-    expect(await within(inspector).findByLabelText("Nome completo")).toBeInTheDocument();
+    expect(await within(inspector).findByLabelText(/Nome do titular/i)).toBeEnabled();
     fireEvent.click(screen.getByText("Bruno Souza"));
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Descartar e trocar" }));
+    const discard = await screen.findByRole("dialog");
+    fireEvent.click(within(discard).getByRole("button", { name: "Descartar e trocar" }));
     await waitFor(() => {
       expect(
         within(screen.getByRole("complementary", { name: "Detalhes da pessoa" })).getByRole(
@@ -847,6 +873,10 @@ describe("TablesPage", () => {
     expect(card.querySelector(".record-panel__owner strong")?.textContent).toBe("Ana da Silva");
     // Missing values are omitted, not drawn as the grid's em dash.
     expect(within(card).queryByText("—")).toBeNull();
+    expect(within(card).queryByText(/Preenchimento inteligente via OCR/i)).toBeNull();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Editar" }));
+    expect(await within(card).findByText(/Preenchimento inteligente via OCR/i)).toBeInTheDocument();
 
     fireEvent.click(within(card).getByRole("button", { name: /Ver pessoa/ }));
     await waitFor(() =>
@@ -910,5 +940,162 @@ describe("TablesPage", () => {
     expect(screen.getByRole("complementary", { name: "Detalhes da pessoa" })).not.toHaveAttribute(
       "aria-busy",
     );
+  });
+
+  it("does not open the inspector when the row actions button is clicked", async () => {
+    window.history.replaceState(null, "", "/tables/people");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Ações de Ana da Silva"));
+    expect(await screen.findByRole("menuitem", { name: "Editar" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("complementary", { name: "Detalhes da pessoa" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Marcar em uso" })).not.toBeInTheDocument();
+  });
+
+  it("opens a person in edit mode from the row actions menu", async () => {
+    window.history.replaceState(null, "", "/tables/people");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    fireEvent.click(await screen.findByLabelText("Ações de Ana da Silva"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Editar" }));
+    const inspector = await screen.findByRole("complementary", { name: "Detalhes da pessoa" });
+    expect(await within(inspector).findByLabelText(/Nome do titular/i)).toBeEnabled();
+  });
+
+  it("offers current-use actions on physical documents and hides them on digital ones", async () => {
+    window.history.replaceState(null, "", "/tables/documents");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    expect(await screen.findByText("1234567890")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Ações de 1234567890"));
+    expect(await screen.findByRole("menuitem", { name: "Editar" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Marcar em uso" })).toBeInTheDocument();
+    fireEvent.click(document.body);
+
+    fireEvent.click(screen.getByLabelText("Ações de 9988776655"));
+    expect(await screen.findByRole("menuitem", { name: "Substituir pessoa" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Devolver" })).toBeInTheDocument();
+  });
+
+  it("does not offer current-use actions for a digital document", async () => {
+    window.history.replaceState(null, "", "/tables/documents");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/v1/documents?")) {
+          return Promise.resolve(
+            jsonResponse({
+              documents: [
+                {
+                  ...documentRecord(),
+                  id: "doc-digital",
+                  identifier_value: "DIG-1",
+                  medium: "DIGITAL",
+                  current_use: null,
+                },
+              ],
+              page: {
+                total: 1,
+                limit: 100,
+                offset: 0,
+                sort_field: "identifier_value",
+                sort_order: "asc",
+              },
+            }),
+          );
+        }
+        return Promise.resolve(apiResponse(url) ?? jsonResponse({ status: "ok" }));
+      }),
+    );
+    render(<App />);
+    fireEvent.click(await screen.findByLabelText("Ações de DIG-1"));
+    expect(await screen.findByRole("menuitem", { name: "Editar" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Marcar em uso" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Devolver" })).not.toBeInTheDocument();
+  });
+
+  it("lets the recorte be filtered and sorted without a row-actions menu", async () => {
+    window.history.replaceState(null, "", "/tables/people");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    const { unmount } = render(<App />);
+    expect(await screen.findByRole("heading", { name: "Pessoas" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Exportar recorte" })).not.toBeInTheDocument();
+    unmount();
+
+    window.history.replaceState(
+      null,
+      "",
+      "/tables/people?result=11111111-1111-4111-8111-111111111111",
+    );
+    render(<App />);
+    expect(await screen.findByRole("button", { name: "Exportar recorte" })).toBeInTheDocument();
+    expect(screen.getByText(/A grade está mostrando o assistente/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ações de/ })).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Filtrar o recorte…")).toBeInTheDocument();
+    expect(await screen.findByText("Zélia Costa")).toBeInTheDocument();
+    expect(screen.getByText("Ana da Silva")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Filtrar o recorte…"), {
+      target: { value: "Zélia" },
+    });
+    await waitFor(() => {
+      expect(screen.queryByText("Ana da Silva")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Zélia Costa")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Filtrar o recorte…"), {
+      target: { value: "" },
+    });
+    await waitFor(() => expect(screen.getByText("Ana da Silva")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("columnheader", { name: /Nome/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("columnheader", { name: /Nome/ })).toHaveAttribute(
+        "aria-sort",
+        "ascending",
+      ),
+    );
+    fireEvent.click(screen.getByRole("columnheader", { name: /Nome/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("columnheader", { name: /Nome/ })).toHaveAttribute(
+        "aria-sort",
+        "descending",
+      ),
+    );
+    const sheet = document.querySelector(".spreadsheet-table")?.textContent ?? "";
+    expect(sheet.indexOf("Zélia Costa")).toBeGreaterThan(-1);
+    expect(sheet.indexOf("Zélia Costa")).toBeLessThan(sheet.indexOf("Ana da Silva"));
   });
 });

@@ -21,7 +21,6 @@ The application consumes:
 - pnpm 11.12.0
 - GNU Make or a compatible environment such as WSL/Git Bash on Windows
 - Git credentials that can read the private Gymkhana Core repository
-- lokeys on the Windows PATH (DPAPI-backed local secrets; never a plaintext `.env`)
 
 ## Private dependency access
 
@@ -36,39 +35,33 @@ GitHub Actions uses the repository secret `GYMKHANA_REPOSITORY_TOKEN`, backed by
 
 ## Setup
 
-`.env.example` is the catalog of environment names for the lokeys `gymkhana` profile. Do not copy it to `.env`. Store values with `lokeys ui`.
+Copy `.env.example` to `.env` and fill in real values. `.env` is gitignored. The API, worker, Vite, and Make load that file from the repository root. Cursor Cloud uses the same `.env`.
 
-The rebuild uses Neon only. Docker is not used in this repository in any form: no local containers, no Compose, no Dockerfiles, no container images. The lokeys `gymkhana` profile scopes `DATABASE_URL` by `--env`:
+The rebuild uses Neon only. Docker is not used in this repository in any form: no local containers, no Compose, no Dockerfiles, no container images.
 
-- `--env dev` → Neon `Gymkhana-Database-Dev-18`, database `gymkhana`, unpooled (direct) endpoint;
-- `--env prod` → Neon `Gymkhana-Database-Prod-18`, database `gymkhana`, unpooled.
+- Local / Cursor Cloud: Neon `Gymkhana-Database-Dev-18`, database `gymkhana`, unpooled (direct) endpoint in `DATABASE_URL`
+- Production: Neon `Gymkhana-Database-Prod-18`, database `gymkhana`, unpooled, from the deployment secret manager
 
 Do not store a PgBouncer `-pooler` URL: Tern and the Go `pgx` pool need the direct compute. Production PostgreSQL is Neon major 18 (Orchestration §24); there is no in-place major upgrade.
 
-`make migrate` and `make migrate-status` require `DATABASE_URL` and apply Tern plus River to that Neon database. `make reset-db` is retired so a local reset cannot be mistaken for a Neon wipe.
-
-Run lokeys from Windows PowerShell. It uses Windows DPAPI; do not call Linux Python in WSL. If Make, Go, and pnpm live in WSL, pass the same command through `wsl`.
+`make migrate` and `make migrate-status` read `DATABASE_URL` from `.env` and apply Tern plus River to that Neon database. `make reset-db` is retired so a local reset cannot be mistaken for a Neon wipe.
 
 ```bash
+cp .env.example .env
 corepack enable
 pnpm install --frozen-lockfile
 go mod download
+make check-config
+make migrate
 ```
 
-```powershell
-$env:LOKEYS_AGENT = "1"
-lokeys run -p gymkhana --env dev -- make check-config
-lokeys run -p gymkhana --env dev -- make migrate
-```
-
-`lokeys --env dev` injects `APP_ENV=development`, which this application treats as `local` for auth cookie rules. The database is still Neon Dev-18.
+`APP_ENV=development` is treated as `local` for auth cookie rules. The database is still Neon Dev-18.
 
 Run the API and web app in separate terminals:
 
-```powershell
-$env:LOKEYS_AGENT = "1"
-lokeys run -p gymkhana --env dev -- make dev-api
-lokeys run -p gymkhana --env dev -- pnpm dev:web
+```bash
+make dev-api
+make dev-web
 ```
 
 - API: `http://localhost:8080`
@@ -82,25 +75,14 @@ The production Next.js app lives in the sibling repository `Gymkhana-Database-Ve
 
 Start it only when the operator also asks to run the legacy. Default local work is this repository alone.
 
-Do not wrap the legacy with `lokeys run`. `npm run dev` is `prisma generate && next dev`. Prisma loads `prisma.config.ts`, which uses `dotenv/config` and therefore reads `.env`. Next.js also loads `.env` / `.env.local` and inlines those files into Edge middleware (`AUTH_SECRET`). lokeys `--env dev` overwrites `NODE_ENV` and `APP_ENV` in the child process, which fights Next. Run Next from WSL against the gitignored env files; lokeys itself is a Windows DPAPI CLI.
+`npm run dev` is `prisma generate && next dev`. Prisma loads `prisma.config.ts`, which uses `dotenv/config` and therefore reads that repository's `.env`. Next.js also loads `.env` / `.env.local` and inlines those files into Edge middleware (`AUTH_SECRET`).
 
-The two apps do not share a database. Legacy local runs use the rotating Dev Neon `DATABASE_URL` in `.env`, never a local PostgreSQL. Ports do not collide: legacy `http://localhost:3000`, rebuild API `8080`, rebuild web `5173`. `AUTH_URL` for local login is `http://localhost:3000`.
+The two apps do not share a database. Legacy local runs use the rotating Dev Neon `DATABASE_URL` in that repository's `.env`, never a local PostgreSQL. Ports do not collide: legacy `http://localhost:3000`, rebuild API `8080`, rebuild web `5173`. `AUTH_URL` for local login is `http://localhost:3000`.
 
 From the Vercel repository:
 
 ```bash
 npm install
-npm run dev
-```
-
-If `.env` is missing and must be materialized from lokeys without printing values, write the file first, then start Next unwrapped:
-
-```powershell
-$env:LOKEYS_AGENT = "1"
-lokeys apply -p gymkhana_vercel --env dev --format dotenv -o .env
-```
-
-```bash
 npm run dev
 ```
 
@@ -114,7 +96,7 @@ Create a Google OAuth client and configure these environment values:
 
 - `AUTH_ENABLED=true`
 - `GOOGLE_OAUTH_CLIENT_ID`
-- `GOOGLE_OAUTH_CLIENT_SECRET`, supplied through lokeys locally or the deployment secret manager;
+- `GOOGLE_OAUTH_CLIENT_SECRET`, supplied through `.env` locally or the deployment secret manager;
 - `GOOGLE_OAUTH_REDIRECT_URL`, ending in `/auth/callback`;
 - `AUTH_APPLICATION_URL`, the web application URL used after login and the only browser origin trusted for credentialed CORS and state-changing requests;
 - `AUTH_ALLOWED_EMAILS`, a comma-separated bootstrap allowlist (runtime access is the `allowed_emails` table);
@@ -122,7 +104,7 @@ Create a Google OAuth client and configure these environment values:
 
 For local testing, use callback `http://localhost:8080/auth/callback` and application URL `http://localhost:5173`. The API stores only SHA-256 session hashes. Browser cookies are HttpOnly, SameSite=Lax, host-only, and become Secure outside local/test. Application sessions expire after 24 hours and logout revokes the server-side session.
 
-The first successful login matching `AUTH_SUPERADMIN_EMAIL` creates the initial `SUPERADMIN`. Other allowed first-time users are created as `EXTERNAL`. Account lookup is by email. Disabled users remain denied even when their email is allowed.
+The first successful login matching `AUTH_SUPERADMIN_EMAIL` creates the initial `SUPERADMIN`. Every other person must be invited in Administração with a role before they can sign in. Account lookup is by email. Disabled users remain denied even when their email is allowed.
 
 The complete setup, lifecycle, audit, smoke-test, incident, and recovery procedures are in [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
 
@@ -156,12 +138,11 @@ make check
 make test
 ```
 
-Commands that need the local profile:
+Commands that need the database:
 
-```powershell
-$env:LOKEYS_AGENT = "1"
-lokeys run -p gymkhana --env dev -- make check-config
-lokeys run -p gymkhana --env dev -- make migrate-status
+```bash
+make check-config
+make migrate-status
 ```
 
 Schema changes go to Neon through `make migrate`. Do not drop Dev-18 from Make.

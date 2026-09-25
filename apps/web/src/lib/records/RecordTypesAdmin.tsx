@@ -1,9 +1,10 @@
-import { Alert, Button, Card, Checkbox, Flex, Input, Select } from "antd";
+import { Button, Card, Checkbox, Flex, Input, Select } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { ConfirmDelete } from "../../components/ConfirmDelete";
+import { StateCard } from "../../components/StateCard";
+import { StatusBanner } from "../../components/StatusBanner";
 import { useI18n } from "../../i18n";
-import { errorMessage } from "../formatters";
 import {
   createBillType,
   createDocumentType,
@@ -31,10 +32,12 @@ export function TypesAdminShell(props: {
 
   if (!props.canAdminister) {
     return (
-      <Alert
+      <StateCard
+        compact
         description={messages.common.status.restrictedDescription}
-        message={messages.common.status.restricted}
-        type="error"
+        kind="warning"
+        title={messages.common.status.restricted}
+        onBack={props.onBack}
       />
     );
   }
@@ -46,11 +49,7 @@ export function TypesAdminShell(props: {
         <Button onClick={props.onBack}>{messages.common.actions.back}</Button>
       </div>
       {props.error ? (
-        <Alert
-          description={<>{errorMessage(props.error)}</>}
-          message={messages.records.types.errorTitle}
-          type="error"
-        />
+        <StatusBanner error={props.error} title={messages.records.types.errorTitle} />
       ) : null}
       <div className="types-admin">
         <Card className="type-list">{props.list}</Card>

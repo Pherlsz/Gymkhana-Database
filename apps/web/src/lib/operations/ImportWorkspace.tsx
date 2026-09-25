@@ -1,11 +1,14 @@
-import { Alert, Button, Card, Flex, Skeleton, Typography } from "antd";
+import { Button, Card, Flex, Spin } from "antd";
 import { useMutation } from "@tanstack/react-query";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { StatusBanner } from "../../components/StatusBanner";
 import { DataGrid } from "../../DataGrid";
 import { useI18n } from "../../i18n";
 import "../../operations.css";
-import { formatBytes, errorMessage as operationError } from "../formatters";
+import { formatBytes } from "../formatters";
+import { CadastroWorkQuery } from "../cadastro/CadastroWork";
+import { OcrDropzoneInline } from "../cadastro/components/OcrDropzoneInline";
 import {
   actionLabel,
   importResultLabel,
@@ -29,7 +32,6 @@ import {
   type OperationDecision,
   type OperationImport,
   type OperationMapping,
-  type OperationModule,
   type OperationReport,
 } from "../api/operations";
 
@@ -46,9 +48,21 @@ export function ImportCreator({
   const { messages } = useI18n();
   const copy = messages.operations.creator;
   const modules = catalog.modules.filter((module) => module.can_import);
-  const [module, setModule] = useState<OperationModule>(modules[0]?.id ?? "PROFILES");
+  const module = modules[0]?.id ?? "PROFILES";
   const [file, setFile] = useState<File>();
+  const [fileError, setFileError] = useState<string>();
   const [progress, setProgress] = useState(0);
+
+  const pickFile = (next?: File) => {
+    if (!next) return;
+    if (isCsvFile(next)) {
+      setFile(undefined);
+      setFileError(copy.csvRejected);
+      return;
+    }
+    setFileError(undefined);
+    setFile(next);
+  };
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -57,6 +71,7 @@ export function ImportCreator({
     },
     onSuccess: (value) => {
       setFile(undefined);
+      setFileError(undefined);
       onCreated(value);
     },
   });
@@ -73,41 +88,22 @@ export function ImportCreator({
         }}
       >
         <Flex gap="1rem" vertical>
-          <div>
-            <strong>{copy.title}</strong>
-            <p className="operations-muted">
-              XLSX de até {formatBytes(catalog.limits.maximum_file_size)}, {copy.description}
-            </p>
-          </div>
-          <div className="operations-form-grid">
-            <label>
-              {copy.module}
-              <select
-                value={module}
-                onChange={(event) => setModule(event.target.value as OperationModule)}
-              >
-                {modules.map((value) => (
-                  <option key={value.id} value={value.id}>
-                    {value.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {copy.sheet}
-              <input
-                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                type="file"
-                onChange={(event) => setFile(event.target.files?.[0])}
-              />
-            </label>
-          </div>
+          <OcrDropzoneInline
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            actionText={copy.dropAction}
+            badgeText="XLSX"
+            description={`XLSX de até ${formatBytes(catalog.limits.maximum_file_size)}, ${copy.description}`}
+            disabled={mutation.isPending}
+            inputId="cadastro-import-xlsx"
+            label={copy.sheet}
+            queuedName={file?.name}
+            title={copy.dropTitle}
+            variant="banner"
+            onFile={(event: ChangeEvent<HTMLInputElement>) => pickFile(event.target.files?.[0])}
+          />
+          {fileError ? <StatusBanner title={fileError} tone="warning" /> : null}
           {mutation.isError ? (
-            <Alert
-              description={<>{operationError(mutation.error)}</>}
-              message={copy.uploadError}
-              type="error"
-            />
+            <StatusBanner error={mutation.error} title={copy.uploadError} />
           ) : null}
           {mutation.isPending ? (
             <div aria-live="polite" className="operations-progress">
@@ -128,12 +124,42 @@ export function ImportCreator({
   );
 }
 
+function isCsvFile(file: File) {
+  const name = file.name.toLowerCase();
+  return (
+    name.endsWith(".csv") || file.type === "text/csv" || file.type === "text/comma-separated-values"
+  );
+}
+
+function previewCellSummary(
+  row: ImportRow,
+  module: Awaited<ReturnType<typeof getOperationsCatalog>>["modules"][number] | undefined,
+  columns: OperationImport["columns"],
+  copy: { cellErrors: Record<string, string> },
+) {
+  const fieldByColumn = new Map(
+    columns.map((column) => [column.source_column, column.target_field]),
+  );
+  const labelByField = new Map((module?.fields ?? []).map((field) => [field.id, field.label]));
+  return row.cells
+    .map((cell) => {
+      const field = fieldByColumn.get(cell.source_column);
+      if (!field) return "";
+      const label = labelByField.get(field) ?? field;
+      const error = cell.validation_code
+        ? ` (${copy.cellErrors[cell.validation_code] ?? cell.validation_code})`
+        : "";
+      return `${label}: ${cell.raw_value || "—"}${error}`;
+    })
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export function ImportWorkspace({
   value,
   catalog,
   loading,
   error,
-  onClose,
   onUpdated,
   report,
   reportError,
@@ -143,7 +169,6 @@ export function ImportWorkspace({
   catalog: Awaited<ReturnType<typeof getOperationsCatalog>>["modules"];
   loading: boolean;
   error: Error | null;
-  onClose: () => void;
   onUpdated: () => Promise<void>;
   report: OperationReport | undefined;
   reportError: Error | null;
@@ -151,75 +176,89 @@ export function ImportWorkspace({
 }) {
   const { messages } = useI18n();
   const copy = messages.operations.workspace;
+  const [adjustMapping, setAdjustMapping] = useState(false);
+  useEffect(() => {
+    setAdjustMapping(false);
+  }, [value?.id, value?.state]);
 
-  if (loading) {
+  if (loading || error) {
     return (
-      <Card className="operations-workspace">
-        <Skeleton active paragraph={{ rows: 6 }} />
-      </Card>
-    );
-  }
-  if (error) {
-    return (
-      <Card className="operations-workspace">
-        <Alert description={<>{operationError(error)}</>} message={copy.loadError} type="error" />
-      </Card>
+      <CadastroWorkQuery
+        errorTitle={copy.loadError}
+        isError={Boolean(error)}
+        isPending={loading}
+        onRetry={error ? () => void onUpdated() : undefined}
+      />
     );
   }
   if (!value) return null;
 
   const module = catalog.find((item) => item.id === value.module);
+  const resultCount =
+    value.inserted_count +
+    value.updated_count +
+    value.linked_count +
+    value.skipped_count +
+    value.conflicted_count +
+    value.errored_count +
+    value.validation_error_count;
+  const showCounts =
+    value.state !== "MAPPING" &&
+    value.stage !== "MAP" &&
+    (value.state === "COMPLETED" || resultCount > 0);
 
   return (
-    <Card className="operations-workspace">
-      <Flex gap="1.5rem" vertical>
-        <div className="operations-workspace__header">
-          <div>
-            <Typography.Title level={2}>{value.original_filename}</Typography.Title>
-            <p className="operations-muted">
-              {module?.label ?? value.module} · {copy.headerId} {value.id}
-            </p>
-          </div>
-          <div className="operations-workspace__actions">
-            <OperationStatus value={value.state} />
-            <Button onClick={onClose}>{messages.common.actions.close}</Button>
-          </div>
-        </div>
-        <ImportSummary value={value} />
-        {operationActive(value.state) ? (
-          <Alert description={copy.activeAlert} message={copy.activeTitle} type="info" />
-        ) : null}
-        {value.state === "FAILED" && value.error_code ? (
-          <Alert
-            description={
-              <>
-                {copy.failedSecureCode} {value.error_code}.
-              </>
-            }
-            message={copy.failedTitle}
-            type="error"
-          />
-        ) : null}
-        {value.state === "CANCELLED" ? (
-          <Alert description={copy.cancelledAlert} message={copy.cancelledTitle} type="warning" />
-        ) : null}
-        {value.stage === "MAP" || value.state === "MAPPING" ? (
-          <MappingWorkspace module={module} onUpdated={onUpdated} value={value} />
-        ) : null}
-        {value.stage === "PREVIEW" ||
+    <div className="operations-workspace">
+      <header className="operations-workspace__header">
+        <h2 className="operations-workspace__title">{value.original_filename}</h2>
+        <p className="operations-workspace__meta">
+          <span>{module?.label ?? value.module}</span>
+          <span aria-hidden="true">·</span>
+          <span>{stageLabel(value.stage, messages)}</span>
+          <OperationStatus value={value.state} />
+          {operationActive(value.state) ? <Spin size="small" /> : null}
+        </p>
+      </header>
+      {showCounts ? <ImportSummary value={value} /> : null}
+      {operationActive(value.state) ? (
+        <p className="operations-workspace__note">{copy.activeAlert}</p>
+      ) : null}
+      {value.state === "FAILED" && value.error_code ? (
+        <StatusBanner
+          description={
+            <>
+              {copy.failedSecureCode} {value.error_code}.
+            </>
+          }
+          title={copy.failedTitle}
+          tone="error"
+        />
+      ) : null}
+      {value.state === "CANCELLED" ? (
+        <p className="operations-workspace__note">{copy.cancelledAlert}</p>
+      ) : null}
+      {value.state === "MAPPING" || adjustMapping ? (
+        <MappingWorkspace module={module} onUpdated={onUpdated} value={value} />
+      ) : null}
+      {!adjustMapping &&
+      (value.stage === "PREVIEW" ||
         value.state === "PREVIEW_READY" ||
         value.state === "DECISIONS_REQUIRED" ||
-        value.state === "READY" ? (
-          <PreviewWorkspace module={module} onUpdated={onUpdated} value={value} />
-        ) : null}
-        {value.state === "COMPLETED" ? (
-          <ImportReportPanel error={reportError} loading={reportLoading} value={report} />
-        ) : null}
-        {!operationTerminal(value.state) ? (
-          <CancelImportButton onUpdated={onUpdated} value={value} />
-        ) : null}
-      </Flex>
-    </Card>
+        value.state === "READY") ? (
+        <PreviewWorkspace
+          module={module}
+          onAdjustMapping={() => setAdjustMapping(true)}
+          onUpdated={onUpdated}
+          value={value}
+        />
+      ) : null}
+      {value.state === "COMPLETED" ? (
+        <ImportReportPanel error={reportError} loading={reportLoading} value={report} />
+      ) : null}
+      {!operationTerminal(value.state) ? (
+        <CancelImportButton onUpdated={onUpdated} value={value} />
+      ) : null}
+    </div>
   );
 }
 
@@ -228,15 +267,13 @@ function ImportSummary({ value }: { value: OperationImport }) {
   const summary = messages.operations.summary;
 
   const items = [
-    [messages.common.labels.stage, stageLabel(value.stage, messages)],
-    [messages.common.labels.version, String(value.version)],
-    [summary.inserted, String(value.inserted_count)],
-    [summary.updated, String(value.updated_count)],
-    [summary.linked, String(value.linked_count)],
-    [summary.skipped, String(value.skipped_count)],
-    [summary.conflicts, String(value.conflicted_count)],
-    [summary.errors, String(value.errored_count + value.validation_error_count)],
-  ];
+    [summary.inserted, value.inserted_count],
+    [summary.updated, value.updated_count],
+    [summary.linked, value.linked_count],
+    [summary.skipped, value.skipped_count],
+    [summary.conflicts, value.conflicted_count],
+    [summary.errors, value.errored_count + value.validation_error_count],
+  ].filter(([, count]) => value.state === "COMPLETED" || Number(count) > 0);
   return (
     <dl className="operations-summary">
       {items.map(([label, content]) => (
@@ -282,16 +319,10 @@ function ImportReportPanel({
   );
 
   if (loading) {
-    return <Alert description={copy.reportWait} message={copy.reportLoading} type="info" />;
+    return <StatusBanner description={copy.reportWait} title={copy.reportLoading} tone="info" />;
   }
   if (error) {
-    return (
-      <Alert
-        description={<>{operationError(error)}</>}
-        message={copy.reportLoadError}
-        type="error"
-      />
-    );
+    return <StatusBanner error={error} title={copy.reportLoadError} />;
   }
   if (!value) return null;
 
@@ -385,22 +416,19 @@ function MappingWorkspace({
     onSuccess: onUpdated,
   });
 
-  const save = useMutation({
-    mutationFn: () => {
+  const proceed = useMutation({
+    mutationFn: async () => {
       const selected: OperationMapping = Object.entries(mapping)
         .filter(([, target]) => target)
         .map(([source, target]) => ({ source_column: Number(source), target_field: target }));
-      return saveOperationMapping(value, selected);
+      const current =
+        mappingDirty && !mappingLocked ? await saveOperationMapping(value, selected) : value;
+      return previewOperationImport(current);
     },
     onSuccess: onUpdated,
   });
 
-  const preview = useMutation({
-    mutationFn: () => previewOperationImport(value),
-    onSuccess: onUpdated,
-  });
-
-  const mutationError = selectSheet.error ?? save.error ?? preview.error;
+  const mutationError = selectSheet.error ?? proceed.error;
   const required = module?.fields.filter((field) => field.required).map((field) => field.id) ?? [];
   const mappedTargets = Object.values(mapping).filter(Boolean);
   const selectedTargets = new Set(mappedTargets);
@@ -420,33 +448,44 @@ function MappingWorkspace({
 
   return (
     <Flex gap="1rem" vertical>
-      <div>
-        <h3>{copy.step1Sheet}</h3>
-        <Flex>
-          {value.sheets.map((sheet) => (
-            <Button
-              aria-pressed={value.selected_sheet_index === sheet.index}
-              disabled={mappingLocked || selectSheet.isPending}
-              key={sheet.index}
-              onClick={() => selectSheet.mutate(sheet.index)}
-            >
-              {sheet.name} · {sheet.row_count} {messages.operations.export.linesCount}
-              {value.selected_sheet_index === sheet.index ? ` · ${copy.sheetSelected}` : ""}
-            </Button>
-          ))}
-        </Flex>
-      </div>
+      {value.sheets.length > 1 ? (
+        <div>
+          <h3>{copy.stepSheet}</h3>
+          <Flex>
+            {value.sheets.map((sheet) => (
+              <Button
+                aria-pressed={value.selected_sheet_index === sheet.index}
+                disabled={mappingLocked || selectSheet.isPending}
+                key={sheet.index}
+                onClick={() => selectSheet.mutate(sheet.index)}
+              >
+                {sheet.name} · {sheet.row_count} {messages.operations.export.linesCount}
+                {value.selected_sheet_index === sheet.index ? ` · ${copy.sheetSelected}` : ""}
+              </Button>
+            ))}
+          </Flex>
+        </div>
+      ) : null}
       {mappingLocked ? (
-        <Alert
+        <StatusBanner
           description={copy.mappingPreservedDesc}
-          message={copy.mappingPreservedTitle}
-          type="info"
+          title={copy.mappingPreservedTitle}
+          tone="info"
         />
       ) : null}
-      {value.selected_sheet_index !== undefined ? (
+      {value.selected_sheet_index != null ? (
         <div>
-          <h3>{copy.step2Map}</h3>
+          <h3>{copy.stepMap}</h3>
           <p className="operations-muted">{copy.step2Desc}</p>
+          {!mappingReady ? (
+            <p className="operations-muted">
+              {copy.mappingRequired}:{" "}
+              {required
+                .filter((field) => !selectedTargets.has(field))
+                .map((field) => module?.fields.find((item) => item.id === field)?.label ?? field)
+                .join(", ")}
+            </p>
+          ) : null}
           <div className="operations-mapping">
             {value.columns.map((column) => (
               <label key={column.source_column}>
@@ -476,38 +515,38 @@ function MappingWorkspace({
           </div>
           <Flex>
             <Button
-              disabled={mappingLocked || !mappingReady || save.isPending}
-              onClick={() => save.mutate()}
+              disabled={!mappingReady || proceed.isPending || (mappingLocked && mappingDirty)}
+              onClick={() => proceed.mutate()}
             >
-              {copy.btnSaveMapping}
-            </Button>
-            <Button
-              disabled={!mappingReady || mappingDirty || save.isPending || preview.isPending}
-              onClick={() => preview.mutate()}
-            >
-              {copy.btnValidatePreview}
+              {copy.btnContinue}
             </Button>
           </Flex>
         </div>
       ) : null}
-      {mutationError ? (
-        <Alert
-          description={<>{operationError(mutationError)}</>}
-          message={copy.prepError}
-          type="error"
-        />
-      ) : null}
+      {mutationError ? <StatusBanner error={mutationError} title={copy.prepError} /> : null}
     </Flex>
+  );
+}
+
+function isPreviewException(row: ImportRow) {
+  return (
+    row.decision_required ||
+    row.validation_error_count > 0 ||
+    row.proposed_action === "ERROR" ||
+    row.proposed_action === "UPDATE" ||
+    row.proposed_action === "LINK"
   );
 }
 
 function PreviewWorkspace({
   value,
   module,
+  onAdjustMapping,
   onUpdated,
 }: {
   value: OperationImport;
   module: Awaited<ReturnType<typeof getOperationsCatalog>>["modules"][number] | undefined;
+  onAdjustMapping: () => void;
   onUpdated: () => Promise<void>;
 }) {
   const { messages } = useI18n();
@@ -552,6 +591,11 @@ function PreviewWorkspace({
     onSuccess: onUpdated,
   });
 
+  const exceptionRows = useMemo(() => value.preview.filter(isPreviewException), [value.preview]);
+  const sheetRows =
+    value.sheets.find((sheet) => sheet.index === value.selected_sheet_index)?.row_count ??
+    value.preview.length;
+
   const columns = useMemo(
     () => [
       rowColumn.accessor("row_number", { header: copy.reportLine }),
@@ -562,12 +606,7 @@ function PreviewWorkspace({
       rowColumn.display({
         id: "values",
         header: copy.values,
-        cell: ({ row }) =>
-          row.original.cells
-            .slice(0, 4)
-            .map((cell: { raw_value?: string }) => cell.raw_value)
-            .filter(Boolean)
-            .join(" · ") || "—",
+        cell: ({ row }) => previewCellSummary(row.original, module, value.columns, copy) || "—",
       }),
       rowColumn.accessor("validation_error_count", {
         header: messages.operations.summary.errors,
@@ -596,74 +635,80 @@ function PreviewWorkspace({
           ),
       }),
     ],
-    [actions, copy, messages],
+    [actions, copy, messages, module, value.columns],
   );
 
   return (
     <Flex gap="1rem" vertical>
       <div>
         <h3>{copy.previewTitle}</h3>
-        <p className="operations-muted">{copy.previewDesc}</p>
+        <p className="operations-muted">
+          {sheetRows} {copy.previewReadyLines}
+          {value.unresolved_count ? ` · ${value.unresolved_count} ${copy.previewNeedDecision}` : ""}
+          {value.validation_error_count
+            ? ` · ${value.validation_error_count} ${copy.previewWithError}`
+            : ""}
+          {exceptionRows.length === 0 ? ` · ${copy.previewAllClear}` : ""}
+        </p>
       </div>
+      <Flex>
+        <Button onClick={onAdjustMapping}>{copy.btnAdjustColumns}</Button>
+      </Flex>
       {value.validation_error_count > 0 ? (
-        <Alert
+        <StatusBanner
           description={
             <>
               {value.validation_error_count} {copy.validationWarningDesc}
             </>
           }
-          message={copy.validationWarning}
-          type="warning"
+          title={copy.validationWarning}
+          tone="warning"
         />
       ) : null}
-      <DataGrid
-        caption={`${copy.previewTitle} - ${module?.label ?? value.module}`}
-        columns={columns}
-        data={value.preview}
-        emptyLabel={copy.emptyPreview}
-        getRowId={(row) => String(row.row_number)}
-        loading={false}
-        loadingLabel={copy.loadingPreview}
-        renderCard={(row) => (
-          <article className="operations-card" key={row.row_number}>
-            <strong>
-              {copy.reportLine} {row.row_number}
-            </strong>
-            <span>
-              {copy.proposedAction}: {actionLabel(row.proposed_action, messages)}
-            </span>
-            <span>
-              {row.cells
-                .slice(0, 4)
-                .map((cell: { raw_value?: string }) => cell.raw_value)
-                .filter(Boolean)
-                .join(" · ") || copy.noValues}
-            </span>
-            {row.decision_required ? (
-              <label>
-                {copy.decisionAria} {row.row_number}
-                <select
-                  onChange={(event) =>
-                    setActions((current) => ({
-                      ...current,
-                      [row.row_number]: event.target.value as "UPDATE" | "LINK" | "SKIP",
-                    }))
-                  }
-                  value={actions[row.row_number] ?? "UPDATE"}
-                >
-                  <option value="UPDATE">{copy.actionUpdate}</option>
-                  <option value="LINK">{copy.actionLink}</option>
-                  <option value="SKIP">{copy.actionSkip}</option>
-                </select>
-              </label>
-            ) : (
+      {exceptionRows.length > 0 ? (
+        <DataGrid
+          caption={`${copy.previewTitle} - ${module?.label ?? value.module}`}
+          columns={columns}
+          data={exceptionRows}
+          emptyLabel={copy.emptyPreview}
+          getRowId={(row) => String(row.row_number)}
+          loading={false}
+          loadingLabel={copy.loadingPreview}
+          renderCard={(row) => (
+            <article className="operations-card" key={row.row_number}>
+              <strong>
+                {copy.reportLine} {row.row_number}
+              </strong>
               <span>
-                {copy.decision}: {actionLabel(row.decision || row.proposed_action, messages)}
+                {copy.proposedAction}: {actionLabel(row.proposed_action, messages)}
               </span>
-            )}
-          </article>
-        )}
-      />
+              <span>{previewCellSummary(row, module, value.columns, copy) || copy.noValues}</span>
+              {row.decision_required ? (
+                <label>
+                  {copy.decisionAria} {row.row_number}
+                  <select
+                    onChange={(event) =>
+                      setActions((current) => ({
+                        ...current,
+                        [row.row_number]: event.target.value as "UPDATE" | "LINK" | "SKIP",
+                      }))
+                    }
+                    value={actions[row.row_number] ?? "UPDATE"}
+                  >
+                    <option value="UPDATE">{copy.actionUpdate}</option>
+                    <option value="LINK">{copy.actionLink}</option>
+                    <option value="SKIP">{copy.actionSkip}</option>
+                  </select>
+                </label>
+              ) : (
+                <span>
+                  {copy.decision}: {actionLabel(row.decision || row.proposed_action, messages)}
+                </span>
+              )}
+            </article>
+          )}
+        />
+      ) : null}
       {value.state === "DECISIONS_REQUIRED" ? (
         <Button disabled={decisions.isPending} onClick={() => decisions.mutate()}>
           {copy.btnSaveDecisions} ({value.unresolved_count})
@@ -675,22 +720,18 @@ function PreviewWorkspace({
         </Button>
       ) : null}
       {value.state === "COMPLETED" ? (
-        <Alert
+        <StatusBanner
           description={
             <>
               {importResultLabel(value, messages)}. {copy.completedDesc}
             </>
           }
-          message={copy.completedTitle}
-          type="info"
+          title={copy.completedTitle}
+          tone="info"
         />
       ) : null}
       {decisions.error || execute.error ? (
-        <Alert
-          description={<>{operationError(decisions.error ?? execute.error)}</>}
-          message={copy.advanceError}
-          type="error"
-        />
+        <StatusBanner error={decisions.error ?? execute.error} title={copy.advanceError} />
       ) : null}
     </Flex>
   );
@@ -717,13 +758,7 @@ function CancelImportButton({
           {copy.btnCancelOp}
         </Button>
       </Flex>
-      {mutation.isError ? (
-        <Alert
-          description={<>{operationError(mutation.error)}</>}
-          message={copy.cancelError}
-          type="error"
-        />
-      ) : null}
+      {mutation.isError ? <StatusBanner error={mutation.error} title={copy.cancelError} /> : null}
     </Flex>
   );
 }

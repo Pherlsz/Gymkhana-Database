@@ -7,6 +7,7 @@ import (
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/customdata"
+	"github.com/Pherlsz/Gymkhana-Database/internal/importcatalog"
 )
 
 func TestValidateMappingRejectsDuplicateTargetsAndIncompleteMoneyPair(t *testing.T) {
@@ -47,15 +48,33 @@ func TestValidateMappingRejectsDuplicateTargetsAndIncompleteMoneyPair(t *testing
 	}
 }
 
-func TestWorkbookHeadersRejectBlankAndCaseInsensitiveDuplicates(t *testing.T) {
-	tests := []WorkbookSheet{
-		{Rows: []WorkbookRow{{Number: 1, Cells: []WorkbookCell{{Column: 0, Value: ""}}}}},
-		{Rows: []WorkbookRow{{Number: 1, Cells: []WorkbookCell{{Column: 0, Value: "Name"}, {Column: 1, Value: "name"}}}}},
+func TestMappingFromColumnsSkipsDiscardAndEmpty(t *testing.T) {
+	got := mappingFromColumns([]Column{
+		{SourceColumn: 0, TargetField: "full_name"},
+		{SourceColumn: 1, TargetField: importcatalog.DiscardSentinel},
+		{SourceColumn: 2, TargetField: ""},
+		{SourceColumn: 3, TargetField: "cpf"},
+	})
+	if len(got) != 2 || got[0].TargetField != "full_name" || got[1].TargetField != "cpf" || got[1].SourceColumn != 3 {
+		t.Fatalf("mappingFromColumns() = %#v", got)
 	}
-	for _, sheet := range tests {
-		if _, _, err := workbookHeaders(sheet); !errors.Is(err, ErrUnsupportedWorkbook) {
-			t.Fatalf("workbookHeaders(%#v) error = %v", sheet, err)
-		}
+}
+
+func TestWorkbookHeadersRejectBlankSheet(t *testing.T) {
+	sheet := WorkbookSheet{Rows: []WorkbookRow{{Number: 1, Cells: []WorkbookCell{{Column: 0, Value: ""}}}}}
+	if _, _, err := workbookHeaders(sheet); !errors.Is(err, ErrUnsupportedWorkbook) {
+		t.Fatalf("workbookHeaders(%#v) error = %v", sheet, err)
+	}
+}
+
+func TestWorkbookHeadersUniquifiesCaseInsensitiveDuplicates(t *testing.T) {
+	sheet := WorkbookSheet{Rows: []WorkbookRow{{Number: 1, Cells: []WorkbookCell{{Column: 0, Value: "Name"}, {Column: 1, Value: "name"}}}}}
+	headers, count, err := workbookHeaders(sheet)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 || headers[0] != "Name" || headers[1] != "name_2" {
+		t.Fatalf("headers = %#v count=%d", headers, count)
 	}
 }
 

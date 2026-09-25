@@ -13,6 +13,7 @@ var (
 	ErrInvalidMapping      = errors.New("invalid import mapping")
 	ErrInvalidState        = errors.New("invalid operation state")
 	ErrInvalidServiceSetup = errors.New("invalid operation service setup")
+	ErrAmbiguousCPF        = errors.New("ambiguous cpf match")
 	ErrNotFound            = errors.New("operation not found")
 	ErrQuotaExceeded       = errors.New("operation quota exceeded")
 	ErrRateLimited         = errors.New("operation rate limit exceeded")

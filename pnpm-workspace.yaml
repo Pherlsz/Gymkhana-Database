@@ -1,6 +1,10 @@
 packages:
   - apps/*
 
+allowBuilds:
+  esbuild: true
+  workerd: true
+
 audit:
   ignore:
     - GHSA-5p4m-2wfm-xmqj

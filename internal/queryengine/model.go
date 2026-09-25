@@ -20,6 +20,9 @@ const (
 	MaximumSortFields      = 3
 	MaximumRows            = 500
 	MaximumPageSize        = 100
+	// MaximumSequenceScan is the ceiling for an alphabet-chain read.
+	// ponytail: one indexed scan per letter if a filtered type exceeds this.
+	MaximumSequenceScan    = 4000
 	MaximumIdempotencySize = 128
 	MinimumIdempotencySize = 8
 
@@ -32,6 +35,9 @@ const (
 	MaximumPatternTokens         = 32
 	MaximumCombinationDimensions = 8
 	MaximumCombinationSize       = 10_000
+	// MaximumShownValues caps one cell that lists formed or matched values.
+	MaximumShownValues = 256
+	MaximumShownRunes  = 500
 )
 
 type Identifier [16]byte
@@ -123,6 +129,8 @@ type FieldDefinition struct {
 	Sortable    bool               `json:"sortable"`
 	Operators   []Operator         `json:"operators"`
 	Options     []OptionDefinition `json:"options,omitempty"`
+	Source      string             `json:"source,omitempty"`
+	Replaces    bool               `json:"replaces,omitempty"`
 }
 
 type RelationCardinality string
@@ -270,6 +278,7 @@ type FilterNode struct {
 	Kind        FilterKind   `json:"kind"`
 	Conjunction Conjunction  `json:"conjunction,omitempty"`
 	Field       string       `json:"field,omitempty"`
+	OtherField  string       `json:"other_field,omitempty"`
 	Operator    Operator     `json:"operator,omitempty"`
 	Values      []string     `json:"values,omitempty"`
 	Relation    string       `json:"relation,omitempty"`
@@ -331,9 +340,56 @@ type CombinationInput struct {
 }
 
 type CombinationSpec struct {
-	Inputs              []CombinationInput `json:"inputs"`
-	MaximumCombinations int                `json:"maximum_combinations"`
-	RequireDistinctRows bool               `json:"require_distinct_rows"`
+	Inputs              []CombinationInput   `json:"inputs"`
+	MaximumCombinations int                  `json:"maximum_combinations"`
+	RequireDistinctRows bool                 `json:"require_distinct_rows"`
+	Aggregates          []Aggregate          `json:"aggregates,omitempty"`
+	Having              *AggregateFilterNode `json:"having,omitempty"`
+}
+
+// Derivation is a pure column the model composes from a field or an earlier column.
+type Derivation struct {
+	As      string `json:"as"`
+	Op      string `json:"op"`
+	From    string `json:"from"`
+	Class   string `json:"class,omitempty"`
+	Index   *int   `json:"index,omitempty"`
+	Pattern string `json:"pattern,omitempty"`
+	Which   string `json:"which,omitempty"`
+}
+
+// MatchSpec keeps or rearranges symbols and records every value that fit.
+type MatchSpec struct {
+	On         string         `json:"on"`
+	Grammar    PatternGrammar `json:"grammar,omitempty"`
+	Pattern    string         `json:"pattern,omitempty"`
+	Order      string         `json:"order,omitempty"`
+	Width      int            `json:"width,omitempty"`
+	Alphabet   string         `json:"alphabet,omitempty"`
+	Anchored   bool           `json:"anchored,omitempty"`
+	Equals     []string       `json:"equals,omitempty"`
+	Quantifier string         `json:"quantifier,omitempty"`
+	Interpret  string         `json:"interpret,omitempty"`
+	Show       string         `json:"show,omitempty"`
+}
+
+type SequenceAlong struct {
+	Field string `json:"field"`
+	Step  string `json:"step"`
+}
+
+// SequenceSpec is a generic chain: alphabet, step, and an optional second column.
+type SequenceSpec struct {
+	By        string         `json:"by"`
+	Alphabet  string         `json:"alphabet,omitempty"`
+	Step      string         `json:"step"`
+	Along     *SequenceAlong `json:"along,omitempty"`
+	OnePer    string         `json:"one_per,omitempty"`
+	Partition string         `json:"partition,omitempty"`
+	Pick      string         `json:"pick,omitempty"`
+	Tie       string         `json:"tie,omitempty"`
+	Minimum   int            `json:"minimum,omitempty"`
+	Distinct  string         `json:"distinct,omitempty"`
 }
 
 // QueryPlan is the single versioned public query contract. Version v1 uses the
@@ -353,6 +409,9 @@ type QueryPlan struct {
 	Patterns    []PatternPredicate   `json:"patterns,omitempty"`
 	Set         *SetExpression       `json:"set,omitempty"`
 	Combination *CombinationSpec     `json:"combination,omitempty"`
+	Derive      []Derivation         `json:"derive,omitempty"`
+	Matches     []MatchSpec          `json:"matches,omitempty"`
+	Sequence    *SequenceSpec        `json:"sequence,omitempty"`
 }
 
 type FieldError struct {
@@ -371,6 +430,17 @@ func (err *ValidationError) add(field, code string) {
 }
 
 func (err *ValidationError) empty() bool { return len(err.Fields) == 0 }
+
+type TextScanRow struct {
+	ID     string
+	Label  string
+	Values []string
+}
+
+type TextScan struct {
+	Rows      []TextScanRow
+	Truncated bool
+}
 
 type PlanEstimate struct {
 	Valid       bool           `json:"valid"`

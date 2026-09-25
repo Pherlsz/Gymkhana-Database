@@ -43,4 +43,10 @@ describe("table search URLs", () => {
       search: { document_identifier: "RG-1" },
     });
   });
+
+  it("keeps an assistant result id on the link", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    expect(compactTableSearch(normalizeTableSearch({ result: id }))).toEqual({ result: id });
+    expect(normalizeTableSearch({ result: "nao-e-id" }).result).toBe("");
+  });
 });

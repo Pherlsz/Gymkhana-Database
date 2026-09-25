@@ -1,4 +1,4 @@
-import { FileUp, Paperclip, Sparkles } from "lucide-react";
+import { Check, FileUp, Paperclip, Sparkles } from "lucide-react";
 import { type ChangeEvent, type DragEvent, useState } from "react";
 
 export interface OcrDropzoneProps {
@@ -10,6 +10,9 @@ export interface OcrDropzoneProps {
   description?: string;
   badgeText?: string;
   actionText?: string;
+  disabled?: boolean;
+  queuedName?: string | undefined;
+  accept?: string;
 }
 
 export function OcrDropzoneInline({
@@ -21,13 +24,17 @@ export function OcrDropzoneInline({
   description,
   badgeText,
   actionText,
+  disabled,
+  queuedName,
+  accept = "image/*,application/pdf",
 }: OcrDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const blocked = Boolean(disabled);
 
   const handleDragOver = (e: DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
+    if (!blocked) setIsDragging(true);
   };
 
   const handleDragLeave = (e: DragEvent<HTMLLabelElement>) => {
@@ -40,6 +47,7 @@ export function OcrDropzoneInline({
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+    if (blocked) return;
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const input = document.getElementById(inputId) as HTMLInputElement | null;
@@ -51,25 +59,32 @@ export function OcrDropzoneInline({
     }
   };
 
+  const queued = queuedName ? `${label} · ${queuedName}` : label;
+
   if (variant === "banner") {
     return (
       <label
-        className={`dropzone-banner ${isDragging ? "is-dragging" : ""}`}
-        htmlFor={inputId}
+        className={`dropzone-banner ${isDragging ? "is-dragging" : ""} ${blocked ? "dropzone-banner--disabled" : ""} ${queuedName ? "dropzone-banner--queued" : ""}`}
+        htmlFor={blocked ? undefined : inputId}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
         <div className="dropzone-banner__lead">
           <div className="dropzone-banner__icon">
-            <Sparkles size={20} strokeWidth={1.8} />
+            {queuedName ? (
+              <Check size={20} strokeWidth={2.2} />
+            ) : (
+              <Sparkles size={20} strokeWidth={1.8} />
+            )}
           </div>
           <div className="dropzone-banner__texts">
             <div className="dropzone-banner__title">
-              <span>{title ?? label}</span>
+              <span>{title ?? queued}</span>
               {badgeText ? <span className="dropzone-banner__chip">{badgeText}</span> : null}
             </div>
             {description ? <p className="dropzone-banner__desc">{description}</p> : null}
+            {queuedName ? <p className="dropzone-banner__queued">{queuedName}</p> : null}
           </div>
         </div>
 
@@ -80,34 +95,38 @@ export function OcrDropzoneInline({
           </div>
         ) : null}
 
-        <input
-          accept="image/*,application/pdf"
-          id={inputId}
-          style={{ display: "none" }}
-          type="file"
-          onChange={onFile}
-        />
+        {blocked ? null : (
+          <input
+            accept={accept}
+            id={inputId}
+            style={{ display: "none" }}
+            type="file"
+            onChange={onFile}
+          />
+        )}
       </label>
     );
   }
 
   return (
     <label
-      className={`dropzone-inline ${isDragging ? "is-dragging" : ""}`}
-      htmlFor={inputId}
+      className={`dropzone-inline ${isDragging ? "is-dragging" : ""} ${blocked ? "dropzone-inline--disabled" : ""}`}
+      htmlFor={blocked ? undefined : inputId}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
       <Paperclip aria-hidden size={15} />
-      <span>{label}</span>
-      <input
-        accept="image/*,application/pdf"
-        id={inputId}
-        style={{ display: "none" }}
-        type="file"
-        onChange={onFile}
-      />
+      <span>{queued}</span>
+      {blocked ? null : (
+        <input
+          accept={accept}
+          id={inputId}
+          style={{ display: "none" }}
+          type="file"
+          onChange={onFile}
+        />
+      )}
     </label>
   );
 }

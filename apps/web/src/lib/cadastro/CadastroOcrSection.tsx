@@ -15,12 +15,24 @@ export function CadastroOcrSection({ owner }: { owner: AttachmentOwner }) {
     queryKey: queryKeys.ocr.capability,
     queryFn: ({ signal }) => getOCRCapability(signal),
   });
-  const enabled = (attachmentsEnabled.data ?? false) && (ocrCapability.data?.enabled ?? false);
-  if (!enabled) {
+  if (attachmentsEnabled.isPending || ocrCapability.isPending) {
+    return <StateCard compact kind="loading" title={messages.common.status.loading} />;
+  }
+  if (attachmentsEnabled.data === false) {
     return (
       <StateCard
         compact
         description={copy.ocrUnavailableR2}
+        kind="warning"
+        title={copy.ocrUnavailable}
+      />
+    );
+  }
+  if (!ocrCapability.data?.enabled) {
+    return (
+      <StateCard
+        compact
+        description={copy.ocrUnavailableProvider}
         kind="warning"
         title={copy.ocrUnavailable}
       />

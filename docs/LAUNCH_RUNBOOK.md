@@ -28,7 +28,7 @@ The repository can validate all contracts without production access. The followi
 - Neon production connection and a separate empty restore-rehearsal database;
 - Cloudflare R2 endpoint and private bucket.
 
-Do not place any real value in this file or in a committed `.env` file. Local secrets use lokeys, not a copied environment file.
+Do not place any real value in this file or in a committed `.env` file. Local secrets live in gitignored `.env`.
 
 ## 1. Select the release candidate
 

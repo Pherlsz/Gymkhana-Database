@@ -9,9 +9,8 @@
   padding-bottom: max(var(--page-block), env(safe-area-inset-bottom));
 }
 
-.search-page__header h1 {
-  margin: 0;
-  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+.search-page > .page-header {
+  flex: none;
 }
 
 /* --- Toolbar (mobile-first) ------------------------------------------ */

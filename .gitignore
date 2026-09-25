@@ -7,9 +7,13 @@
 node_modules/
 dist/
 .vite/
+.wrangler/
+.dev.vars
 coverage-web/
 playwright-report/
 test-results/
+*.tsbuildinfo
+.turbo/
 
 # Python
 __pycache__/
@@ -18,7 +22,8 @@ __pycache__/
 
 # Environment
 .env
-.env.local
+.env.*
+!.env.example
 gha-creds-*.json
 
 # Generated temporary files
@@ -30,12 +35,32 @@ gha-creds-*.json
 /recovery-private/
 *.pgdump
 
+# Agent tooling (local symlinks, plans, prototypes — not product source)
+.agents/
+.hermes/
+sketches/
+.codegraph/
+agent-tools/
+
+# Cursor: version only project rules, not synced skills or local editor state
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+
+apps/web/.hermes/
+apps/web/.tanstack/tmp/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Personal / sensitive exports
+*.xlsx
+
 # IDE and OS
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
-apps/web/.hermes/mocks/
-apps/web/.hermes/plans/
-apps/web/.tanstack/tmp/
-.cursor/

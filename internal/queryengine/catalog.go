@@ -112,6 +112,7 @@ func addStaticFields(catalog *resolvedCatalog) {
 	fields := []sqlFieldDefinition{
 		field("profile.id", "profiles", "ID", ValueIdentifier, false, true, true, true, "{root}.id"),
 		field("profile.full_name", "profiles", "Nome completo", ValueText, false, true, true, true, "{root}.full_name"),
+		nameInitialField(),
 		field("profile.social_name", "profiles", "Nome social", ValueText, true, true, true, true, "{root}.social_name"),
 		field("profile.cpf", "profiles", "CPF", ValueIdentifier, true, true, true, true, `(SELECT presence.identifier_value FROM document_presences presence JOIN document_types document_type ON document_type.id=presence.document_type_id WHERE presence.profile_id={root}.id AND document_type.technical_key='cpf' AND presence.claim='informed_number' LIMIT 1)`),
 		field("profile.email", "profiles", "E-mail", ValueText, true, true, true, true, "{root}.email"),
@@ -119,6 +120,7 @@ func addStaticFields(catalog *resolvedCatalog) {
 		field("profile.landline_phone", "profiles", "Telefone", ValueIdentifier, true, true, true, true, "{root}.landline_phone"),
 		field("profile.address_street", "profiles", "Logradouro", ValueText, true, true, true, true, "{root}.address_street"),
 		field("profile.address_number", "profiles", "Número", ValueText, true, true, true, true, "{root}.address_number"),
+		houseNumberField(),
 		field("profile.address_complement", "profiles", "Complemento", ValueText, true, true, true, false, "{root}.address_complement"),
 		field("profile.address_neighborhood", "profiles", "Bairro", ValueText, true, true, true, true, "{root}.address_neighborhood"),
 		field("profile.address_city", "profiles", "Cidade", ValueText, true, true, true, true, "{root}.address_city"),
@@ -367,6 +369,30 @@ func removeOperators(values []Operator, excluded ...Operator) []Operator {
 func relation(key, from, to, label string, cardinality RelationCardinality, condition string) sqlRelationDefinition {
 	return sqlRelationDefinition{Public: RelationDefinition{Key: key, FromEntity: from, ToEntity: to, Label: truncateRunes(label, 160), Cardinality: cardinality},
 		JoinCondition: condition, TargetEntityKey: to}
+}
+
+// nameInitialField is the first letter of the given name, with Portuguese
+// accents folded (Ó → O). Gymkhana proofs filter this, not starts_with on the
+// full name.
+func nameInitialField() sqlFieldDefinition {
+	value := field("profile.name_initial", "profiles", "Inicial", ValueText, true, true, true, true,
+		"upper(substring(translate(split_part(btrim({root}.full_name), ' ', 1), "+
+			"'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',"+
+			"'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC') from '[A-Za-z]'))")
+	value.Public.Operators = []Operator{OperatorEqual, OperatorNotEqual, OperatorIn, OperatorIsNull, OperatorNotNull}
+	value.Public.Source = "profile.full_name"
+	return value
+}
+
+// houseNumberField is the integer street number. The first run of 1–6 digits
+// in address_number: 632 stays 632, 3/3 becomes 3, s/n is empty. It replaces
+// the text Número on the grid; ranges use this field.
+func houseNumberField() sqlFieldDefinition {
+	value := field("profile.address_house_number", "profiles", "Número da casa", ValueInteger, true, true, true, true,
+		"NULLIF(substring({root}.address_number from '[0-9]{1,6}'), '')::bigint")
+	value.Public.Source = "profile.address_number"
+	value.Public.Replaces = true
+	return value
 }
 
 func operatorsForKind(kind ValueKind) []Operator {

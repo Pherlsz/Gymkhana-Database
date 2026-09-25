@@ -5,12 +5,42 @@
   width: 100%;
   max-width: min(100%, 76rem);
   margin-inline: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .cadastro-work {
   display: flex;
   flex-direction: column;
   gap: var(--gym-space-4);
+  flex: 1;
+  min-height: 0;
+}
+
+.cadastro-work__state {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: min(28rem, calc(100dvh - 10rem));
+  padding-block: clamp(1.5rem, 8vh, 4rem);
+  padding-inline: clamp(0.75rem, 4vw, 2rem);
+}
+
+.cadastro-work__state .state-card {
+  width: min(32rem, 100%);
+}
+
+.app-shell__content:has(.cadastro-page) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+@media (min-width: 600px) {
+  .app-shell__content:has(.cadastro-page) {
+    height: 100%;
+  }
 }
 
 .cadastro-manual,
@@ -27,25 +57,33 @@
   display: flex;
   flex-direction: column;
   gap: var(--gym-space-4);
-  padding: clamp(1rem, 2.2vw, 1.5rem);
-  background: var(--md-surface-elevated);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--gym-radius-lg);
-  box-shadow: var(--shadow-card);
 }
 
-@media (max-width: 600px) {
-  .cadastro-panel {
-    padding: 0.875rem;
-    border-radius: var(--gym-radius-md);
-  }
-}
-
-.cadastro-panel:has(> .state-card) {
-  padding: 0;
+.cadastro-page .ant-card,
+.cadastro-page .ant-card.ant-card-bordered {
   background: transparent;
   border: none;
   box-shadow: none;
+}
+
+.cadastro-page .ant-card .ant-card-body {
+  padding: 0;
+  background: transparent;
+}
+
+.cadastro-page .operations-workspace,
+.cadastro-page .operations-creator,
+.cadastro-page .google-forms-panel,
+.cadastro-page .google-forms-source,
+.cadastro-page .google-forms-sync {
+  padding: 0;
+}
+
+.cadastro-page .state-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding-inline: 0;
 }
 
 .cadastro-manual__lead,
@@ -108,9 +146,9 @@
 }
 
 .cadastro-page .profile-panel {
-  background: var(--md-surface-elevated);
-  border-color: var(--md-outline-variant);
-  box-shadow: var(--shadow-card);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .cadastro-page .profile-panel__body {
@@ -145,6 +183,54 @@
 
 .cadastro-catalog .home-catalog__group {
   background: var(--md-surface);
+}
+
+.cadastro-catalog__lead,
+.cadastro-review__lead {
+  margin: 0 0 var(--gym-space-4);
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.cadastro-catalog__groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-4);
+}
+
+.cadastro-review__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-3);
+  margin: 0;
+}
+
+.cadastro-review__row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 14rem) 1fr;
+  gap: var(--gym-space-3);
+}
+
+.cadastro-review__row dt {
+  color: var(--gym-color-text-muted);
+  font-size: var(--gym-font-size-sm);
+}
+
+.cadastro-review__row dd {
+  margin: 0;
+}
+
+.dropzone-banner--disabled,
+.dropzone-inline--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dropzone-banner__queued {
+  margin: 0.25rem 0 0;
+  font-size: var(--gym-font-size-xs);
+  font-weight: 600;
+  color: var(--brand-accent-text);
 }
 
 .cadastro-entry {
@@ -250,8 +336,7 @@
 .cadastro-single {
   display: flex;
   flex-direction: column;
-  gap: var(--gym-space-4);
-  padding-bottom: 90px;
+  gap: var(--gym-space-5);
 }
 
 .cadastro-crumb {
@@ -290,32 +375,22 @@
 
 /* Expandable Groups (Accordions) */
 .cadastro-group {
-  border: 1px solid var(--md-outline-variant);
+  border: 1px solid color-mix(in oklch, var(--md-outline-variant) 80%, transparent);
   border-radius: var(--gym-radius-lg);
-  background: var(--md-surface-elevated);
-  box-shadow: var(--shadow-card);
+  background: var(--md-surface);
+  box-shadow: none;
   overflow: hidden;
-  transition: border-color 0.18s ease;
-}
-
-.cadastro-group:focus-within {
-  border-color: var(--gym-color-border);
 }
 
 .cadastro-group__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: clamp(0.875rem, 1.8vw, 1.25rem) clamp(1rem, 2vw, 1.5rem);
-  background: var(--gym-color-surface-raised);
+  padding: var(--gym-space-3) var(--gym-space-4);
+  background: color-mix(in oklch, var(--md-surface-container) 45%, var(--md-surface));
   border-bottom: 1px solid var(--gym-hairline);
   cursor: pointer;
   user-select: none;
-  transition: background 0.15s ease;
-}
-
-.cadastro-group__header:hover {
-  background: color-mix(in oklch, var(--gym-color-surface-raised) 92%, var(--gym-color-text) 5%);
 }
 
 .cadastro-group__title-area {
@@ -373,6 +448,15 @@ html.dark .cadastro-group--bills .cadastro-group__icon--bills {
   display: flex;
   align-items: center;
   gap: var(--gym-space-2);
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.cadastro-group__extra {
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .cadastro-group__title {
@@ -430,10 +514,11 @@ html.dark .cadastro-group__badge--bills {
 }
 
 .cadastro-group__body {
-  padding: clamp(1rem, 2.2vw, 1.5rem);
+  padding: var(--gym-space-5);
   display: flex;
   flex-direction: column;
-  gap: var(--gym-space-4);
+  gap: var(--gym-space-5);
+  container-type: inline-size;
 }
 
 .cadastro-group__hint {
@@ -446,7 +531,7 @@ html.dark .cadastro-group__badge--bills {
 .cadastro-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--gym-space-3);
+  gap: var(--gym-space-5) var(--gym-space-4);
 }
 
 .cadastro-col-1,
@@ -464,7 +549,7 @@ html.dark .cadastro-group__badge--bills {
   grid-column: span 1;
 }
 
-@media (min-width: 768px) {
+@container (min-width: 32rem) {
   .cadastro-grid {
     grid-template-columns: repeat(12, 1fr);
   }
@@ -510,7 +595,7 @@ html.dark .cadastro-group__badge--bills {
 .cadastro-field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.55rem;
 }
 
 .cadastro-field__label {
@@ -602,6 +687,26 @@ html.dark .cadastro-group__badge--bills {
   border-color: color-mix(in oklch, var(--amber-11) 45%, transparent);
 }
 
+.cadastro-extras {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-4);
+}
+
+.cadastro-extras__hint {
+  margin: 0;
+  font-size: var(--gym-font-size-sm);
+  color: var(--gym-color-text-muted);
+  line-height: 1.45;
+}
+
+.cadastro-bill-fields,
+.cadastro-document-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-5);
+}
+
 /* Item Strips (Mock 011 .strip & .srow) */
 .strip {
   border: 1px solid var(--gym-hairline);
@@ -626,6 +731,35 @@ html.dark .cadastro-group__badge--bills {
 
 .srow:hover {
   background: color-mix(in oklch, var(--gym-color-surface-raised) 92%, var(--gym-color-text) 5%);
+}
+
+.srow--interactive {
+  cursor: pointer;
+}
+
+.srow--interactive:focus-visible {
+  outline: 2px solid var(--gym-color-text);
+  outline-offset: -2px;
+}
+
+.cadastro-linkbtn {
+  border: 0;
+  background: transparent;
+  color: var(--gym-color-text);
+  cursor: pointer;
+  font:
+    500 var(--gym-font-size-sm) "Geist",
+    system-ui,
+    sans-serif;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cadastro-field__static {
+  margin: 0;
+  color: var(--gym-color-text);
+  font-size: var(--gym-font-size-sm);
 }
 
 .srow .mk {
@@ -781,8 +915,8 @@ html.dark .cadastro-group__badge--bills {
   gap: var(--gym-space-3);
   padding: 0.875rem 1.125rem;
   border-radius: var(--gym-radius-lg);
-  border: 1.5px dashed var(--md-outline-variant);
-  background: color-mix(in oklch, var(--md-surface-container) 40%, transparent);
+  border: 1.5px dashed var(--gym-color-border);
+  background: color-mix(in oklch, var(--md-surface-container) 70%, var(--md-surface));
   cursor: pointer;
   transition:
     border-color 0.2s ease,
@@ -791,6 +925,11 @@ html.dark .cadastro-group__badge--bills {
     transform 0.2s ease;
   margin-bottom: var(--gym-space-3);
   user-select: none;
+}
+
+.dropzone-banner:focus-visible {
+  outline: 2px solid var(--md-focus-ring);
+  outline-offset: 2px;
 }
 
 .dropzone-banner:hover,
@@ -803,6 +942,18 @@ html.dark .cadastro-group__badge--bills {
 .dropzone-banner.is-dragging {
   transform: scale(1.008);
   border-style: solid;
+}
+
+.dropzone-banner--queued {
+  border-style: solid;
+  border-color: var(--brand-accent-border);
+  background: var(--brand-accent-surface);
+}
+
+.dropzone-banner--disabled:hover {
+  border-color: var(--gym-color-border);
+  background: color-mix(in oklch, var(--md-surface-container) 70%, var(--md-surface));
+  box-shadow: none;
 }
 
 .dropzone-banner__lead {
@@ -870,8 +1021,8 @@ html.dark .cadastro-group__badge--bills {
   gap: 6px;
   padding: 6px 14px;
   border-radius: var(--gym-radius-md);
-  background: var(--md-surface-container);
-  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface);
+  border: 1px solid var(--gym-color-border);
   font-size: var(--gym-font-size-xs);
   font-weight: 500;
   color: var(--gym-color-text);
@@ -971,45 +1122,77 @@ html.dark .cadastro-group__badge--bills {
   border: 1px solid color-mix(in oklch, var(--md-success) 30%, transparent);
 }
 
-/* Sticky Action Bar (Desktop standard, Mobile sticky with blur) */
+/* Flush sticky bar to the scrollport; shell padding-bottom would show as a blank strip. */
+.app-shell__content:has(.sticky-actions) {
+  padding-bottom: 0;
+}
+
 .sticky-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--gym-space-3);
-  padding: var(--gym-space-4) 0;
   margin-top: var(--gym-space-2);
-  border-top: 1px solid var(--gym-hairline);
+  margin-inline: calc(-1 * var(--page-inline));
+  padding: var(--gym-space-3) var(--page-inline);
+  padding-bottom: max(var(--gym-space-3), env(safe-area-inset-bottom, 0px));
+  background: color-mix(in oklch, var(--md-surface) 92%, transparent);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--md-outline-variant);
 }
 
 .sticky-actions__summary {
   font-size: var(--gym-font-size-sm);
   color: var(--gym-color-text-muted);
+  min-width: 0;
+}
+
+.sticky-actions__summary--blocked {
+  color: var(--amber-11);
 }
 
 .sticky-actions__buttons {
   display: flex;
   align-items: center;
   gap: var(--gym-space-3);
+  flex: none;
 }
 
 @media (max-width: 768px) {
   .sticky-actions {
-    position: sticky;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-    margin: 0 -1rem;
-    padding: var(--gym-space-3) 1rem max(14px, env(safe-area-inset-bottom));
-    background: rgba(14, 13, 11, 0.88);
-    backdrop-filter: blur(12px);
-    border-top: 1px solid var(--gym-hairline);
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35);
+    flex-wrap: wrap;
+    box-shadow: 0 -0.5rem 1.25rem color-mix(in oklch, var(--md-on-surface) 6%, transparent);
+  }
+
+  .sticky-actions__buttons {
+    margin-left: auto;
   }
 
   .sticky-actions__buttons .ant-btn {
     min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sticky-actions__summary {
+    flex: 1 0 100%;
+  }
+
+  .sticky-actions__buttons {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .sticky-actions__buttons > span {
+    display: flex;
+    flex: 1;
+  }
+
+  .sticky-actions__buttons .ant-btn {
+    flex: 1;
   }
 }
 
@@ -1055,7 +1238,8 @@ html.dark .cadastro-group__badge--bills {
 /* Titular Selected Card */
 .holder-selected-card {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: var(--gym-space-3);
   padding: clamp(0.75rem, 1.5vw, 1rem) clamp(0.875rem, 2vw, 1.25rem);
   background: var(--md-surface);
@@ -1079,22 +1263,22 @@ html.dark .holder-selected-card {
   background: var(--brand-accent-surface);
   color: var(--brand-accent-icon);
   border: 1px solid var(--brand-accent-border);
-  flex-shrink: 0;
+  flex: none;
 }
 
 .holder-selected-card__content {
-  flex: 1;
+  flex: 1 1 12rem;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
 }
 
 .holder-selected-card__header {
   display: flex;
-  align-items: center;
-  gap: var(--gym-space-2);
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .holder-selected-card__badge {
@@ -1113,19 +1297,23 @@ html.dark .holder-selected-card {
   font-size: var(--gym-font-size-md);
   font-weight: 600;
   color: var(--gym-color-text);
+  line-height: 1.3;
+  overflow-wrap: break-word;
 }
 
 .holder-selected-card__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px 10px;
   font-size: var(--gym-font-size-xs);
   color: var(--gym-color-text-muted);
 }
 
 .holder-selected-card__meta-item {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 4px;
+  min-width: 0;
 }
 
 .holder-selected-card__notice {
@@ -1133,13 +1321,39 @@ html.dark .holder-selected-card {
   color: var(--md-success);
   font-weight: 500;
   margin: 0;
+  line-height: 1.4;
 }
 
 .holder-selected-card__actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--gym-space-1);
-  flex-shrink: 0;
+  flex: 1 1 100%;
+}
+
+.holder-selected-card__actions .ant-btn {
+  height: auto;
+  padding-block: 4px;
+}
+
+@media (min-width: 720px) {
+  .holder-selected-card {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+
+  .holder-selected-card__header {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .holder-selected-card__actions {
+    flex: none;
+    padding-top: 2px;
+  }
 }
 
 /* Mass Import Scope Switcher */
@@ -1175,4 +1389,144 @@ html.dark .holder-selected-card {
   font-size: var(--gym-font-size-xs);
   color: var(--gym-color-text-muted);
   margin: 0;
+}
+
+.cadastro-import-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gym-space-2);
+  margin-top: var(--gym-space-4);
+}
+
+.cadastro-import-history__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gym-space-3);
+}
+
+.cadastro-import-history__label {
+  margin: 0;
+  font-size: var(--gym-font-size-sm);
+  font-weight: 600;
+  color: var(--gym-color-text);
+}
+
+.cadastro-import-history__clear {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gym-color-text-muted);
+  font: inherit;
+  font-size: var(--gym-font-size-xs);
+  cursor: pointer;
+}
+
+.cadastro-import-history__clear:hover:not(:disabled) {
+  color: var(--gym-color-text);
+}
+
+.cadastro-import-history__clear:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.cadastro-import-history__empty {
+  margin: 0;
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text-muted);
+}
+
+.cadastro-import-history__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cadastro-import-history__row {
+  display: flex;
+  align-items: center;
+  border-radius: var(--gym-radius-sm);
+}
+
+.cadastro-import-history__row:hover {
+  background: color-mix(in oklch, var(--gym-color-text) 6%, transparent);
+}
+
+.cadastro-import-history__item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--gym-space-2) var(--gym-space-3);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cadastro-import-history__remove {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-inline-end: var(--gym-space-1);
+  padding: 0;
+  border: 0;
+  border-radius: var(--gym-radius-sm);
+  background: transparent;
+  color: var(--gym-color-text-muted);
+  cursor: pointer;
+}
+
+.cadastro-import-history__remove:hover:not(:disabled) {
+  color: var(--gym-color-text);
+  background: color-mix(in oklch, var(--gym-color-text) 8%, transparent);
+}
+
+.cadastro-import-history__remove:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.cadastro-import-history__name {
+  font-size: var(--gym-font-size-sm);
+  color: var(--gym-color-text);
+}
+
+.cadastro-import-history__meta {
+  font-size: var(--gym-font-size-xs);
+  color: var(--gym-color-text-muted);
+}
+
+.cadastro-record--view .cadastro-field .ant-input[disabled],
+.cadastro-record--view .cadastro-field .ant-input-disabled,
+.cadastro-record--view .cadastro-field .ant-input-textarea-disabled textarea,
+.cadastro-record--view .cadastro-field .ant-select-disabled .ant-select-selector,
+.cadastro-record--view .cadastro-field .ant-picker-disabled {
+  color: var(--gym-color-text);
+  -webkit-text-fill-color: var(--gym-color-text);
+  opacity: 1;
+  cursor: default;
+}
+
+.profile-panel .cadastro-single {
+  gap: var(--gym-space-4);
+}
+
+.profile-panel .cadastro-group__body {
+  padding: var(--gym-space-4);
+}
+
+.profile-panel .document-presence {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }

@@ -1,3 +1,4 @@
+import { QueryView } from "../../components/QueryView";
 import { StateCard } from "../../components/StateCard";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
@@ -23,37 +24,56 @@ import { BillEditor } from "../records/BillEditor";
 import { DocumentEditor } from "../records/DocumentEditor";
 import { AttachmentsPanel } from "../../AttachmentsPanel";
 import { CadastroOcrSection } from "../cadastro/CadastroOcrSection";
+import { OWNER_BILL_SEARCH, OWNER_DOC_SEARCH } from "../cadastro/components/PersonOwnedCollections";
 import { billSearch, documentSearch } from "./sheetQuery";
 
 export function TableRecordEditorPanel({
   section,
   search,
   role,
+  fallbackOwnerId,
   onSearch,
   onNotice,
 }: {
   section: "documents" | "bills";
   search: ProfileListSearch;
   role: UserRole;
+  fallbackOwnerId?: string | undefined;
   onSearch: (patch: Partial<ProfileListSearch>) => void;
   onNotice: (message: string) => void;
 }) {
   if (section === "documents") {
     return (
-      <DocumentTableEditor role={role} search={search} onNotice={onNotice} onSearch={onSearch} />
+      <DocumentTableEditor
+        fallbackOwnerId={fallbackOwnerId}
+        role={role}
+        search={search}
+        onNotice={onNotice}
+        onSearch={onSearch}
+      />
     );
   }
-  return <BillTableEditor role={role} search={search} onNotice={onNotice} onSearch={onSearch} />;
+  return (
+    <BillTableEditor
+      fallbackOwnerId={fallbackOwnerId}
+      role={role}
+      search={search}
+      onNotice={onNotice}
+      onSearch={onSearch}
+    />
+  );
 }
 
 function DocumentTableEditor({
   search,
   role,
+  fallbackOwnerId,
   onSearch,
   onNotice,
 }: {
   search: ProfileListSearch;
   role: UserRole;
+  fallbackOwnerId?: string | undefined;
   onSearch: (patch: Partial<ProfileListSearch>) => void;
   onNotice: (message: string) => void;
 }) {
@@ -63,13 +83,22 @@ function DocumentTableEditor({
   const selectedID = search.document_selected;
   if (!mode || mode === "types") return null;
 
+  const listOwnerId = search.records_owner ?? fallbackOwnerId;
+  const useOwnerList = Boolean(listOwnerId);
   const recordsQuery = useQuery({
-    queryKey: queryKeys.tables.documents(documentSearch(search), search.records_owner),
-    queryFn: ({ signal }) => listDocuments(search.records_owner, documentSearch(search), signal),
-    enabled: Boolean(mode === "create" ? search.records_owner : selectedID || search.records_owner),
+    queryKey: useOwnerList
+      ? queryKeys.records.documents(listOwnerId, OWNER_DOC_SEARCH)
+      : queryKeys.tables.documents(documentSearch(search), search.records_owner),
+    queryFn: ({ signal }) =>
+      listDocuments(
+        useOwnerList ? listOwnerId : search.records_owner,
+        useOwnerList ? OWNER_DOC_SEARCH : documentSearch(search),
+        signal,
+      ),
+    enabled: Boolean(mode === "create" ? listOwnerId : selectedID || listOwnerId),
   });
   const selected = recordsQuery.data?.documents.find((value) => value.id === selectedID);
-  const ownerID = search.records_owner ?? selected?.owner_profile_id;
+  const ownerID = search.records_owner ?? selected?.owner_profile_id ?? fallbackOwnerId;
   const ownerQuery = useQuery({
     queryKey: queryKeys.profiles.detail(ownerID),
     queryFn: ({ signal }) => getProfile(ownerID!, signal),
@@ -80,6 +109,18 @@ function DocumentTableEditor({
     queryFn: ({ signal }) => listDocumentTypes(signal),
     enabled: Boolean(mode),
   });
+  const openOwner = ownerID
+    ? () =>
+        onSearch({
+          section: "profile",
+          selected: ownerID,
+          mode: "view",
+          document_selected: undefined,
+          document_mode: undefined,
+          bill_selected: undefined,
+          bill_mode: undefined,
+        })
+    : undefined;
 
   return (
     <RecordEditorShell<DocumentRecord>
@@ -87,24 +128,28 @@ function DocumentTableEditor({
       mode={mode}
       ownerID={ownerID}
       ownerQuery={ownerQuery}
+      recordsLoading={Boolean(selectedID) && recordsQuery.isLoading}
       selected={selected}
       typesLoading={typesQuery.isLoading}
       onClose={() => onSearch({ document_selected: undefined, document_mode: undefined })}
       onDelete={async (value, confirmation) => {
         await deleteDocument(value.id, value.version, confirmation);
         await queryClient.invalidateQueries({ queryKey: queryKeys.tables.documents() });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.records.documents() });
         onNotice(messages.records.panel.docDeletedNotice);
         onSearch({ document_selected: undefined, document_mode: undefined });
       }}
       onDuplicate={async (id) => {
         const value = await duplicateDocument(id);
         await queryClient.invalidateQueries({ queryKey: queryKeys.tables.documents() });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.records.documents() });
         onNotice(messages.records.panel.docDuplicatedNotice);
         onSearch({ document_selected: value.id, document_mode: "edit" });
       }}
       onEdit={() => onSearch({ document_mode: "edit" })}
       onSaved={async (value, message) => {
         await queryClient.invalidateQueries({ queryKey: queryKeys.tables.documents() });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.records.documents() });
         onNotice(message);
         onSearch({ document_selected: value.id, document_mode: "view" });
       }}
@@ -116,20 +161,20 @@ function DocumentTableEditor({
           profile={profile}
           record={record}
           types={typesQuery.data?.types ?? []}
-        />
+          onOpenOwner={openOwner}
+        >
+          {record && (mode === "view" || mode === "edit") ? (
+            <>
+              <AttachmentsPanel
+                description={messages.records.panel.docAttachmentsDesc}
+                owner={{ owner_kind: "DOCUMENT", owner_id: record.id }}
+                title={messages.records.panel.docAttachmentsTitle}
+              />
+              <CadastroOcrSection owner={{ owner_kind: "DOCUMENT", owner_id: record.id }} />
+            </>
+          ) : null}
+        </DocumentEditor>
       )}
-      renderExtras={(record) =>
-        record && (mode === "view" || mode === "edit") ? (
-          <>
-            <AttachmentsPanel
-              description={messages.records.panel.docAttachmentsDesc}
-              owner={{ owner_kind: "DOCUMENT", owner_id: record.id }}
-              title={messages.records.panel.docAttachmentsTitle}
-            />
-            <CadastroOcrSection owner={{ owner_kind: "DOCUMENT", owner_id: record.id }} />
-          </>
-        ) : null
-      }
     />
   );
 }
@@ -137,11 +182,13 @@ function DocumentTableEditor({
 function BillTableEditor({
   search,
   role,
+  fallbackOwnerId,
   onSearch,
   onNotice,
 }: {
   search: ProfileListSearch;
   role: UserRole;
+  fallbackOwnerId?: string | undefined;
   onSearch: (patch: Partial<ProfileListSearch>) => void;
   onNotice: (message: string) => void;
 }) {
@@ -151,13 +198,22 @@ function BillTableEditor({
   const selectedID = search.bill_selected;
   if (!mode || mode === "types") return null;
 
+  const listOwnerId = search.records_owner ?? fallbackOwnerId;
+  const useOwnerList = Boolean(listOwnerId);
   const recordsQuery = useQuery({
-    queryKey: queryKeys.tables.bills(billSearch(search), search.records_owner),
-    queryFn: ({ signal }) => listBills(search.records_owner, billSearch(search), signal),
-    enabled: Boolean(mode === "create" ? search.records_owner : selectedID || search.records_owner),
+    queryKey: useOwnerList
+      ? queryKeys.records.bills(listOwnerId, OWNER_BILL_SEARCH)
+      : queryKeys.tables.bills(billSearch(search), search.records_owner),
+    queryFn: ({ signal }) =>
+      listBills(
+        useOwnerList ? listOwnerId : search.records_owner,
+        useOwnerList ? OWNER_BILL_SEARCH : billSearch(search),
+        signal,
+      ),
+    enabled: Boolean(mode === "create" ? listOwnerId : selectedID || listOwnerId),
   });
   const selected = recordsQuery.data?.bills.find((value) => value.id === selectedID);
-  const ownerID = search.records_owner ?? selected?.owner_profile_id;
+  const ownerID = search.records_owner ?? selected?.owner_profile_id ?? fallbackOwnerId;
   const ownerQuery = useQuery({
     queryKey: queryKeys.profiles.detail(ownerID),
     queryFn: ({ signal }) => getProfile(ownerID!, signal),
@@ -168,6 +224,18 @@ function BillTableEditor({
     queryFn: ({ signal }) => listBillTypes(signal),
     enabled: Boolean(mode),
   });
+  const openOwner = ownerID
+    ? () =>
+        onSearch({
+          section: "profile",
+          selected: ownerID,
+          mode: "view",
+          document_selected: undefined,
+          document_mode: undefined,
+          bill_selected: undefined,
+          bill_mode: undefined,
+        })
+    : undefined;
 
   return (
     <RecordEditorShell<BillRecord>
@@ -175,24 +243,28 @@ function BillTableEditor({
       mode={mode}
       ownerID={ownerID}
       ownerQuery={ownerQuery}
+      recordsLoading={Boolean(selectedID) && recordsQuery.isLoading}
       selected={selected}
       typesLoading={typesQuery.isLoading}
       onClose={() => onSearch({ bill_selected: undefined, bill_mode: undefined })}
       onDelete={async (value, confirmation) => {
         await deleteBill(value.id, value.version, confirmation);
         await queryClient.invalidateQueries({ queryKey: queryKeys.tables.bills() });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.records.bills() });
         onNotice(messages.records.panel.billDeletedNotice);
         onSearch({ bill_selected: undefined, bill_mode: undefined });
       }}
       onDuplicate={async (id) => {
         const value = await duplicateBill(id);
         await queryClient.invalidateQueries({ queryKey: queryKeys.tables.bills() });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.records.bills() });
         onNotice(messages.records.panel.billDuplicatedNotice);
         onSearch({ bill_selected: value.id, bill_mode: "edit" });
       }}
       onEdit={() => onSearch({ bill_mode: "edit" })}
       onSaved={async (value, message) => {
         await queryClient.invalidateQueries({ queryKey: queryKeys.tables.bills() });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.records.bills() });
         onNotice(message);
         onSearch({ bill_selected: value.id, bill_mode: "view" });
       }}
@@ -204,20 +276,20 @@ function BillTableEditor({
           profile={profile}
           record={record}
           types={typesQuery.data?.types ?? []}
-        />
+          onOpenOwner={openOwner}
+        >
+          {record && (mode === "view" || mode === "edit") ? (
+            <>
+              <AttachmentsPanel
+                description={messages.records.panel.billAttachmentsDesc}
+                owner={{ owner_kind: "BILL", owner_id: record.id }}
+                title={messages.records.panel.billAttachmentsTitle}
+              />
+              <CadastroOcrSection owner={{ owner_kind: "BILL", owner_id: record.id }} />
+            </>
+          ) : null}
+        </BillEditor>
       )}
-      renderExtras={(record) =>
-        record && (mode === "view" || mode === "edit") ? (
-          <>
-            <AttachmentsPanel
-              description={messages.records.panel.billAttachmentsDesc}
-              owner={{ owner_kind: "BILL", owner_id: record.id }}
-              title={messages.records.panel.billAttachmentsTitle}
-            />
-            <CadastroOcrSection owner={{ owner_kind: "BILL", owner_id: record.id }} />
-          </>
-        ) : null
-      }
     />
   );
 }
@@ -228,6 +300,7 @@ function RecordEditorShell<T extends DocumentRecord | BillRecord>({
   ownerQuery,
   selected,
   typesLoading,
+  recordsLoading,
   canDelete,
   onClose,
   onEdit,
@@ -235,13 +308,18 @@ function RecordEditorShell<T extends DocumentRecord | BillRecord>({
   onDuplicate,
   onDelete,
   renderEditor,
-  renderExtras,
 }: {
   mode: "create" | "view" | "edit";
   ownerID: string | undefined;
-  ownerQuery: { isLoading: boolean; error: Error | null; data: Profile | undefined };
+  ownerQuery: {
+    isLoading: boolean;
+    error: Error | null;
+    data: Profile | undefined;
+    refetch: () => unknown;
+  };
   selected: T | undefined;
   typesLoading: boolean;
+  recordsLoading: boolean;
   canDelete: boolean;
   onClose: () => void;
   onEdit: () => void;
@@ -262,7 +340,6 @@ function RecordEditorShell<T extends DocumentRecord | BillRecord>({
       onDelete: (value: T, confirmation: string) => void;
     },
   ) => ReactNode;
-  renderExtras: (record: T | undefined) => ReactNode;
 }) {
   const { messages } = useI18n();
   const [pending, setPending] = useState(false);
@@ -277,16 +354,22 @@ function RecordEditorShell<T extends DocumentRecord | BillRecord>({
       />
     );
   }
-  if (ownerQuery.isLoading || typesLoading) {
-    return <StateCard compact kind="loading" title={messages.tables.record.formLoading} />;
-  }
-  if (ownerQuery.error || !ownerQuery.data) {
+  if (
+    recordsLoading ||
+    ownerQuery.isLoading ||
+    typesLoading ||
+    ownerQuery.error ||
+    !ownerQuery.data
+  ) {
     return (
-      <StateCard
+      <QueryView
         compact
-        description={messages.tables.record.ownerNotFoundDesc}
-        kind="error"
-        title={messages.tables.record.ownerNotFoundTitle}
+        errorDescription={messages.tables.record.ownerNotFoundDesc}
+        errorTitle={messages.tables.record.ownerNotFoundTitle}
+        isError={Boolean(!recordsLoading && (ownerQuery.error || !ownerQuery.data))}
+        isPending={recordsLoading || ownerQuery.isLoading || typesLoading}
+        loadingTitle={messages.tables.record.formLoading}
+        onRetry={ownerQuery.error ? () => void ownerQuery.refetch() : undefined}
       />
     );
   }
@@ -318,7 +401,6 @@ function RecordEditorShell<T extends DocumentRecord | BillRecord>({
   return (
     <div className="table-record-editor">
       {renderEditor(ownerQuery.data, selected, editorProps)}
-      {renderExtras(selected)}
     </div>
   );
 }

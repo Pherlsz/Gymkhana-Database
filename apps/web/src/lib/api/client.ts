@@ -9,6 +9,9 @@ export type AdminUsersResponse =
   paths["/api/admin/users"]["get"]["responses"][200]["content"]["application/json"];
 export type AdminUser = AdminUsersResponse["users"][number];
 export type UserRole = AdminUser["role"];
+export type ModelKeyStatus = components["schemas"]["ModelKeyStatus"];
+export type ModelProvider = components["schemas"]["ModelProvider"];
+export type SetModelKeyRequest = components["schemas"]["SetModelKeyRequest"];
 export type ProfilePageResponse =
   paths["/api/v1/profiles"]["get"]["responses"][200]["content"]["application/json"];
 export type Profile = ProfilePageResponse["profiles"][number] & {
@@ -24,11 +27,6 @@ export type ProfileValuesRequest =
   paths["/api/v1/profiles"]["post"]["requestBody"]["content"]["application/json"];
 export type UpdateProfileRequest =
   paths["/api/v1/profiles/{profile_id}"]["put"]["requestBody"]["content"]["application/json"];
-export type UpsertDocumentPresenceRequest =
-  paths["/api/v1/document-presences"]["put"]["requestBody"]["content"]["application/json"];
-export type DocumentPresence =
-  paths["/api/v1/document-presences"]["put"]["responses"][200]["content"]["application/json"];
-
 export type DocumentTypePageResponse =
   paths["/api/v1/document-types"]["get"]["responses"][200]["content"]["application/json"];
 export type DocumentType = DocumentTypePageResponse["types"][number];
@@ -183,6 +181,91 @@ export async function logout(): Promise<void> {
   await requestNoContent("/api/auth/logout", { method: "POST" });
 }
 
+export async function getModelKeyStatus(
+  provider: ModelProvider,
+  signal?: AbortSignal,
+): Promise<ModelKeyStatus> {
+  return requestJSON<ModelKeyStatus>(`/api/admin/model-keys/${provider}`, signal ? { signal } : {});
+}
+
+export async function setModelKey(
+  provider: ModelProvider,
+  request: SetModelKeyRequest,
+): Promise<ModelKeyStatus> {
+  return requestJSON<ModelKeyStatus>(
+    `/api/admin/model-keys/${provider}`,
+    jsonRequest("PUT", request),
+  );
+}
+
+export async function clearModelKey(provider: ModelProvider): Promise<void> {
+  await requestNoContent(`/api/admin/model-keys/${provider}`, { method: "DELETE" });
+}
+
+export async function listAdminUsers(signal?: AbortSignal): Promise<AdminUsersResponse> {
+  return requestJSON<AdminUsersResponse>("/api/admin/users", signal ? { signal } : {});
+}
+
+export type AdminProvisionUser = {
+  email: string;
+  display_name: string;
+  role: "EXTERNAL" | "ADMIN";
+  capabilities: string[];
+};
+
+export async function provisionAdminUser(request: AdminProvisionUser): Promise<AdminUser> {
+  return requestJSON<AdminUser>("/api/admin/users", jsonRequest("POST", request));
+}
+
+export async function deleteAdminUser(userId: string): Promise<void> {
+  await requestNoContent(`/api/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
+}
+
+export type AdminAccessUpdate = {
+  role: "EXTERNAL" | "ADMIN";
+  active: boolean;
+  version: number;
+  display_name: string;
+  email: string;
+};
+
+export async function updateAdminUserAccess(
+  userId: string,
+  request: AdminAccessUpdate,
+): Promise<AdminUser> {
+  return requestJSON<AdminUser>(
+    `/api/admin/users/${encodeURIComponent(userId)}/access`,
+    jsonRequest("PATCH", request),
+  );
+}
+
+type UserCapabilitiesResponse = { capabilities?: string[] | null };
+
+export async function listUserCapabilities(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const body = await requestJSON<UserCapabilitiesResponse>(
+    `/api/admin/users/${encodeURIComponent(userId)}/capabilities`,
+    signal ? { signal } : {},
+  );
+  return body.capabilities ?? [];
+}
+
+export async function grantUserCapability(userId: string, capability: string): Promise<void> {
+  await requestJSON<unknown>(
+    `/api/admin/users/${encodeURIComponent(userId)}/capabilities`,
+    jsonRequest("POST", { capability }),
+  );
+}
+
+export async function revokeUserCapability(userId: string, capability: string): Promise<void> {
+  await requestNoContent(
+    `/api/admin/users/${encodeURIComponent(userId)}/capabilities/${encodeURIComponent(capability)}`,
+    { method: "DELETE" },
+  );
+}
+
 export type ProfileListSearch = {
   page: number;
   limit: number;
@@ -236,6 +319,10 @@ export type ProfileListSearch = {
   bill_mode: "create" | "view" | "edit" | "types" | undefined;
   records_owner: string | undefined;
   cols: string;
+  /** Assistant recorte marker. "on", or the extra column keys it turned on. */
+  recorte: string;
+  /** Assistant result reference. The open sheet pages this plan. */
+  result: string;
 };
 
 export async function listProfiles(
@@ -355,12 +442,6 @@ export async function updateProfile(id: string, request: UpdateProfileRequest): 
   );
 }
 
-export async function duplicateProfile(id: string): Promise<Profile> {
-  return requestJSON<Profile>(`/api/v1/profiles/${encodeURIComponent(id)}/duplicate`, {
-    method: "POST",
-  });
-}
-
 export async function deleteProfile(
   id: string,
   version: number,
@@ -444,12 +525,6 @@ export async function listDocuments(
   if (search.document_medium) query.set("medium", search.document_medium);
   if (search.document_type) query.set("document_type_id", search.document_type);
   return requestJSON<DocumentPageResponse>(`/api/v1/documents?${query}`, signal ? { signal } : {});
-}
-
-export async function upsertDocumentPresence(
-  request: UpsertDocumentPresenceRequest,
-): Promise<DocumentPresence> {
-  return requestJSON<DocumentPresence>("/api/v1/document-presences", jsonRequest("PUT", request));
 }
 
 export async function createDocument(request: DocumentValuesRequest): Promise<DocumentRecord> {
@@ -641,15 +716,6 @@ export async function suggestSearchValues(
   });
   if (input.grain) query.set("grain", input.grain);
   return requestJSON(`/api/v1/search/suggest?${query}`, signal ? { signal } : {});
-}
-
-export async function listCustomEntityTypes(
-  signal?: AbortSignal,
-): Promise<components["schemas"]["CustomEntityTypePageResponse"]> {
-  return requestJSON(
-    "/api/v1/custom-entity-types?limit=1000&offset=0&sort=label&order=asc",
-    signal ? { signal } : {},
-  );
 }
 
 export async function listCustomFields(

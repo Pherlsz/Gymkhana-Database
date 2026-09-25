@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
+	"github.com/Pherlsz/Gymkhana-Database/internal/importcatalog"
 )
 
 func (service *Service) CreateImport(ctx context.Context, actor auth.Session, input CreateImportInput, requestID string) (UploadGrant, error) {
@@ -73,27 +74,13 @@ func (service *Service) ConfirmImport(ctx context.Context, actor auth.Session, i
 	if value.State != ImportUploading {
 		return Import{}, ErrInvalidState
 	}
-	opened, err := service.objects.Open(ctx, value.ObjectKey)
-	if err != nil {
-		return Import{}, err
-	}
-	hash := sha256.New()
-	count, copyErr := io.Copy(hash, io.LimitReader(opened, MaximumFileSize+1))
-	closeErr := opened.Close()
-	if copyErr != nil || closeErr != nil {
-		return Import{}, fmt.Errorf("verify import upload: %w", errors.Join(copyErr, closeErr))
-	}
-	if count != value.DeclaredSize || count > MaximumFileSize {
-		return Import{}, ErrWorkbookLimit
-	}
-	var digest [32]byte
-	copy(digest[:], hash.Sum(nil))
+	// ponytail: skip R2 GET here; ParseImport is the single read (hash + workbook).
 	jobID, err := service.jobs.EnqueueParse(ctx, id)
 	if err != nil {
 		return Import{}, err
 	}
 	now := service.now().UTC()
-	confirmed, err := service.store.ConfirmImport(ctx, id, actor.User.ID, count, digest, jobID, now)
+	confirmed, err := service.store.ConfirmImport(ctx, id, actor.User.ID, value.DeclaredSize, [32]byte{}, jobID, now)
 	if err != nil {
 		return Import{}, err
 	}
@@ -134,7 +121,7 @@ func (service *Service) ParseImport(ctx context.Context, id Identifier) error {
 		return service.failImport(ctx, value, ImportParsing, workbookErrorCode(parseErr), workerRequestID("parse", id), errors.Join(parseErr, closeErr))
 	}
 	digest := sha256.Sum256(data)
-	if digest != value.ContentSHA256 {
+	if value.ContentSHA256 != ([32]byte{}) && digest != value.ContentSHA256 {
 		return service.failImport(ctx, value, ImportParsing, "content_changed", workerRequestID("parse", id), ErrConflict)
 	}
 	now := service.now().UTC()
@@ -146,6 +133,12 @@ func (service *Service) ParseImport(ctx context.Context, id Identifier) error {
 	}
 	if err := service.applyImportCatalog(ctx, id, value.Module, nil); err != nil {
 		return service.failImport(ctx, value, ImportParsing, "catalog_mapping_failed", workerRequestID("parse", id), err)
+	}
+	if err := service.advanceReadyMapping(ctx, id); err != nil {
+		return err
+	}
+	if delErr := service.objects.Delete(ctx, value.ObjectKey); delErr != nil {
+		// ponytail: leftover object until expires_at cleanup; staging already won.
 	}
 	service.audit(ctx, &value.ActorUserID, &id, nil, value.Module, AuditImportParsed, auth.AuditOutcomeSuccess, nil, workerRequestID("parse", id))
 	return nil
@@ -187,6 +180,9 @@ func (service *Service) SelectSheet(ctx context.Context, actor auth.Session, id 
 		return Import{}, err
 	}
 	if err := service.applyImportCatalog(ctx, id, value.Module, &sheetIndex); err != nil {
+		return Import{}, err
+	}
+	if err := service.advanceReadyMapping(ctx, id); err != nil {
 		return Import{}, err
 	}
 	service.audit(ctx, &actor.User.ID, &id, nil, value.Module, AuditImportMapped, auth.AuditOutcomeSuccess, nil, requestID)
@@ -287,11 +283,57 @@ func (service *Service) Preview(ctx context.Context, actor auth.Session, id Iden
 	if !value.ExpiresAt.After(service.now().UTC()) {
 		return Import{}, ErrExpired
 	}
+	return service.saveComputedPreview(ctx, value, version, actor.User.ID, requestID)
+}
+
+func mappingFromColumns(columns []Column) []MappingInput {
+	mapping := make([]MappingInput, 0, len(columns))
+	for _, column := range columns {
+		target := importcatalog.VisibleTarget(column.TargetField)
+		if target == "" {
+			continue
+		}
+		mapping = append(mapping, MappingInput{SourceColumn: column.SourceColumn, TargetField: target})
+	}
+	return mapping
+}
+
+func (service *Service) advanceReadyMapping(ctx context.Context, id Identifier) error {
+	value, err := service.store.GetImportForWorker(ctx, id)
+	if err != nil {
+		return err
+	}
+	if value.SelectedSheetIndex == nil || value.State != ImportMapping {
+		return nil
+	}
+	detailed, err := service.store.GetImport(ctx, id, value.ActorUserID)
+	if err != nil {
+		return err
+	}
+	actor, err := service.store.GetActor(ctx, detailed.ActorUserID)
+	if err != nil {
+		return err
+	}
+	catalog, err := service.catalogModule(ctx, actor.User.Role, detailed.Module)
+	if err != nil {
+		return err
+	}
+	if err := ValidateMapping(catalog, mappingFromColumns(detailed.Columns)); err != nil {
+		return nil
+	}
+	_, err = service.saveComputedPreview(ctx, detailed, detailed.Version, detailed.ActorUserID, workerRequestID("preview", id))
+	if errors.Is(err, ErrInvalidState) {
+		return nil
+	}
+	return err
+}
+
+func (service *Service) saveComputedPreview(ctx context.Context, value Import, version int64, actorID auth.Identifier, requestID string) (Import, error) {
 	customFields, err := service.store.CustomFields(ctx, value.Module)
 	if err != nil {
 		return Import{}, err
 	}
-	rows, err := service.store.LoadMappedRows(ctx, id)
+	rows, err := service.store.LoadMappedRows(ctx, value.ID)
 	if err != nil {
 		return Import{}, err
 	}
@@ -328,11 +370,15 @@ func (service *Service) Preview(ctx context.Context, actor auth.Session, id Iden
 		} else if allMappedValuesEmpty(mapped.Values) {
 			row.ProposedAction = ActionSkip
 		} else {
-			targetID, _, action, targetErr := targetFromValues(mapped.Values)
+			targetID, _, action, targetErr := service.resolveTarget(ctx, value.Module, mapped.Values)
 			if targetErr != nil {
 				row.ProposedAction = ActionError
 				row.ValidationErrorCount++
-				markFirstError(&row, "invalid_target")
+				code := "invalid_target"
+				if errors.Is(targetErr, ErrAmbiguousCPF) {
+					code = "cpf_ambiguous"
+				}
+				markFirstError(&row, code)
 			} else if _, canonicalVersion, mutationErr := service.mutationForRow(ctx, value.Module, mapped.Values, customFields); mutationErr != nil {
 				row.ProposedAction = ActionError
 				row.ValidationErrorCount++
@@ -350,9 +396,9 @@ func (service *Service) Preview(ctx context.Context, actor auth.Session, id Iden
 		validationErrors += row.ValidationErrorCount
 		preview = append(preview, row)
 	}
-	saved, err := service.store.SavePreview(ctx, id, actor.User.ID, version, preview, unresolved, validationErrors, service.now().UTC())
+	saved, err := service.store.SavePreview(ctx, value.ID, actorID, version, preview, unresolved, validationErrors, service.now().UTC())
 	if err == nil {
-		service.audit(ctx, &actor.User.ID, &id, nil, value.Module, AuditImportPreviewed, auth.AuditOutcomeSuccess, nil, requestID)
+		service.audit(ctx, &actorID, &value.ID, nil, value.Module, AuditImportPreviewed, auth.AuditOutcomeSuccess, nil, requestID)
 	}
 	return saved, err
 }
@@ -483,6 +529,28 @@ func (service *Service) CancelImport(ctx context.Context, actor auth.Session, id
 	}
 	service.audit(ctx, &actor.User.ID, &id, nil, value.Module, AuditImportCancelled, auth.AuditOutcomeSuccess, nil, requestID)
 	return cancelled, nil
+}
+
+func (service *Service) DeleteImport(ctx context.Context, actor auth.Session, id Identifier, _ string) error {
+	value, err := service.store.GetImport(ctx, id, actor.User.ID)
+	if err != nil {
+		return err
+	}
+	if !canImport(actor, value.Module) {
+		return ErrForbidden
+	}
+	if !value.State.Terminal() {
+		return ErrInvalidState
+	}
+	if value.ObjectKey != "" {
+		if err := service.objects.Delete(ctx, value.ObjectKey); err != nil {
+			return err
+		}
+	}
+	if err := service.store.DeleteImport(ctx, id, actor.User.ID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (service *Service) failImport(ctx context.Context, value Import, expected ImportState, code, requestID string, cause error) error {

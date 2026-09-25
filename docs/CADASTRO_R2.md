@@ -6,7 +6,7 @@ Cloudflare R2 is required for attachments, XLSX import temp storage, digital doc
 
 1. Create a **private** R2 bucket.
 2. Configure CORS for the SPA origin (`AUTH_APPLICATION_URL`, e.g. `http://localhost:5173` in dev).
-3. Store credentials in lokeys profile `gymkhana` (never commit):
+3. Store credentials in gitignored `.env` (never commit):
 
    | Variable               | Purpose                                      |
    | ---------------------- | -------------------------------------------- |
@@ -21,11 +21,8 @@ Cloudflare R2 is required for attachments, XLSX import temp storage, digital doc
 
 ## Local development (WSL)
 
-lokeys is DPAPI-backed on Windows. From PowerShell:
-
-```powershell
-$env:LOKEYS_AGENT = "1"
-lokeys run -p gymkhana --env dev -- make check-config
+```bash
+make check-config
 ```
 
 Until R2 is enabled, Cadastro **OCR** and **attachment upload** show a disabled state with reason in the UI. Manual and XLSX import (metadata-only staging) may still be tested where the worker has R2 for temp files.

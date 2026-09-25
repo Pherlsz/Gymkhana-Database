@@ -31,7 +31,7 @@ Every migration must include forward SQL, a safe rollback section when possible,
 
 ## Security
 
-Never commit credentials, production data, signed URLs, OAuth tokens, private attachments, or real personal information. Use synthetic fixtures only.
+Never commit credentials, production data, signed URLs, OAuth tokens, private attachments, or real personal information. Use synthetic fixtures only. Local secrets belong in gitignored `.env`, copied from `.env.example`.
 
 ## Planning
 

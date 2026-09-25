@@ -256,31 +256,114 @@ RETURNING `+executionColumns,
 	return created, true, nil
 }
 
+func (store *PostgresStore) CountReadOnly(ctx context.Context, query string, arguments []any, timeout time.Duration) (int64, error) {
+	query = strings.TrimSpace(query)
+	if store == nil || store.pool == nil || !strings.HasPrefix(query, "SELECT ") || strings.Contains(query, ";") ||
+		timeout <= 0 || timeout > 10*time.Second || len(arguments) > 64 {
+		return 0, ErrReadOnlyRequired
+	}
+	tx, err := store.beginReadOnly(ctx, timeout)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+	var count int64
+	if err := tx.QueryRow(ctx, query, arguments...).Scan(&count); err != nil {
+		return 0, normalizeQueryExecutionError(err)
+	}
+	if err := tx.Commit(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+		return 0, normalizeQueryExecutionError(err)
+	}
+	return count, nil
+}
+
+func (store *PostgresStore) ScanTexts(ctx context.Context, query string, arguments []any, columns, limit int, timeout time.Duration) ([][]string, error) {
+	query = strings.TrimSpace(query)
+	if store == nil || store.pool == nil || !strings.HasPrefix(query, "SELECT ") || strings.Contains(query, ";") ||
+		timeout <= 0 || timeout > 10*time.Second || len(arguments) > 64 ||
+		columns < 2 || columns > MaximumProjections+2 || limit < 1 || limit > MaximumSequenceScan {
+		return nil, ErrReadOnlyRequired
+	}
+	tx, err := store.beginReadOnly(ctx, timeout)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+	rows, err := tx.Query(ctx, query, arguments...)
+	if err != nil {
+		return nil, normalizeQueryExecutionError(err)
+	}
+	defer rows.Close()
+	result := make([][]string, 0)
+	for rows.Next() {
+		values, err := rows.Values()
+		if err != nil {
+			return nil, fmt.Errorf("read query scan values: %w", err)
+		}
+		if len(values) != columns || len(result) >= limit {
+			return nil, ErrUnsafeResult
+		}
+		record := make([]string, columns)
+		for index, value := range values {
+			if value == nil {
+				continue
+			}
+			text, ok := queryText(value)
+			if !ok {
+				return nil, ErrUnsafeResult
+			}
+			record[index] = text
+		}
+		if strings.TrimSpace(record[0]) == "" {
+			return nil, ErrUnsafeResult
+		}
+		result = append(result, record)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, normalizeQueryExecutionError(err)
+	}
+	if err := tx.Commit(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+		return nil, normalizeQueryExecutionError(err)
+	}
+	return result, nil
+}
+
+func (store *PostgresStore) beginReadOnly(ctx context.Context, timeout time.Duration) (pgx.Tx, error) {
+	tx, err := store.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return nil, fmt.Errorf("begin read-only query execution: %w", err)
+	}
+	timeoutMilliseconds := timeout.Milliseconds()
+	if timeoutMilliseconds < 1 {
+		timeoutMilliseconds = 1
+	}
+	if _, err := tx.Exec(ctx, `SELECT set_config('statement_timeout', $1, true)`, strconv.FormatInt(timeoutMilliseconds, 10)); err != nil {
+		_ = tx.Rollback(context.Background())
+		return nil, fmt.Errorf("configure query statement timeout: %w", err)
+	}
+	var readOnly string
+	if err := tx.QueryRow(ctx, `SHOW transaction_read_only`).Scan(&readOnly); err != nil {
+		_ = tx.Rollback(context.Background())
+		return nil, fmt.Errorf("verify read-only query transaction: %w", err)
+	}
+	if readOnly != "on" {
+		_ = tx.Rollback(context.Background())
+		return nil, ErrReadOnlyRequired
+	}
+	return tx, nil
+}
+
 func (store *PostgresStore) ExecuteReadOnly(ctx context.Context, plan CompiledPlan, timeout time.Duration) ([]RawResultRow, error) {
 	if store == nil || store.pool == nil || strings.TrimSpace(plan.SQL) == "" || !strings.HasPrefix(strings.TrimSpace(plan.SQL), "SELECT ") ||
 		strings.Contains(plan.SQL, ";") || timeout <= 0 || timeout > 10*time.Second || plan.MaximumRows < 1 ||
 		plan.MaximumRows > MaximumRows || len(plan.Columns) == 0 || len(plan.Columns) > MaximumProjections {
 		return nil, ErrReadOnlyRequired
 	}
-	tx, err := store.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	tx, err := store.beginReadOnly(ctx, timeout)
 	if err != nil {
-		return nil, fmt.Errorf("begin read-only query execution: %w", err)
+		return nil, err
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	timeoutMilliseconds := timeout.Milliseconds()
-	if timeoutMilliseconds < 1 {
-		timeoutMilliseconds = 1
-	}
-	if _, err := tx.Exec(ctx, `SELECT set_config('statement_timeout', $1, true)`, strconv.FormatInt(timeoutMilliseconds, 10)); err != nil {
-		return nil, fmt.Errorf("configure query statement timeout: %w", err)
-	}
-	var readOnly string
-	if err := tx.QueryRow(ctx, `SHOW transaction_read_only`).Scan(&readOnly); err != nil {
-		return nil, fmt.Errorf("verify read-only query transaction: %w", err)
-	}
-	if readOnly != "on" {
-		return nil, ErrReadOnlyRequired
-	}
 	rows, err := tx.Query(ctx, plan.SQL, plan.Arguments...)
 	if err != nil {
 		return nil, normalizeQueryExecutionError(err)

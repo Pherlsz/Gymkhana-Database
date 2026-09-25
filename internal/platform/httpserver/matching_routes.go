@@ -283,7 +283,7 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 		}
 		response := matchingCasePageResponse{Cases: make([]matchingCaseResponse, 0, len(page.Cases)), Total: page.Total, Limit: page.Limit, Offset: page.Offset}
 		for _, value := range page.Cases {
-			response.Cases = append(response.Cases, matchingCaseFromDomain(value, false, actor.User.Role.CanManageUsers()))
+			response.Cases = append(response.Cases, matchingCaseFromDomain(value, false, actor.User.Role.CanWriteProfiles()))
 		}
 		writeJSON(w, http.StatusOK, response)
 	}))
@@ -298,7 +298,7 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 			writeMatchingError(w, r, logger, "read Matching case", err)
 			return
 		}
-		writeJSON(w, http.StatusOK, matchingCaseFromDomain(value, true, actor.User.Role.CanManageUsers()))
+		writeJSON(w, http.StatusOK, matchingCaseFromDomain(value, true, actor.User.Role.CanWriteProfiles()))
 	}))
 
 	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/dismiss", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
@@ -316,7 +316,7 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 			writeMatchingError(w, r, logger, "dismiss Matching case", err)
 			return
 		}
-		writeJSON(w, http.StatusOK, matchingCaseFromDomain(value, true, actor.User.Role.CanManageUsers()))
+		writeJSON(w, http.StatusOK, matchingCaseFromDomain(value, true, actor.User.Role.CanWriteProfiles()))
 	}))
 
 	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/merge-preview", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
@@ -339,7 +339,7 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 			writeMatchingError(w, r, logger, "preview Profile merge", err)
 			return
 		}
-		writeJSON(w, http.StatusOK, matchingPreviewFromDomain(value, actor.User.Role.CanManageUsers()))
+		writeJSON(w, http.StatusOK, matchingPreviewFromDomain(value, actor.User.Role.CanWriteProfiles()))
 	}))
 
 	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/merge", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {

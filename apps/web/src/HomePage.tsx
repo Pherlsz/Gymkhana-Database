@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Alert, Button, Dropdown, Skeleton } from "antd";
+import { Button, Dropdown, Skeleton } from "antd";
 import {
   ChevronRight,
   ChevronUp,
@@ -27,6 +27,7 @@ import "./home.css";
 import { useApplicationSession } from "./session";
 import { ICON, ICON_STROKE } from "./components/icons";
 import { AppCard } from "./components/AppCard";
+import { StatusBanner } from "./components/StatusBanner";
 
 export function HomePage() {
   const session = useApplicationSession();
@@ -324,7 +325,7 @@ export function HomePage() {
       </div>
 
       {overview.failed || overview.inUseFailed ? (
-        <Alert
+        <StatusBanner
           action={
             <Button
               icon={<RefreshCw aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />}
@@ -334,10 +335,8 @@ export function HomePage() {
               {copy.retry}
             </Button>
           }
-          role="alert"
-          showIcon
           title={copy.overviewError}
-          type="warning"
+          tone="warning"
         />
       ) : null}
 

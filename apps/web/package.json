@@ -15,6 +15,7 @@
     "@tanstack/react-virtual": "^3.14.9",
     "antd": "^6.5.0",
     "dayjs": "^1.11.21",
+    "hyperformula": "3.4.0",
     "lucide-react": "^1.31.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

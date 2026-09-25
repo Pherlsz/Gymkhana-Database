@@ -168,6 +168,112 @@ func (service *Service) Execute(ctx context.Context, actor auth.Session, plan Qu
 	return completed, nil
 }
 
+func (service *Service) CountMatches(ctx context.Context, actor auth.Session, plan QueryPlan, requestID string) (int, error) {
+	_, catalog, err := service.authorizedCatalog(ctx, actor)
+	if err != nil {
+		return 0, err
+	}
+	query, arguments, err := compileMatchCount(plan, catalog)
+	if err != nil {
+		return 0, err
+	}
+	count, err := service.store.CountReadOnly(ctx, query, arguments, service.timeout)
+	if err != nil || count < 0 {
+		if err == nil {
+			err = ErrUnsafeResult
+		}
+		return 0, err
+	}
+	return int(count), nil
+}
+
+func (service *Service) ScanFields(ctx context.Context, actor auth.Session, plan QueryPlan, limit int, requestID string) (TextScan, error) {
+	_, catalog, err := service.authorizedCatalog(ctx, actor)
+	if err != nil {
+		return TextScan{}, err
+	}
+	query, arguments, err := compileFieldScan(plan, catalog, limit)
+	if err != nil {
+		return TextScan{}, err
+	}
+	raw, err := service.store.ScanTexts(ctx, query, arguments, len(plan.Projections)+2, limit, service.timeout)
+	if err != nil {
+		return TextScan{}, err
+	}
+	rows := make([]TextScanRow, 0, len(raw))
+	for _, record := range raw {
+		if len(record) != len(plan.Projections)+2 {
+			return TextScan{}, ErrUnsafeResult
+		}
+		rows = append(rows, TextScanRow{ID: record[0], Label: record[1], Values: append([]string(nil), record[2:]...)})
+	}
+	return TextScan{Rows: rows, Truncated: len(rows) >= limit}, nil
+}
+
+func (service *Service) ScanShape(ctx context.Context, actor auth.Session, plan QueryPlan, limit int, requestID string) ([]ShapeRow, bool, error) {
+	_, catalog, err := service.authorizedCatalog(ctx, actor)
+	if err != nil {
+		return nil, false, err
+	}
+	query, arguments, fields, kind, err := compileShapeScan(plan, catalog, limit)
+	if err != nil {
+		return nil, false, err
+	}
+	raw, err := service.store.ScanTexts(ctx, query, arguments, len(fields)+2, limit, service.timeout)
+	if err != nil {
+		return nil, false, err
+	}
+	rows := make([]ShapeRow, 0, len(raw))
+	for _, record := range raw {
+		if len(record) != len(fields)+2 {
+			return nil, false, ErrUnsafeResult
+		}
+		values := map[string]string{}
+		for index, key := range fields {
+			values[key] = record[index+2]
+		}
+		rows = append(rows, ShapeRow{EntityID: record[0], EntityKind: kind, Label: record[1], Fields: values})
+	}
+	_ = requestID
+	return rows, len(rows) >= limit, nil
+}
+
+// RunAdvanced executes a v2 plan against the live catalog. The caller does not
+// supply catalog_version: this stamps the current advanced catalog, including
+// nested set inputs.
+func (service *Service) RunAdvanced(ctx context.Context, actor auth.Session, plan QueryPlan, requestID string) (AdvancedResult, error) {
+	_, catalog, err := service.authorizedAdvancedCatalog(ctx, actor)
+	if err != nil {
+		return AdvancedResult{}, err
+	}
+	stampAdvancedPlan(&plan, catalog.Public.Version)
+	return service.RunV2(ctx, actor, plan, requestID)
+}
+
+func stampAdvancedPlan(plan *QueryPlan, version string) {
+	if plan == nil {
+		return
+	}
+	plan.Version = PlanVersionV2
+	plan.CatalogVersion = version
+	if plan.MaximumRows == 0 || plan.MaximumRows > MaximumPageSize {
+		plan.MaximumRows = MaximumPageSize
+	}
+	stampAdvancedSet(plan.Set, version)
+}
+
+func stampAdvancedSet(set *SetExpression, version string) {
+	if set == nil {
+		return
+	}
+	if set.Plan != nil {
+		stampAdvancedPlan(set.Plan, version)
+	}
+	for index := range set.Inputs {
+		stampAdvancedSet(&set.Inputs[index], version)
+	}
+}
+
 func (service *Service) Result(ctx context.Context, actor auth.Session, executionID Identifier, limit, offset int, requestID string) (ResultPage, error) {
 	user, catalog, err := service.authorizedCatalog(ctx, actor)
 	if err != nil {

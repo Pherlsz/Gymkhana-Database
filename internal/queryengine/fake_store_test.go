@@ -27,6 +27,8 @@ type fakeQueryStore struct {
 	created           bool
 	existing          Execution
 	rawRows           []RawResultRow
+	matchCount        int64
+	scanRows          [][]string
 	page              ResultPage
 	executeCalls      int
 	completeCalls     int
@@ -77,6 +79,14 @@ func (store *fakeQueryStore) CreateExecution(ctx context.Context, input Executio
 		StartedAt: input.StartedAt, ExpiresAt: input.ExpiresAt, Version: 1,
 		CreatedAt: input.StartedAt, UpdatedAt: input.StartedAt,
 	}, true, nil
+}
+
+func (store *fakeQueryStore) CountReadOnly(context.Context, string, []any, time.Duration) (int64, error) {
+	return store.matchCount, store.executeErr
+}
+
+func (store *fakeQueryStore) ScanTexts(context.Context, string, []any, int, int, time.Duration) ([][]string, error) {
+	return store.scanRows, store.executeErr
 }
 
 func (store *fakeQueryStore) ExecuteReadOnly(ctx context.Context, plan CompiledPlan, timeout time.Duration) ([]RawResultRow, error) {

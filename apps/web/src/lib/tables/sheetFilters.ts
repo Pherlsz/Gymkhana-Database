@@ -1,5 +1,6 @@
 import type { CustomField, ProfileListSearch } from "../api/client";
 import type { CatalogV1 } from "../../i18n/v1/pt-BR";
+import { fieldFilterActive, fieldPredicate } from "./bindPredicates";
 import {
   brazilStateOptions,
   customFieldFilter,
@@ -318,12 +319,26 @@ export function activeFilterChips(fields: ToolbarFilterField[]): {
   onClear: () => void;
 }[] {
   return fields
-    .filter((field) => field.value.trim())
-    .map((field) => ({
-      key: field.key,
-      field: field.label,
-      value: filterValuePreview(field),
-      local: field.local === true,
-      onClear: () => field.onChange(""),
-    }));
+    .filter((field) => fieldFilterActive(field))
+    .map((field) => {
+      const predicate = fieldPredicate(field);
+      const preview =
+        predicate.op === "between"
+          ? `${predicate.values[0] ?? ""}–${predicate.values[1] ?? ""}`
+          : predicate.op === "in"
+            ? predicate.values.join(", ")
+            : predicate.op === "is_null" || predicate.op === "not_null"
+              ? predicate.op
+              : filterValuePreview(field) || predicate.values[0] || "";
+      return {
+        key: field.key,
+        field: field.label,
+        value: preview,
+        local: field.local === true,
+        onClear: () => {
+          field.onPredicate?.({ op: fieldPredicate(field).op, values: [] });
+          field.onChange("");
+        },
+      };
+    });
 }

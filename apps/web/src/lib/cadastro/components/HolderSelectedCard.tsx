@@ -1,23 +1,19 @@
 import { Button } from "antd";
-import { User, Unlink, RefreshCw } from "lucide-react";
+import { User, Unlink } from "lucide-react";
 import type { Profile } from "../../api/client";
 
 export interface HolderSelectedCardProps {
   profile: Profile;
-  onChange: () => void;
-  onUnlink: () => void;
+  onUnlink?: (() => void) | undefined;
   selectedTitle: string;
-  changeText: string;
   unlinkText: string;
-  autoFilledNotice?: string;
+  autoFilledNotice?: string | undefined;
 }
 
 export function HolderSelectedCard({
   profile,
-  onChange,
   onUnlink,
   selectedTitle,
-  changeText,
   unlinkText,
   autoFilledNotice,
 }: HolderSelectedCardProps) {
@@ -55,14 +51,13 @@ export function HolderSelectedCard({
           <p className="holder-selected-card__notice">{autoFilledNotice}</p>
         ) : null}
       </div>
-      <div className="holder-selected-card__actions">
-        <Button icon={<RefreshCw size={14} />} onClick={onChange} size="small" type="text">
-          {changeText}
-        </Button>
-        <Button danger icon={<Unlink size={14} />} onClick={onUnlink} size="small" type="text">
-          {unlinkText}
-        </Button>
-      </div>
+      {onUnlink ? (
+        <div className="holder-selected-card__actions">
+          <Button danger icon={<Unlink size={14} />} onClick={onUnlink} size="small" type="text">
+            {unlinkText}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

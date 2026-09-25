@@ -1,10 +1,10 @@
-import { Button, ConfigProvider, theme as antdTheme } from "antd";
-import { Moon, Sun } from "lucide-react";
+import { ConfigProvider, theme as antdTheme } from "antd";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -195,15 +195,19 @@ function persistTheme(theme: Theme) {
   }
 }
 
-export function ThemeProvider({ children }: PropsWithChildren) {
+export function ThemeProvider({
+  children,
+  forceDark = false,
+}: PropsWithChildren<{ forceDark?: boolean }>) {
   const [theme, setThemeState] = useState<Theme>(() =>
     typeof window === "undefined" ? "light" : readStoredTheme(),
   );
   const switchTimer = useRef(0);
+  const resolved = forceDark ? "dark" : theme;
 
-  useEffect(() => {
-    applyThemeClass(theme);
-  }, [theme]);
+  useLayoutEffect(() => {
+    applyThemeClass(resolved);
+  }, [resolved]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -232,10 +236,10 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     });
   }, []);
 
-  const antdThemeConfig = useMemo(() => gymkhanaAntdTheme(theme), [theme]);
+  const antdThemeConfig = useMemo(() => gymkhanaAntdTheme(resolved), [resolved]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: resolved, toggleTheme }}>
       <ConfigProvider theme={antdThemeConfig}>{children}</ConfigProvider>
     </ThemeContext.Provider>
   );
@@ -245,51 +249,4 @@ export function useTheme() {
   const ctx = useContext(ThemeContext);
   if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
   return ctx;
-}
-
-export function ThemeToggle({
-  activateLight,
-  activateDark,
-  lightLabel,
-  darkLabel,
-}: {
-  activateLight: string;
-  activateDark: string;
-  lightLabel: string;
-  darkLabel: string;
-}) {
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === "dark";
-
-  return (
-    <Button
-      type="text"
-      className="login-theme-toggle"
-      data-theme={theme}
-      onClick={toggleTheme}
-      aria-label={isDark ? activateLight : activateDark}
-      title={isDark ? lightLabel : darkLabel}
-    >
-      <span
-        className="login-theme-toggle__icon"
-        style={{
-          opacity: isDark ? 1 : 0,
-          transform: isDark ? "rotate(0deg) scale(1)" : "rotate(-90deg) scale(0.5)",
-        }}
-        aria-hidden
-      >
-        <Sun aria-hidden size={16} strokeWidth={1.75} />
-      </span>
-      <span
-        className="login-theme-toggle__icon"
-        style={{
-          opacity: isDark ? 0 : 1,
-          transform: isDark ? "rotate(90deg) scale(0.5)" : "rotate(0deg) scale(1)",
-        }}
-        aria-hidden
-      >
-        <Moon aria-hidden size={16} strokeWidth={1.75} />
-      </span>
-    </Button>
-  );
 }

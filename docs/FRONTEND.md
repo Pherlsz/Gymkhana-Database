@@ -24,6 +24,14 @@ Roles:
 
 Form pages use `.page-measure` (`--page-measure: 64rem`); the spreadsheet does not.
 
+## Page chrome and query states
+
+Authenticated screens compose chrome and async states from `apps/web/src/components/`:
+
+- **`PageShell`** wraps the page class (`tables-page`, `admin-page`, `cadastro-page`, `search-page`). Form pages pass `measure` for `.page-measure`. Optional `title` / `description` / `actions` render `PageHeader` (Oswald on `.page-header__title`). Home keeps its catalog hero. Cadastro work modes (Forms / XLSX) keep `CadastroWorkShell` crumbs instead of a second page title.
+- **`QueryView`** is the exclusive pending / error / empty switch over `StateCard`. Do not name it `QueryState` — that file encodes table URL plans. Search results are not exclusive: catalog and result errors can coexist, so they use banners plus `InlineStatus`.
+- **`StatusBanner`** is the shared Ant `Alert` for success, mutation failure, OAuth notices, and 409 conflict (warning). Optional `action` covers retry / “vincular existente”. Inline list footnotes use `InlineStatus`. Spreadsheet / popover empty stays Ant `Empty`. Home catalog loading stays `AppCard` row skeletons.
+
 **Icons:** product chrome uses Lucide (`lucide-react`), `strokeWidth={1.75}`. Do not import `@ant-design/icons` in app source. Ant Design may still render its own glyphs inside Select, DatePicker, and Pagination. Brand marks (Google) stay as local SVG. Document presence marks (Orchestration §6.4) are Lucide `File` (physical), `ScanLine` (digital) and `UserRound` (with the owner), not the letters `F` / `D` / `(i)`. The number mark stays the `nº` glyph.
 
 Do not rebuild an Ant Design control in raw HTML only to restyle it. Pages compose Ant Design (`Table`, `Form`, `Select`, `Pagination`, overlays) plus module-owned wrappers under `apps/web/src/lib/<area>/`.
@@ -39,7 +47,7 @@ Custom React markup and CSS remain appropriate for:
 
 TanStack Router file-based routing is the frontend routing standard. Route declarations live under `apps/web/src/routes/`; `App.tsx` owns application bootstrap and authentication gating, not route registration.
 
-Approved SPA destinations: `/`, `/tables/people`, `/tables/documents`, `/tables/bills`, `/search`, `/admin`, `/settings`, `/cadastro`. `/tables` without a type redirects to `/tables/people`. `/profiles` may redirect for compatibility; it is not a destination. `/forms` redirects to `/cadastro?mode=forms` (Google Forms is a Cadastro submodule, not a nav destination).
+Approved SPA destinations: `/`, `/tables/people`, `/tables/documents`, `/tables/bills`, `/search`, `/admin`, `/cadastro`. `/tables` without a type redirects to `/tables/people`. `/profiles` may redirect for compatibility; it is not a destination. `/forms` redirects to `/cadastro?mode=forms` (Google Forms is a Cadastro submodule, not a nav destination).
 
 Do not add `/chat`, `/query`, `/tasks`, `/ocr`, `/operations`, `/matching`, `/custom-data`, or `/google-forms` as destinations.
 

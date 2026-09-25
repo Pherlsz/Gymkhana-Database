@@ -303,7 +303,7 @@ func (store *PostgresStore) ApplyRow(ctx context.Context, imported Import, row M
 		outcome.Kind = OutcomeLinked
 		outcome.TargetID = &targetID
 	case ActionCreate, ActionUpdate:
-		targetID, err = applyCanonicalMutation(ctx, tx, imported, row.Row, mutation, generatedID, requestID, now, action)
+		targetID, err = applyCanonicalMutation(ctx, tx, imported, row, mutation, generatedID, requestID, now, action)
 		if err != nil {
 			if isConflictError(err) {
 				outcome.Kind, outcome.ErrorCode = OutcomeConflicted, "conflict"
@@ -366,16 +366,16 @@ func validateCanonicalLink(ctx context.Context, tx pgx.Tx, module Module, id Ide
 	return nil
 }
 
-func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row Row, mutation Mutation, generatedID Identifier, requestID string, now time.Time, action Action) (Identifier, error) {
+func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row MappedRow, mutation Mutation, generatedID Identifier, requestID string, now time.Time, action Action) (Identifier, error) {
 	if mutation.Module != imported.Module {
 		return Identifier{}, ErrInvalidInput
 	}
 	targetID := generatedID
 	if action == ActionUpdate {
-		if row.TargetID == nil || row.TargetVersion <= 0 {
+		if row.Row.TargetID == nil || row.Row.TargetVersion <= 0 {
 			return Identifier{}, ErrInvalidInput
 		}
-		targetID = *row.TargetID
+		targetID = *row.Row.TargetID
 	}
 	switch imported.Module {
 	case ModuleProfiles:
@@ -384,32 +384,41 @@ func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row
 		}
 		values := mutation.Profile
 		if action == ActionCreate {
+			args := append([]any{databaseUUID(targetID)}, profileSQLArgs(values)...)
+			args = append(args, now)
 			_, err := tx.Exec(ctx, `INSERT INTO profiles (
   id, full_name, social_name, email, mobile_phone, landline_phone,
   address_street, address_number, address_complement, address_neighborhood,
-  address_city, address_state, address_postal_code, notes, created_at, updated_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$15)`,
-				databaseUUID(targetID), values.FullName, nullableString(values.SocialName),
-				nullableString(values.Email), nullableString(values.MobilePhone), nullableString(values.LandlinePhone),
-				nullableString(values.Address.Street), nullableString(values.Address.Number), nullableString(values.Address.Complement),
-				nullableString(values.Address.Neighborhood), nullableString(values.Address.City), nullableString(values.Address.State),
-				nullableString(values.Address.PostalCode), nullableString(values.Notes), now)
+  address_city, address_state, address_postal_code, notes,
+  birth_date, gender, blood_type, nationality, birth_city, marital_status, wedding_date,
+  father_name, father_birth_date, mother_name, mother_birth_date, health_plan, blood_donor, organ_donor,
+  team, sector, collections, vehicle_model, vehicle_color, vehicle_plate, vehicle_year, club_membership,
+  membership_type, place_of_origin, birth_country, parents_wedding_date, supermarket_club, pet,
+  travel_countries, card_brand, card_bank, created_at, updated_at
+) VALUES (
+  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
+  $15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,
+  $29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45,$46,$46
+)`, args...)
 			if err != nil {
 				return Identifier{}, err
 			}
 		} else {
+			args := append([]any{databaseUUID(targetID), row.Row.TargetVersion}, profileSQLArgs(values)...)
+			args = append(args, now)
 			command, err := tx.Exec(ctx, `UPDATE profiles SET
-  full_name=$3, social_name=$4, email=$5, mobile_phone=$6,
-  landline_phone=$7, address_street=$8, address_number=$9,
-  address_complement=$10, address_neighborhood=$11, address_city=$12,
-  address_state=$13, address_postal_code=$14, notes=$15,
-  version=version+1, updated_at=$16
- WHERE id=$1 AND version=$2`, databaseUUID(targetID), row.TargetVersion, values.FullName,
-				nullableString(values.SocialName), nullableString(values.Email),
-				nullableString(values.MobilePhone), nullableString(values.LandlinePhone), nullableString(values.Address.Street),
-				nullableString(values.Address.Number), nullableString(values.Address.Complement), nullableString(values.Address.Neighborhood),
-				nullableString(values.Address.City), nullableString(values.Address.State), nullableString(values.Address.PostalCode),
-				nullableString(values.Notes), now)
+  full_name=$3, social_name=$4, email=$5, mobile_phone=$6, landline_phone=$7,
+  address_street=$8, address_number=$9, address_complement=$10, address_neighborhood=$11,
+  address_city=$12, address_state=$13, address_postal_code=$14, notes=$15,
+  birth_date=$16, gender=$17, blood_type=$18, nationality=$19, birth_city=$20,
+  marital_status=$21, wedding_date=$22, father_name=$23, father_birth_date=$24,
+  mother_name=$25, mother_birth_date=$26, health_plan=$27, blood_donor=$28, organ_donor=$29,
+  team=$30, sector=$31, collections=$32, vehicle_model=$33, vehicle_color=$34,
+  vehicle_plate=$35, vehicle_year=$36, club_membership=$37, membership_type=$38,
+  place_of_origin=$39, birth_country=$40, parents_wedding_date=$41, supermarket_club=$42,
+  pet=$43, travel_countries=$44, card_brand=$45, card_bank=$46,
+  version=version+1, updated_at=$47
+ WHERE id=$1 AND version=$2`, args...)
 			if err != nil {
 				return Identifier{}, err
 			}
@@ -418,6 +427,9 @@ func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row
 			}
 		}
 		if err := syncImportedCPFPresence(ctx, tx, targetID, values.CPF, now); err != nil {
+			return Identifier{}, err
+		}
+		if err := syncImportedSidecarDocuments(ctx, tx, targetID, row.Values, now); err != nil {
 			return Identifier{}, err
 		}
 		if err := applyCustomValueMutations(ctx, tx, imported.Module, targetID, mutation.CustomValues, now); err != nil {
@@ -467,7 +479,7 @@ func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row
 			command, err := tx.Exec(ctx, `UPDATE documents SET
   presence_id=$3, document_date=$4, notes=$5, medium=$6, idle_custody=$7, valid_until=$8,
   version=version+1, updated_at=$9
- WHERE id=$1 AND version=$2`, databaseUUID(targetID), row.TargetVersion, databaseUUID(presenceID), nullableDate(values.DocumentDate), nullableString(values.Notes), values.Medium, idleCustody, nullableDate(values.ValidUntil), now)
+ WHERE id=$1 AND version=$2`, databaseUUID(targetID), row.Row.TargetVersion, databaseUUID(presenceID), nullableDate(values.DocumentDate), nullableString(values.Notes), values.Medium, idleCustody, nullableDate(values.ValidUntil), now)
 			if err != nil {
 				return Identifier{}, err
 			}
@@ -514,7 +526,7 @@ func applyCanonicalMutation(ctx context.Context, tx pgx.Tx, imported Import, row
   printed_address=$6, reference_value=$7, competence=$8, amount=$9,
   currency=$10, notes=$11, medium=$12, idle_custody=$13, version=b.version+1, updated_at=$14
  FROM bill_types t
- WHERE b.id=$1 AND b.version=$2 AND t.id=$4 AND t.active=true`, databaseUUID(targetID), row.TargetVersion, databaseUUID(Identifier(values.OwnerProfileID)), databaseUUID(Identifier(values.TypeID)), nullableString(values.PrintedHolderName), nullableString(values.PrintedAddress), nullableString(values.Reference), nullableString(values.Competence), nullableDecimal(values.Amount), nullableString(values.Currency), nullableString(values.Notes), values.Medium, idleCustody, now)
+ WHERE b.id=$1 AND b.version=$2 AND t.id=$4 AND t.active=true`, databaseUUID(targetID), row.Row.TargetVersion, databaseUUID(Identifier(values.OwnerProfileID)), databaseUUID(Identifier(values.TypeID)), nullableString(values.PrintedHolderName), nullableString(values.PrintedAddress), nullableString(values.Reference), nullableString(values.Competence), nullableDecimal(values.Amount), nullableString(values.Currency), nullableString(values.Notes), values.Medium, idleCustody, now)
 			if err != nil {
 				return Identifier{}, err
 			}
@@ -769,6 +781,22 @@ RETURNING id, actor_user_id, module, source_kind, original_filename,
 		return Import{}, fmt.Errorf("cancel import: %w", err)
 	}
 	return value, nil
+}
+
+func (store *PostgresStore) DeleteImport(ctx context.Context, id Identifier, actorID auth.Identifier) error {
+	command, err := store.pool.Exec(ctx, `DELETE FROM operation_imports
+ WHERE id=$1 AND actor_user_id=$2
+   AND state IN ('COMPLETED','FAILED','CANCELLED','EXPIRED')`, databaseUUID(id), authDatabaseUUID(actorID))
+	if err != nil {
+		return mapPostgresError("delete import", err)
+	}
+	if command.RowsAffected() == 1 {
+		return nil
+	}
+	if _, err := store.GetImport(ctx, id, actorID); err != nil {
+		return err
+	}
+	return ErrInvalidState
 }
 
 func optionalIdentifier(value *Identifier) any {

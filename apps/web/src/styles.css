@@ -2,9 +2,8 @@
   box-sizing: border-box;
 }
 /*
- * Page titles speak in the brand's display voice. The legacy pages set class
- * `page-title` with no rules anywhere; TablesPage is the lone PageHeader user.
- * One shared rule puts Oswald (the crest's lettering face) on every screen.
+ * Page titles speak in the brand's display voice. Shared screens use PageHeader
+ * (Oswald on `.page-header__title`). Home keeps a custom hero heading.
  */
 .page-title,
 .home-page__header h1 {
@@ -357,11 +356,6 @@ p {
   text-transform: uppercase;
   color: var(--gym-color-text-muted);
 }
-.document-presence__error {
-  margin: 0;
-  color: var(--gym-color-danger);
-  font-size: var(--gym-font-size-sm);
-}
 .document-presence__list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
@@ -369,14 +363,6 @@ p {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-.document-presence--editable .document-presence__list {
-  grid-template-columns: 1fr;
-}
-@media (min-width: 720px) {
-  .document-presence--editable .document-presence__list {
-    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-  }
 }
 .document-presence__row {
   display: grid;
@@ -393,29 +379,15 @@ p {
     transparent
   );
 }
-.document-presence--editable .document-presence__row {
-  align-items: center;
-}
-/* Ant now owns these controls, so they inherit the app-wide field height and
-   theming instead of the 2rem native pair this row used to hand-roll. */
-.document-presence__row .ant-select,
-.document-presence__row .ant-input {
-  width: 100%;
-  min-width: 0;
-}
 .document-presence__type {
   font-size: 0.75rem;
   font-weight: 650;
 }
-.document-presence__hint,
 .document-presence__number {
   grid-column: 2;
   color: var(--gym-color-text-muted);
   font-size: var(--gym-font-size-sm);
   overflow-wrap: anywhere;
-}
-.document-presence__row .ant-input {
-  grid-column: 2;
 }
 .profile-panel__actions {
   display: flex;
@@ -480,6 +452,9 @@ p {
   grid-template-columns: 1fr;
   gap: var(--gym-space-3);
   padding: var(--gym-space-4);
+}
+.record-form {
+  container-type: inline-size;
 }
 .record-filters label,
 .record-form label,

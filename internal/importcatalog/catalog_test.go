@@ -11,9 +11,25 @@ func TestSuggestColumnProfiles(t *testing.T) {
 		{"Nome", "full_name", false},
 		{"E-mail", "email", false},
 		{"Celular", "mobile_phone", false},
-		{"Idade", discardSentinel, true},
-		{"Signo", discardSentinel, true},
+		{"Idade", DiscardSentinel, true},
+		{"Signo", DiscardSentinel, true},
 		{"Desconhecido", "", false},
+		{"Sexo", "gender", false},
+		{"Data de nascimento:", "birth_date", false},
+		{"Município", "address_city", false},
+		{"CPF/CGC", "cpf", false},
+		{"arquivo", DiscardSentinel, true},
+		{"RG", DocumentFieldPrefix + "rg", false},
+		{"CNH", DocumentFieldPrefix + "cnh", false},
+		{"PIS", DocumentFieldPrefix + "pis", false},
+		{"Formação", DocumentFieldPrefix + "generic", false},
+		{"rg_presenca", DiscardSentinel, true},
+		{"Equipe", "team", false},
+		{"Doador sangue", "blood_donor", false},
+		{"SOMA_DIGITO", DiscardSentinel, true},
+		{"Quem indicou?", DiscardSentinel, true},
+		{"Nº", DiscardSentinel, true},
+		{"CNH (número e data da primeira emissão):", DocumentFieldPrefix + "cnh", false},
 	}
 	for _, tc := range cases {
 		got := SuggestColumn(ModuleProfiles, tc.header)
@@ -25,7 +41,7 @@ func TestSuggestColumnProfiles(t *testing.T) {
 
 func TestApplyHeaders(t *testing.T) {
 	targets := ApplyHeaders(ModuleProfiles, []string{"Nome", "Idade", "CPF"})
-	if targets[0] != "full_name" || targets[1] != discardSentinel || targets[2] != "cpf" {
+	if targets[0] != "full_name" || targets[1] != DiscardSentinel || targets[2] != "cpf" {
 		t.Fatalf("ApplyHeaders() = %#v", targets)
 	}
 }

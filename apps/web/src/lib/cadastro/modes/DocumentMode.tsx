@@ -1,9 +1,8 @@
 import { FileText } from "lucide-react";
-import type { ChangeEvent } from "react";
 import { useI18n } from "../../../i18n";
 import type { DocumentType, Profile } from "../../api/client";
 import { CadastroHolderSection } from "../components/CadastroHolderSection";
-import { CadastroSection } from "../components/CadastroSection";
+import { CadastroSection, CadastroSectionBadge } from "../components/CadastroSection";
 import { DocumentFormFields, type DocumentFormFieldsState } from "../components/DocumentFormFields";
 
 export interface DocumentModeProps {
@@ -11,15 +10,16 @@ export interface DocumentModeProps {
   onChangeDocFields: (patch: Partial<DocumentFormFieldsState>) => void;
   documentTypes: DocumentType[];
   fileInputId: string;
-  onFileDrop: (e: ChangeEvent<HTMLInputElement>) => void;
   holderName: string;
   cpf: string;
   onChangeCpf: (cpf: string) => void;
   selectedProfile: Profile | null;
   onSelectProfile: (p: Profile) => void;
   onSelectNewName: (name: string) => void;
+  onDraftName: (name: string) => void;
   onClearProfile: () => void;
-  onChangeSelectedProfile: (p: Profile | null) => void;
+  lockType?: boolean;
+  attachmentsEnabled?: boolean;
   defaultOpenPrimary?: boolean;
   defaultOpenHolder?: boolean;
 }
@@ -29,15 +29,16 @@ export function DocumentMode({
   onChangeDocFields,
   documentTypes,
   fileInputId,
-  onFileDrop,
   holderName,
   cpf,
   onChangeCpf,
   selectedProfile,
   onSelectProfile,
   onSelectNewName,
+  onDraftName,
   onClearProfile,
-  onChangeSelectedProfile,
+  lockType,
+  attachmentsEnabled,
   defaultOpenPrimary = true,
   defaultOpenHolder = true,
 }: DocumentModeProps) {
@@ -48,9 +49,7 @@ export function DocumentMode({
     <>
       <CadastroSection
         badge={
-          <span className="cadastro-group__badge cadastro-group__badge--documents">
-            {copy.badgeOfficial}
-          </span>
+          <CadastroSectionBadge modifier="documents">{copy.badgeOfficial}</CadastroSectionBadge>
         }
         defaultOpen={defaultOpenPrimary}
         hint={copy.sectionDocDataHint}
@@ -59,9 +58,10 @@ export function DocumentMode({
         title={copy.sectionDocData}
       >
         <DocumentFormFields
+          attachmentsEnabled={attachmentsEnabled}
           documentTypes={documentTypes}
           fileInputId={fileInputId}
-          onFileDrop={onFileDrop}
+          lockType={lockType}
           state={docFields}
           onChange={onChangeDocFields}
         />
@@ -74,8 +74,8 @@ export function DocumentMode({
         holderName={holderName}
         inputId="cad-doc-holder"
         onChangeCpf={onChangeCpf}
-        onChangeSelectedProfile={onChangeSelectedProfile}
         onClearProfile={onClearProfile}
+        onDraftName={onDraftName}
         onSelectNewName={onSelectNewName}
         onSelectProfile={onSelectProfile}
         selectedProfile={selectedProfile}

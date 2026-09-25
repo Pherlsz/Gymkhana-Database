@@ -72,6 +72,10 @@ func (service *fakeOperationsService) CancelImport(context.Context, auth.Session
 	return service.imported, service.err
 }
 
+func (service *fakeOperationsService) DeleteImport(context.Context, auth.Session, operations.Identifier, string) error {
+	return service.err
+}
+
 func (service *fakeOperationsService) CreateExport(_ context.Context, _ auth.Session, module operations.Module, _, _ string) (operations.Export, error) {
 	service.lastModule = module
 	return service.exported, service.err
@@ -154,6 +158,11 @@ func TestOperationsHTTPUsesLogicalRedactedContracts(t *testing.T) {
 		t.Fatalf("bounded preview missing from response: %s", response.Body.String())
 	}
 
+	deleted := operationRequest(t, handler, http.MethodDelete, "/api/v1/operations/imports/"+id.String(), "")
+	if deleted.Code != http.StatusNoContent {
+		t.Fatalf("delete import response = %d, %s", deleted.Code, deleted.Body.String())
+	}
+
 	report := operationRequest(t, handler, http.MethodGet, "/api/v1/operations/imports/"+id.String()+"/report", "")
 	if report.Code != http.StatusOK || !strings.Contains(report.Body.String(), `"linked":3`) || !strings.Contains(report.Body.String(), `"outcome":"LINKED"`) {
 		t.Fatalf("report response = %d, %s", report.Code, report.Body.String())
@@ -214,6 +223,15 @@ func TestOperationsHTTPRequiresAuthentication(t *testing.T) {
 	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/v1/operations/catalog", nil))
 	if response.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestOperationsHTTPUnavailableWhenServiceNil(t *testing.T) {
+	var service *fakeOperationsService
+	handler := operationsHTTPFixture(t, service)
+	response := operationRequest(t, handler, http.MethodGet, "/api/v1/operations/catalog", "")
+	if response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("nil operations status = %d, want %d, body=%s", response.Code, http.StatusServiceUnavailable, response.Body.String())
 	}
 }
 

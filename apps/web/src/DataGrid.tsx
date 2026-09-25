@@ -9,6 +9,7 @@ import {
 } from "antd";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo, type ReactNode } from "react";
+import { InlineStatus } from "./components/InlineStatus";
 import { useI18n } from "./i18n";
 
 type GridColumn<TData> = ColumnDef<TData, any>;
@@ -113,14 +114,10 @@ export function DataGrid<TData>({
   return (
     <Card aria-busy={loading} className={surfaceClassName}>
       {loading ? (
-        <p className="data-grid__status" role="status">
-          {loadingLabel}
-        </p>
+        <InlineStatus className="data-grid__status" kind="loading" label={loadingLabel} />
       ) : null}
       {!loading && data.length === 0 ? (
-        <p className="data-grid__status" role="status">
-          {emptyLabel}
-        </p>
+        <InlineStatus className="data-grid__status" kind="empty" label={emptyLabel} />
       ) : null}
       {!loading && data.length > 0 ? (
         <>

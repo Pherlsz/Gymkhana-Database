@@ -49,8 +49,8 @@ Tela de gestão do sistema (users, integrações, chave compartilhada do modelo)
 _Avoid_: Preferências, settings do user
 
 **Preferências**:
-Tela da conta logada: nome de exibição, tema.
-_Avoid_: Administração, Profile, chave de modelo
+Não há tela de conta. Nome vem do convite e do Google. Tema fica na sidebar.
+_Avoid_: Página de configurações, edição de nome, chave de modelo no perfil
 
 **Coluna calculada**:
 Valor derivado na página atual da grade (idade, signo, soma de dígitos). Não é cadastro e não cobre a base inteira.

@@ -1,7 +1,8 @@
 import { Zap } from "lucide-react";
-import { type ChangeEvent, useId, useState } from "react";
+import { useId, useState } from "react";
 import { useI18n } from "../../../i18n";
 import type { BillType } from "../../api/client";
+import { isCompetenceMonth } from "../cadastroValidate";
 import { INITIAL_BILL_FIELDS, type PendingBill } from "../types";
 import { BillFormFields, type BillFormFieldsState } from "./BillFormFields";
 import { CadastroStagedSection } from "./CadastroStagedSection";
@@ -11,6 +12,7 @@ export interface PendingBillsSectionProps {
   onAddBill: (bill: PendingBill) => void;
   onRemoveBill: (id: string) => void;
   billTypes: BillType[];
+  attachmentsEnabled?: boolean | undefined;
   defaultOpen?: boolean | undefined;
   open?: boolean | undefined;
   onToggleOpen?: (() => void) | undefined;
@@ -21,62 +23,59 @@ export function PendingBillsSection({
   onAddBill,
   onRemoveBill,
   billTypes,
+  attachmentsEnabled,
   defaultOpen = true,
   open,
   onToggleOpen,
 }: PendingBillsSectionProps) {
-  const { messages, t } = useI18n();
+  const { messages } = useI18n();
   const copy = messages.tables.cadastro;
   const actions = messages.common.actions;
   const labels = messages.common.labels;
 
   const [addingBill, setAddingBill] = useState(false);
   const [billState, setBillState] = useState<BillFormFieldsState>(INITIAL_BILL_FIELDS);
+  const [formError, setFormError] = useState<string | null>(null);
   const inlineBillFileId = useId();
 
   const handleConfirmAdd = () => {
-    const type = billTypes.find((bt) => bt.id === billState.billTypeId);
-    const serviceName = type?.label || copy.billFallbackDefault;
+    const type = billTypes.find((bt) => bt.id === billState.billTypeId) ?? billTypes[0];
+    if (!type) {
+      setFormError(copy.errorBillTypeRequired);
+      return;
+    }
+    if (!billState.billInstallation.trim()) {
+      setFormError(copy.errorBillInstallationRequired);
+      return;
+    }
+    if (!isCompetenceMonth(billState.billCompetence)) {
+      setFormError(copy.errorBillCompetenceRequired);
+      return;
+    }
+    if (!billState.billAmount.trim()) {
+      setFormError(copy.errorBillAmountRequired);
+      return;
+    }
     const newBill: PendingBill = {
       id: String(Date.now()),
-      typeId: billState.billTypeId || billTypes?.[0]?.id || "",
-      serviceName,
-      provider: billState.billProvider.trim(),
+      typeId: type.id,
+      serviceName: type.label,
+      typeKey: type.technical_key,
       installation: billState.billInstallation.trim(),
       competence: billState.billCompetence.trim(),
-      dueDate: billState.billDueDate,
       amount: billState.billAmount.trim(),
       printedHolder: billState.billPrintedHolder.trim(),
       printedAddress: billState.billPrintedAddress.trim(),
       medium: billState.billMedium,
       notes: billState.billNotes.trim(),
-      tag: "manual",
+      tag: billState.file ? "queued" : "manual",
+      customDraft: billState.customDraft,
+      file: billState.file,
     };
     onAddBill(newBill);
     setBillState(INITIAL_BILL_FIELDS);
+    setFormError(null);
     setAddingBill(false);
-  };
-
-  const handleFileDrop = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const fallbackType = billTypes?.[0];
-    const newBill: PendingBill = {
-      id: String(Date.now()),
-      typeId: billState.billTypeId || fallbackType?.id || "",
-      serviceName: fallbackType?.label || copy.billFallbackDefault,
-      provider: "Concessionária",
-      installation: "400123456",
-      competence: "2026-09",
-      amount: "150,00",
-      medium: "DIGITAL",
-      notes: t(copy.ocrExtractedNote, { filename: file.name }),
-      tag: "ocr",
-    };
-    onAddBill(newBill);
-    setAddingBill(false);
-    setBillState(INITIAL_BILL_FIELDS);
-    e.target.value = "";
   };
 
   return (
@@ -88,23 +87,26 @@ export function PendingBillsSection({
       count={bills.length}
       defaultOpen={defaultOpen}
       emptyText={copy.sectionBillsEmpty}
+      error={formError ?? undefined}
       hint={copy.sectionBillsHint}
       icon={<Zap size={18} strokeWidth={1.75} />}
       items={bills.map((b) => ({
         id: b.id,
-        title: b.provider ? `${b.serviceName} — ${b.provider}` : b.serviceName,
+        title: b.serviceName,
         subtitle: `${b.installation ? `${copy.fieldBillInstallation} ${b.installation}` : copy.docNumberEmpty}${b.amount ? ` · R$ ${b.amount}` : ""}`,
-        tagText: b.tag === "ocr" ? labels.ocr : copy.tagActive,
-        isOcr: b.tag === "ocr",
+        tagText: b.tag === "queued" ? labels.ocr : copy.tagActive,
+        isOcr: b.tag === "queued",
       }))}
       modifier="bills"
       onCancelAdd={() => {
         setAddingBill(false);
         setBillState(INITIAL_BILL_FIELDS);
+        setFormError(null);
       }}
       onConfirmAdd={handleConfirmAdd}
       onRemoveItem={onRemoveBill}
       onStartAdd={() => {
+        setFormError(null);
         setBillState({
           ...INITIAL_BILL_FIELDS,
           billTypeId: billTypes?.[0]?.id || "",
@@ -117,11 +119,11 @@ export function PendingBillsSection({
       title={copy.sectionBillsTitle}
     >
       <BillFormFields
+        attachmentsEnabled={attachmentsEnabled}
         billTypes={billTypes}
         fileInputId={inlineBillFileId}
         state={billState}
         onChange={(patch) => setBillState((prev) => ({ ...prev, ...patch }))}
-        onFileDrop={handleFileDrop}
       />
     </CadastroStagedSection>
   );

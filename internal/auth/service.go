@@ -198,6 +198,9 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 	} else {
 		_, allowed = service.allowedEmails[identity.Email]
 	}
+	if !allowed && identity.Email == service.superadminEmail {
+		allowed = true
+	}
 
 	if !allowed {
 		service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
@@ -207,20 +210,23 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 	user, err := service.store.FindUserByEmail(ctx, identity.Email)
 	switch {
 	case errors.Is(err, ErrUserNotFound):
-		role := RoleExternal
-		if identity.Email == service.superadminEmail {
-			role = RoleSuperadmin
+		if identity.Email != service.superadminEmail {
+			service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
+			return LoginResult{}, ErrAccessDenied
 		}
 		userID, idErr := NewIdentifier()
 		if idErr != nil {
 			service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
 			return LoginResult{}, fmt.Errorf("generate user id: %w", idErr)
 		}
-		user, err = service.store.CreateUser(ctx, CreateUserParams{ID: userID, Identity: identity, Role: role})
+		user, err = service.store.CreateUser(ctx, CreateUserParams{ID: userID, Identity: identity, Role: RoleSuperadmin})
 	case err == nil:
 		if !user.Active {
 			service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
 			return LoginResult{}, ErrAccessDenied
+		}
+		if user.DisplayName != "" {
+			identity.DisplayName = user.DisplayName
 		}
 		user, err = service.store.UpdateUserIdentity(ctx, user.ID, identity)
 	}

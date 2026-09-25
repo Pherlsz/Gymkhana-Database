@@ -11,7 +11,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Receipt,
-  Settings,
+  Shield,
   Sun,
   User,
   UserPlus,
@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useI18n } from "./i18n";
+import { ADMIN_SEARCH_DEFAULTS } from "./lib/admin/adminSearch";
+import { canManageUsers } from "./lib/roles";
 import { TABLE_SEARCH_DEFAULTS } from "./lib/tables/tableRoutes";
 import { CADASTRO_SEARCH_DEFAULTS } from "./lib/cadastro/cadastroSearch";
 import { GLOBAL_SEARCH_DEFAULTS } from "./lib/search/urlState";
@@ -37,9 +39,11 @@ export function AuthenticatedShell() {
 
 function AuthenticatedShellLayout() {
   const { messages } = useI18n();
+  const { session } = useApplicationContext();
   const navigate = useNavigate();
   const copy = messages.shell;
   const entities = messages.common.entities;
+  const showAdmin = canManageUsers(session.user.role);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [navOpen, setNavOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -283,6 +287,21 @@ function AuthenticatedShellLayout() {
               <span className="nav-item__label">{entities.cadastro}</span>
             </Link>
           </RailTip>
+          {showAdmin ? (
+            <RailTip label={entities.admin} rail={rail}>
+              <Link
+                activeOptions={{ exact: true, includeSearch: false }}
+                activeProps={{ "aria-current": "page", className: "nav-item--active" }}
+                className="nav-item"
+                search={ADMIN_SEARCH_DEFAULTS}
+                title={entities.admin}
+                to="/admin"
+              >
+                <Shield aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />
+                <span className="nav-item__label">{entities.admin}</span>
+              </Link>
+            </RailTip>
+          ) : null}
         </nav>
         <UserAccountCard rail={rail} />
       </aside>
@@ -396,11 +415,12 @@ function SidebarThemeToggle({ rail }: { rail: boolean }) {
 }
 
 function UserAccountCard({ rail }: { rail: boolean }) {
-  const navigate = useNavigate();
   const { messages } = useI18n();
   const { session, signingOut, signOut } = useApplicationContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [open, setOpen] = useState(false);
+  const [menuWidth, setMenuWidth] = useState<number>();
+  const anchorRef = useRef<HTMLDivElement>(null);
   const user = session.user;
   const copy = messages.shell;
 
@@ -411,12 +431,13 @@ function UserAccountCard({ rail }: { rail: boolean }) {
   return (
     <div className="sidebar-account">
       <SidebarThemeToggle rail={rail} />
-      <div className="sidebar-account__anchor">
+      <div className="sidebar-account__anchor" ref={anchorRef}>
         <RailTip label={user.display_name} rail={rail}>
           <Dropdown
             getPopupContainer={() => document.body}
             onOpenChange={(next, info) => {
               if (!next && info.source === "menu") return;
+              if (next) setMenuWidth(anchorRef.current?.offsetWidth);
               setOpen(next);
               if (next) return;
               const active = document.activeElement;
@@ -428,25 +449,12 @@ function UserAccountCard({ rail }: { rail: boolean }) {
             placement={rail ? "rightBottom" : "topLeft"}
             menu={{
               onClick: ({ key }) => {
-                if (key === "settings") {
-                  setOpen(false);
-                  void navigate({ to: "/settings" });
-                  return;
-                }
                 if (key === "logout") {
                   setOpen(false);
                   signOut();
                 }
               },
               items: [
-                {
-                  key: "settings",
-                  icon: <Settings aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
-                  label: copy.account.settings,
-                },
-                {
-                  type: "divider",
-                },
                 {
                   key: "logout",
                   danger: true,
@@ -456,7 +464,11 @@ function UserAccountCard({ rail }: { rail: boolean }) {
                 },
               ],
             }}
-            styles={{ root: { minWidth: rail ? 160 : 210 } }}
+            styles={{
+              root: rail
+                ? { minWidth: 160 }
+                : { width: menuWidth, minWidth: menuWidth, maxWidth: menuWidth },
+            }}
             trigger={["click"]}
           >
             <Button

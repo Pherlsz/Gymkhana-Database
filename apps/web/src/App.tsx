@@ -62,11 +62,10 @@ export function App() {
     try {
       await logout();
       queryClient.clear();
-      setAuthentication({ kind: "unauthenticated" });
+      window.location.replace("/");
     } catch {
-      setAuthentication({ kind: "unavailable" });
-    } finally {
       setSigningOut(false);
+      setAuthentication({ kind: "unavailable" });
     }
   }, [queryClient]);
 
@@ -85,5 +84,5 @@ export function App() {
       </QueryClientProvider>
     );
 
-  return <ThemeProvider>{tree}</ThemeProvider>;
+  return <ThemeProvider forceDark={authentication.kind !== "authenticated"}>{tree}</ThemeProvider>;
 }

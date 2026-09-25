@@ -36,6 +36,7 @@ type ServiceOptions struct {
 	MaximumSourceBytes   int64
 	RecoveryBatch        int
 	OnAuditFailure       AuditFailureHandler
+	Ready                func(context.Context) bool
 }
 
 type Service struct {
@@ -51,6 +52,7 @@ type Service struct {
 	maximumSourceBytes   int64
 	recoveryBatch        int
 	onAuditFailure       AuditFailureHandler
+	ready                func(context.Context) bool
 }
 
 func NewService(store Store, jobs Jobs, sources SourceGateway, targets TargetGateway, extractor Extractor, options ServiceOptions) (*Service, error) {
@@ -86,13 +88,14 @@ func NewService(store Store, jobs Jobs, sources SourceGateway, targets TargetGat
 		store: store, jobs: jobs, sources: sources, targets: targets, extractor: extractor,
 		now: options.Now, timeout: options.Timeout, maximumRate: options.MaximumRate,
 		maximumProviderUsage: options.MaximumProviderUsage, maximumSourceBytes: options.MaximumSourceBytes,
-		recoveryBatch: options.RecoveryBatch, onAuditFailure: options.OnAuditFailure,
+		recoveryBatch: options.RecoveryBatch, onAuditFailure: options.OnAuditFailure, ready: options.Ready,
 	}, nil
 }
 
 func (service *Service) Capability() Capability {
 	return Capability{
-		Enabled: true, SupportedMIMEs: SupportedMIMEs(), MaximumSourceBytes: service.maximumSourceBytes,
+		Enabled:        service.ready == nil || service.ready(context.Background()),
+		SupportedMIMEs: SupportedMIMEs(), MaximumSourceBytes: service.maximumSourceBytes,
 		MaximumPages: MaximumPages, MaximumPixels: MaximumPixels, MaximumSuggestions: MaximumSuggestions,
 		MaximumDuration: service.timeout, MaximumRequests: service.maximumRate,
 		MaximumProviderUsage: service.maximumProviderUsage,
@@ -113,6 +116,10 @@ func (service *Service) StartJob(ctx context.Context, actor auth.Session, attach
 	if err != nil {
 		service.audit(ctx, auditActor(actor), nil, nil, AuditJobCreated, auditOutcome(err), nil, err, requestID)
 		return Job{}, err
+	}
+	if service.ready != nil && !service.ready(ctx) {
+		service.audit(ctx, &user.ID, nil, nil, AuditJobCreated, auth.AuditOutcomeFailure, nil, ErrUnavailable, requestID)
+		return Job{}, ErrUnavailable
 	}
 	if attachmentID.IsZero() || !validIdempotencyKey(idempotencyKey) || retryOf != nil && retryOf.IsZero() {
 		return Job{}, ErrInvalidInput

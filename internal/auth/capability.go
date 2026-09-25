@@ -12,6 +12,7 @@ var (
 	ErrCapabilityNotFound       = errors.New("capability not granted")
 	ErrCapabilityConflict       = errors.New("capability conflict")
 	ErrCapabilityAlreadyGranted = errors.New("capability already granted")
+	ErrMemberNeedsCapability    = errors.New("external user needs at least one capability")
 )
 
 type Capability string
@@ -120,17 +121,46 @@ func (service *Service) RevokeCapability(ctx context.Context, actor Session, par
 		return ErrSelfAccessChange
 	}
 
-	store, ok := service.store.(CapabilityStore)
+	store, ok := service.store.(interface {
+		CapabilityStore
+		UserAdministrationStore
+	})
 	if !ok {
 		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeFailure, requestID, actor.User.Email)
 		return fmt.Errorf("%w: capability store is unavailable", ErrInvalidServiceSetup)
 	}
 
-	if err := store.RevokeCapability(ctx, params.UserID, params.Capability); err != nil {
+	target, err := store.FindUserByID(ctx, params.UserID)
+	if err != nil {
 		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeFailure, requestID, actor.User.Email)
 		return err
 	}
-	service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeSuccess, requestID, actor.User.Email)
+	if target.User.Role == RoleExternal {
+		current, listErr := store.ListCapabilities(ctx, params.UserID)
+		if listErr != nil {
+			service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeFailure, requestID, target.User.Email)
+			return listErr
+		}
+		held := false
+		remaining := 0
+		for _, capability := range current {
+			if capability == params.Capability {
+				held = true
+				continue
+			}
+			remaining++
+		}
+		if held && remaining == 0 {
+			service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeDenied, requestID, target.User.Email)
+			return ErrMemberNeedsCapability
+		}
+	}
+
+	if err := store.RevokeCapability(ctx, params.UserID, params.Capability); err != nil {
+		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeFailure, requestID, target.User.Email)
+		return err
+	}
+	service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventCapabilityRevoked, AuditOutcomeSuccess, requestID, target.User.Email)
 	return nil
 }
 

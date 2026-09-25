@@ -1,5 +1,6 @@
-import { Alert, Card, Input, Select } from "antd";
-import { useState } from "react";
+import { Flex, Input } from "antd";
+import { UserRound, Zap } from "lucide-react";
+import { type ReactNode, useId, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ConfirmDelete } from "../../components/ConfirmDelete";
 import { useI18n } from "../../i18n";
@@ -8,26 +9,26 @@ import {
   updateBill,
   type BillRecord,
   type BillType,
-  type BillValuesRequest,
   type Profile,
 } from "../api/client";
 import {
-  RecordCustomFieldsSection,
   recordCustomFieldError,
   saveRecordCustomValues,
   useSeedRecordDraft,
   type CustomDraftValue,
 } from "../../RecordCustomFields";
+import { CadastroHolderSection } from "../cadastro/components/CadastroHolderSection";
+import { CadastroSection, CadastroSectionBadge } from "../cadastro/components/CadastroSection";
+import { StatusBanner } from "../../components/StatusBanner";
+import { BillFormFields } from "../cadastro/components/BillFormFields";
+import { RecordScreen } from "../cadastro/components/RecordScreen";
+import { billFormFromValues, billValuesFromForm } from "../cadastro/recordFieldMaps";
 import {
   CurrentUseControls,
   EditorActions,
-  EditorHeader,
   MissingRecord,
   billValues,
-  media,
-  mediumLabel,
   profileAddress,
-  withRecordMedium,
 } from "./RecordEditorCommon";
 
 export function BillEditor(props: {
@@ -44,40 +45,53 @@ export function BillEditor(props: {
   onSaved: (value: BillRecord, message: string) => Promise<void>;
   onDuplicate: (value: BillRecord) => void;
   onDelete: (value: BillRecord, confirmation: string) => void;
+  onOpenOwner?: (() => void) | undefined;
+  children?: ReactNode;
 }) {
-  const [values, setValues] = useState<BillValuesRequest>(() =>
-    props.record
-      ? billValues(props.record)
-      : {
-          owner_profile_id: props.profile.id,
-          bill_type_id:
-            props.initialTypeId && props.types.some((value) => value.id === props.initialTypeId)
-              ? props.initialTypeId
-              : (props.types.find((value) => value.active)?.id ?? ""),
-          printed_holder_name: props.profile.full_name,
-          printed_address: profileAddress(props.profile),
-          reference_value: "",
-          competence: "",
-          amount: "",
-          currency: "BRL",
-          notes: "",
-          medium: "PHYSICAL",
-          idle_custody: "ORGANIZATION",
-        },
+  const fileInputId = useId();
+  const initialValues = props.record
+    ? billValues(props.record)
+    : {
+        owner_profile_id: props.profile.id,
+        bill_type_id:
+          props.initialTypeId && props.types.some((value) => value.id === props.initialTypeId)
+            ? props.initialTypeId
+            : (props.types.find((value) => value.active)?.id ?? ""),
+        printed_holder_name: props.profile.full_name,
+        printed_address: profileAddress(props.profile),
+        reference_value: "",
+        competence: "",
+        amount: "",
+        currency: "BRL",
+        notes: "",
+        medium: "PHYSICAL" as const,
+        idle_custody: "ORGANIZATION" as const,
+      };
+  const [fields, setFields] = useState(() => billFormFromValues(initialValues));
+  const [currency, setCurrency] = useState(initialValues.currency);
+  const [idleCustody, setIdleCustody] = useState<"ORGANIZATION" | "OWNER">(
+    initialValues.idle_custody ?? "ORGANIZATION",
   );
   const { messages } = useI18n();
   const panel = messages.records.panel;
   const common = messages.common;
+  const recordCopy = messages.tables.record;
+  const cadastro = messages.tables.cadastro;
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [customDraft, setCustomDraft] = useState<Record<string, CustomDraftValue>>({});
-  useSeedRecordDraft("bill", props.record?.id, setCustomDraft);
+  useSeedRecordDraft("bill", props.record?.id, (draft: Record<string, CustomDraftValue>) =>
+    setFields((current) => ({ ...current, customDraft: draft })),
+  );
   const queryClient = useQueryClient();
   const editable = props.mode !== "view";
   const submit = async () => {
     setSaving(true);
     setError(null);
     try {
+      const values = billValuesFromForm(props.profile.id, fields, {
+        currency,
+        ...(fields.billMedium === "PHYSICAL" ? { idleCustody } : {}),
+      });
       const saved = props.record
         ? await updateBill(props.record.id, {
             ...values,
@@ -91,7 +105,7 @@ export function BillEditor(props: {
         definitionTargetId: saved.type.id,
         recordId: saved.id,
         recordVersion: saved.version,
-        draft: customDraft,
+        draft: fields.customDraft,
         force: Boolean(props.record),
       });
       if (updatedCustomValues) {
@@ -106,168 +120,106 @@ export function BillEditor(props: {
   };
   if (props.mode !== "create" && !props.record) return <MissingRecord onClose={props.onClose} />;
   return (
-    <Card className="record-editor">
-      <EditorHeader
-        closeLabel={panel.closeRecord}
-        title={
-          props.record
-            ? `${props.record.type.label} · ${props.record.reference_value}`
-            : panel.newBill
-        }
-        onClose={props.onClose}
-      />
-      {error ? <Alert message={panel.saveError} type="error" description={<>{error}</>} /> : null}
-      <div className="record-form">
-        <label>
-          {common.labels.type}
-          <Select
-            disabled={!editable || Boolean(props.lockType)}
-            onChange={(value) => setValues({ ...values, bill_type_id: value })}
-            options={[
-              { value: "", label: panel.selectPlaceholder },
-              ...props.types
-                .filter((value) => value.active || value.id === values.bill_type_id)
-                .map((value) => ({
-                  value: value.id,
-                  label: value.label,
-                })),
-            ]}
-            value={values.bill_type_id}
+    <RecordScreen
+      ariaLabel={recordCopy.billAria}
+      closeLabel={messages.tables.inspector.close}
+      eyebrow={recordCopy.billEyebrow}
+      footer={
+        <Flex className="profile-panel__actions" vertical gap="0.75rem">
+          <EditorActions
+            editable={editable}
+            saving={saving}
+            record={props.record}
+            onSave={() => void submit()}
+            onEdit={props.onEdit}
+            onDuplicate={props.onDuplicate}
           />
-        </label>
-        <label>
-          {common.labels.reference}
-          <Input
-            disabled={!editable}
-            value={values.reference_value}
-            onChange={(event) => setValues({ ...values, reference_value: event.target.value })}
-          />
-        </label>
-        <label>
-          {common.labels.competence}
-          <Input
-            disabled={!editable}
-            placeholder={panel.competencePlaceholder}
-            value={values.competence}
-            onChange={(event) => setValues({ ...values, competence: event.target.value })}
-          />
-        </label>
-        <label>
-          {common.labels.amount}
-          <Input
-            disabled={!editable}
-            inputMode="decimal"
-            value={values.amount}
-            onChange={(event) => setValues({ ...values, amount: event.target.value })}
-          />
-        </label>
-        <label>
-          {common.labels.currency}
-          <Input
-            disabled={!editable}
-            maxLength={3}
-            value={values.currency}
-            onChange={(event) =>
-              setValues({ ...values, currency: event.target.value.toUpperCase() })
-            }
-          />
-        </label>
-        <label>
-          {common.labels.medium}
-          <Select
-            disabled={!editable}
-            onChange={(value) =>
-              setValues(withRecordMedium(values, value as BillValuesRequest["medium"]))
-            }
-            options={media.map((value) => ({
-              value,
-              label: mediumLabel(value, messages),
-            }))}
-            value={values.medium}
-          />
-        </label>
-        {values.medium === "PHYSICAL" ? (
-          <label>
-            {common.labels.custody}
-            <Select
-              disabled={!editable}
-              onChange={(value) =>
-                setValues({
-                  ...values,
-                  idle_custody: value as NonNullable<BillValuesRequest["idle_custody"]>,
-                })
-              }
-              options={[
-                { value: "ORGANIZATION", label: panel.custodyOrg },
-                { value: "OWNER", label: panel.custodyOwner },
-              ]}
-              value={values.idle_custody ?? "ORGANIZATION"}
+          {props.record && props.canDelete ? (
+            <ConfirmDelete
+              cancelLabel={common.actions.cancel}
+              confirmLabel={panel.deleteTitle}
+              confirmationLabel={panel.deleteBillConfirmPrompt}
+              confirmationWord={common.actions.confirm}
+              description={panel.deleteBillDesc}
+              pending={props.pending}
+              title={panel.deleteTitle}
+              onCancel={props.onClose}
+              onConfirm={(word) => props.onDelete(props.record!, word)}
             />
-          </label>
-        ) : null}
-        <label className="record-form__wide">
-          {common.labels.printedHolder}
-          <Input
-            disabled={!editable}
-            value={values.printed_holder_name}
-            onChange={(event) => setValues({ ...values, printed_holder_name: event.target.value })}
-          />
-        </label>
-        <label className="record-form__wide">
-          {common.labels.printedAddress}
-          <Input
-            disabled={!editable}
-            value={values.printed_address}
-            onChange={(event) => setValues({ ...values, printed_address: event.target.value })}
-          />
-        </label>
-        <label className="record-form__wide">
-          {common.labels.notes}
-          <Input.TextArea
-            disabled={!editable}
-            rows={4}
-            value={values.notes}
-            onChange={(event) => setValues({ ...values, notes: event.target.value })}
-          />
-        </label>
-        <RecordCustomFieldsSection
-          definitionTargetKind="BILL_TYPE"
-          definitionTargetId={values.bill_type_id || undefined}
+          ) : null}
+        </Flex>
+      }
+      onClose={props.onClose}
+      onOpenOwner={props.onOpenOwner}
+      openOwnerLabel={recordCopy.openOwner}
+      ownerLabel={recordCopy.owner}
+      ownerName={props.profile.full_name}
+      title={props.record ? props.record.reference_value : panel.newBill}
+    >
+      {error ? <StatusBanner description={error} title={panel.saveError} tone="error" /> : null}
+      <CadastroSection
+        badge={
+          <CadastroSectionBadge modifier="bills">{cadastro.badgeConsumption}</CadastroSectionBadge>
+        }
+        defaultOpen
+        hint={cadastro.sectionBillDataHint}
+        icon={<Zap size={18} strokeWidth={1.75} />}
+        modifier="bills"
+        title={cadastro.sectionBillData}
+      >
+        <BillFormFields
+          billTypes={props.types.filter((value) => value.active || value.id === fields.billTypeId)}
           disabled={!editable}
-          draft={customDraft}
-          onDraftChange={setCustomDraft}
-        />
-      </div>
-      <EditorActions
-        editable={editable}
-        saving={saving}
-        record={props.record}
-        onSave={submit}
-        onEdit={props.onEdit}
-        onDuplicate={props.onDuplicate}
-      />
-      {props.record && props.record.medium === "PHYSICAL" ? (
-        <CurrentUseControls
-          kind="bill"
-          record={props.record}
-          onChanged={async (message) => {
-            await props.onSaved(props.record!, message);
+          fileInputId={fileInputId}
+          lockType={props.lockType}
+          showDropzone={props.mode === "create"}
+          state={fields}
+          onChange={(patch) => {
+            setFields((current) => ({ ...current, ...patch }));
+            if (patch.billMedium === "DIGITAL") setIdleCustody("ORGANIZATION");
           }}
         />
+        <div className="cadastro-grid" style={{ marginTop: "var(--gym-space-4)" }}>
+          <div className="cadastro-col-6">
+            <div className="cadastro-field">
+              <label className="cadastro-field__label" htmlFor="cad-bill-currency">
+                {common.labels.currency}
+              </label>
+              <Input
+                disabled={!editable}
+                id="cad-bill-currency"
+                maxLength={3}
+                value={currency}
+                onChange={(event) => setCurrency(event.target.value.toUpperCase())}
+              />
+            </div>
+          </div>
+        </div>
+      </CadastroSection>
+      <CadastroHolderSection
+        defaultOpen
+        holderName={props.profile.full_name}
+        inputId="record-bill-holder"
+        locked
+        selectedProfile={props.profile}
+      />
+      {props.record && props.record.medium === "PHYSICAL" ? (
+        <CadastroSection
+          defaultOpen
+          icon={<UserRound size={18} strokeWidth={1.75} />}
+          title={panel.currentUseTitle}
+        >
+          <CurrentUseControls
+            framed={false}
+            kind="bill"
+            record={props.record}
+            onChanged={async (message) => {
+              await props.onSaved(props.record!, message);
+            }}
+          />
+        </CadastroSection>
       ) : null}
-      {props.record && props.canDelete ? (
-        <ConfirmDelete
-          cancelLabel={common.actions.cancel}
-          confirmLabel={panel.deleteTitle}
-          confirmationLabel={panel.deleteBillConfirmPrompt}
-          confirmationWord={common.actions.confirm}
-          description={panel.deleteBillDesc}
-          pending={props.pending}
-          title={panel.deleteTitle}
-          onCancel={props.onClose}
-          onConfirm={(word) => props.onDelete(props.record!, word)}
-        />
-      ) : null}
-    </Card>
+      {props.children}
+    </RecordScreen>
   );
 }

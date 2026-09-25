@@ -171,7 +171,7 @@ func TestServiceRequiresExplicitSafeConfigurationAndBounds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewService(default limits) error = %v", err)
 	}
-	capability := service.Capability()
+	capability := service.Capability(context.Background())
 	if !capability.Enabled || capability.MaximumToolCalls != MaximumToolCalls || capability.MaximumRows != MaximumToolRows || capability.MaximumUsage == 0 {
 		t.Fatalf("Capability() = %#v", capability)
 	}

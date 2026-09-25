@@ -748,6 +748,9 @@ type ServerInterface interface {
 	// (POST /api/v1/operations/imports)
 	CreateOperationImport(w http.ResponseWriter, r *http.Request)
 
+	// (DELETE /api/v1/operations/imports/{import_id})
+	DeleteOperationImport(w http.ResponseWriter, r *http.Request, importId ImportID)
+
 	// (GET /api/v1/operations/imports/{import_id})
 	GetOperationImport(w http.ResponseWriter, r *http.Request, importId ImportID)
 
@@ -1024,6 +1027,38 @@ func (siw *ServerInterfaceWrapper) CreateOperationImport(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateOperationImport(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteOperationImport operation middleware
+func (siw *ServerInterfaceWrapper) DeleteOperationImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "import_id" -------------
+	var importId ImportID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "import_id", r.PathValue("import_id"), &importId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "import_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteOperationImport(w, r, importId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1449,6 +1484,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/operations/exports/{export_id}/download", wrapper.DownloadOperationExport)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/operations/imports", wrapper.ListOperationImports)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/operations/imports", wrapper.CreateOperationImport)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/operations/imports/{import_id}", wrapper.DeleteOperationImport)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/operations/imports/{import_id}", wrapper.GetOperationImport)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/operations/imports/{import_id}/cancel", wrapper.CancelOperationImport)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/operations/imports/{import_id}/confirm", wrapper.ConfirmOperationImport)
@@ -2160,6 +2196,92 @@ func (response CreateOperationImport429JSONResponse) VisitCreateOperationImportR
 type CreateOperationImport503JSONResponse struct{ ServiceUnavailableJSONResponse }
 
 func (response CreateOperationImport503JSONResponse) VisitCreateOperationImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteOperationImportRequestObject struct {
+	ImportId ImportID `json:"import_id"`
+}
+
+type DeleteOperationImportResponseObject interface {
+	VisitDeleteOperationImportResponse(w http.ResponseWriter) error
+}
+
+type DeleteOperationImport204Response struct {
+}
+
+func (response DeleteOperationImport204Response) VisitDeleteOperationImportResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteOperationImport401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteOperationImport401JSONResponse) VisitDeleteOperationImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteOperationImport403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteOperationImport403JSONResponse) VisitDeleteOperationImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteOperationImport404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteOperationImport404JSONResponse) VisitDeleteOperationImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteOperationImport409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteOperationImport409JSONResponse) VisitDeleteOperationImportResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteOperationImport503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response DeleteOperationImport503JSONResponse) VisitDeleteOperationImportResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -3186,6 +3308,9 @@ type StrictServerInterface interface {
 	// (POST /api/v1/operations/imports)
 	CreateOperationImport(ctx context.Context, request CreateOperationImportRequestObject) (CreateOperationImportResponseObject, error)
 
+	// (DELETE /api/v1/operations/imports/{import_id})
+	DeleteOperationImport(ctx context.Context, request DeleteOperationImportRequestObject) (DeleteOperationImportResponseObject, error)
+
 	// (GET /api/v1/operations/imports/{import_id})
 	GetOperationImport(ctx context.Context, request GetOperationImportRequestObject) (GetOperationImportResponseObject, error)
 
@@ -3457,6 +3582,32 @@ func (sh *strictHandler) CreateOperationImport(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateOperationImportResponseObject); ok {
 		if err := validResponse.VisitCreateOperationImportResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteOperationImport operation middleware
+func (sh *strictHandler) DeleteOperationImport(w http.ResponseWriter, r *http.Request, importId ImportID) {
+	var request DeleteOperationImportRequestObject
+
+	request.ImportId = importId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteOperationImport(ctx, request.(DeleteOperationImportRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteOperationImport")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteOperationImportResponseObject); ok {
+		if err := validResponse.VisitDeleteOperationImportResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

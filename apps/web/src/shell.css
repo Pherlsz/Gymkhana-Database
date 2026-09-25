@@ -1262,47 +1262,10 @@ html.theme-switching *::after {
   .nav-item,
   .nav-item--toggle .nav-item__chev,
   .nav-sub-wrap,
-  .login-theme-toggle__icon,
   .sidebar-theme-toggle,
   .sidebar-theme-toggle__switch,
   .sidebar-theme-toggle__thumb,
   .sidebar-account__trigger {
     transition: none !important;
   }
-}
-
-.login-theme-toggle {
-  position: relative;
-  display: inline-flex;
-  overflow: hidden;
-  flex-shrink: 0;
-  width: 2.25rem;
-  height: 2.25rem;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--gym-radius-pill);
-  background: var(--md-surface);
-  color: var(--md-on-surface);
-  cursor: pointer;
-}
-
-.login-theme-toggle:hover {
-  background: var(--md-state-hover);
-}
-
-.login-theme-toggle:focus-visible {
-  outline: 2px solid var(--md-primary-text);
-  outline-offset: 2px;
-}
-
-.login-theme-toggle__icon {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    opacity 200ms ease,
-    transform 200ms ease;
 }

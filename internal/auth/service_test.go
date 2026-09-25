@@ -76,6 +76,14 @@ func (store *fakeStore) IsEmailAllowed(_ context.Context, email string) (bool, e
 	return false, nil
 }
 
+func (store *fakeStore) AddAllowedEmail(context.Context, string, *Identifier) error { return nil }
+
+func (store *fakeStore) RemoveAllowedEmail(context.Context, string) error { return nil }
+
+func (store *fakeStore) ListAllowedEmails(context.Context) ([]string, error) {
+	return nil, nil
+}
+
 func (store *fakeStore) RevokeSessionByTokenHash(_ context.Context, hash []byte) error {
 	store.revokedHash = append([]byte(nil), hash...)
 	return store.revokeError
@@ -127,7 +135,76 @@ func TestServiceBootstrapsAllowedSuperadminAndSession(t *testing.T) {
 	}
 }
 
-func TestServiceAuditsInvalidOAuthCode(t *testing.T) {
+func TestServiceDeniesAllowlistedLoginUntilARoleIsProvisioned(t *testing.T) {
+	store := &fakeStore{findUserError: ErrUserNotFound}
+	service, err := NewService(fakeProvider{identity: GoogleIdentity{
+		Email: "member@example.com", DisplayName: "Member",
+	}}, store, ServiceOptions{
+		AllowedEmails:   []string{"admin@example.com", "member@example.com"},
+		SuperadminEmail: "admin@example.com",
+	})
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	if _, err := service.CompleteLogin(context.Background(), "code", "request-unprovisioned"); !errors.Is(err, ErrAccessDenied) {
+		t.Fatalf("CompleteLogin() error = %v, want %v", err, ErrAccessDenied)
+	}
+	if store.createdUser.Role != "" {
+		t.Fatalf("created role = %q, want no user", store.createdUser.Role)
+	}
+	if len(store.audits) != 1 || store.audits[0].EventType != AuditEventSignInDenied {
+		t.Fatalf("audits = %#v", store.audits)
+	}
+}
+
+func TestServiceKeepsProvisionedMemberRoleOnFirstGoogleLogin(t *testing.T) {
+	userID, _ := NewIdentifier()
+	store := &fakeStore{user: User{
+		ID: userID, Email: "member@example.com", DisplayName: "Membro", Role: RoleExternal, Active: true,
+	}}
+	service, err := NewService(fakeProvider{identity: GoogleIdentity{
+		Email: "member@example.com", DisplayName: "Google Name",
+	}}, store, ServiceOptions{
+		AllowedEmails:   []string{"admin@example.com", "member@example.com"},
+		SuperadminEmail: "admin@example.com",
+	})
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	result, err := service.CompleteLogin(context.Background(), "code", "request-provisioned")
+	if err != nil {
+		t.Fatalf("CompleteLogin() error = %v", err)
+	}
+	if result.User.Role != RoleExternal || result.User.DisplayName != "Membro" {
+		t.Fatalf("user = %#v", result.User)
+	}
+	if store.createdUser.Role != "" {
+		t.Fatalf("created a new user = %#v", store.createdUser)
+	}
+}
+
+func TestCompleteLoginAllowsConfiguredSuperadminWithoutDatabaseAllowlist(t *testing.T) {
+	store := &fakeStore{findUserError: ErrUserNotFound, allowedEmails: map[string]struct{}{}}
+	service, err := NewService(fakeProvider{identity: GoogleIdentity{
+		Email: "admin@example.com", DisplayName: "Admin",
+	}}, store, ServiceOptions{
+		AllowedEmails:   []string{"admin@example.com"},
+		SuperadminEmail: "admin@example.com",
+		AllowlistStore:  store,
+	})
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	result, err := service.CompleteLogin(context.Background(), "code", "request-superadmin-bootstrap")
+	if err != nil {
+		t.Fatalf("CompleteLogin() error = %v", err)
+	}
+	if result.User.Role != RoleSuperadmin || store.createdUser.Role != RoleSuperadmin {
+		t.Fatalf("user = %#v created = %#v", result.User, store.createdUser)
+	}
+}
+
+func TestServiceRejectsInvalidOAuthCode(t *testing.T) {
 	store := &fakeStore{}
 	service, err := NewService(fakeProvider{}, store, ServiceOptions{
 		AllowedEmails: []string{"admin@example.com"}, SuperadminEmail: "admin@example.com",

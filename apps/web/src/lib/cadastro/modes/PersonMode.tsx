@@ -1,18 +1,15 @@
-import { Car, Check, User, Users } from "lucide-react";
+import { Check } from "lucide-react";
 import { useI18n } from "../../../i18n";
-import type { BillType, DocumentType } from "../../api/client";
-import { CadastroSection } from "../components/CadastroSection";
+import { StatusBanner } from "../../../components/StatusBanner";
+import type { BillType, DocumentType, Profile } from "../../api/client";
+import { HolderSearchSelect } from "../components/HolderSearchSelect";
+import { HolderSelectedCard } from "../components/HolderSelectedCard";
 import { PendingBillsSection } from "../components/PendingBillsSection";
 import { PendingDocumentsSection } from "../components/PendingDocumentsSection";
-import {
-  PersonComplementaryGroup,
-  type PersonComplementaryState,
-} from "../components/PersonComplementaryGroup";
-import {
-  PersonDemographicsGroup,
-  type PersonDemographicsState,
-} from "../components/PersonDemographicsGroup";
-import { PersonFamilyGroup, type PersonFamilyState } from "../components/PersonFamilyGroup";
+import { PersonRecordFields } from "../components/PersonRecordFields";
+import type { PersonComplementaryState } from "../components/PersonComplementaryGroup";
+import type { PersonDemographicsState } from "../components/PersonDemographicsGroup";
+import type { PersonFamilyState } from "../components/PersonFamilyGroup";
 import type { PendingBill, PendingDoc } from "../types";
 
 export interface PersonModeProps {
@@ -32,6 +29,14 @@ export interface PersonModeProps {
   billTypes: BillType[];
   hasMinimumRequirement: boolean;
   matchingOfficialDocs: string[];
+  selectedProfile: Profile | null;
+  onSelectProfile: (p: Profile) => void;
+  onSelectNewName: (name: string) => void;
+  onDraftName: (name: string) => void;
+  onClearProfile: () => void;
+  existingMatch: Profile | null;
+  onUseExisting: (profile: Profile) => void;
+  attachmentsEnabled?: boolean;
 }
 
 export function PersonMode({
@@ -51,14 +56,25 @@ export function PersonMode({
   billTypes,
   hasMinimumRequirement,
   matchingOfficialDocs,
+  selectedProfile,
+  onSelectProfile,
+  onSelectNewName,
+  onDraftName,
+  onClearProfile,
+  existingMatch,
+  onUseExisting,
+  attachmentsEnabled,
 }: PersonModeProps) {
   const { messages } = useI18n();
   const copy = messages.tables.cadastro;
 
   return (
     <>
-      <CadastroSection
-        defaultOpen={true}
+      <PersonRecordFields
+        complementary={complementary}
+        demographics={demographics}
+        defaultOpenComplementary={false}
+        defaultOpenFamily={false}
         extraTitle={
           <span
             className={`minreq-pill ${
@@ -80,32 +96,62 @@ export function PersonMode({
             )}
           </span>
         }
-        hint={copy.sectionIdentityHint}
-        icon={<User size={18} strokeWidth={1.75} />}
-        title={copy.sectionIdentityTitle}
-      >
-        <PersonDemographicsGroup state={demographics} onChange={onChangeDemographics} />
-      </CadastroSection>
+        family={family}
+        hideName={Boolean(selectedProfile)}
+        identityLead={
+          <>
+            <div className="cadastro-field">
+              <label className="cadastro-field__label" htmlFor="cad-person-existing">
+                {copy.holderLinkExisting}
+              </label>
+              {selectedProfile ? (
+                <HolderSelectedCard
+                  autoFilledNotice={copy.holderAutoFilledNotice}
+                  onUnlink={onClearProfile}
+                  profile={selectedProfile}
+                  selectedTitle={copy.holderSelectedTitle}
+                  unlinkText={copy.holderUnlinkButton}
+                />
+              ) : (
+                <HolderSearchSelect
+                  ariaLabel={copy.holderSelectPlaceholder}
+                  createNewOptionText={copy.holderCreateNewOption}
+                  id="cad-person-existing"
+                  onClear={onClearProfile}
+                  onDraftName={onDraftName}
+                  onSelectNewName={onSelectNewName}
+                  onSelectProfile={onSelectProfile}
+                  placeholder={copy.holderSelectPlaceholder}
+                  selectedProfile={selectedProfile}
+                  value={demographics.fullName}
+                />
+              )}
+            </div>
 
-      <CadastroSection
-        defaultOpen={false}
-        hint={copy.sectionFamilyHint}
-        icon={<Users size={18} strokeWidth={1.75} />}
-        title={copy.sectionFamilyTitle}
-      >
-        <PersonFamilyGroup state={family} onChange={onChangeFamily} />
-      </CadastroSection>
-
-      <CadastroSection
-        defaultOpen={false}
-        hint={copy.sectionComplementaryHint}
-        icon={<Car size={18} strokeWidth={1.75} />}
-        title={copy.sectionComplementaryTitle}
-      >
-        <PersonComplementaryGroup state={complementary} onChange={onChangeComplementary} />
-      </CadastroSection>
+            {existingMatch && !selectedProfile ? (
+              <StatusBanner
+                action={
+                  <button
+                    className="cadastro-linkbtn"
+                    type="button"
+                    onClick={() => onUseExisting(existingMatch)}
+                  >
+                    {copy.holderLinkExisting}
+                  </button>
+                }
+                title={copy.holderExistsHint}
+                tone="info"
+              />
+            ) : null}
+          </>
+        }
+        onChangeComplementary={onChangeComplementary}
+        onChangeDemographics={onChangeDemographics}
+        onChangeFamily={onChangeFamily}
+      />
 
       <PendingDocumentsSection
+        attachmentsEnabled={attachmentsEnabled}
         defaultOpen={true}
         documentTypes={documentTypes}
         documents={documents}
@@ -114,9 +160,10 @@ export function PersonMode({
       />
 
       <PendingBillsSection
+        attachmentsEnabled={attachmentsEnabled}
         billTypes={billTypes}
         bills={bills}
-        defaultOpen={true}
+        defaultOpen={false}
         onAddBill={onAddBill}
         onRemoveBill={onRemoveBill}
       />

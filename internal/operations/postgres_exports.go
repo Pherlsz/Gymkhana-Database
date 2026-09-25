@@ -326,9 +326,12 @@ func (store *PostgresStore) ClaimCleanupCandidates(ctx context.Context, now time
 	result := make([]CleanupCandidate, 0, limit)
 	rows, err := tx.Query(ctx, `WITH candidates AS (
   SELECT id FROM operation_imports
-   WHERE expires_at<=$1 AND object_deleted_at IS NULL
-	 AND (state NOT IN ('PARSING','RUNNING') OR updated_at<=$3)
+   WHERE object_deleted_at IS NULL
      AND (cleanup_claimed_at IS NULL OR cleanup_claimed_at<=$3)
+     AND (
+       (expires_at<=$1 AND (state NOT IN ('PARSING','RUNNING') OR updated_at<=$3))
+       OR (state='UPLOADING' AND created_at<=$1 - INTERVAL '15 minutes')
+     )
    ORDER BY expires_at, id
    FOR UPDATE SKIP LOCKED
    LIMIT $2

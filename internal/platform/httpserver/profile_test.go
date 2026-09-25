@@ -96,8 +96,8 @@ func TestProfileRoutesListCreateUpdateAndDelete(t *testing.T) {
 	if err := json.Unmarshal(listResponse.Body.Bytes(), &listed); err != nil || len(listed.Profiles) != 1 || listed.Profiles[0].CustomValues == nil || listed.Profiles[0].DocumentIdentifiers == nil || listed.Profiles[0].DocumentBadges == nil {
 		t.Fatalf("list body should embed custom_values, document_identifiers and document_badges: err=%v body=%s", err, listResponse.Body.String())
 	}
-	if listed.Profiles[0].CPF != "***.***.***-25" || listed.Profiles[0].CPFDigitSum == nil || *listed.Profiles[0].CPFDigitSum != 55 {
-		t.Fatalf("external list CPF = %#v", listed.Profiles[0])
+	if listed.Profiles[0].CPF != "529.982.247-25" || listed.Profiles[0].CPFDigitSum == nil || *listed.Profiles[0].CPFDigitSum != 55 {
+		t.Fatalf("member list CPF = %#v", listed.Profiles[0])
 	}
 
 	authentication, _, _, adminHandler := profileHTTPFixture(t)

@@ -760,10 +760,6 @@ func stringValue(value *string) string {
 	return *value
 }
 
-func mediumFromDatabase(value string) Medium {
-	return Medium(value)
-}
-
 func activeFilter(value *bool) string {
 	if value == nil {
 		return ""

@@ -1,9 +1,6 @@
-function toneToType(tone: string): "info" | "success" | "warning" | "error" {
-  return tone === "danger" ? "error" : (tone as any);
-}
-
-import { Alert, Button, Card, Checkbox, Flex, Tag } from "antd";
+import { Button, Card, Checkbox, Flex, Tag } from "antd";
 import { InlineStatus } from "./components/InlineStatus";
+import { StatusBanner } from "./components/StatusBanner";
 import "./attachments.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
@@ -19,6 +16,7 @@ import {
 import { APIRequestError } from "./lib/api/client";
 import { queryKeys } from "./lib/api/queryKeys";
 import { formatBytes, formatDateTime as formatDate } from "./lib/formatters";
+import { useI18n } from "./i18n";
 
 const acceptedMIMEs = [
   "application/pdf",
@@ -47,6 +45,8 @@ export function AttachmentsPanel({
   title?: string;
   description?: string;
 }) {
+  const { messages } = useI18n();
+  const copy = messages.attachments;
   const queryClient = useQueryClient();
   const inputID = useId();
   const [showTrash, setShowTrash] = useState(false);
@@ -125,23 +125,13 @@ export function AttachmentsPanel({
           </Checkbox>
         </div>
         {notice ? (
-          <Alert
-            title="Anexos"
-            type={toneToType(
-              notice.includes("Arquivo verificado") ||
-                notice.includes("restaurado") ||
-                notice.includes("movido")
-                ? "success"
-                : "warning",
-            )}
-            description={<>{notice}</>}
-          />
+          <StatusBanner description={notice} title={copy.noticeTitle} tone="success" />
         ) : null}
         {error ? (
-          <Alert
-            message="Não foi possível concluir a operação"
-            type="error"
-            description={<>{attachmentError(error)}</>}
+          <StatusBanner
+            description={attachmentError(error)}
+            title={copy.operationError}
+            tone="error"
           />
         ) : null}
         <div className="attachments-panel__upload">
@@ -164,12 +154,9 @@ export function AttachmentsPanel({
             </div>
           ) : null}
         </div>
-        {query.isLoading ? <InlineStatus kind="loading" label="Carregando anexos…" /> : null}
+        {query.isLoading ? <InlineStatus kind="loading" label={copy.loading} /> : null}
         {!query.isLoading && (query.data?.length ?? 0) === 0 ? (
-          <InlineStatus
-            kind="empty"
-            label={showTrash ? "Nenhum anexo ativo ou recuperável." : "Nenhum anexo ativo."}
-          />
+          <InlineStatus kind="empty" label={showTrash ? copy.emptyWithTrash : copy.empty} />
         ) : null}
         <div className="attachments-panel__list">
           {query.data?.map((value) => (

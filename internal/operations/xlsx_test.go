@@ -57,7 +57,8 @@ func TestWorkbookRoundTripPreservesLiteralValuesAndNeverWritesFormulas(t *testin
 }
 
 func TestWorkbookWriterAllowsLargeFullTableExportsBeyondImportLimit(t *testing.T) {
-	rows := make([][]string, MaximumRows+1)
+	// Fixed size: must not scale with MaximumRows (100k would write ~100k XML rows).
+	rows := make([][]string, 10_001)
 	for index := range rows {
 		rows[index] = []string{"row"}
 	}

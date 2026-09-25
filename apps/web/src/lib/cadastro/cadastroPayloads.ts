@@ -1,7 +1,17 @@
-import type { ProfileValuesRequest } from "../api/client";
+import type { Profile, ProfileValuesRequest } from "../api/client";
 import type { PersonComplementaryState } from "./components/PersonComplementaryGroup";
 import type { PersonDemographicsState } from "./components/PersonDemographicsGroup";
 import type { PersonFamilyState } from "./components/PersonFamilyGroup";
+
+export function formatAddressLine(demographics: PersonDemographicsState): string {
+  const streetLine = [demographics.street.trim(), demographics.number.trim()]
+    .filter(Boolean)
+    .join(", ");
+  const cityLine = [demographics.city.trim(), demographics.state.trim()].filter(Boolean).join("/");
+  return [streetLine, demographics.complement.trim(), demographics.neighborhood.trim(), cityLine]
+    .filter(Boolean)
+    .join(" — ");
+}
 
 export function buildProfilePayload(
   demographics: PersonDemographicsState,
@@ -9,6 +19,7 @@ export function buildProfilePayload(
   complementary: PersonComplementaryState,
   fallbackName: string,
   defaultHolder: string,
+  notes = "",
 ): ProfileValuesRequest {
   const finalName = demographics.fullName.trim() || fallbackName.trim() || defaultHolder;
   const vehicleYearParsed = parseInt(complementary.vehicleYear.trim(), 10);
@@ -76,19 +87,66 @@ export function buildProfilePayload(
     ...(complementary.cardBrand.trim() ? { card_brand: complementary.cardBrand.trim() } : {}),
     ...(complementary.cardBank.trim() ? { card_bank: complementary.cardBank.trim() } : {}),
     address: {
-      street: demographics.address.trim(),
-      number: "",
-      complement: "",
-      neighborhood: "",
-      city: "",
-      state: "",
+      street: demographics.street.trim(),
+      number: demographics.number.trim(),
+      complement: demographics.complement.trim(),
+      neighborhood: demographics.neighborhood.trim(),
+      city: demographics.city.trim(),
+      state: demographics.state.trim(),
       postal_code: demographics.postalCode.trim(),
     },
-    notes: "",
+    notes: notes.trim(),
   };
 }
 
-export function mapProfileToState(p: import("../api/client").Profile): {
+export function demographicsHasMoreDetails(state: PersonDemographicsState): boolean {
+  return Boolean(
+    state.socialName.trim() ||
+    state.landline.trim() ||
+    state.gender ||
+    state.maritalStatus ||
+    state.bloodType ||
+    state.nationality.trim() ||
+    state.birthCity.trim() ||
+    state.birthCountry.trim() ||
+    state.placeOfOrigin.trim(),
+  );
+}
+
+export function familyHasValues(family: PersonFamilyState): boolean {
+  return Boolean(
+    family.fatherName.trim() ||
+    family.fatherBirthDate ||
+    family.motherName.trim() ||
+    family.motherBirthDate ||
+    family.weddingDate ||
+    family.parentsWeddingDate,
+  );
+}
+
+export function complementaryHasValues(complementary: PersonComplementaryState): boolean {
+  return Boolean(
+    complementary.vehicleModel.trim() ||
+    complementary.vehicleColor.trim() ||
+    complementary.vehiclePlate.trim() ||
+    complementary.vehicleYear.trim() ||
+    complementary.healthPlan.trim() ||
+    complementary.bloodDonor != null ||
+    complementary.organDonor != null ||
+    complementary.team.trim() ||
+    complementary.sector.trim() ||
+    complementary.clubMembership.trim() ||
+    complementary.membershipType.trim() ||
+    complementary.collections.trim() ||
+    complementary.pet.trim() ||
+    complementary.supermarketClub.trim() ||
+    complementary.travelCountries.trim() ||
+    complementary.cardBrand.trim() ||
+    complementary.cardBank.trim(),
+  );
+}
+
+export function mapProfileToState(p: Profile): {
   demographics: PersonDemographicsState;
   family: PersonFamilyState;
   complementary: PersonComplementaryState;
@@ -102,11 +160,12 @@ export function mapProfileToState(p: import("../api/client").Profile): {
       email: p.email || "",
       phone: p.mobile_phone || "",
       landline: p.landline_phone || "",
-      address: p.address?.street
-        ? `${p.address.street}${p.address.number ? `, ${p.address.number}` : ""}${
-            p.address.city ? ` — ${p.address.city}/${p.address.state || ""}` : ""
-          }`.trim()
-        : "",
+      street: p.address?.street || "",
+      number: p.address?.number || "",
+      complement: p.address?.complement || "",
+      neighborhood: p.address?.neighborhood || "",
+      city: p.address?.city || "",
+      state: p.address?.state || "",
       postalCode: p.address?.postal_code || "",
       gender: p.gender || undefined,
       maritalStatus: p.marital_status || undefined,

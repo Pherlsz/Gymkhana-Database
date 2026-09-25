@@ -220,7 +220,7 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 			return
 		}
 		response := profilePageResponse{Profiles: make([]profileResponse, 0, len(page.Profiles)), Page: profilePageMeta{Total: page.Total, Limit: page.Limit, Offset: page.Offset, SortField: string(page.SortField), SortOrder: string(page.SortOrder)}}
-		reveal := actor.User.Role.CanManageUsers()
+		reveal := actor.User.Role.CanWriteProfiles()
 		for _, value := range page.Profiles {
 			response.Profiles = append(response.Profiles, profileFromDomain(value, reveal))
 		}
@@ -403,8 +403,9 @@ func (request updateProfileRequest) domainValues() profile.Values {
 	return request.profileValuesRequest.domainValues()
 }
 func writeProfileJSON(w http.ResponseWriter, r *http.Request, logger *slog.Logger, pool listEnrichmentQuerier, value profile.Profile, actor auth.Session, status int) {
-	payload := []profileResponse{profileFromDomain(value, actor.User.Role.CanManageUsers())}
-	enrichProfileList(r.Context(), pool, logger, payload, actor.User.Role.CanManageUsers())
+	reveal := actor.User.Role.CanWriteProfiles()
+	payload := []profileResponse{profileFromDomain(value, reveal)}
+	enrichProfileList(r.Context(), pool, logger, payload, reveal)
 	writeJSON(w, status, payload[0])
 }
 

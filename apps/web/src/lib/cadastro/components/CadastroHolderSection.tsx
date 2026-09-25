@@ -7,19 +7,20 @@ import { HolderSearchSelect } from "./HolderSearchSelect";
 import { HolderSelectedCard } from "./HolderSelectedCard";
 
 export interface CadastroHolderSectionProps {
-  defaultOpen?: boolean;
-  open?: boolean;
-  onToggleOpen?: () => void;
+  defaultOpen?: boolean | undefined;
+  open?: boolean | undefined;
+  onToggleOpen?: (() => void) | undefined;
   holderName: string;
   selectedProfile: Profile | null;
-  onSelectProfile: (p: Profile) => void;
-  onSelectNewName: (name: string) => void;
-  onClearProfile: () => void;
-  onChangeSelectedProfile: (p: Profile | null) => void;
+  onSelectProfile?: ((p: Profile) => void) | undefined;
+  onSelectNewName?: ((name: string) => void) | undefined;
+  onDraftName?: ((name: string) => void) | undefined;
+  onClearProfile?: (() => void) | undefined;
   inputId: string;
   cpf?: string | undefined;
   onChangeCpf?: ((cpf: string) => void) | undefined;
   cpfInputId?: string | undefined;
+  locked?: boolean | undefined;
 }
 
 export function CadastroHolderSection({
@@ -30,17 +31,19 @@ export function CadastroHolderSection({
   selectedProfile,
   onSelectProfile,
   onSelectNewName,
+  onDraftName,
   onClearProfile,
-  onChangeSelectedProfile,
   inputId,
   cpf,
   onChangeCpf,
   cpfInputId,
+  locked = false,
 }: CadastroHolderSectionProps) {
   const { messages } = useI18n();
   const copy = messages.tables.cadastro;
 
   const showCpf = typeof onChangeCpf === "function";
+  const canSearch = Boolean(onSelectProfile && onSelectNewName && onClearProfile);
 
   return (
     <CadastroSection
@@ -52,38 +55,43 @@ export function CadastroHolderSection({
       title={copy.sectionHolderTitle}
     >
       <div className="cadastro-grid">
-        <div className={showCpf ? "cadastro-col-8" : "cadastro-col-12"}>
+        <div className={showCpf && !locked ? "cadastro-col-8" : "cadastro-col-12"}>
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor={inputId}>
               {copy.fieldHolderName}
             </label>
             {selectedProfile ? (
               <HolderSelectedCard
-                autoFilledNotice={copy.holderAutoFilledNotice}
-                changeText={copy.holderChangeButton}
-                onChange={() => onChangeSelectedProfile(null)}
-                onUnlink={onClearProfile}
                 profile={selectedProfile}
                 selectedTitle={copy.holderSelectedTitle}
                 unlinkText={copy.holderUnlinkButton}
+                {...(locked
+                  ? {}
+                  : {
+                      autoFilledNotice: copy.holderAutoFilledNotice,
+                      onUnlink: onClearProfile,
+                    })}
               />
-            ) : (
+            ) : canSearch ? (
               <HolderSearchSelect
                 ariaLabel={copy.fieldHolderName}
                 createNewOptionText={copy.holderCreateNewOption}
                 id={inputId}
-                onClear={onClearProfile}
-                onSelectNewName={onSelectNewName}
-                onSelectProfile={onSelectProfile}
+                onClear={onClearProfile!}
+                onDraftName={onDraftName}
+                onSelectNewName={onSelectNewName!}
+                onSelectProfile={onSelectProfile!}
                 placeholder={copy.holderSelectPlaceholder}
                 selectedProfile={selectedProfile}
                 value={holderName}
               />
+            ) : (
+              <p className="cadastro-field__static">{holderName}</p>
             )}
           </div>
         </div>
 
-        {showCpf && (
+        {showCpf && !locked ? (
           <div className="cadastro-col-4">
             <div className="cadastro-field">
               <label className="cadastro-field__label" htmlFor={cpfInputId}>
@@ -98,7 +106,7 @@ export function CadastroHolderSection({
               />
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </CadastroSection>
   );

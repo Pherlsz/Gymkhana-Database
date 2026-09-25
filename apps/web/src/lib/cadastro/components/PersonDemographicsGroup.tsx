@@ -1,8 +1,9 @@
-import { AutoComplete, Button, DatePicker, Input } from "antd";
+import { AutoComplete, Button, DatePicker, Input, Select } from "antd";
 import dayjs from "dayjs";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { useI18n } from "../../../i18n";
+import { BRAZIL_STATES } from "../../tables/tableFilters";
 import {
   BLOOD_TYPE_OPTIONS,
   GENDER_OPTIONS,
@@ -10,6 +11,7 @@ import {
   NATIONALITY_OPTIONS,
   toAutoCompleteOptions,
 } from "../data/presetOptions";
+import { phoneInputDigits } from "../cadastroValidate";
 
 export interface PersonDemographicsState {
   fullName: string;
@@ -19,7 +21,12 @@ export interface PersonDemographicsState {
   email: string;
   phone: string;
   landline: string;
-  address: string;
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
   postalCode: string;
   gender?: string | undefined;
   maritalStatus?: string | undefined;
@@ -34,6 +41,8 @@ export interface PersonDemographicsProps {
   state: PersonDemographicsState;
   onChange: (patch: Partial<PersonDemographicsState>) => void;
   disabled?: boolean;
+  hideName?: boolean;
+  defaultShowMore?: boolean;
   copy?: Record<string, string>;
 }
 
@@ -49,7 +58,7 @@ function maskCpf(val: string) {
 }
 
 function maskPhone(val: string) {
-  const digits = val.replace(/\D/g, "").slice(0, 11);
+  const digits = phoneInputDigits(val);
   if (!digits) return "";
   if (digits.length <= 2) return `(${digits}`;
   if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
@@ -68,40 +77,45 @@ export function PersonDemographicsGroup({
   state,
   onChange,
   disabled,
+  hideName,
+  defaultShowMore,
   copy: customCopy,
 }: PersonDemographicsProps) {
   const { messages } = useI18n();
   const labels = messages.common.labels;
   const placeholders = messages.common.placeholders;
   const copy = { ...messages.tables.cadastro, ...customCopy };
-  const [showMoreDetails, setShowMoreDetails] = useState(false);
+  const [showMoreDetails, setShowMoreDetails] = useState(() => Boolean(defaultShowMore));
   const isDisabled = Boolean(disabled);
 
   const nationalityOptions = toAutoCompleteOptions(NATIONALITY_OPTIONS);
   const bloodTypeOptions = toAutoCompleteOptions(BLOOD_TYPE_OPTIONS);
   const maritalOptions = toAutoCompleteOptions(MARITAL_STATUS_OPTIONS);
   const genderOptions = toAutoCompleteOptions(GENDER_OPTIONS);
+  const ufOptions = BRAZIL_STATES.map((value) => ({ value, label: value }));
 
   return (
     <>
       <div className="cadastro-grid">
-        <div className="cadastro-col-8">
-          <div className="cadastro-field">
-            <label className="cadastro-field__label" htmlFor="cad-p-holder">
-              <span>{copy.fieldHolderName}</span>
-              <span className="cadastro-field__required">*</span>
-            </label>
-            <Input
-              disabled={isDisabled}
-              id="cad-p-holder"
-              placeholder={placeholders.holderName}
-              value={state.fullName}
-              onChange={(e) => onChange({ fullName: e.target.value })}
-            />
+        {hideName ? null : (
+          <div className="cadastro-col-8">
+            <div className="cadastro-field">
+              <label className="cadastro-field__label" htmlFor="cad-p-holder">
+                <span>{copy.fieldHolderName}</span>
+                <span className="cadastro-field__required">*</span>
+              </label>
+              <Input
+                disabled={isDisabled}
+                id="cad-p-holder"
+                placeholder={placeholders.holderName}
+                value={state.fullName}
+                onChange={(e) => onChange({ fullName: e.target.value })}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="cadastro-col-4">
+        <div className={hideName ? "cadastro-col-12" : "cadastro-col-4"}>
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-p-cpf">
               {labels.cpf}
@@ -143,7 +157,7 @@ export function PersonDemographicsGroup({
               id="cad-p-phone"
               maxLength={15}
               placeholder={placeholders.phone}
-              value={state.phone}
+              value={maskPhone(state.phone)}
               onChange={(e) => onChange({ phone: maskPhone(e.target.value) })}
             />
           </div>
@@ -166,22 +180,96 @@ export function PersonDemographicsGroup({
           </div>
         </div>
 
-        <div className="cadastro-col-9">
+        <div className="cadastro-col-6">
           <div className="cadastro-field">
-            <label className="cadastro-field__label" htmlFor="cad-p-addr">
-              {copy.fieldAddress}
+            <label className="cadastro-field__label" htmlFor="cad-p-street">
+              {labels.streetAddress}
             </label>
             <Input
               disabled={isDisabled}
-              id="cad-p-addr"
+              id="cad-p-street"
               placeholder={copy.placeholderAddress}
-              value={state.address}
-              onChange={(e) => onChange({ address: e.target.value })}
+              value={state.street}
+              onChange={(e) => onChange({ street: e.target.value })}
             />
           </div>
         </div>
 
         <div className="cadastro-col-3">
+          <div className="cadastro-field">
+            <label className="cadastro-field__label" htmlFor="cad-p-number">
+              {labels.number}
+            </label>
+            <Input
+              disabled={isDisabled}
+              id="cad-p-number"
+              value={state.number}
+              onChange={(e) => onChange({ number: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="cadastro-col-3">
+          <div className="cadastro-field">
+            <label className="cadastro-field__label" htmlFor="cad-p-complement">
+              {labels.complement}
+            </label>
+            <Input
+              disabled={isDisabled}
+              id="cad-p-complement"
+              value={state.complement}
+              onChange={(e) => onChange({ complement: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="cadastro-col-4">
+          <div className="cadastro-field">
+            <label className="cadastro-field__label" htmlFor="cad-p-neighborhood">
+              {labels.neighborhood}
+            </label>
+            <Input
+              disabled={isDisabled}
+              id="cad-p-neighborhood"
+              value={state.neighborhood}
+              onChange={(e) => onChange({ neighborhood: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="cadastro-col-4">
+          <div className="cadastro-field">
+            <label className="cadastro-field__label" htmlFor="cad-p-city">
+              {labels.city}
+            </label>
+            <Input
+              disabled={isDisabled}
+              id="cad-p-city"
+              value={state.city}
+              onChange={(e) => onChange({ city: e.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="cadastro-col-2">
+          <div className="cadastro-field">
+            <label className="cadastro-field__label" htmlFor="cad-p-state">
+              {labels.state}
+            </label>
+            <Select
+              allowClear
+              disabled={isDisabled}
+              id="cad-p-state"
+              options={ufOptions}
+              placeholder={labels.state}
+              style={{ width: "100%" }}
+              value={state.state || undefined}
+              onChange={(value) => onChange({ state: value ?? "" })}
+            />
+          </div>
+        </div>
+
+        <div className="cadastro-col-2">
           <div className="cadastro-field">
             <label className="cadastro-field__label" htmlFor="cad-p-cep">
               {labels.cep}

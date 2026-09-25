@@ -1,24 +1,20 @@
-import { Alert, Button, Spin } from "antd";
-import { ArrowLeft } from "lucide-react";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { lazy, Suspense, useCallback, useState } from "react";
-import { PageHeader } from "./components/PageHeader";
+import { useCallback, useState } from "react";
+import { PageShell } from "./components/PageShell";
+import { StatusBanner } from "./components/StatusBanner";
 import { useI18n } from "./i18n";
 import { CadastroEntryScreen } from "./lib/cadastro/CadastroEntryScreen";
+import { CadastroPanel } from "./lib/cadastro/CadastroPanel";
 import { CadastroSingleScreen } from "./lib/cadastro/CadastroSingleScreen";
+import { CadastroWorkShell } from "./lib/cadastro/CadastroWork";
+import { GoogleFormsPage } from "./lib/cadastro/forms/GoogleFormsPage";
 import "./cadastro.css";
-
-const GoogleFormsPage = lazy(() =>
-  import("./GoogleFormsPage").then((m) => ({ default: m.GoogleFormsPage })),
-);
-const CadastroPanel = lazy(() =>
-  import("./lib/cadastro/CadastroPanel").then((m) => ({ default: m.CadastroPanel })),
-);
 import {
   type CadastroPageSearch,
   cadastroWorkMode,
   moduleFromTable,
   normalizeCadastroPageSearch,
+  tableFromModule,
 } from "./lib/cadastro/cadastroSearch";
 
 const cadastroRoute = getRouteApi("/cadastro");
@@ -55,6 +51,18 @@ export function CadastroPage() {
     });
   }, [patchSearch]);
 
+  const goToXlsxList = useCallback(() => {
+    patchSearch({ import: undefined, mode: "xlsx" });
+  }, [patchSearch]);
+
+  const goBackXlsx = useCallback(() => {
+    if (search.import) {
+      goToXlsxList();
+      return;
+    }
+    goToEntry();
+  }, [goToEntry, goToXlsxList, search.import]);
+
   const entryActive =
     search.table === "people" &&
     !search.mode &&
@@ -64,20 +72,25 @@ export function CadastroPage() {
     !search.import;
 
   return (
-    <div className="cadastro-page page-measure">
+    <PageShell
+      className="cadastro-page"
+      description={entryActive ? copy.description : undefined}
+      measure
+      title={entryActive ? copy.title : undefined}
+    >
       {entryActive ? (
         <>
-          <PageHeader description={copy.description} title={copy.title} />
           {notice ? (
-            <Alert closable message={notice} type="success" onClose={() => setNotice(null)} />
+            <StatusBanner closable title={notice} tone="success" onClose={() => setNotice(null)} />
           ) : null}
           <CadastroEntryScreen />
         </>
       ) : null}
 
-      {!entryActive && (work === "manual" || work === "catalog") ? (
+      {!entryActive && work === "manual" ? (
         <CadastroSingleScreen
           targetTable={search.table}
+          typeId={search.type}
           onCancel={goToEntry}
           onSuccess={() => {
             goToEntry();
@@ -86,83 +99,26 @@ export function CadastroPage() {
       ) : null}
 
       {!entryActive && work === "forms" ? (
-        <div className="cadastro-work">
-          <nav aria-label={copy.crumbHome} className="cadastro-crumb">
-            <Button
-              className="cadastro-crumb__btn"
-              type="text"
-              size="small"
-              icon={<ArrowLeft size={13} />}
-              onClick={goToEntry}
-            >
-              {copy.crumbHome}
-            </Button>
-            <span className="cadastro-crumb__sep">/</span>
-            <span className="cadastro-crumb__current">{copy.modeForms}</span>
-          </nav>
-          <Suspense
-            fallback={<Spin size="large" style={{ display: "block", margin: "3rem auto" }} />}
-          >
-            <GoogleFormsPage defaultModule={moduleFromTable(search.table)} />
-          </Suspense>
-        </div>
+        <CadastroWorkShell backLabel={copy.crumbHome} current={copy.modeForms} onBack={goToEntry}>
+          <GoogleFormsPage defaultModule={moduleFromTable(search.table)} />
+        </CadastroWorkShell>
       ) : null}
 
-      {!entryActive && (work === "xlsx" || work === "ocr") ? (
-        <div className="cadastro-work">
-          <nav aria-label={copy.crumbHome} className="cadastro-crumb">
-            <Button
-              className="cadastro-crumb__btn"
-              type="text"
-              size="small"
-              icon={<ArrowLeft size={13} />}
-              onClick={goToEntry}
-            >
-              {copy.crumbHome}
-            </Button>
-            <span className="cadastro-crumb__sep">/</span>
-            <span className="cadastro-crumb__current">
-              {work === "xlsx" ? copy.modeXlsx : copy.modeOcr}
-            </span>
-          </nav>
-          <Suspense
-            fallback={<Spin size="large" style={{ display: "block", margin: "3rem auto" }} />}
-          >
-            <CadastroPanel
-              cadastro={work}
-              importId={search.import}
-              recordId={search.record}
-              recordsOwner={search.owner}
-              table={search.table}
-              typeId={search.type}
-              onClearOwner={() => patchSearch({ owner: undefined, record: undefined })}
-              onCreateInstead={() =>
-                patchSearch({
-                  mode: "manual",
-                  record: undefined,
-                  owner: search.owner,
-                  table: search.table === "people" ? "documents" : search.table,
-                })
-              }
-              onImportChange={(importId) => patchSearch({ import: importId })}
-              onOwner={(ownerProfileId) =>
-                patchSearch({
-                  owner: ownerProfileId || undefined,
-                  record: undefined,
-                })
-              }
-              onRecord={(next) =>
-                patchSearch({
-                  table: next.id ? next.table : search.table,
-                  record: next.id || undefined,
-                  owner: search.owner,
-                  mode: "ocr",
-                })
-              }
-            />
-          </Suspense>
-        </div>
+      {!entryActive && work === "xlsx" ? (
+        <CadastroWorkShell
+          backLabel={search.import ? copy.modeXlsx : copy.crumbHome}
+          current={search.import ? undefined : copy.modeXlsx}
+          onBack={goBackXlsx}
+        >
+          <CadastroPanel
+            importId={search.import}
+            table={search.table}
+            onImportChange={(importId) => patchSearch({ import: importId })}
+            onModuleChange={(next) => patchSearch({ table: tableFromModule(next) })}
+            onNotice={setNotice}
+          />
+        </CadastroWorkShell>
       ) : null}
-    </div>
+    </PageShell>
   );
 }

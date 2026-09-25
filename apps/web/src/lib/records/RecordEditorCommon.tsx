@@ -1,8 +1,10 @@
-import { Alert, Button, Card, Flex, Input, Tag } from "antd";
+import { Button, Card, Flex, Input, Tag } from "antd";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { createColumnHelper } from "@tanstack/react-table";
 import { SearchField } from "../../components/SearchField";
+import { StateCard } from "../../components/StateCard";
+import { StatusBanner } from "../../components/StatusBanner";
 import { useI18n } from "../../i18n";
 import type { CatalogV1 } from "../../i18n/v1/pt-BR";
 import {
@@ -22,13 +24,24 @@ import { errorMessage } from "../formatters";
 
 export const media = ["PHYSICAL", "DIGITAL"] as const;
 
-export function CurrentUseControls(
-  props:
-    | { kind: "document"; record: DocumentRecord; onChanged: (message: string) => Promise<void> }
-    | { kind: "bill"; record: BillRecord; onChanged: (message: string) => Promise<void> },
-) {
+export type CurrentUseRecord = {
+  id: string;
+  status?: "AVAILABLE" | "IN_USE" | undefined;
+  current_use?: {
+    holder_profile_id?: string;
+    holder_full_name?: string;
+  } | null;
+};
+
+export function CurrentUseControls(props: {
+  kind: "document" | "bill";
+  record: CurrentUseRecord;
+  onChanged: (message: string) => Promise<void>;
+  framed?: boolean | undefined;
+}) {
   const { messages } = useI18n();
   const panel = messages.records.panel;
+  const framed = props.framed !== false;
   const [query, setQuery] = useState(props.record.current_use?.holder_full_name ?? "");
   const [holder, setHolder] = useState(props.record.current_use?.holder_profile_id ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -53,41 +66,41 @@ export function CurrentUseControls(
     onSuccess: async () => props.onChanged(panel.currentUseReturnedNotice),
     onError: (caught) => setError(errorMessage(caught)),
   });
-  return (
-    <Card className="current-use">
-      <Flex vertical gap="0.75rem">
-        <strong>{panel.currentUseTitle}</strong>
-        {error ? (
-          <Alert message={panel.currentUseError} type="error" description={<>{error}</>} />
-        ) : null}
-        <label>
-          {panel.holderLabel}
-          <SearchField
-            label={panel.holderLabel}
-            lookup
-            mode="suggest"
-            placeholder={panel.searchHolderPlaceholder}
-            value={query}
-            onChange={setQuery}
-            onPick={(id, name) => {
-              setHolder(id);
-              setQuery(name);
-            }}
-          />
-        </label>
-        <Flex>
-          <Button disabled={!holder || assign.isPending} onClick={() => assign.mutate()}>
-            {props.record.status === "IN_USE" ? panel.substituteHolder : panel.assignUse}
+  const body = (
+    <Flex vertical gap="0.75rem">
+      {framed ? <strong>{panel.currentUseTitle}</strong> : null}
+      {error ? (
+        <StatusBanner description={error} title={panel.currentUseError} tone="error" />
+      ) : null}
+      <label>
+        {panel.holderLabel}
+        <SearchField
+          label={panel.holderLabel}
+          lookup
+          mode="suggest"
+          placeholder={panel.searchHolderPlaceholder}
+          value={query}
+          onChange={setQuery}
+          onPick={(id, name) => {
+            setHolder(id);
+            setQuery(name);
+          }}
+        />
+      </label>
+      <Flex>
+        <Button disabled={!holder || assign.isPending} onClick={() => assign.mutate()}>
+          {props.record.status === "IN_USE" ? panel.substituteHolder : panel.assignUse}
+        </Button>
+        {props.record.status === "IN_USE" ? (
+          <Button disabled={giveBack.isPending} onClick={() => giveBack.mutate()}>
+            {panel.returnUse}
           </Button>
-          {props.record.status === "IN_USE" ? (
-            <Button disabled={giveBack.isPending} onClick={() => giveBack.mutate()}>
-              {panel.returnUse}
-            </Button>
-          ) : null}
-        </Flex>
+        ) : null}
       </Flex>
-    </Card>
+    </Flex>
   );
+  if (!framed) return body;
+  return <Card className="current-use">{body}</Card>;
 }
 
 export function EditorHeader({
@@ -137,21 +150,15 @@ export function MissingRecord({ onClose }: { onClose: () => void }) {
   const { messages } = useI18n();
   const panel = messages.records.panel;
   return (
-    <Alert
-      message={panel.notFound}
-      type="error"
-      description={
-        <Flex vertical gap="0.75rem">
-          <span>{panel.notFoundHint}</span>
-          <Button onClick={onClose}>{messages.common.actions.close}</Button>
-        </Flex>
-      }
+    <StateCard
+      compact
+      description={panel.notFoundHint}
+      kind="error"
+      title={panel.notFound}
+      backLabel={messages.common.actions.close}
+      onBack={onClose}
     />
   );
-}
-
-export function RecordsError({ title, error }: { title: string; error: unknown }) {
-  return <Alert message={title} type="error" description={<>{errorMessage(error)}</>} />;
 }
 
 export function RecordStatus({ value }: { value?: "AVAILABLE" | "IN_USE" | "" }) {

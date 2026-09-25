@@ -5,7 +5,7 @@ function isTableKind(value: string): value is TableKind {
   return (TABLE_KINDS as readonly string[]).includes(value);
 }
 
-export const CADASTRO_MODES = ["manual", "xlsx", "ocr", "forms"] as const;
+export const CADASTRO_MODES = ["manual", "xlsx", "forms"] as const;
 export type CadastroMode = (typeof CADASTRO_MODES)[number];
 
 export const GOOGLE_FORMS_TABS = ["sources", "history"] as const;
@@ -64,7 +64,7 @@ export function normalizeCadastroPageSearch(search: Record<string, unknown>): Ca
   if (mode) result.mode = mode;
   if (importId) result.import = importId;
   if (owner) result.owner = owner;
-  if ((mode === "ocr" || mode === undefined) && record) result.record = record;
+  if (record) result.record = record;
   if (table !== "people" && typeId) result.type = typeId;
   if (mode === "forms") {
     if (isGoogleFormsTab(search.tab)) result.tab = search.tab;
@@ -106,10 +106,9 @@ function serializeCadastroSearch(search: CadastroPageSearch): string {
   return params.toString();
 }
 
-export function cadastroWorkMode(search: CadastroPageSearch): CadastroMode | "catalog" {
+export function cadastroWorkMode(search: CadastroPageSearch): CadastroMode {
   if (search.mode) return search.mode;
-  if (search.table === "people" || search.type) return "manual";
-  return "catalog";
+  return "manual";
 }
 
 export function cadastroHref(search: CadastroPageSearch): string {
