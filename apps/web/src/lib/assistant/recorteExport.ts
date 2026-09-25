@@ -10,7 +10,7 @@ export function filenameFromContentDisposition(
   const encoded = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(header);
   if (encoded) {
     try {
-      const name = decodeURIComponent(encoded[1].trim());
+      const name = decodeURIComponent(encoded[1]!.trim());
       return name || fallback;
     } catch {
       return fallback;

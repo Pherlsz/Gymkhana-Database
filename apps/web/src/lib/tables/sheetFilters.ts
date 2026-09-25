@@ -1,6 +1,7 @@
 import type { CustomField, ProfileListSearch } from "../api/client";
 import type { CatalogV1 } from "../../i18n/v1/pt-BR";
-import { fieldFilterActive, fieldPredicate } from "./bindPredicates";
+import { defaultOp } from "./columnPredicate";
+import { fieldFilterActive, fieldPredicate, resolveFunnelKind } from "./bindPredicates";
 import {
   brazilStateOptions,
   customFieldFilter,
@@ -315,7 +316,7 @@ export function activeFilterChips(fields: ToolbarFilterField[]): {
   key: string;
   field: string;
   value: string;
-  local: boolean;
+  local?: boolean;
   onClear: () => void;
 }[] {
   return fields
@@ -329,14 +330,15 @@ export function activeFilterChips(fields: ToolbarFilterField[]): {
             ? predicate.values.join(", ")
             : predicate.op === "is_null" || predicate.op === "not_null"
               ? predicate.op
-              : filterValuePreview(field) || predicate.values[0] || "";
+              : predicate.values[0] || (field.kind === "select" ? filterValuePreview(field) : field.value) || "";
+      const kind = resolveFunnelKind(field);
+      const fallback = defaultOp(kind);
       return {
         key: field.key,
         field: field.label,
         value: preview,
-        local: field.local === true,
         onClear: () => {
-          field.onPredicate?.({ op: fieldPredicate(field).op, values: [] });
+          field.onPredicate?.({ op: fallback, values: [] });
           field.onChange("");
         },
       };

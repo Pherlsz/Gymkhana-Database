@@ -21,7 +21,11 @@ import "./tables.css";
 import { SpreadsheetTable } from "./lib/tables/SpreadsheetTable";
 import { TablesToolbar } from "./lib/tables/TablesToolbar";
 import { cellKeyForFilter, textFilter } from "./lib/tables/tableFilters";
-import { bindPredicates, fieldFilterActive, fieldPredicate } from "./lib/tables/bindPredicates";
+import {
+  bindPredicates,
+  fieldFilterActive,
+  fieldPredicate,
+} from "./lib/tables/bindPredicates";
 import { cellMatches, formulaColumnKey } from "./lib/tables/columnPredicate";
 import type { ColumnPredicate } from "./lib/tables/columnPredicate";
 import { matchFormula } from "./lib/tables/formulas/catalog";
@@ -136,9 +140,13 @@ export function TablesPage() {
     setRecorteSort({ field: "", order: "asc" });
   }
 
-  const setLocal = useCallback((key: string, value: string) => {
-    setLocalFilters((current) => ({ ...current, [key]: value }));
-  }, []);
+  const setLocal = useCallback(
+    (key: string, value: string) => {
+      setLocalFilters((current) => ({ ...current, [key]: value }));
+      updateSearch(resetPage(section));
+    },
+    [section, updateSearch],
+  );
 
   const recorteSummary = useMemo(() => {
     const labels: Record<string, string> = {
@@ -386,7 +394,10 @@ export function TablesPage() {
   );
   // Columns without an entry in buildSheetFilters (team, sector, idle_custody, …) get a local
   // text funnel so every visible data header can filter the loaded page.
-  const gapLocalFilters = useMemo(() => {
+  // Split into two memos: structure (gapColumnKeys) only changes when columns/filters change;
+  // values (gapLocalFilters) change on every keystroke. This prevents localFilters from
+  // invalidating the expensive visibleColumns + allFilters iteration.
+  const gapColumnKeys = useMemo(() => {
     if (search.result) return [];
     const covered = new Set(allFilters.flatMap((field) => [field.key, cellKeyForFilter(field)]));
     return visibleColumns
@@ -396,16 +407,18 @@ export function TablesPage() {
           !covered.has(column.key) &&
           !covered.has(column.dataIndex ?? column.key),
       )
-      .map((column) =>
-        textFilter(
-          column.key,
-          column.label ?? String(column.title ?? column.key),
-          localFilters[column.key] ?? "",
-          (value) => setLocal(column.key, value),
-          true,
-        ),
-      );
-  }, [allFilters, localFilters, search.result, setLocal, visibleColumns]);
+      .map((column) => ({
+        key: column.key,
+        label: column.label ?? String(column.title ?? column.key),
+      }));
+  }, [allFilters, search.result, visibleColumns]);
+  const gapLocalFilters = useMemo(
+    () =>
+      gapColumnKeys.map(({ key, label }) =>
+        textFilter(key, label, localFilters[key] ?? "", (value) => setLocal(key, value), true),
+      ),
+    [gapColumnKeys, localFilters, setLocal],
+  );
   const sheetFilters = useMemo(
     () =>
       bindPredicates(
@@ -457,11 +470,13 @@ export function TablesPage() {
     return withFx.filter((row) =>
       sheetFilters.every((field) => {
         if (!fieldFilterActive(field)) return true;
-        if (!search.result && !field.local && !extraPredicates[field.key]) return true;
-        return cellMatches(row.cells[cellKeyForFilter(field)], fieldPredicate(field));
+        if (search.result || field.local) {
+          return cellMatches(row.cells[cellKeyForFilter(field)], fieldPredicate(field));
+        }
+        return true;
       }),
     );
-  }, [baseRows, extraPredicates, formulaColumns, formulas, recorteWorkingRows, search.result, sheetFilters]);
+  }, [baseRows, formulaColumns, formulas, recorteWorkingRows, search.result, sheetFilters]);
   const rows = useMemo(() => {
     if (search.result) return pageRecorteRows(matchedRows, page, pageSize);
     return matchedRows;
@@ -577,12 +592,13 @@ export function TablesPage() {
 
   const sheetColumns = useMemo(() => {
     const source = search.result ? resultColumns : visibleColumns;
+    // Pre-index filters by key for O(1) lookup instead of O(N) find() per column.
+    const filterByKey = new Map(sheetFilters.map((f) => [f.key, f]));
+    const filterByCellKey = new Map(sheetFilters.map((f) => [cellKeyForFilter(f), f]));
     const out = [];
     for (const column of source) {
       const sourceKey = column.dataIndex ?? column.key;
-      const field = sheetFilters.find(
-        (item) => item.key === column.key || cellKeyForFilter(item) === sourceKey,
-      );
+      const field = filterByKey.get(column.key) ?? filterByCellKey.get(sourceKey);
       const expression = formulas[sourceKey] ?? "";
       out.push({
         ...column,
@@ -604,7 +620,7 @@ export function TablesPage() {
         label: spec?.name ?? "fx",
         dataIndex: key,
         className: spec?.numeric ? "spreadsheet-table__numeric" : undefined,
-        filterField: sheetFilters.find((item) => item.key === key),
+        filterField: filterByKey.get(key),
       });
     }
     return out;

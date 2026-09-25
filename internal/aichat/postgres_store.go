@@ -66,15 +66,18 @@ func (store *PostgresStore) ListThreads(ctx context.Context, owner auth.Identifi
 	if store == nil || store.pool == nil {
 		return ThreadPage{}, ErrInvalidSetup
 	}
-	rows, err := store.pool.Query(ctx, threadSelect+`
-WHERE owner_user_id=$1 AND retention_expires_at>$2 ORDER BY updated_at DESC,id DESC LIMIT $3 OFFSET $4`, chatAuthUUID(owner), now, limit, offset)
+	rows, err := store.pool.Query(ctx, `SELECT id,owner_user_id,title,active_result_reference_id,
+retention_expires_at,version,created_at,updated_at,count(*) OVER () AS total_count
+FROM ai_chat_threads
+WHERE owner_user_id=$1 AND retention_expires_at>$2
+ORDER BY updated_at DESC,id DESC LIMIT $3 OFFSET $4`, chatAuthUUID(owner), now, limit, offset)
 	if err != nil {
 		return ThreadPage{}, fmt.Errorf("list AI Chat threads: %w", err)
 	}
 	defer rows.Close()
 	page := ThreadPage{Threads: make([]Thread, 0), Limit: limit, Offset: offset}
 	for rows.Next() {
-		value, err := scanThread(rows)
+		value, err := scanThreadWithTotal(rows, &page.Total)
 		if err != nil {
 			return ThreadPage{}, fmt.Errorf("scan AI Chat thread: %w", err)
 		}
@@ -82,9 +85,6 @@ WHERE owner_user_id=$1 AND retention_expires_at>$2 ORDER BY updated_at DESC,id D
 	}
 	if err := rows.Err(); err != nil {
 		return ThreadPage{}, fmt.Errorf("iterate AI Chat threads: %w", err)
-	}
-	if err := store.pool.QueryRow(ctx, `SELECT count(*) FROM ai_chat_threads WHERE owner_user_id=$1 AND retention_expires_at>$2`, chatAuthUUID(owner), now).Scan(&page.Total); err != nil {
-		return ThreadPage{}, fmt.Errorf("count AI Chat threads: %w", err)
 	}
 	return page, nil
 }
@@ -152,21 +152,22 @@ func (store *PostgresStore) DeleteThread(ctx context.Context, id Identifier, own
 }
 
 func (store *PostgresStore) ListMessages(ctx context.Context, threadID Identifier, owner auth.Identifier, limit, offset int) (MessagePage, error) {
-	if _, err := store.GetThread(ctx, threadID, owner); err != nil {
-		return MessagePage{}, err
-	}
 	rows, err := store.pool.Query(ctx, `SELECT message.id,message.thread_id,message.run_id,message.sequence,message.role,message.content,message.created_at,
 COALESCE((SELECT jsonb_agg(reference.id ORDER BY reference.created_at,reference.id)
   FROM ai_chat_result_references reference
-  WHERE reference.run_id=message.run_id AND message.role='ASSISTANT'),'[]'::jsonb)
-FROM ai_chat_messages message WHERE message.thread_id=$1 ORDER BY message.sequence,message.id LIMIT $2 OFFSET $3`, chatUUID(threadID), limit, offset)
+  WHERE reference.run_id=message.run_id AND message.role='ASSISTANT'),'[]'::jsonb),
+count(*) OVER () AS total_count
+FROM ai_chat_messages message
+JOIN ai_chat_threads thread ON thread.id=message.thread_id AND thread.owner_user_id=$2
+WHERE message.thread_id=$1
+ORDER BY message.sequence,message.id LIMIT $3 OFFSET $4`, chatUUID(threadID), chatAuthUUID(owner), limit, offset)
 	if err != nil {
 		return MessagePage{}, fmt.Errorf("list AI Chat messages: %w", err)
 	}
 	defer rows.Close()
 	page := MessagePage{Messages: make([]Message, 0), Limit: limit, Offset: offset}
 	for rows.Next() {
-		value, err := scanMessageWithReferences(rows)
+		value, err := scanMessageWithTotal(rows, &page.Total)
 		if err != nil {
 			return MessagePage{}, fmt.Errorf("scan AI Chat message: %w", err)
 		}
@@ -175,8 +176,10 @@ FROM ai_chat_messages message WHERE message.thread_id=$1 ORDER BY message.sequen
 	if err := rows.Err(); err != nil {
 		return MessagePage{}, fmt.Errorf("iterate AI Chat messages: %w", err)
 	}
-	if err := store.pool.QueryRow(ctx, `SELECT count(*) FROM ai_chat_messages WHERE thread_id=$1`, chatUUID(threadID)).Scan(&page.Total); err != nil {
-		return MessagePage{}, fmt.Errorf("count AI Chat messages: %w", err)
+	if page.Total == 0 && len(page.Messages) == 0 {
+		if _, err := store.GetThread(ctx, threadID, owner); err != nil {
+			return MessagePage{}, err
+		}
 	}
 	return page, nil
 }
@@ -353,27 +356,44 @@ tool_call_count,input_usage,output_usage,result_bytes,error_code,cancel_requeste
 }
 
 func (store *PostgresStore) AppendTextDelta(ctx context.Context, id Identifier, owner auth.Identifier, delta string, now time.Time) (RunEvent, error) {
-	tx, err := store.pool.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return RunEvent{}, fmt.Errorf("begin AI Chat text event: %w", err)
-	}
-	defer func() { _ = tx.Rollback(context.Background()) }()
-	run, err := lockRun(ctx, tx, id, owner)
-	if err != nil {
-		return RunEvent{}, err
-	}
-	if run.CancelRequestedAt != nil || run.State == RunCancelled {
-		return RunEvent{}, ErrCancelled
-	}
-	if run.State != RunRunning {
+	// Hot-path: chamado a cada delta de streaming. Usa CTE atômica para alocar
+	// a sequência e inserir o evento sem abrir uma transação explícita nem fazer
+	// um SELECT FOR UPDATE separado. O WHERE state='RUNNING' garante a mesma
+	// invariante de estado que o lockRun anterior.
+	var event RunEvent
+	err := store.pool.QueryRow(ctx, `
+WITH seq AS (
+  UPDATE ai_chat_runs
+  SET next_event_sequence = next_event_sequence + 1
+  WHERE id = $1 AND owner_user_id = $2
+    AND state = 'RUNNING' AND cancel_requested_at IS NULL
+  RETURNING next_event_sequence - 1 AS seq
+),
+ins AS (
+  INSERT INTO ai_chat_run_events (run_id, sequence, event_kind, text_delta, created_at)
+  SELECT $1, seq.seq, 'TEXT_DELTA', $3, $4 FROM seq
+  RETURNING run_id, sequence, event_kind, text_delta, tool_step_id,
+            result_reference_id, error_code, created_at
+)
+SELECT run_id, sequence, event_kind, text_delta, tool_step_id,
+       result_reference_id, error_code, created_at FROM ins`,
+		chatUUID(id), chatAuthUUID(owner), delta, now,
+	).Scan(&event.RunID, &event.Sequence, &event.Kind, &event.TextDelta,
+		new(pgtype.UUID), new(pgtype.UUID), new(pgtype.Text), &event.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// A CTE não retornou linhas: o run não está em estado RUNNING ou foi cancelado.
+		// Distingue entre not-found e cancelled consultando o estado atual.
+		run, loadErr := store.GetRun(ctx, id, owner)
+		if loadErr != nil {
+			return RunEvent{}, loadErr
+		}
+		if run.CancelRequestedAt != nil || run.State == RunCancelled {
+			return RunEvent{}, ErrCancelled
+		}
 		return RunEvent{}, ErrInvalidState
 	}
-	event, err := appendEventTx(ctx, tx, RunEvent{RunID: id, Kind: EventTextDelta, TextDelta: delta, CreatedAt: now})
 	if err != nil {
-		return RunEvent{}, err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return RunEvent{}, normalizePostgresError(err)
+		return RunEvent{}, normalizePostgresError(fmt.Errorf("append AI Chat text delta: %w", err))
 	}
 	return event, nil
 }
@@ -801,6 +821,19 @@ func scanThread(row rowScanner) (Thread, error) {
 	return value, nil
 }
 
+// scanThreadWithTotal lê a coluna extra count(*) OVER () emitida pela window
+// function em ListThreads, eliminando a segunda query de COUNT.
+func scanThreadWithTotal(row rowScanner, total *int) (Thread, error) {
+	var value Thread
+	var id, owner, active pgtype.UUID
+	if err := row.Scan(&id, &owner, &value.Title, &active, &value.RetentionExpiresAt, &value.Version, &value.CreatedAt, &value.UpdatedAt, total); err != nil {
+		return Thread{}, err
+	}
+	value.ID, value.OwnerUserID = chatIdentifier(id), auth.Identifier(owner.Bytes)
+	value.ActiveResultReferenceID = optionalIdentifier(active)
+	return value, nil
+}
+
 func scanRun(row rowScanner) (Run, error) {
 	var value Run
 	var id, thread, owner, retry pgtype.UUID
@@ -848,6 +881,31 @@ func scanMessageWithReferences(row rowScanner) (Message, error) {
 	var id, thread, run pgtype.UUID
 	var encodedReferences []byte
 	if err := row.Scan(&id, &thread, &run, &value.Sequence, &value.Role, &value.Content, &value.CreatedAt, &encodedReferences); err != nil {
+		return Message{}, err
+	}
+	value.ID, value.ThreadID, value.RunID = chatIdentifier(id), chatIdentifier(thread), chatIdentifier(run)
+	var references []string
+	if err := json.Unmarshal(encodedReferences, &references); err != nil || len(references) > MaximumToolCalls {
+		return Message{}, ErrInvalidState
+	}
+	value.ResultReferenceIDs = make([]Identifier, 0, len(references))
+	for _, raw := range references {
+		reference, err := ParseIdentifier(raw)
+		if err != nil {
+			return Message{}, ErrInvalidState
+		}
+		value.ResultReferenceIDs = append(value.ResultReferenceIDs, reference)
+	}
+	return value, nil
+}
+
+// scanMessageWithTotal lê a coluna extra count(*) OVER () emitida pela window
+// function em ListMessages, eliminando a segunda query de COUNT.
+func scanMessageWithTotal(row rowScanner, total *int) (Message, error) {
+	var value Message
+	var id, thread, run pgtype.UUID
+	var encodedReferences []byte
+	if err := row.Scan(&id, &thread, &run, &value.Sequence, &value.Role, &value.Content, &value.CreatedAt, &encodedReferences, total); err != nil {
 		return Message{}, err
 	}
 	value.ID, value.ThreadID, value.RunID = chatIdentifier(id), chatIdentifier(thread), chatIdentifier(run)

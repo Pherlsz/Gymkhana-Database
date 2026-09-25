@@ -123,3 +123,146 @@ export function firstFnName(expression: string): string {
     .match(/^\s*([A-Za-zÀ-ÿÉé0-9._]+)/);
   return match ? foldName(match[1] ?? "") : "";
 }
+
+export function digitsOnly(value: unknown): string {
+  return String(value ?? "").replace(/\D/g, "");
+}
+
+export function formatCPF(value: unknown): string {
+  const d = digitsOnly(value);
+  if (d.length !== 11) return asText(value);
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`;
+}
+
+export function formatCEP(value: unknown): string {
+  const d = digitsOnly(value);
+  if (d.length !== 8) return asText(value);
+  return `${d.slice(0, 5)}-${d.slice(5, 8)}`;
+}
+
+export function formatPhone(value: unknown): string {
+  const d = digitsOnly(value);
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return asText(value);
+}
+
+export function extractDDD(value: unknown): string {
+  const d = digitsOnly(value);
+  return d.length >= 10 ? d.slice(0, 2) : "";
+}
+
+export function extractEmailDomain(value: unknown): string {
+  const text = asText(value).trim();
+  const idx = text.indexOf("@");
+  return idx >= 0 ? text.slice(idx + 1).toLowerCase() : "";
+}
+
+export function extractEmailUser(value: unknown): string {
+  const text = asText(value).trim();
+  const idx = text.indexOf("@");
+  return idx >= 0 ? text.slice(0, idx) : text;
+}
+
+const MONTH_NAMES = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
+export function monthName(value: unknown): string {
+  const d = toDate(value);
+  if (d) return MONTH_NAMES[d.getMonth()] ?? "";
+  const n = asNumber(value);
+  if (n != null && n >= 1 && n <= 12) return MONTH_NAMES[Math.trunc(n) - 1] ?? "";
+  return "";
+}
+
+const WEEKDAY_NAMES = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado",
+];
+
+export function weekdayName(value: unknown): string {
+  const d = toDate(value);
+  return d ? (WEEKDAY_NAMES[d.getDay()] ?? "") : "";
+}
+
+export function daysBetween(from: unknown, to: unknown): number | "" {
+  const start = toDate(from);
+  const end = toDate(to);
+  if (!start || !end) return "";
+  const diffMs = end.getTime() - start.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+}
+
+export function daysFromToday(value: unknown, today = new Date()): number | "" {
+  const d = toDate(value);
+  if (!d) return "";
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  const diffMs = d.getTime() - today.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+}
+
+export function isExpired(value: unknown, today = new Date()): boolean {
+  const d = toDate(value);
+  if (!d) return false;
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime() < today.getTime();
+}
+
+export function roundNum(val: unknown, decimals = 0): number | "" {
+  const n = asNumber(val);
+  if (n == null) return "";
+  const factor = Math.pow(10, Math.max(0, decimals));
+  return Math.round(n * factor) / factor;
+}
+
+export function ceilNum(val: unknown, decimals = 0): number | "" {
+  const n = asNumber(val);
+  if (n == null) return "";
+  const factor = Math.pow(10, Math.max(0, decimals));
+  return Math.ceil(n * factor) / factor;
+}
+
+export function floorNum(val: unknown, decimals = 0): number | "" {
+  const n = asNumber(val);
+  if (n == null) return "";
+  const factor = Math.pow(10, Math.max(0, decimals));
+  return Math.floor(n * factor) / factor;
+}
+
+export function averageNums(args: unknown[]): number | "" {
+  const nums = args.map(asNumber).filter((n): n is number => n != null);
+  if (!nums.length) return "";
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+export function minNums(args: unknown[]): number | "" {
+  const nums = args.map(asNumber).filter((n): n is number => n != null);
+  if (!nums.length) return "";
+  return Math.min(...nums);
+}
+
+export function maxNums(args: unknown[]): number | "" {
+  const nums = args.map(asNumber).filter((n): n is number => n != null);
+  if (!nums.length) return "";
+  return Math.max(...nums);
+}
+

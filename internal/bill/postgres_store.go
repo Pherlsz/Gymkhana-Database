@@ -272,7 +272,7 @@ func (store *PostgresStore) Get(ctx context.Context, id Identifier) (Bill, error
 func (store *PostgresStore) Count(ctx context.Context, filters Filters) (int64, error) {
 	count, err := store.queries.CountBills(ctx, dbgen.CountBillsParams{
 		OwnerProfileIDFilter: optionalProfileUUID(filters.OwnerProfileID), BillTypeIDFilter: optionalDatabaseUUID(filters.TypeID),
-		ReferenceFilter: normalize.SearchText(filters.Reference), CompetenceFilter: strings.TrimSpace(filters.Competence),
+		ReferenceFilter: normalizeFilterPattern(filters.Reference, normalize.SearchText), CompetenceFilter: strings.TrimSpace(filters.Competence),
 		MediumFilter: string(filters.Medium), StatusFilter: string(filters.Status),
 		HolderProfileIDFilter: optionalProfileUUID(filters.HolderProfileID),
 		RestrictIds:           filters.RestrictIDs,
@@ -287,7 +287,7 @@ func (store *PostgresStore) Count(ctx context.Context, filters Filters) (int64, 
 func (store *PostgresStore) List(ctx context.Context, options ListOptions) ([]Bill, error) {
 	values, err := store.queries.ListBills(ctx, dbgen.ListBillsParams{
 		OwnerProfileIDFilter: optionalProfileUUID(options.Filters.OwnerProfileID), BillTypeIDFilter: optionalDatabaseUUID(options.Filters.TypeID),
-		ReferenceFilter: normalize.SearchText(options.Filters.Reference), CompetenceFilter: strings.TrimSpace(options.Filters.Competence),
+		ReferenceFilter: normalizeFilterPattern(options.Filters.Reference, normalize.SearchText), CompetenceFilter: strings.TrimSpace(options.Filters.Competence),
 		MediumFilter: string(options.Filters.Medium), StatusFilter: string(options.Filters.Status),
 		HolderProfileIDFilter: optionalProfileUUID(options.Filters.HolderProfileID),
 		RestrictIds:           options.Filters.RestrictIDs,

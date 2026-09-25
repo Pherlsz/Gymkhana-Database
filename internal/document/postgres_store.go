@@ -286,7 +286,7 @@ func (store *PostgresStore) Get(ctx context.Context, id Identifier) (Document, e
 func (store *PostgresStore) Count(ctx context.Context, filters Filters) (int64, error) {
 	count, err := store.queries.CountDocuments(ctx, dbgen.CountDocumentsParams{
 		OwnerProfileIDFilter: optionalProfileUUID(filters.OwnerProfileID), DocumentTypeIDFilter: optionalDatabaseUUID(filters.TypeID),
-		IdentifierFilter: normalize.SearchText(filters.Identifier), MediumFilter: string(filters.Medium),
+		IdentifierFilter: normalizeFilterPattern(filters.Identifier, normalize.SearchText), MediumFilter: string(filters.Medium),
 		StatusFilter: string(filters.Status), HolderProfileIDFilter: optionalProfileUUID(filters.HolderProfileID),
 		RestrictIds: filters.RestrictIDs, IDFilter: documentUUIDList(filters.IDFilter),
 	})
@@ -299,7 +299,7 @@ func (store *PostgresStore) Count(ctx context.Context, filters Filters) (int64, 
 func (store *PostgresStore) List(ctx context.Context, options ListOptions) ([]Document, error) {
 	values, err := store.queries.ListDocuments(ctx, dbgen.ListDocumentsParams{
 		OwnerProfileIDFilter: optionalProfileUUID(options.Filters.OwnerProfileID), DocumentTypeIDFilter: optionalDatabaseUUID(options.Filters.TypeID),
-		IdentifierFilter: normalize.SearchText(options.Filters.Identifier), MediumFilter: string(options.Filters.Medium),
+		IdentifierFilter: normalizeFilterPattern(options.Filters.Identifier, normalize.SearchText), MediumFilter: string(options.Filters.Medium),
 		StatusFilter: string(options.Filters.Status), HolderProfileIDFilter: optionalProfileUUID(options.Filters.HolderProfileID),
 		RestrictIds: options.Filters.RestrictIDs, IDFilter: documentUUIDList(options.Filters.IDFilter),
 		SortField: string(options.SortField), SortOrder: string(options.SortOrder), PageOffset: options.Offset, PageLimit: options.Limit,

@@ -349,6 +349,20 @@ func normalizeTypeListOptions(options TypeListOptions) (TypeListOptions, error) 
 	return options, nil
 }
 
+func normalizeFilterPattern(raw string, fn func(string) string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if strings.HasPrefix(raw, "^") {
+		return "^" + fn(raw[1:])
+	}
+	if strings.HasPrefix(raw, "=") {
+		return "=" + fn(raw[1:])
+	}
+	return fn(raw)
+}
+
 func normalizeListOptions(options ListOptions) (ListOptions, error) {
 	if options.Limit == 0 {
 		options.Limit = 100
@@ -380,7 +394,7 @@ func normalizeListOptions(options ListOptions) (ListOptions, error) {
 	if options.Filters.Status != "" && !options.Filters.Status.Valid() {
 		return ListOptions{}, ErrInvalidListOptions
 	}
-	options.Filters.Reference = normalize.SearchText(options.Filters.Reference)
+	options.Filters.Reference = normalizeFilterPattern(options.Filters.Reference, normalize.SearchText)
 	options.Filters.Competence = strings.TrimSpace(options.Filters.Competence)
 	if options.Filters.Competence != "" && !competencePattern.MatchString(options.Filters.Competence) {
 		return ListOptions{}, ErrInvalidListOptions

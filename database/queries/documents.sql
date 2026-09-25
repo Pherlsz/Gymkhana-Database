@@ -134,7 +134,17 @@ JOIN document_presences AS presence ON presence.id = document.presence_id
 LEFT JOIN document_current_uses AS document_current_use ON document_current_use.document_id = document.id
 WHERE (sqlc.narg(owner_profile_id_filter)::uuid IS NULL OR presence.profile_id = sqlc.narg(owner_profile_id_filter)::uuid)
   AND (sqlc.narg(document_type_id_filter)::uuid IS NULL OR presence.document_type_id = sqlc.narg(document_type_id_filter)::uuid)
-  AND (sqlc.arg(identifier_filter)::text = '' OR lower(COALESCE(presence.identifier_value, '')) LIKE '%' || lower(sqlc.arg(identifier_filter)::text) || '%')
+  AND (
+    sqlc.arg(identifier_filter)::text = '' OR
+    CASE
+      WHEN sqlc.arg(identifier_filter)::text LIKE '^%' THEN
+        lower(COALESCE(presence.identifier_value, '')) LIKE lower(substring(sqlc.arg(identifier_filter)::text FROM 2)) || '%'
+      WHEN sqlc.arg(identifier_filter)::text LIKE '=%' THEN
+        lower(COALESCE(presence.identifier_value, '')) = lower(substring(sqlc.arg(identifier_filter)::text FROM 2))
+      ELSE
+        lower(COALESCE(presence.identifier_value, '')) LIKE '%' || lower(sqlc.arg(identifier_filter)::text) || '%'
+    END
+  )
   AND (sqlc.arg(medium_filter)::text = '' OR document.medium = sqlc.arg(medium_filter)::text)
   AND (sqlc.arg(status_filter)::text = '' OR
     (sqlc.arg(status_filter)::text = 'IN_USE' AND document.medium = 'PHYSICAL' AND document_current_use.document_id IS NOT NULL) OR
@@ -170,7 +180,17 @@ LEFT JOIN document_current_uses AS document_current_use ON document_current_use.
 LEFT JOIN profiles AS holder ON holder.id = document_current_use.holder_profile_id
 WHERE (sqlc.narg(owner_profile_id_filter)::uuid IS NULL OR presence.profile_id = sqlc.narg(owner_profile_id_filter)::uuid)
   AND (sqlc.narg(document_type_id_filter)::uuid IS NULL OR presence.document_type_id = sqlc.narg(document_type_id_filter)::uuid)
-  AND (sqlc.arg(identifier_filter)::text = '' OR lower(COALESCE(presence.identifier_value, '')) LIKE '%' || lower(sqlc.arg(identifier_filter)::text) || '%')
+  AND (
+    sqlc.arg(identifier_filter)::text = '' OR
+    CASE
+      WHEN sqlc.arg(identifier_filter)::text LIKE '^%' THEN
+        lower(COALESCE(presence.identifier_value, '')) LIKE lower(substring(sqlc.arg(identifier_filter)::text FROM 2)) || '%'
+      WHEN sqlc.arg(identifier_filter)::text LIKE '=%' THEN
+        lower(COALESCE(presence.identifier_value, '')) = lower(substring(sqlc.arg(identifier_filter)::text FROM 2))
+      ELSE
+        lower(COALESCE(presence.identifier_value, '')) LIKE '%' || lower(sqlc.arg(identifier_filter)::text) || '%'
+    END
+  )
   AND (sqlc.arg(medium_filter)::text = '' OR document.medium = sqlc.arg(medium_filter)::text)
   AND (sqlc.arg(status_filter)::text = '' OR
     (sqlc.arg(status_filter)::text = 'IN_USE' AND document.medium = 'PHYSICAL' AND document_current_use.document_id IS NOT NULL) OR

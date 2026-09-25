@@ -4,13 +4,31 @@ import {
   ageFrom,
   asNumber,
   asText,
+  averageNums,
+  ceilNum,
+  daysBetween,
+  daysFromToday,
+  digitsOnly,
   digitSum,
+  extractDDD,
+  extractEmailDomain,
+  extractEmailUser,
   faixaKey,
   firstFnName,
+  floorNum,
   foldName,
+  formatCEP,
+  formatCPF,
+  formatPhone,
+  isExpired,
   letterSum,
+  maxNums,
+  minNums,
+  monthName,
+  roundNum,
   splitTextsAndNumber,
   titleCase,
+  weekdayName,
   yearsBetween,
 } from "./text";
 import { HyperFormula } from "hyperformula";
@@ -29,35 +47,89 @@ const TO_HF: Record<string, string> = {
   OU: "OR",
   AND: "AND",
   E: "AND",
+  NAO: "NOT",
+  NOT: "NOT",
   SE: "IF",
   ANO: "YEAR",
   DIA: "DAY",
   DATA: "DATE",
+  HOJE: "HOJE",
+  DATAHOJE: "HOJE",
   RANGE: "FAIXA",
   ENTRE: "FAIXA",
   EMFAIXA: "FAIXA",
   VERDADEIRO: "TRUE",
   FALSO: "FALSE",
   NPRIMEIRO: "NPRIMEIRO",
-  /** Catalog dotted names → JS custom dispatch keys. */
+  ESQUERDA: "NPRIMEIRO",
+  NULTIMO: "NULTIMO",
+  DIREITA: "NULTIMO",
   SOMACARAC: "VALORCARACT",
   VALORCARACT: "VALORCARACT",
   TOTALCARAC: "TOTALCARAC",
+  COMPRIMENTO: "TOTALCARAC",
   SOMADIGITO: "SOMADIGITOS",
   SOMADIGITOS: "SOMADIGITOS",
   NOMEPROPRIO: "NOMEPROPRIO",
   EVAZIO: "EVAZIO",
   EIGUAL: "EIGUAL",
+  DIFERENTE: "DIFERENTE",
+  MAIORQUE: "MAIORQUE",
+  MENORQUE: "MENORQUE",
+  VALORPADRAO: "VALORPADRAO",
+  COALESCE: "VALORPADRAO",
   MAIUSCULA: "MAIUSCULA",
   MINUSCULA: "MINUSCULA",
   IDADE: "IDADE",
   INICIAIS: "INICIAIS",
   TRECHO: "TRECHO",
   JUNTAR: "JUNTAR",
+  CONCAT: "JUNTAR",
+  CONCATENAR: "JUNTAR",
   ARRUMAR: "ARRUMAR",
   TROCA: "TROCA",
+  SUBSTITUIR: "TROCA",
+  REPETIR: "REPETIR",
+  CONTEM: "CONTEM",
+  COMECACOM: "COMECACOM",
+  COMECAPOR: "COMECACOM",
+  TERMINACOM: "TERMINACOM",
+  TERMINAPOR: "TERMINACOM",
   FAIXA: "FAIXA",
-  NULTIMO: "NULTIMO",
+  SONUMEROS: "SONUMEROS",
+  SODIGITOS: "SONUMEROS",
+  FORMATARCPF: "FORMATARCPF",
+  FORMATARCEP: "FORMATARCEP",
+  FORMATARTELEFONE: "FORMATARTELEFONE",
+  DDD: "DDD",
+  DOMINIOEMAIL: "DOMINIOEMAIL",
+  DOMINIO: "DOMINIOEMAIL",
+  USUARIOEMAIL: "USUARIOEMAIL",
+  MESNOME: "MESNOME",
+  DIASEMANA: "DIASEMANA",
+  DIAS: "DIAS",
+  DIASATEHOJE: "DIASATEHOJE",
+  VENCIDO: "VENCIDO",
+  EXPIRADO: "VENCIDO",
+  MEDIA: "MEDIA",
+  AVERAGE: "MEDIA",
+  MINIMO: "MINIMO",
+  MIN: "MINIMO",
+  MAXIMO: "MAXIMO",
+  MAX: "MAXIMO",
+  SUBTRAIR: "SUBTRAIR",
+  MULT: "MULT",
+  MULTIPLICAR: "MULT",
+  PORCENTAGEM: "PORCENTAGEM",
+  ARRED: "ARRED",
+  ARREDONDAR: "ARRED",
+  ROUND: "ARRED",
+  ARREDPARACIMA: "ARREDPARACIMA",
+  TETO: "ARREDPARACIMA",
+  CEIL: "ARREDPARACIMA",
+  ARREDPARABAIXO: "ARREDPARABAIXO",
+  PISO: "ARREDPARABAIXO",
+  FLOOR: "ARREDPARABAIXO",
 };
 
 const PLUGIN = new Set([
@@ -68,6 +140,10 @@ const PLUGIN = new Set([
   "SOMADIGITOS",
   "EVAZIO",
   "EIGUAL",
+  "DIFERENTE",
+  "MAIORQUE",
+  "MENORQUE",
+  "VALORPADRAO",
   "MAIUSCULA",
   "MINUSCULA",
   "NOMEPROPRIO",
@@ -77,9 +153,36 @@ const PLUGIN = new Set([
   "JUNTAR",
   "ARRUMAR",
   "TROCA",
+  "REPETIR",
+  "CONTEM",
+  "COMECACOM",
+  "TERMINACOM",
   "FAIXA",
+  "SONUMEROS",
+  "FORMATARCPF",
+  "FORMATARCEP",
+  "FORMATARTELEFONE",
+  "DDD",
+  "DOMINIOEMAIL",
+  "USUARIOEMAIL",
+  "MESNOME",
+  "DIASEMANA",
+  "DIAS",
+  "DIASATEHOJE",
+  "HOJE",
+  "VENCIDO",
+  "MEDIA",
+  "MINIMO",
+  "MAXIMO",
+  "SUBTRAIR",
+  "MULT",
+  "PORCENTAGEM",
+  "ARRED",
+  "ARREDPARACIMA",
+  "ARREDPARABAIXO",
   "OR",
   "AND",
+  "NOT",
   "IF",
   "DATE",
 ]);
@@ -196,7 +299,27 @@ function toFormulaLiteral(value: unknown, preferNumber: boolean): string {
 
 function wantsNumberArgs(expression: string): boolean {
   const name = firstFnName(expression);
-  return name === "SOMA" || name === "SUM" || name === "ABS" || name === "NVALOR" || name === "VALUE" || name === "FAIXA";
+  return (
+    name === "SOMA" ||
+    name === "SUM" ||
+    name === "SUBTRAIR" ||
+    name === "MULT" ||
+    name === "MULTIPLICAR" ||
+    name === "MEDIA" ||
+    name === "AVERAGE" ||
+    name === "MINIMO" ||
+    name === "MIN" ||
+    name === "MAXIMO" ||
+    name === "MAX" ||
+    name === "ARRED" ||
+    name === "ARREDPARACIMA" ||
+    name === "ARREDPARABAIXO" ||
+    name === "PORCENTAGEM" ||
+    name === "ABS" ||
+    name === "NVALOR" ||
+    name === "VALUE" ||
+    name === "FAIXA"
+  );
 }
 
 export type FormulaColumn = { key: string; label: string };
@@ -287,6 +410,22 @@ function dispatch(name: string, args: unknown[]): unknown {
       return args.every((value) => asText(value).trim() === "");
     case "EIGUAL":
       return args.length >= 2 && args.every((value) => asText(value) === asText(args[0]));
+    case "DIFERENTE":
+      return asText(args[0]) !== asText(args[1]);
+    case "MAIORQUE": {
+      const a = asNumber(args[0]);
+      const b = asNumber(args[1]);
+      if (a != null && b != null) return a > b;
+      return asText(args[0]) > asText(args[1]);
+    }
+    case "MENORQUE": {
+      const a = asNumber(args[0]);
+      const b = asNumber(args[1]);
+      if (a != null && b != null) return a < b;
+      return asText(args[0]) < asText(args[1]);
+    }
+    case "VALORPADRAO":
+      return asText(args[0]).trim() ? args[0] : (args[1] ?? "");
     case "MAIUSCULA":
       return args.map((value) => asText(value).toLocaleUpperCase("pt-BR")).join("");
     case "MINUSCULA":
@@ -320,6 +459,75 @@ function dispatch(name: string, args: unknown[]): unknown {
       const from = asText(args[args.length - 2]);
       return args.slice(0, -2).map(asText).join("").split(from).join(to);
     }
+    case "REPETIR": {
+      const count = Math.max(0, Math.trunc(asNumber(args[1]) ?? 1));
+      return asText(args[0]).repeat(count);
+    }
+    case "CONTEM":
+      return asText(args[0]).toLowerCase().includes(asText(args[1]).toLowerCase());
+    case "COMECACOM":
+      return asText(args[0]).toLowerCase().startsWith(asText(args[1]).toLowerCase());
+    case "TERMINACOM":
+      return asText(args[0]).toLowerCase().endsWith(asText(args[1]).toLowerCase());
+    case "SONUMEROS":
+      return digitsOnly(args[0]);
+    case "FORMATARCPF":
+      return formatCPF(args[0]);
+    case "FORMATARCEP":
+      return formatCEP(args[0]);
+    case "FORMATARTELEFONE":
+      return formatPhone(args[0]);
+    case "DDD":
+      return extractDDD(args[0]);
+    case "DOMINIOEMAIL":
+      return extractEmailDomain(args[0]);
+    case "USUARIOEMAIL":
+      return extractEmailUser(args[0]);
+    case "MESNOME":
+      return monthName(args[0]);
+    case "DIASEMANA":
+      return weekdayName(args[0]);
+    case "DIAS":
+      return daysBetween(args[0], args[1]);
+    case "DIASATEHOJE":
+      return daysFromToday(args[0]);
+    case "HOJE":
+      return new Date().toISOString().slice(0, 10);
+    case "VENCIDO":
+      return isExpired(args[0]);
+    case "MEDIA":
+      return averageNums(args);
+    case "MINIMO":
+      return minNums(args);
+    case "MAXIMO":
+      return maxNums(args);
+    case "SUBTRAIR": {
+      const a = asNumber(args[0]) ?? 0;
+      const b = asNumber(args[1]) ?? 0;
+      return a - b;
+    }
+    case "MULT": {
+      const nums = args.map(asNumber).filter((n): n is number => n != null);
+      if (!nums.length) return "";
+      return nums.reduce((a, b) => a * b, 1);
+    }
+    case "PORCENTAGEM": {
+      const val = asNumber(args[0]) ?? 0;
+      const pct = asNumber(args[1]) ?? 0;
+      return (val * pct) / 100;
+    }
+    case "ARRED": {
+      const dec = typeof args[1] === "number" ? args[1] : 0;
+      return roundNum(args[0], dec);
+    }
+    case "ARREDPARACIMA": {
+      const dec = typeof args[1] === "number" ? args[1] : 0;
+      return ceilNum(args[0], dec);
+    }
+    case "ARREDPARABAIXO": {
+      const dec = typeof args[1] === "number" ? args[1] : 0;
+      return floorNum(args[0], dec);
+    }
     case "FAIXA": {
       if (args.length < 3) return false;
       const value = faixaKey(args[0]);
@@ -335,6 +543,8 @@ function dispatch(name: string, args: unknown[]): unknown {
       return args.some(truthy);
     case "AND":
       return args.every(truthy);
+    case "NOT":
+      return !truthy(args[0]);
     case "IF":
       return truthy(args[0]) ? args[1] : args[2];
     case "DATE":

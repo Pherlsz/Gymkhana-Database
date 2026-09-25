@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Pherlsz/Gymkhana-Core/normalize"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
@@ -341,6 +342,20 @@ func normalizeTypeListOptions(options TypeListOptions) (TypeListOptions, error) 
 	return options, nil
 }
 
+func normalizeFilterPattern(raw string, fn func(string) string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if strings.HasPrefix(raw, "^") {
+		return "^" + fn(raw[1:])
+	}
+	if strings.HasPrefix(raw, "=") {
+		return "=" + fn(raw[1:])
+	}
+	return fn(raw)
+}
+
 func normalizeListOptions(options ListOptions) (ListOptions, error) {
 	if options.Limit == 0 {
 		options.Limit = 100
@@ -372,7 +387,7 @@ func normalizeListOptions(options ListOptions) (ListOptions, error) {
 	if options.Filters.Status != "" && !options.Filters.Status.Valid() {
 		return ListOptions{}, ErrInvalidListOptions
 	}
-	options.Filters.Identifier = normalize.SearchText(options.Filters.Identifier)
+	options.Filters.Identifier = normalizeFilterPattern(options.Filters.Identifier, normalize.SearchText)
 	return options, nil
 }
 

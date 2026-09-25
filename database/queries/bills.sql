@@ -92,7 +92,17 @@ FROM bills AS bill
 LEFT JOIN bill_current_uses AS bill_current_use ON bill_current_use.bill_id = bill.id
 WHERE (sqlc.narg(owner_profile_id_filter)::uuid IS NULL OR bill.owner_profile_id = sqlc.narg(owner_profile_id_filter)::uuid)
   AND (sqlc.narg(bill_type_id_filter)::uuid IS NULL OR bill.bill_type_id = sqlc.narg(bill_type_id_filter)::uuid)
-  AND (sqlc.arg(reference_filter)::text = '' OR lower(coalesce(bill.reference_value, '')) LIKE '%' || lower(sqlc.arg(reference_filter)::text) || '%')
+  AND (
+    sqlc.arg(reference_filter)::text = '' OR
+    CASE
+      WHEN sqlc.arg(reference_filter)::text LIKE '^%' THEN
+        lower(coalesce(bill.reference_value, '')) LIKE lower(substring(sqlc.arg(reference_filter)::text FROM 2)) || '%'
+      WHEN sqlc.arg(reference_filter)::text LIKE '=%' THEN
+        lower(coalesce(bill.reference_value, '')) = lower(substring(sqlc.arg(reference_filter)::text FROM 2))
+      ELSE
+        lower(coalesce(bill.reference_value, '')) LIKE '%' || lower(sqlc.arg(reference_filter)::text) || '%'
+    END
+  )
   AND (sqlc.arg(competence_filter)::text = '' OR coalesce(bill.competence, '') = sqlc.arg(competence_filter)::text)
   AND (sqlc.arg(medium_filter)::text = '' OR bill.medium = sqlc.arg(medium_filter)::text)
   AND (sqlc.arg(status_filter)::text = '' OR
@@ -121,7 +131,17 @@ LEFT JOIN bill_current_uses AS bill_current_use ON bill_current_use.bill_id = bi
 LEFT JOIN profiles AS holder ON holder.id = bill_current_use.holder_profile_id
 WHERE (sqlc.narg(owner_profile_id_filter)::uuid IS NULL OR bill.owner_profile_id = sqlc.narg(owner_profile_id_filter)::uuid)
   AND (sqlc.narg(bill_type_id_filter)::uuid IS NULL OR bill.bill_type_id = sqlc.narg(bill_type_id_filter)::uuid)
-  AND (sqlc.arg(reference_filter)::text = '' OR lower(coalesce(bill.reference_value, '')) LIKE '%' || lower(sqlc.arg(reference_filter)::text) || '%')
+  AND (
+    sqlc.arg(reference_filter)::text = '' OR
+    CASE
+      WHEN sqlc.arg(reference_filter)::text LIKE '^%' THEN
+        lower(coalesce(bill.reference_value, '')) LIKE lower(substring(sqlc.arg(reference_filter)::text FROM 2)) || '%'
+      WHEN sqlc.arg(reference_filter)::text LIKE '=%' THEN
+        lower(coalesce(bill.reference_value, '')) = lower(substring(sqlc.arg(reference_filter)::text FROM 2))
+      ELSE
+        lower(coalesce(bill.reference_value, '')) LIKE '%' || lower(sqlc.arg(reference_filter)::text) || '%'
+    END
+  )
   AND (sqlc.arg(competence_filter)::text = '' OR coalesce(bill.competence, '') = sqlc.arg(competence_filter)::text)
   AND (sqlc.arg(medium_filter)::text = '' OR bill.medium = sqlc.arg(medium_filter)::text)
   AND (sqlc.arg(status_filter)::text = '' OR

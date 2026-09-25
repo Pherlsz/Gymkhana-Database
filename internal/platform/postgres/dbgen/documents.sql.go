@@ -59,7 +59,17 @@ JOIN document_presences AS presence ON presence.id = document.presence_id
 LEFT JOIN document_current_uses AS document_current_use ON document_current_use.document_id = document.id
 WHERE ($1::uuid IS NULL OR presence.profile_id = $1::uuid)
   AND ($2::uuid IS NULL OR presence.document_type_id = $2::uuid)
-  AND ($3::text = '' OR lower(COALESCE(presence.identifier_value, '')) LIKE '%' || lower($3::text) || '%')
+  AND (
+    $3::text = '' OR
+    CASE
+      WHEN $3::text LIKE '^%' THEN
+        lower(COALESCE(presence.identifier_value, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+      WHEN $3::text LIKE '=%' THEN
+        lower(COALESCE(presence.identifier_value, '')) = lower(substring($3::text FROM 2))
+      ELSE
+        lower(COALESCE(presence.identifier_value, '')) LIKE '%' || lower($3::text) || '%'
+    END
+  )
   AND ($4::text = '' OR document.medium = $4::text)
   AND ($5::text = '' OR
     ($5::text = 'IN_USE' AND document.medium = 'PHYSICAL' AND document_current_use.document_id IS NOT NULL) OR
@@ -570,7 +580,17 @@ LEFT JOIN document_current_uses AS document_current_use ON document_current_use.
 LEFT JOIN profiles AS holder ON holder.id = document_current_use.holder_profile_id
 WHERE ($1::uuid IS NULL OR presence.profile_id = $1::uuid)
   AND ($2::uuid IS NULL OR presence.document_type_id = $2::uuid)
-  AND ($3::text = '' OR lower(COALESCE(presence.identifier_value, '')) LIKE '%' || lower($3::text) || '%')
+  AND (
+    $3::text = '' OR
+    CASE
+      WHEN $3::text LIKE '^%' THEN
+        lower(COALESCE(presence.identifier_value, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+      WHEN $3::text LIKE '=%' THEN
+        lower(COALESCE(presence.identifier_value, '')) = lower(substring($3::text FROM 2))
+      ELSE
+        lower(COALESCE(presence.identifier_value, '')) LIKE '%' || lower($3::text) || '%'
+    END
+  )
   AND ($4::text = '' OR document.medium = $4::text)
   AND ($5::text = '' OR
     ($5::text = 'IN_USE' AND document.medium = 'PHYSICAL' AND document_current_use.document_id IS NOT NULL) OR

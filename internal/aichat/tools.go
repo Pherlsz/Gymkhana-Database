@@ -104,16 +104,17 @@ const queryToolSchema = `{"type":"object","additionalProperties":false,"required
 "catalog_version":{"type":"string","description":"query.version do Cadastro lógico na política"},
 "root_entity":{"type":"string","description":"Chave da entidade raiz (query.entities[].key). No conjunto, a entidade do primeiro plano."},
 "projections":{"type":"array","minItems":0,"maxItems":20,"items":{"type":"string"},"description":"Deste passo: sempre o nome numa lista de pessoas, mais o que o passo pede para ver ou conferir. Campo com replaces: não projete o src. Vazio no v2 com aggregates ou set."},
-"filter":{"type":"object","description":"Nó de filtro. kind=predicate: field, operator e values (strings). kind=group: conjunction AND|OR e children. Faixas distintas por letra: OR de grupos AND (Inicial + Número da casa). kind=not: children com um nó. kind=relation: relation (query.relations[].key) e children avaliados na entidade relacionada.",
+"filter":{"type":"object","description":"Nó de filtro. kind=predicate: field, operator e values (strings ou números). kind=group: conjunction AND|OR e children. Faixas distintas por letra: OR de grupos AND (Inicial + Número da casa). kind=not: children com um nó. kind=relation: relation (query.relations[].key) e children avaliados na entidade relacionada.",
+"required":["kind"],
 "properties":{
-"kind":{"type":"string","enum":["predicate","group","relation","not"]},
+"kind":{"type":"string","enum":["predicate","group","relation","not"],"description":"Obrigatório. 'group' para grupos AND/OR e 'predicate' para condições em campos."},
 "conjunction":{"type":"string","enum":["AND","OR"]},
 "field":{"type":"string"},
 "other_field":{"type":"string","description":"Compara este campo com field, sem values."},
 "operator":{"type":"string","enum":["eq","neq","contains","starts_with","gt","gte","lt","lte","between","in","is_null","not_null"]},
-"values":{"type":"array","maxItems":50,"items":{"type":"string"}},
+"values":{"type":"array","maxItems":50,"items":{"type":"string"},"description":"Valores do predicado (ex: ['1756', '5566'] ou ['Charqueadas']). NUNCA use children para valores de predicado."},
 "relation":{"type":"string"},
-"children":{"type":"array","items":{"type":"object"}}}},
+"children":{"type":"array","items":{"type":"object"},"description":"Sub-nós de filtro para kind=group ou kind=not. NUNCA use para valores de predicado."}}},
 "sort":{"type":"array","maxItems":3,"items":{"type":"object","required":["field","direction"],"properties":{"field":{"type":"string"},"direction":{"type":"string","enum":["asc","desc"]}}},"description":"O servidor ordena listas A-Z. Não envie sort numa lista de pessoas, documentos ou contas."},
 "group_by":{"type":"array","maxItems":4,"items":{"type":"string"},"description":"v2. Campos do grupo."},
 "aggregates":{"type":"array","maxItems":4,"items":{"type":"object","additionalProperties":false,"required":["key","function"],"properties":{"key":{"type":"string"},"function":{"type":"string","enum":["count","sum","average","minimum","maximum"]},"field":{"type":"string"},"distinct":{"type":"boolean"}}},"description":"v2. Não combine com projections."},
@@ -129,6 +130,7 @@ const queryToolSchema = `{"type":"object","additionalProperties":false,"required
 func (gateway *ToolGateway) Schemas() []ToolSchema {
 	return []ToolSchema{
 		{Name: "catalog", Description: "Cadastro lógico extra. Só chame se faltar um campo no bloco da política.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false}`)},
+		{Name: "search", Description: "Busca textual no cadastro. Use para encontrar registros por nome, CPF, endereço ou qualquer texto. Suporta q (texto livre), terms (lista de palavras exatas) e modules para filtrar por tipo (people, documents, bills). Retorna lista de resultados com score de relevância.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"properties":{"q":{"type":"string","description":"Texto livre de busca"},"terms":{"type":"array","items":{"type":"string"},"description":"Palavras exatas a buscar"},"modules":{"type":"array","items":{"type":"string"},"description":"Filtrar por módulo: people, documents, bills"},"fields":{"type":"array","items":{"type":"string"},"description":"Campos específicos para buscar"},"limit":{"type":"integer","minimum":1,"maximum":100},"offset":{"type":"integer","minimum":0}}}`)},
 		{Name: "query", Description: "Consulta o cadastro. catalog_version está na política. Inicial: profile.name_initial (A-Z). Número da casa: profile.address_house_number (inteiro; 3/3=3; s/n vazio). Não use between em profile.address_number. Faixas por letra: OR de AND. Se a tool recusar um ramo, não publique a grade. Projeções deste passo: sempre o nome numa lista de pessoas, mais o que o passo pede para ver ou conferir. Campo com replaces: não projete também o src. match_count é o total. Listas A-Z; omita sort. context_reference_id refina o resultado ativo.", InputSchema: json.RawMessage(queryToolSchema)},
 		{Name: "result", Description: "Reabre uma referência de resultado da própria conversa com reautorização.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["reference_id"],"properties":{"reference_id":{"type":"string","format":"uuid"},"limit":{"type":"integer","minimum":1,"maximum":100},"offset":{"type":"integer","minimum":0,"maximum":10000}}}`)},
 	}
@@ -814,9 +816,11 @@ func queryResultPayload(page querydomain.ResultPage, matchCount int, note string
 	return marshalBoundedToolPayload(struct {
 		Note       string `json:"note"`
 		MatchCount int    `json:"match_count"`
+		TotalRows  int    `json:"total_rows"`
+		Sampled    bool   `json:"sampled,omitempty"`
 		Truncated  bool   `json:"truncated,omitempty"`
 		Rows       any    `json:"rows"`
-	}{Note: note, MatchCount: matchCount, Truncated: truncated, Rows: rows})
+	}{Note: note, MatchCount: matchCount, TotalRows: matchCount, Sampled: len(page.Rows) > maximumModelSampleRows, Truncated: truncated, Rows: rows})
 }
 
 func safeQueryCell(value querydomain.ResultCell) queryCell {

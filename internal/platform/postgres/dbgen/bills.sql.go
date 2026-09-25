@@ -69,7 +69,17 @@ FROM bills AS bill
 LEFT JOIN bill_current_uses AS bill_current_use ON bill_current_use.bill_id = bill.id
 WHERE ($1::uuid IS NULL OR bill.owner_profile_id = $1::uuid)
   AND ($2::uuid IS NULL OR bill.bill_type_id = $2::uuid)
-  AND ($3::text = '' OR lower(coalesce(bill.reference_value, '')) LIKE '%' || lower($3::text) || '%')
+  AND (
+    $3::text = '' OR
+    CASE
+      WHEN $3::text LIKE '^%' THEN
+        lower(coalesce(bill.reference_value, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+      WHEN $3::text LIKE '=%' THEN
+        lower(coalesce(bill.reference_value, '')) = lower(substring($3::text FROM 2))
+      ELSE
+        lower(coalesce(bill.reference_value, '')) LIKE '%' || lower($3::text) || '%'
+    END
+  )
   AND ($4::text = '' OR coalesce(bill.competence, '') = $4::text)
   AND ($5::text = '' OR bill.medium = $5::text)
   AND ($6::text = '' OR
@@ -510,7 +520,17 @@ LEFT JOIN bill_current_uses AS bill_current_use ON bill_current_use.bill_id = bi
 LEFT JOIN profiles AS holder ON holder.id = bill_current_use.holder_profile_id
 WHERE ($1::uuid IS NULL OR bill.owner_profile_id = $1::uuid)
   AND ($2::uuid IS NULL OR bill.bill_type_id = $2::uuid)
-  AND ($3::text = '' OR lower(coalesce(bill.reference_value, '')) LIKE '%' || lower($3::text) || '%')
+  AND (
+    $3::text = '' OR
+    CASE
+      WHEN $3::text LIKE '^%' THEN
+        lower(coalesce(bill.reference_value, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+      WHEN $3::text LIKE '=%' THEN
+        lower(coalesce(bill.reference_value, '')) = lower(substring($3::text FROM 2))
+      ELSE
+        lower(coalesce(bill.reference_value, '')) LIKE '%' || lower($3::text) || '%'
+    END
+  )
   AND ($4::text = '' OR coalesce(bill.competence, '') = $4::text)
   AND ($5::text = '' OR bill.medium = $5::text)
   AND ($6::text = '' OR

@@ -77,13 +77,11 @@ function headerTexts() {
 async function applyColumnSelect(columnLabel: string, optionLabel: string) {
   fireEvent.click(await screen.findByRole("button", { name: `Filtrar ${columnLabel}` }));
   const select = await screen.findByRole("combobox", { name: "Valor" });
-  fireEvent.change(select, {
-    target: {
-      value:
-        [...select.querySelectorAll("option")].find((o) => o.textContent === optionLabel)?.value ??
-        "",
-    },
+  fireEvent.mouseDown(select);
+  const option = await screen.findByText(optionLabel, {
+    selector: ".ant-select-item-option-content",
   });
+  fireEvent.click(option);
 }
 
 function cnhType() {
@@ -452,60 +450,64 @@ describe("TablesPage", () => {
     );
   });
 
-  it("lists people with priority columns first and hides the long tail", { timeout: 15_000 }, async () => {
-    window.history.replaceState(null, "", "/tables/people");
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockImplementation((input: RequestInfo | URL) =>
-          Promise.resolve(apiResponse(String(input))),
-        ),
-    );
-    render(<App />);
-    expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: "Filtrar Nome" })).toBeInTheDocument();
-    expect(document.querySelector(".tables-inspector-slot")).toBeNull();
-    expect(document.querySelector(".tables-page__workspace > .profile-panel")).toBeNull();
-    const headers = headerTexts();
-    expect(headers.slice(0, 13)).toEqual([
-      "Ações",
-      "Nome",
-      "Documentos",
-      "CPF",
-      "RG",
-      "Rua",
-      "Número",
-      "Cidade",
-      "CEP",
-      "E-mail",
-      "Celular",
-      "Data de nascimento",
-      "Título eleitoral",
-    ]);
-    expect(headers).toContain("CNH");
-    expect(headers).toContain("Equipe");
-    expect(headers.indexOf("Equipe")).toBeGreaterThan(headers.indexOf("CNH"));
-    expect(screen.getByRole("button", { name: "Filtrar Equipe" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Filtrar Setor" })).toBeInTheDocument();
-    expect(headers).not.toContain("Idade");
-    expect(headers).not.toContain("Soma nome");
-    expect(headers).not.toContain("Signo");
-    expect(headers).not.toContain("Nome do pai");
-    expect(headers.some((text) => text === "Notas")).toBe(false);
-    expect(screen.getByText("529.982.247-25")).toBeInTheDocument();
-    expect(screen.getByText("1122334455")).toBeInTheDocument();
-    expect(document.querySelector(".document-badge__acronym")?.textContent).toBe("RG");
-    expect(document.querySelector(".document-badge__mark--physical")?.getAttribute("title")).toBe(
-      "Exemplar físico",
-    );
-    expect(document.querySelector(".document-badge__mark--physical svg")).toBeTruthy();
-    expect(screen.queryByText("Identidade")).not.toBeInTheDocument();
-    const footer = document.querySelector(".spreadsheet-table__footer");
-    expect(footer).toBeTruthy();
-    expect(document.querySelector(".spreadsheet-table")?.contains(footer)).toBe(false);
-    expect(screen.getByLabelText("Linhas por página")).toBeInTheDocument();
-  });
+  it(
+    "lists people with priority columns first and hides the long tail",
+    { timeout: 15_000 },
+    async () => {
+      window.history.replaceState(null, "", "/tables/people");
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockImplementation((input: RequestInfo | URL) =>
+            Promise.resolve(apiResponse(String(input))),
+          ),
+      );
+      render(<App />);
+      expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
+      expect(await screen.findByRole("button", { name: "Filtrar Nome" })).toBeInTheDocument();
+      expect(document.querySelector(".tables-inspector-slot")).toBeNull();
+      expect(document.querySelector(".tables-page__workspace > .profile-panel")).toBeNull();
+      const headers = headerTexts();
+      expect(headers.slice(0, 13)).toEqual([
+        "Ações",
+        "Nome",
+        "Documentos",
+        "CPF",
+        "RG",
+        "Rua",
+        "Número",
+        "Cidade",
+        "CEP",
+        "E-mail",
+        "Celular",
+        "Data de nascimento",
+        "Título eleitoral",
+      ]);
+      expect(headers).toContain("CNH");
+      expect(headers).toContain("Equipe");
+      expect(headers.indexOf("Equipe")).toBeGreaterThan(headers.indexOf("CNH"));
+      expect(screen.getByRole("button", { name: "Filtrar Equipe" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Filtrar Setor" })).toBeInTheDocument();
+      expect(headers).not.toContain("Idade");
+      expect(headers).not.toContain("Soma nome");
+      expect(headers).not.toContain("Signo");
+      expect(headers).not.toContain("Nome do pai");
+      expect(headers.some((text) => text === "Notas")).toBe(false);
+      expect(screen.getByText("529.982.247-25")).toBeInTheDocument();
+      expect(screen.getByText("1122334455")).toBeInTheDocument();
+      expect(document.querySelector(".document-badge__acronym")?.textContent).toBe("RG");
+      expect(document.querySelector(".document-badge__mark--physical")?.getAttribute("title")).toBe(
+        "Exemplar físico",
+      );
+      expect(document.querySelector(".document-badge__mark--physical svg")).toBeTruthy();
+      expect(screen.queryByText("Identidade")).not.toBeInTheDocument();
+      const footer = document.querySelector(".spreadsheet-table__footer");
+      expect(footer).toBeTruthy();
+      expect(document.querySelector(".spreadsheet-table")?.contains(footer)).toBe(false);
+      expect(screen.getByLabelText("Linhas por página")).toBeInTheDocument();
+    },
+  );
 
   it("applies compact column overrides from the people URL", async () => {
     window.history.replaceState(null, "", "/tables/people?cols=-city,father_name");

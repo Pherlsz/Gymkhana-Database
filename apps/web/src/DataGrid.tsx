@@ -105,7 +105,7 @@ export function DataGrid<TData>({
             : {}),
         };
       }),
-    [columns, data],
+    [columns],
   );
 
   const pagination: TablePaginationConfig | false =

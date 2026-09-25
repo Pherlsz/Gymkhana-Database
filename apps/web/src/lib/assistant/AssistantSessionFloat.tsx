@@ -72,7 +72,7 @@ function ResultOnTableAction({
   onShow,
 }: {
   referenceId: string;
-  activeResultId?: string;
+  activeResultId?: string | undefined;
   applyLabel: string;
   onTableLabel: string;
   onShow: (id: string) => void;
@@ -96,9 +96,9 @@ export function AssistantSessionFloat({
 }: {
   size: AssistantWindowSize;
   tableLabel: string;
-  activeResultId?: string;
+  activeResultId?: string | undefined;
   onSizeChange: (size: AssistantWindowSize) => void;
-  onShowResult?: (referenceId: string) => void;
+  onShowResult?: ((referenceId: string) => void) | undefined;
 }) {
   const { messages, t } = useI18n();
   const copy = messages.tables.assistant;
@@ -370,7 +370,7 @@ export function AssistantSessionFloat({
                     onShow={onShowResult}
                     onTableLabel={copy.onTable}
                     referenceId={
-                      message.result_reference_ids[message.result_reference_ids.length - 1]
+                      message.result_reference_ids[message.result_reference_ids.length - 1]!
                     }
                   />
                 ) : null}

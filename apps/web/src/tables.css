@@ -1303,10 +1303,41 @@ body.spreadsheet-col-resizing * {
 }
 
 .column-funnel__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   color: var(--md-on-surface-variant);
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.2;
+}
+
+.column-funnel__hint-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md-on-surface-variant);
+  cursor: help;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.column-funnel__hint-trigger:hover {
+  opacity: 1;
+  color: var(--md-primary);
+}
+
+.column-funnel__option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.column-funnel__option-name {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.775rem;
 }
 
 .column-funnel__field .ant-select,

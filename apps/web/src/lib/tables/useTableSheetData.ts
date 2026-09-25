@@ -141,8 +141,8 @@ export function useTableSheetData({
     })),
   });
 
-  const documentFieldsStamp = queriesStamp(documentFieldQueries);
-  const billFieldsStamp = queriesStamp(billFieldQueries);
+  const documentFieldsStamp = section === "documents" ? queriesStamp(documentFieldQueries) : "";
+  const billFieldsStamp = section === "bills" ? queriesStamp(billFieldQueries) : "";
 
   const columnMetadataLoading =
     section === "profile"
@@ -288,10 +288,10 @@ export function useTableSheetData({
 
   const distinctByKey = useMemo(() => {
     const result: Record<string, string[]> = {};
-    for (const field of extraFields)
+    for (const field of selectCustomFields)
       result[field.technical_key] = distinctValues(baseRows, field.technical_key);
     return result;
-  }, [baseRows, extraFields]);
+  }, [baseRows, selectCustomFields]);
 
   const cityOptions = useMemo(
     () =>

@@ -273,6 +273,16 @@ func normalizeFilter(node FilterNode, validation *ValidationError, path string, 
 	if depth > MaximumFilterDepth {
 		validation.add(path, "too_deep")
 	}
+	if node.Kind == "" {
+		switch {
+		case node.Field != "" || node.Operator != "":
+			node.Kind = FilterPredicate
+		case node.Relation != "":
+			node.Kind = FilterRelation
+		case node.Conjunction != "" || len(node.Children) > 0:
+			node.Kind = FilterGroup
+		}
+	}
 	node.Field = strings.TrimSpace(node.Field)
 	node.OtherField = strings.TrimSpace(node.OtherField)
 	node.Relation = strings.TrimSpace(node.Relation)

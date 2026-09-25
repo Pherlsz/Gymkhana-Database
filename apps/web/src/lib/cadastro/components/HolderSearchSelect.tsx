@@ -7,17 +7,17 @@ import { type Profile, listProfilesLookup } from "../../api/client";
 import { queryKeys } from "../../api/queryKeys";
 
 export interface HolderSearchSelectProps {
-  id?: string;
-  ariaLabel?: string;
-  value?: string;
+  id?: string | undefined;
+  ariaLabel?: string | undefined;
+  value?: string | undefined;
   selectedProfile: Profile | null;
   onSelectProfile: (profile: Profile) => void;
   onSelectNewName: (name: string) => void;
-  onDraftName?: (name: string) => void;
+  onDraftName?: ((name: string) => void) | undefined;
   onClear: () => void;
   placeholder: string;
   createNewOptionText: string;
-  disabled?: boolean;
+  disabled?: boolean | undefined;
 }
 
 function scoreProfile(profile: Profile, query: string): number {

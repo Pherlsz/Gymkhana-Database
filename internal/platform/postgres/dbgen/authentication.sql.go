@@ -421,7 +421,7 @@ SET email = $2,
     display_name = $3,
     avatar_url = $4,
     subject = CASE
-      WHEN $5 <> '' AND subject LIKE 'pending:%' THEN $5
+      WHEN $5::text <> '' AND subject LIKE 'pending:%' THEN $5::text
       ELSE subject
     END,
     updated_at = now(),

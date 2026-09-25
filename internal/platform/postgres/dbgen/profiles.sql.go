@@ -30,7 +30,17 @@ func (q *Queries) ClearCPFPresenceNumber(ctx context.Context, profileID pgtype.U
 const countProfiles = `-- name: CountProfiles :one
 SELECT count(*)
 FROM profiles
-WHERE ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
+WHERE (
+    $1::text = '' OR
+    CASE
+      WHEN $1::text LIKE '^%' THEN
+        lower(full_name) LIKE lower(substring($1::text FROM 2)) || '%'
+      WHEN $1::text LIKE '=%' THEN
+        lower(full_name) = lower(substring($1::text FROM 2))
+      ELSE
+        lower(full_name) LIKE '%' || lower($1::text) || '%'
+    END
+  )
   AND ($2::text = '' OR EXISTS (
     SELECT 1
     FROM document_presences AS presence
@@ -38,10 +48,39 @@ WHERE ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
     WHERE presence.profile_id = profiles.id
       AND document_type.technical_key = 'cpf'
       AND presence.claim = 'informed_number'
-      AND coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%'
+      AND (
+        CASE
+          WHEN $2::text LIKE '^%' THEN
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring($2::text FROM 2) || '%'
+          WHEN $2::text LIKE '=%' THEN
+            coalesce(presence.identifier_digits, presence.identifier_value, '') = substring($2::text FROM 2)
+          ELSE
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%'
+        END
+      )
   ))
-  AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%')
-  AND ($4::text = '' OR lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%')
+  AND (
+    $3::text = '' OR
+    CASE
+      WHEN $3::text LIKE '^%' THEN
+        lower(coalesce(email, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+      WHEN $3::text LIKE '=%' THEN
+        lower(coalesce(email, '')) = lower(substring($3::text FROM 2))
+      ELSE
+        lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%'
+    END
+  )
+  AND (
+    $4::text = '' OR
+    CASE
+      WHEN $4::text LIKE '^%' THEN
+        lower(coalesce(address_city, '')) LIKE lower(substring($4::text FROM 2)) || '%'
+      WHEN $4::text LIKE '=%' THEN
+        lower(coalesce(address_city, '')) = lower(substring($4::text FROM 2))
+      ELSE
+        lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%'
+    END
+  )
   AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
   AND (NOT $6::bool OR id = ANY($7::uuid[]))
 `
@@ -434,7 +473,7 @@ func (q *Queries) GetProfileByID(ctx context.Context, id pgtype.UUID) (Profile, 
 }
 
 const listDistinctCities = `-- name: ListDistinctCities :many
-SELECT DISTINCT address_city
+SELECT address_city
 FROM profiles
 WHERE address_city IS NOT NULL
   AND address_city <> ''
@@ -450,6 +489,7 @@ WHERE address_city IS NOT NULL
   ))
   AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%')
   AND ($4::text = '' OR coalesce(address_state, '') = $4::text)
+GROUP BY address_city
 ORDER BY address_city COLLATE gymkhana_pt_br
 LIMIT $5
 `
@@ -491,7 +531,17 @@ func (q *Queries) ListDistinctCities(ctx context.Context, arg ListDistinctCities
 const listProfiles = `-- name: ListProfiles :many
 SELECT id, full_name, social_name, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, birth_date, gender, blood_type, nationality, birth_city, marital_status, wedding_date, father_name, father_birth_date, mother_name, mother_birth_date, health_plan, blood_donor, organ_donor, team, sector, collections, vehicle_model, vehicle_color, vehicle_plate, vehicle_year, club_membership, membership_type, place_of_origin, birth_country, parents_wedding_date, supermarket_club, pet, travel_countries, card_brand, card_bank, version, created_at, updated_at
 FROM profiles
-WHERE ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
+WHERE (
+    $1::text = '' OR
+    CASE
+      WHEN $1::text LIKE '^%' THEN
+        lower(full_name) LIKE lower(substring($1::text FROM 2)) || '%'
+      WHEN $1::text LIKE '=%' THEN
+        lower(full_name) = lower(substring($1::text FROM 2))
+      ELSE
+        lower(full_name) LIKE '%' || lower($1::text) || '%'
+    END
+  )
   AND ($2::text = '' OR EXISTS (
     SELECT 1
     FROM document_presences AS presence
@@ -499,10 +549,39 @@ WHERE ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
     WHERE presence.profile_id = profiles.id
       AND document_type.technical_key = 'cpf'
       AND presence.claim = 'informed_number'
-      AND coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%'
+      AND (
+        CASE
+          WHEN $2::text LIKE '^%' THEN
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring($2::text FROM 2) || '%'
+          WHEN $2::text LIKE '=%' THEN
+            coalesce(presence.identifier_digits, presence.identifier_value, '') = substring($2::text FROM 2)
+          ELSE
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%'
+        END
+      )
   ))
-  AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%')
-  AND ($4::text = '' OR lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%')
+  AND (
+    $3::text = '' OR
+    CASE
+      WHEN $3::text LIKE '^%' THEN
+        lower(coalesce(email, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+      WHEN $3::text LIKE '=%' THEN
+        lower(coalesce(email, '')) = lower(substring($3::text FROM 2))
+      ELSE
+        lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%'
+    END
+  )
+  AND (
+    $4::text = '' OR
+    CASE
+      WHEN $4::text LIKE '^%' THEN
+        lower(coalesce(address_city, '')) LIKE lower(substring($4::text FROM 2)) || '%'
+      WHEN $4::text LIKE '=%' THEN
+        lower(coalesce(address_city, '')) = lower(substring($4::text FROM 2))
+      ELSE
+        lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%'
+    END
+  )
   AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
   AND (NOT $6::bool OR id = ANY($7::uuid[]))
 ORDER BY
@@ -515,6 +594,20 @@ ORDER BY
         WHEN lower(full_name) LIKE '% ' || lower($1::text) || ' %' THEN 3
         WHEN lower(full_name) LIKE '% ' || lower($1::text) || '%' THEN 4
         ELSE 5
+      END
+    ELSE 0
+  END ASC,
+  CASE
+    WHEN $2::text <> '' THEN
+      CASE
+        WHEN (
+          SELECT presence.identifier_digits
+          FROM document_presences AS presence
+          JOIN document_types AS document_type ON document_type.id = presence.document_type_id
+          WHERE presence.profile_id = profiles.id AND document_type.technical_key = 'cpf'
+          LIMIT 1
+        ) LIKE $2::text || '%' THEN 0
+        ELSE 1
       END
     ELSE 0
   END ASC,

@@ -81,15 +81,17 @@ function applyLiveColumnWidth(th: HTMLElement, width: number, tableWidth: number
   });
 
   const resizing = document.body.classList.contains("spreadsheet-col-resizing");
-  root.querySelectorAll<HTMLElement>(".ant-table-tbody-virtual-holder-inner > div").forEach((row) => {
-    const cell = row.children[index];
-    if (cell instanceof HTMLElement) {
-      paintCellWidth(cell, width);
-      cell.classList.toggle("is-resizing", resizing);
-    }
-    row.style.width = pxTotal;
-    row.style.minWidth = pxTotal;
-  });
+  root
+    .querySelectorAll<HTMLElement>(".ant-table-tbody-virtual-holder-inner > div")
+    .forEach((row) => {
+      const cell = row.children[index];
+      if (cell instanceof HTMLElement) {
+        paintCellWidth(cell, width);
+        cell.classList.toggle("is-resizing", resizing);
+      }
+      row.style.width = pxTotal;
+      row.style.minWidth = pxTotal;
+    });
 
   root.querySelectorAll<HTMLElement>(".ant-table-header table").forEach((table) => {
     table.style.width = pxTotal;
@@ -184,15 +186,30 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
   const startResize = useCallback(
     (event: ReactPointerEvent<HTMLElement>, columnKey: string, startWidth: number) => {
       if (!onColumnWidth || event.button !== 0) return;
+      const th = event.currentTarget;
+      if (!(th instanceof HTMLElement)) return;
+
+      // Event must originate from within this th element in the real DOM (not from an overlay/portal)
+      if (event.target instanceof Node && !th.contains(event.target)) {
+        return;
+      }
       if (
         event.target instanceof Element &&
-        event.target.closest(".column-funnel__anchor, .column-funnel__trigger, .column-funnel")
+        event.target.closest(
+          ".column-funnel__anchor, .column-funnel__trigger, .column-funnel, .column-funnel__overlay, .column-funnel__dropdown, .ant-select-dropdown, .ant-popover, .ant-picker-dropdown, .ant-modal",
+        )
       ) {
         return;
       }
-      const th = event.currentTarget;
       const rect = th.getBoundingClientRect();
-      if (rect.right - event.clientX > RESIZE_EDGE_PX) return;
+      if (rect.width <= 0) return;
+      if (
+        event.clientX < rect.right - RESIZE_EDGE_PX ||
+        event.clientX > rect.right ||
+        (rect.height > 0 && (event.clientY < rect.top || event.clientY > rect.bottom))
+      ) {
+        return;
+      }
 
       event.preventDefault();
       event.stopPropagation();
@@ -208,11 +225,11 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
       const setResizingClass = (on: boolean) => {
         th.classList.toggle("is-resizing", on);
         if (!(root instanceof HTMLElement) || columnIndex < 0) return;
-        root.querySelectorAll<HTMLElement>(".ant-table-tbody-virtual-holder-inner > div").forEach(
-          (row) => {
+        root
+          .querySelectorAll<HTMLElement>(".ant-table-tbody-virtual-holder-inner > div")
+          .forEach((row) => {
             row.children[columnIndex]?.classList.toggle("is-resizing", on);
-          },
-        );
+          });
       };
 
       setResizingClass(true);
@@ -262,12 +279,34 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     [pageSize, pageSizeOptionLabel],
   );
 
+  const [openFunnelKey, setOpenFunnelKey] = useState<string | null>(null);
+
+  // Stable cell style objects keyed by column — avoids producing new object references
+  // inside antdColumns and forcing Ant Design to reconcile every cell style on each render.
+  const cellStyles = useMemo(
+    () =>
+      new Map(
+        columns.map((column) => {
+          const width = resolvedWidth(column);
+          return [
+            column.key,
+            {
+              base: { width, minWidth: width, flex: `0 0 ${width}px` },
+              header: { width, minWidth: width, flex: `0 0 ${width}px`, position: "relative" as const },
+              cell: { width, minWidth: width, flex: `0 0 ${width}px`, display: "flex", alignItems: "center", padding: "0 0.55rem" },
+            },
+          ];
+        }),
+      ),
+    [columns, resolvedWidth],
+  );
+
   const antdColumns = useMemo(() => {
     const dataColumns = columns.map((column): NonNullable<TableProps<T>["columns"]>[number] => {
       const width = resolvedWidth(column);
       const sorted = Boolean(column.sortField && column.sortField === sortField);
       const cellKey = column.dataIndex ?? column.key;
-      const cellStyle = { width, minWidth: width, flex: `0 0 ${width}px` };
+      const styles = cellStyles.get(column.key);
       const field = column.sortField;
       return {
         key: column.key,
@@ -275,12 +314,20 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
           <span className="spreadsheet-table__head">
             <span className="spreadsheet-table__head-label">{column.title}</span>
             {funnel && column.filterField ? (
-              <span className="column-funnel__anchor">
+              <span
+                className="column-funnel__anchor"
+                onClick={(event) => event.stopPropagation()}
+                onDoubleClick={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+                onPointerDown={(event) => event.stopPropagation()}
+              >
                 <ColumnFunnel
                   columns={funnel.columns}
                   copy={funnel.copy}
                   field={column.filterField}
                   formula={column.formula}
+                  open={openFunnelKey === column.key}
+                  onOpenChange={(next) => setOpenFunnelKey(next ? column.key : null)}
                 />
               </span>
             ) : null}
@@ -295,7 +342,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
         sortOrder: sorted ? (sortOrder === "asc" ? "ascend" : "descend") : null,
         showSorterTooltip: false,
         onHeaderCell: () => ({
-          style: { ...cellStyle, position: "relative" as const },
+          style: styles?.header ?? { width, minWidth: width, flex: `0 0 ${width}px`, position: "relative" as const },
           ...(onColumnWidth
             ? {
                 onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
@@ -314,10 +361,18 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
                     suppressSortClick.current = false;
                     return;
                   }
+                  const th = event.currentTarget;
+                  if (
+                    th instanceof HTMLElement &&
+                    event.target instanceof Node &&
+                    !th.contains(event.target)
+                  ) {
+                    return;
+                  }
                   if (
                     event.target instanceof Element &&
                     event.target.closest(
-                      ".column-funnel__anchor, .column-funnel__trigger, .column-funnel",
+                      ".column-funnel__anchor, .column-funnel__trigger, .column-funnel, .column-funnel__overlay, .column-funnel__dropdown, .ant-select-dropdown, .ant-popover, .ant-picker-dropdown, .ant-modal",
                     )
                   ) {
                     return;
@@ -327,10 +382,16 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
                   if (
                     onColumnWidth &&
                     typeof event.clientX === "number" &&
-                    event.currentTarget instanceof HTMLElement
+                    th instanceof HTMLElement
                   ) {
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    if (rect.right - event.clientX <= RESIZE_EDGE_PX) return;
+                    const rect = th.getBoundingClientRect();
+                    if (
+                      rect.width > 0 &&
+                      event.clientX >= rect.right - RESIZE_EDGE_PX &&
+                      event.clientX <= rect.right
+                    ) {
+                      return;
+                    }
                   }
                   if (field === sortField) {
                     onSort(field, sortOrder === "asc" ? "desc" : "asc");
@@ -342,8 +403,10 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
             : {}),
         }),
         onCell: () => ({
-          style: {
-            ...cellStyle,
+          style: styles?.cell ?? {
+            width,
+            minWidth: width,
+            flex: `0 0 ${width}px`,
             display: "flex",
             alignItems: "center",
             padding: "0 0.55rem",
@@ -378,10 +441,12 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     };
     return [actionsColumn, ...dataColumns];
   }, [
+    cellStyles,
     columns,
     funnel,
     onColumnWidth,
     onSort,
+    openFunnelKey,
     resolvedWidth,
     rowActions,
     sortField,
@@ -574,7 +639,15 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
               showSearch={false}
               size="small"
               value={pageSize}
-              onChange={(value) => onPage(page, value)}
+              onChange={(value) => {
+                const currentFirstItem = (page - 1) * pageSize;
+                const maxPage = total > 0 ? Math.max(1, Math.ceil(total / value)) : 1;
+                const nextComputedPage = Math.min(
+                  maxPage,
+                  Math.max(1, Math.floor(currentFirstItem / value) + 1),
+                );
+                onPage(nextComputedPage, value);
+              }}
             />
           </div>
           <Pagination

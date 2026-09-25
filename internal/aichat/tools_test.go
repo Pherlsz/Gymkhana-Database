@@ -113,10 +113,10 @@ func (references *fakeToolReferences) ResultReference(_ context.Context, _ auth.
 func TestToolRegistryIsFixedTypedAndReadOnly(t *testing.T) {
 	gateway := testToolGateway(t, &fakeToolSearch{}, &fakeToolQuery{}, &fakeToolReferences{})
 	schemas := gateway.Schemas()
-	if len(schemas) != 3 {
+	if len(schemas) != 4 {
 		t.Fatalf("Schemas() length = %d", len(schemas))
 	}
-	want := []string{"catalog", "query", "result"}
+	want := []string{"catalog", "search", "query", "result"}
 	for index, schema := range schemas {
 		if schema.Name != want[index] || !json.Valid(schema.InputSchema) || !strings.Contains(string(schema.InputSchema), `"additionalProperties":false`) {
 			t.Fatalf("schema[%d] = %#v", index, schema)

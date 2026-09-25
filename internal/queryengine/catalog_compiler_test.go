@@ -415,3 +415,152 @@ func TestShapeScanFoldsRepeatedInitialLikeExecute(t *testing.T) {
 		t.Fatalf("shape scan initials = %#v", arguments)
 	}
 }
+
+func TestFilterNodeUnmarshalJSONFlexibilityAndKindInference(t *testing.T) {
+	// 1. Group missing "kind" but with conjunction and children
+	jsonGroup := []byte(`{
+		"conjunction": "AND",
+		"children": [
+			{"field": "profile.address_street", "operator": "not_null"},
+			{"field": "profile.address_number", "operator": "not_null"}
+		]
+	}`)
+	var groupNode FilterNode
+	if err := json.Unmarshal(jsonGroup, &groupNode); err != nil {
+		t.Fatalf("Unmarshal group error = %v", err)
+	}
+	if groupNode.Kind != FilterGroup {
+		t.Fatalf("groupNode.Kind = %q, want %q", groupNode.Kind, FilterGroup)
+	}
+	if len(groupNode.Children) != 2 {
+		t.Fatalf("groupNode.Children len = %d, want 2", len(groupNode.Children))
+	}
+	if groupNode.Children[0].Kind != FilterPredicate || groupNode.Children[1].Kind != FilterPredicate {
+		t.Fatalf("child kinds = %q, %q; want predicates", groupNode.Children[0].Kind, groupNode.Children[1].Kind)
+	}
+
+	// 2. Predicate with integer numbers in values
+	jsonNumbers := []byte(`{
+		"field": "profile.address_house_number",
+		"operator": "between",
+		"values": [1756, 5566]
+	}`)
+	var numberNode FilterNode
+	if err := json.Unmarshal(jsonNumbers, &numberNode); err != nil {
+		t.Fatalf("Unmarshal numbers error = %v", err)
+	}
+	if numberNode.Kind != FilterPredicate {
+		t.Fatalf("numberNode.Kind = %q, want %q", numberNode.Kind, FilterPredicate)
+	}
+	if len(numberNode.Values) != 2 || numberNode.Values[0] != "1756" || numberNode.Values[1] != "5566" {
+		t.Fatalf("numberNode.Values = %#v, want ['1756', '5566']", numberNode.Values)
+	}
+
+	// 3. Predicate with values passed in "children" array (in operator)
+	jsonChildrenAsValues := []byte(`{
+		"kind": "predicate",
+		"field": "profile.address_city",
+		"operator": "in",
+		"children": ["Porto Alegre", "Canoas"]
+	}`)
+	var childrenValuesNode FilterNode
+	if err := json.Unmarshal(jsonChildrenAsValues, &childrenValuesNode); err != nil {
+		t.Fatalf("Unmarshal children-as-values error = %v", err)
+	}
+	if childrenValuesNode.Kind != FilterPredicate {
+		t.Fatalf("childrenValuesNode.Kind = %q, want %q", childrenValuesNode.Kind, FilterPredicate)
+	}
+	if len(childrenValuesNode.Values) != 2 || childrenValuesNode.Values[0] != "Porto Alegre" || childrenValuesNode.Values[1] != "Canoas" {
+		t.Fatalf("childrenValuesNode.Values = %#v, want ['Porto Alegre', 'Canoas']", childrenValuesNode.Values)
+	}
+	if len(childrenValuesNode.Children) != 0 {
+		t.Fatalf("childrenValuesNode.Children should be empty, got len=%d", len(childrenValuesNode.Children))
+	}
+}
+
+func TestCompileUserQueryComplexFilterTree(t *testing.T) {
+	store := newFakeQueryStore()
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
+	if err != nil {
+		t.Fatalf("loadCatalog() error = %v", err)
+	}
+
+	// This JSON simulates the exact plan produced by Gemini for the user's prompt:
+	// - Name initial in B, F, G
+	// - Address not null
+	// - Not in 24 cities
+	// - House numbers in specific ranges per initial (numbers passed as raw integers, kind omitted in nested groups)
+	rawPlanJSON := []byte(`{
+		"version": "v1",
+		"catalog_version": "` + catalog.Public.Version + `",
+		"root_entity": "profiles",
+		"projections": ["profile.full_name", "profile.address_city", "profile.address_number"],
+		"maximum_rows": 100,
+		"filter": {
+			"conjunction": "AND",
+			"children": [
+				{
+					"field": "profile.address_street",
+					"operator": "not_null"
+				},
+				{
+					"kind": "not",
+					"children": [
+						{
+							"field": "profile.address_city",
+							"operator": "in",
+							"values": ["Charqueadas", "Gravataí", "Novo Hamburgo", "Campo Bom", "Três Coroas", "Taquara", "São Leopoldo", "Muitos Capões", "Vacaria", "Arroio dos Ratos", "Estância Velha", "Ipê", "Pelotas", "Capão da Canoa", "Imbé", "Blumenau", "Parobé", "Palmares do Sul", "canoas", "São Jerônimo", "Porto Alegre", "sapucaia", "roca salles"]
+						}
+					]
+				},
+				{
+					"conjunction": "OR",
+					"children": [
+						{
+							"conjunction": "AND",
+							"children": [
+								{"field": "profile.name_initial", "operator": "eq", "values": ["B"]},
+								{"field": "profile.address_house_number", "operator": "between", "values": [1756, 5566]}
+							]
+						},
+						{
+							"conjunction": "AND",
+							"children": [
+								{"field": "profile.name_initial", "operator": "eq", "values": ["F"]},
+								{"field": "profile.address_house_number", "operator": "between", "values": [1047, 1605]}
+							]
+						},
+						{
+							"conjunction": "AND",
+							"children": [
+								{"field": "profile.name_initial", "operator": "eq", "values": ["G"]},
+								{"field": "profile.address_house_number", "operator": "between", "values": [878, 1250]}
+							]
+						}
+					]
+				}
+			]
+		}
+	}`)
+
+	var plan QueryPlan
+	if err := json.Unmarshal(rawPlanJSON, &plan); err != nil {
+		t.Fatalf("json.Unmarshal(rawPlanJSON) error = %v", err)
+	}
+
+	compiled, _, err := compilePlan(plan, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("compilePlan() error = %v", err)
+	}
+
+	if compiled.SQL == "" {
+		t.Fatal("compiled SQL is empty")
+	}
+	if !strings.Contains(compiled.SQL, "BETWEEN") {
+		t.Errorf("compiled SQL missing BETWEEN: %s", compiled.SQL)
+	}
+	if !strings.Contains(compiled.SQL, "NOT (") {
+		t.Errorf("compiled SQL missing NOT (: %s", compiled.SQL)
+	}
+}
+

@@ -2,6 +2,8 @@ package queryengine
 
 import (
 	"crypto/rand"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
@@ -283,6 +285,83 @@ type FilterNode struct {
 	Values      []string     `json:"values,omitempty"`
 	Relation    string       `json:"relation,omitempty"`
 	Children    []FilterNode `json:"children,omitempty"`
+}
+
+func (node *FilterNode) UnmarshalJSON(data []byte) error {
+	type rawFilterNode struct {
+		Kind        FilterKind      `json:"kind"`
+		Conjunction Conjunction     `json:"conjunction,omitempty"`
+		Field       string          `json:"field,omitempty"`
+		OtherField  string          `json:"other_field,omitempty"`
+		Operator    Operator        `json:"operator,omitempty"`
+		Values      json.RawMessage `json:"values,omitempty"`
+		Relation    string          `json:"relation,omitempty"`
+		Children    json.RawMessage `json:"children,omitempty"`
+	}
+	var raw rawFilterNode
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	node.Kind = raw.Kind
+	node.Conjunction = raw.Conjunction
+	node.Field = raw.Field
+	node.OtherField = raw.OtherField
+	node.Operator = raw.Operator
+	node.Relation = raw.Relation
+
+	if len(raw.Values) > 0 && string(raw.Values) != "null" {
+		var stringValues []string
+		if err := json.Unmarshal(raw.Values, &stringValues); err == nil {
+			node.Values = stringValues
+		} else {
+			var anyValues []any
+			if err := json.Unmarshal(raw.Values, &anyValues); err == nil {
+				node.Values = make([]string, 0, len(anyValues))
+				for _, v := range anyValues {
+					if v != nil {
+						node.Values = append(node.Values, fmt.Sprint(v))
+					}
+				}
+			}
+		}
+	}
+
+	if len(raw.Children) > 0 && string(raw.Children) != "null" {
+		var childNodes []FilterNode
+		if err := json.Unmarshal(raw.Children, &childNodes); err == nil {
+			node.Children = childNodes
+		} else {
+			var rawStrings []string
+			if err := json.Unmarshal(raw.Children, &rawStrings); err == nil && len(node.Values) == 0 {
+				node.Values = rawStrings
+			} else {
+				var rawAnys []any
+				if err := json.Unmarshal(raw.Children, &rawAnys); err == nil && len(node.Values) == 0 {
+					node.Values = make([]string, 0, len(rawAnys))
+					for _, v := range rawAnys {
+						if v != nil {
+							node.Values = append(node.Values, fmt.Sprint(v))
+						}
+					}
+				} else {
+					return err
+				}
+			}
+		}
+	}
+
+	if node.Kind == "" {
+		switch {
+		case node.Field != "" || node.Operator != "":
+			node.Kind = FilterPredicate
+		case node.Relation != "":
+			node.Kind = FilterRelation
+		case node.Conjunction != "" || len(node.Children) > 0:
+			node.Kind = FilterGroup
+		}
+	}
+
+	return nil
 }
 
 type SortDirection string

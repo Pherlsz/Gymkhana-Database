@@ -26,12 +26,23 @@ export function defaultOp(kind: FunnelKind): ColumnOp {
   return "contains";
 }
 
-export function opsForKind(kind: FunnelKind): ColumnOp[] {
-  if (kind === "select" || kind === "bool") return ["eq", "neq", "in", "is_null", "not_null"];
-  if (kind === "number" || kind === "date") {
-    return ["eq", "neq", "gt", "gte", "lt", "lte", "between", "is_null", "not_null"];
-  }
-  return ["contains", "eq", "neq", "starts_with", "in", "is_null", "not_null"];
+export const ALL_COLUMN_OPS: ColumnOp[] = [
+  "contains",
+  "eq",
+  "neq",
+  "starts_with",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "between",
+  "in",
+  "is_null",
+  "not_null",
+];
+
+export function opsForKind(_kind?: FunnelKind): ColumnOp[] {
+  return ALL_COLUMN_OPS;
 }
 
 export function predicateActive(predicate: ColumnPredicate | undefined): boolean {
@@ -53,6 +64,15 @@ function comparable(value: unknown): string | number | null {
   const text = cellText(value).trim();
   const iso = toIsoDate(text);
   if (iso) return iso;
+  const cleanNum = text
+    .replace(/^[R$\s]+/, "")
+    .replace(/\s/g, "")
+    .replace(/\.(?=\d{3})/g, "")
+    .replace(",", ".");
+  if (/^-?\d+(\.\d+)?$/.test(cleanNum)) {
+    const num = Number(cleanNum);
+    if (Number.isFinite(num)) return num;
+  }
   const asN = Number(text.replace(",", "."));
   if (Number.isFinite(asN) && /^-?\d/.test(text)) return asN;
   return text.toLowerCase();
@@ -72,15 +92,29 @@ export function cellMatches(value: unknown, predicate: ColumnPredicate): boolean
   if (predicate.op === "is_null") return isEmptyCell(value);
   if (predicate.op === "not_null") return !isEmptyCell(value);
   if (predicate.op === "in") {
-    return predicate.values.some((item) => item && cellText(value) === item);
+    const digitsVal = text.replace(/\D/g, "");
+    return predicate.values.some((item) => {
+      if (!item) return false;
+      const q = item.trim().toLowerCase();
+      const qDigits = q.replace(/\D/g, "");
+      return lower === q || (qDigits.length > 0 && digitsVal === qDigits);
+    });
   }
-  if (predicate.op === "contains") return lower.includes(String(predicate.values[0]).toLowerCase());
+  const q = String(predicate.values[0] ?? "").trim().toLowerCase();
+  const qDigits = q.replace(/\D/g, "");
+  const digits = text.replace(/\D/g, "");
+
+  if (predicate.op === "contains") {
+    return lower.includes(q) || (qDigits.length > 0 && digits.includes(qDigits));
+  }
   if (predicate.op === "starts_with") {
-    return lower.startsWith(String(predicate.values[0]).toLowerCase());
+    return lower.startsWith(q) || (qDigits.length > 0 && digits.startsWith(qDigits));
   }
-  if (predicate.op === "eq" || predicate.op === "neq") {
-    const same = lower === String(predicate.values[0]).trim().toLowerCase();
-    return predicate.op === "eq" ? same : !same;
+  if (predicate.op === "eq") {
+    return lower === q || (qDigits.length > 0 && digits === qDigits);
+  }
+  if (predicate.op === "neq") {
+    return lower !== q && (qDigits.length === 0 || digits !== qDigits);
   }
   const left = comparable(value);
   if (predicate.op === "between") {

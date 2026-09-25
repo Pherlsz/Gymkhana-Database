@@ -1,9 +1,23 @@
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { ListFilter } from "lucide-react";
-import { Button, Input, Popover, Select } from "antd";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { CircleHelp, ListFilter } from "lucide-react";
+import { Button, Input, Popover, Select, Tooltip } from "antd";
 import { ICON, ICON_STROKE } from "../../components/icons";
 import { fieldPredicate, resolveFunnelKind } from "./bindPredicates";
-import { opsForKind, predicateActive, type ColumnOp, type ColumnPredicate } from "./columnPredicate";
+import {
+  opsForKind,
+  predicateActive,
+  type ColumnOp,
+  type ColumnPredicate,
+} from "./columnPredicate";
 import type { ToolbarFilterField } from "./FilterControl";
 import { funcsForKind, insertFormula, matchFormula, type FormulaSpec } from "./formulas/catalog";
 
@@ -26,14 +40,29 @@ function predicateKey(predicate: ColumnPredicate): string {
 
 function Field({
   label,
+  hint,
   children,
 }: {
   label: string;
+  hint?: string | undefined;
   children: ReactNode;
 }) {
   return (
     <label className="column-funnel__field">
-      <span className="column-funnel__label">{label}</span>
+      <span className="column-funnel__label">
+        <span>{label}</span>
+        {hint ? (
+          <Tooltip title={hint} placement="top">
+            <span
+              aria-label={hint}
+              className="column-funnel__hint-trigger"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CircleHelp size={12} strokeWidth={ICON_STROKE} />
+            </span>
+          </Tooltip>
+        ) : null}
+      </span>
       {children}
     </label>
   );
@@ -44,6 +73,8 @@ export const ColumnFunnel = memo(function ColumnFunnel({
   copy,
   formula,
   columns,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: {
   field: ToolbarFilterField;
   copy: ColumnFunnelCopy;
@@ -55,13 +86,18 @@ export const ColumnFunnel = memo(function ColumnFunnel({
       }
     | undefined;
   columns: { key: string; label: string }[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const kind = resolveFunnelKind(field);
   const current = fieldPredicate(field);
   const surfaceId = useId();
   const draftRef = useRef(current);
   const fxRef = useRef(formula?.expression ?? "");
-  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
   const [draft, setDraft] = useState(current);
   const [fx, setFx] = useState(formula?.expression ?? "");
   const [fxError, setFxError] = useState("");
@@ -70,7 +106,7 @@ export const ColumnFunnel = memo(function ColumnFunnel({
   fxRef.current = fx;
 
   const ops = useMemo(() => opsForKind(kind), [kind]);
-  const funcs = useMemo(() => funcsForKind(kind), [kind]);
+  const funcs = useMemo(() => funcsForKind(kind, field.key), [kind, field.key]);
   const other = useMemo(
     () => columns.find((item) => item.key !== field.key)?.label ?? columns[0]?.label ?? field.label,
     [columns, field.key, field.label],
@@ -87,7 +123,8 @@ export const ColumnFunnel = memo(function ColumnFunnel({
     () =>
       funcs.map((item) => ({
         value: item.name,
-        label: `${item.name} — ${item.hint}`,
+        label: item.name,
+        hint: item.hint,
       })),
     [funcs],
   );
@@ -117,19 +154,43 @@ export const ColumnFunnel = memo(function ColumnFunnel({
     [formula],
   );
 
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (!isControlled) {
+        setUncontrolledOpen(next);
+      }
+      controlledOnOpenChange?.(next);
+    },
+    [controlledOnOpenChange, isControlled],
+  );
+
+  const prevOpenForSyncRef = useRef(false);
   useEffect(() => {
-    if (!open) return;
-    const next = fieldPredicate(field);
-    setDraft(next);
-    setFx(formula?.expression ?? "");
-    setFxError("");
+    if (open && !prevOpenForSyncRef.current) {
+      const next = fieldPredicate(field);
+      draftRef.current = next;
+      setDraft(next);
+      fxRef.current = formula?.expression ?? "";
+      setFx(formula?.expression ?? "");
+      setFxError("");
+    }
+    prevOpenForSyncRef.current = open;
   }, [field, formula?.expression, open]);
+
+  const prevOpenRef = useRef(open);
+  useEffect(() => {
+    if (prevOpenRef.current && !open) {
+      commitPredicate(draftRef.current);
+      if (formula) commitFx(fxRef.current);
+    }
+    prevOpenRef.current = open;
+  }, [commitFx, commitPredicate, formula, open]);
 
   const close = useCallback(() => {
     commitPredicate(draftRef.current);
     if (formula) commitFx(fxRef.current);
     setOpen(false);
-  }, [commitFx, commitPredicate, formula]);
+  }, [commitFx, commitPredicate, formula, setOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -138,8 +199,14 @@ export const ColumnFunnel = memo(function ColumnFunnel({
       if (!(target instanceof Element)) return;
       if (
         target.closest(
-          ".column-funnel__overlay, .column-funnel__trigger, .column-funnel__anchor, .ant-select-dropdown",
+          ".column-funnel__overlay, .column-funnel__dropdown, .ant-select-dropdown, .ant-picker-dropdown, .ant-tooltip",
         )
+      ) {
+        return;
+      }
+      if (
+        triggerRef.current &&
+        (triggerRef.current === target || triggerRef.current.contains(target))
       ) {
         return;
       }
@@ -157,16 +224,29 @@ export const ColumnFunnel = memo(function ColumnFunnel({
       }
       close();
     },
-    [close],
+    [close, setOpen],
   );
 
   const changeOp = useCallback(
     (op: ColumnOp) => {
-      const next = { op, values: [] as string[] };
+      const isNullOp = op === "is_null" || op === "not_null";
+      const isRange = op === "between";
+      let values = draft.values;
+      if (isNullOp) {
+        values = [];
+      } else if (isRange && values.length < 2) {
+        values = [values[0] ?? "", ""];
+      } else if (!isRange && values.length > 1) {
+        values = [values[0] ?? ""];
+      }
+      const next = { op, values };
+      draftRef.current = next;
       setDraft(next);
-      commitPredicate(next);
+      if (isNullOp || predicateActive(next)) {
+        commitPredicate(next);
+      }
     },
-    [commitPredicate],
+    [commitPredicate, draft.values],
   );
 
   const insertFn = useCallback(
@@ -192,6 +272,9 @@ export const ColumnFunnel = memo(function ColumnFunnel({
       id={surfaceId}
       role="dialog"
       onClick={(event) => event.stopPropagation()}
+      onDoubleClick={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
       onKeyDown={(event) => {
         if (event.key !== "Escape") return;
         event.stopPropagation();
@@ -203,6 +286,7 @@ export const ColumnFunnel = memo(function ColumnFunnel({
           <Select
             aria-label={copy.operator}
             options={opOptions}
+            classNames={{ popup: { root: "column-funnel__dropdown" } }}
             popupMatchSelectWidth={false}
             style={{ width: "100%" }}
             value={draft.op}
@@ -216,20 +300,30 @@ export const ColumnFunnel = memo(function ColumnFunnel({
                 <Input
                   aria-label={copy.from}
                   value={draft.values[0] ?? ""}
-                  onChange={(event) =>
-                    setDraft({ ...draft, values: [event.target.value, draft.values[1] ?? ""] })
-                  }
-                  onPressEnter={() => commitPredicate(draft)}
+                  onChange={(event) => {
+                    const next = { ...draft, values: [event.target.value, draft.values[1] ?? ""] };
+                    draftRef.current = next;
+                    setDraft(next);
+                  }}
+                  onPressEnter={() => {
+                    commitPredicate(draftRef.current);
+                    close();
+                  }}
                 />
               </Field>
               <Field label={copy.to}>
                 <Input
                   aria-label={copy.to}
                   value={draft.values[1] ?? ""}
-                  onChange={(event) =>
-                    setDraft({ ...draft, values: [draft.values[0] ?? "", event.target.value] })
-                  }
-                  onPressEnter={() => commitPredicate(draft)}
+                  onChange={(event) => {
+                    const next = { ...draft, values: [draft.values[0] ?? "", event.target.value] };
+                    draftRef.current = next;
+                    setDraft(next);
+                  }}
+                  onPressEnter={() => {
+                    commitPredicate(draftRef.current);
+                    close();
+                  }}
                 />
               </Field>
             </div>
@@ -243,6 +337,7 @@ export const ColumnFunnel = memo(function ColumnFunnel({
                   label: option.label,
                 }))}
                 placeholder={field.allLabel}
+                classNames={{ popup: { root: "column-funnel__dropdown" } }}
                 style={{ width: "100%" }}
                 value={draft.values}
                 onChange={(values) => {
@@ -264,6 +359,7 @@ export const ColumnFunnel = memo(function ColumnFunnel({
                   label: option.label,
                 }))}
                 placeholder={field.allLabel}
+                classNames={{ popup: { root: "column-funnel__dropdown" } }}
                 style={{ width: "100%" }}
                 value={draft.values[0] || undefined}
                 onChange={(value) => {
@@ -307,14 +403,34 @@ export const ColumnFunnel = memo(function ColumnFunnel({
               allowClear
               aria-label={copy.function}
               options={fnOptions}
+              optionRender={(option) => {
+                const hint = (option.data as { hint?: string } | undefined)?.hint;
+                return (
+                  <div className="column-funnel__option-row">
+                    <span className="column-funnel__option-name">{String(option.data?.label ?? option.data?.value ?? "")}</span>
+                    {hint ? (
+                      <Tooltip title={hint} placement="right">
+                        <span
+                          aria-label={hint}
+                          className="column-funnel__hint-trigger"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <CircleHelp size={12} strokeWidth={ICON_STROKE} />
+                        </span>
+                      </Tooltip>
+                    ) : null}
+                  </div>
+                );
+              }}
               placeholder={copy.insert}
+              classNames={{ popup: { root: "column-funnel__dropdown" } }}
               popupMatchSelectWidth={false}
               style={{ width: "100%" }}
               value={pickedFn || undefined}
               onChange={(value) => insertFn(value ?? "")}
             />
           </Field>
-          <Field label={copy.formula}>
+          <Field label={copy.formula} hint={activeHint}>
             <Input
               aria-label={copy.formula}
               className="column-funnel__formula"
@@ -327,7 +443,6 @@ export const ColumnFunnel = memo(function ColumnFunnel({
               }}
             />
           </Field>
-          {activeHint ? <p className="column-funnel__hint">{activeHint}</p> : null}
           {fxError ? <p className="column-funnel__error">{fxError}</p> : null}
           {formula.expression ? (
             <Button
@@ -363,6 +478,7 @@ export const ColumnFunnel = memo(function ColumnFunnel({
         hung the tables sheet (infinite update). No IconButton exists in this repo.
       */}
       <button
+        ref={triggerRef}
         aria-controls={open ? surfaceId : undefined}
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -373,6 +489,9 @@ export const ColumnFunnel = memo(function ColumnFunnel({
           event.stopPropagation();
           onOpenChange(!open);
         }}
+        onDoubleClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
       >
         <ListFilter aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />
       </button>
