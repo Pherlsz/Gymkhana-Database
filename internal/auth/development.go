@@ -20,11 +20,6 @@ func (service *Service) DevelopmentLogin(ctx context.Context, requestID string) 
 		Subject:     "development",
 	})
 
-	if err := service.allowlistStore.AddAllowedEmail(ctx, identity.Email, nil); err != nil {
-		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
-		return LoginResult{}, fmt.Errorf("ensure development allowlist: %w", err)
-	}
-
 	user, err := service.store.FindUserByEmail(ctx, identity.Email)
 	switch {
 	case errors.Is(err, ErrUserNotFound):

@@ -31,15 +31,6 @@ type fakeStore struct {
 	revokeError      error
 	audits           []AuditEvent
 	auditError       error
-	allowedEmails    map[string]struct{}
-}
-
-func allowEmails(emails ...string) map[string]struct{} {
-	out := make(map[string]struct{}, len(emails))
-	for _, email := range emails {
-		out[normalizeEmail(email)] = struct{}{}
-	}
-	return out
 }
 
 func (store *fakeStore) FindUserByEmail(context.Context, string) (User, error) {
@@ -77,27 +68,6 @@ func (store *fakeStore) FindAuthenticatedSession(context.Context, []byte, time.T
 
 func (store *fakeStore) TouchSession(context.Context, Identifier) error { return nil }
 
-func (store *fakeStore) IsEmailAllowed(_ context.Context, email string) (bool, error) {
-	if _, ok := store.allowedEmails[email]; ok {
-		return true, nil
-	}
-	return false, nil
-}
-
-func (store *fakeStore) AddAllowedEmail(_ context.Context, email string, _ *Identifier) error {
-	if store.allowedEmails == nil {
-		store.allowedEmails = map[string]struct{}{}
-	}
-	store.allowedEmails[normalizeEmail(email)] = struct{}{}
-	return nil
-}
-
-func (store *fakeStore) RemoveAllowedEmail(context.Context, string) error { return nil }
-
-func (store *fakeStore) ListAllowedEmails(context.Context) ([]string, error) {
-	return nil, nil
-}
-
 func (store *fakeStore) RevokeSessionByTokenHash(_ context.Context, hash []byte) error {
 	store.revokedHash = append([]byte(nil), hash...)
 	return store.revokeError
@@ -111,11 +81,7 @@ func (store *fakeStore) RecordAuditEvent(_ context.Context, event AuditEvent) er
 	return nil
 }
 
-func testServiceOptions(store AllowlistStore) ServiceOptions {
-	return ServiceOptions{AllowlistStore: store}
-}
-
-func TestServiceSignsInProvisionedAllowlistedUser(t *testing.T) {
+func TestServiceSignsInProvisionedUser(t *testing.T) {
 	now := time.Date(2026, time.July, 14, 18, 0, 0, 0, time.UTC)
 	userID, _ := NewIdentifier()
 	store := &fakeStore{
@@ -123,15 +89,13 @@ func TestServiceSignsInProvisionedAllowlistedUser(t *testing.T) {
 			ID: userID, Email: "pherlsz@example.com", DisplayName: "pherlsz@example.com",
 			Role: RoleSuperadmin, Active: true,
 		},
-		allowedEmails: allowEmails("pherlsz@example.com", "member@example.com"),
 	}
 	service, err := NewService(fakeProvider{identity: GoogleIdentity{
 		Email:       " Pherlsz@example.com ",
 		DisplayName: "",
 		AvatarURL:   "https://example.test/avatar.png",
 	}}, store, ServiceOptions{
-		AllowlistStore: store,
-		Now:            func() time.Time { return now },
+		Now: func() time.Time { return now },
 	})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
@@ -159,14 +123,11 @@ func TestServiceSignsInProvisionedAllowlistedUser(t *testing.T) {
 	}
 }
 
-func TestServiceDeniesAllowlistedLoginUntilARoleIsProvisioned(t *testing.T) {
-	store := &fakeStore{
-		findUserError: ErrUserNotFound,
-		allowedEmails: allowEmails("admin@example.com", "member@example.com"),
-	}
+func TestServiceDeniesLoginUntilProvisioned(t *testing.T) {
+	store := &fakeStore{findUserError: ErrUserNotFound}
 	service, err := NewService(fakeProvider{identity: GoogleIdentity{
 		Email: "member@example.com", DisplayName: "Member",
-	}}, store, testServiceOptions(store))
+	}}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -187,11 +148,10 @@ func TestServiceKeepsProvisionedMemberRoleOnFirstGoogleLogin(t *testing.T) {
 		user: User{
 			ID: userID, Email: "member@example.com", DisplayName: "Membro", Role: RoleExternal, Active: true,
 		},
-		allowedEmails: allowEmails("admin@example.com", "member@example.com"),
 	}
 	service, err := NewService(fakeProvider{identity: GoogleIdentity{
 		Email: "member@example.com", DisplayName: "Google Name",
-	}}, store, testServiceOptions(store))
+	}}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -213,11 +173,10 @@ func TestServiceTakesGoogleNameWhenProvisionedNameIsEmailPlaceholder(t *testing.
 		user: User{
 			ID: userID, Email: "member@example.com", DisplayName: "member@example.com", Role: RoleExternal, Active: true,
 		},
-		allowedEmails: allowEmails("admin@example.com", "member@example.com"),
 	}
 	service, err := NewService(fakeProvider{identity: GoogleIdentity{
 		Email: "member@example.com", DisplayName: "Google Name",
-	}}, store, testServiceOptions(store))
+	}}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -230,15 +189,15 @@ func TestServiceTakesGoogleNameWhenProvisionedNameIsEmailPlaceholder(t *testing.
 	}
 }
 
-func TestCompleteLoginDeniesMissingUserEvenWhenAllowlisted(t *testing.T) {
-	store := &fakeStore{findUserError: ErrUserNotFound, allowedEmails: allowEmails("admin@example.com")}
+func TestCompleteLoginDeniesMissingUser(t *testing.T) {
+	store := &fakeStore{findUserError: ErrUserNotFound}
 	service, err := NewService(fakeProvider{identity: GoogleIdentity{
 		Email: "admin@example.com", DisplayName: "Admin",
-	}}, store, testServiceOptions(store))
+	}}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
-	if _, err := service.CompleteLogin(context.Background(), "code", "request-no-bootstrap"); !errors.Is(err, ErrAccessDenied) {
+	if _, err := service.CompleteLogin(context.Background(), "code", "request-no-user"); !errors.Is(err, ErrAccessDenied) {
 		t.Fatalf("CompleteLogin() error = %v, want %v", err, ErrAccessDenied)
 	}
 	if store.createdUser.Role != "" {
@@ -247,8 +206,8 @@ func TestCompleteLoginDeniesMissingUserEvenWhenAllowlisted(t *testing.T) {
 }
 
 func TestServiceRejectsInvalidOAuthCode(t *testing.T) {
-	store := &fakeStore{allowedEmails: allowEmails("admin@example.com")}
-	service, err := NewService(fakeProvider{}, store, testServiceOptions(store))
+	store := &fakeStore{}
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -261,7 +220,7 @@ func TestServiceRejectsInvalidOAuthCode(t *testing.T) {
 	}
 }
 
-func TestServiceDeniesUnlistedAndInactiveUsers(t *testing.T) {
+func TestServiceDeniesUnknownAndInactiveUsers(t *testing.T) {
 	tests := []struct {
 		name      string
 		identity  GoogleIdentity
@@ -269,9 +228,9 @@ func TestServiceDeniesUnlistedAndInactiveUsers(t *testing.T) {
 		wantAudit AuditEventType
 	}{
 		{
-			name:      "unlisted",
+			name:      "unknown",
 			identity:  GoogleIdentity{Email: "outsider@example.com"},
-			store:     &fakeStore{allowedEmails: allowEmails("admin@example.com", "member@example.com")},
+			store:     &fakeStore{findUserError: ErrUserNotFound},
 			wantAudit: AuditEventSignInDenied,
 		},
 		{
@@ -283,7 +242,6 @@ func TestServiceDeniesUnlistedAndInactiveUsers(t *testing.T) {
 					Role:   RoleExternal,
 					Active: false,
 				},
-				allowedEmails: allowEmails("admin@example.com", "member@example.com"),
 			},
 			wantAudit: AuditEventSignInDenied,
 		},
@@ -291,7 +249,7 @@ func TestServiceDeniesUnlistedAndInactiveUsers(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			service, err := NewService(fakeProvider{identity: test.identity}, test.store, testServiceOptions(test.store))
+			service, err := NewService(fakeProvider{identity: test.identity}, test.store, ServiceOptions{})
 			if err != nil {
 				t.Fatalf("NewService() error = %v", err)
 			}
@@ -313,9 +271,8 @@ func TestServiceReadsAndRevokesOpaqueSession(t *testing.T) {
 			ID:   sessionID,
 			User: User{ID: userID, Email: "member@example.com", Role: RoleExternal, Active: true},
 		},
-		allowedEmails: allowEmails("admin@example.com"),
 	}
-	service, err := NewService(fakeProvider{}, store, testServiceOptions(store))
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -338,11 +295,10 @@ func TestServiceReadsAndRevokesOpaqueSession(t *testing.T) {
 func TestServiceAuditsSignOutFailure(t *testing.T) {
 	userID, _ := NewIdentifier()
 	store := &fakeStore{
-		authSession:   Session{User: User{ID: userID, Email: "member@example.com"}},
-		revokeError:   errors.New("database unavailable"),
-		allowedEmails: allowEmails("admin@example.com"),
+		authSession: Session{User: User{ID: userID, Email: "member@example.com"}},
+		revokeError: errors.New("database unavailable"),
 	}
-	service, err := NewService(fakeProvider{}, store, testServiceOptions(store))
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -356,11 +312,10 @@ func TestServiceAuditsSignOutFailure(t *testing.T) {
 }
 
 func TestServiceReportsAuditPersistenceFailure(t *testing.T) {
-	store := &fakeStore{auditError: errors.New("audit database unavailable"), allowedEmails: allowEmails("admin@example.com")}
+	store := &fakeStore{auditError: errors.New("audit database unavailable")}
 	var reported AuditEvent
 	var reportedErr error
 	service, err := NewService(fakeProvider{}, store, ServiceOptions{
-		AllowlistStore: store,
 		OnAuditFailure: func(_ context.Context, event AuditEvent, err error) {
 			reported = event
 			reportedErr = err
@@ -376,23 +331,12 @@ func TestServiceReportsAuditPersistenceFailure(t *testing.T) {
 	}
 }
 
-func TestNewServiceRequiresAllowlistStore(t *testing.T) {
+func TestNewServiceRequiresProviderAndStore(t *testing.T) {
 	store := &fakeStore{}
-	if _, err := NewService(fakeProvider{}, store, ServiceOptions{}); !errors.Is(err, ErrInvalidServiceSetup) {
-		t.Fatalf("NewService() error = %v, want %v", err, ErrInvalidServiceSetup)
+	if _, err := NewService(nil, store, ServiceOptions{}); !errors.Is(err, ErrInvalidServiceSetup) {
+		t.Fatalf("NewService(nil provider) error = %v, want %v", err, ErrInvalidServiceSetup)
 	}
-}
-
-func TestServiceDeniesLoginOutsideAllowlist(t *testing.T) {
-	store := &fakeStore{
-		user:          User{Email: "member@example.com", Role: RoleExternal, Active: true},
-		allowedEmails: allowEmails("admin@example.com"),
-	}
-	service, err := NewService(fakeProvider{identity: GoogleIdentity{Email: "member@example.com"}}, store, testServiceOptions(store))
-	if err != nil {
-		t.Fatalf("NewService() error = %v", err)
-	}
-	if _, err := service.CompleteLogin(context.Background(), "code", "request-outside"); !errors.Is(err, ErrAccessDenied) {
-		t.Fatalf("CompleteLogin() error = %v, want %v", err, ErrAccessDenied)
+	if _, err := NewService(fakeProvider{}, nil, ServiceOptions{}); !errors.Is(err, ErrInvalidServiceSetup) {
+		t.Fatalf("NewService(nil store) error = %v, want %v", err, ErrInvalidServiceSetup)
 	}
 }

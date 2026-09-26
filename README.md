@@ -102,7 +102,7 @@ Create a Google OAuth client and configure these environment values:
 
 For local testing, use callback `http://localhost:8080/auth/callback` and application URL `http://localhost:5173`. The API stores only SHA-256 session hashes. Browser cookies are HttpOnly, SameSite=Lax, host-only, and become Secure outside local/test. Application sessions expire after 24 hours and logout revokes the server-side session.
 
-Who can sign in is decided in Neon: the `allowed_emails` table plus a provisioned `app_users` row (Administração). Google OAuth does not create users. Seed the first `SUPERADMIN` in the database (or use local Dev Login, which uses a fixed `developer@gymkhana.local` identity). Disabled users remain denied even when their email is allowed.
+Who can sign in is decided in Neon: a provisioned `app_users` row (Administração). Google OAuth does not create users. Seed the first `SUPERADMIN` in the database (or use local Dev Login, which uses a fixed `developer@gymkhana.local` identity). Disabled users are denied.
 
 The complete setup, lifecycle, audit, smoke-test, incident, and recovery procedures are in [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
 
@@ -195,7 +195,7 @@ Repository merge settings should allow squash merge only and automatically delet
 ## Platform contracts
 
 - typed environment validation that fails closed in deployed environments;
-- Google OAuth with state validation and an explicit email allowlist;
+- Google OAuth with state validation against provisioned `app_users`;
 - exact-origin CSRF validation and credentialed CORS derived from `AUTH_APPLICATION_URL`;
 - opaque, revocable, server-side sessions with a 24-hour lifetime;
 - centralized `EXTERNAL`, `ADMIN`, and protected `SUPERADMIN` authorization;

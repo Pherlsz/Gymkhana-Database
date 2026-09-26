@@ -43,7 +43,7 @@ func (store *fakeAdministrationStore) RevokeAllSessionsForUser(_ context.Context
 
 func newAdministrationService(t *testing.T, store *fakeAdministrationStore) *Service {
 	t.Helper()
-	service, err := NewService(fakeProvider{}, store, ServiceOptions{AllowlistStore: store})
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}

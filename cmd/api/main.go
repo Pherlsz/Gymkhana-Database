@@ -74,7 +74,6 @@ func run() error {
 		}
 		authStore = auth.NewPostgresStore(pool)
 		authService, err = auth.NewService(provider, authStore, auth.ServiceOptions{
-			AllowlistStore: authStore,
 			OnAuditFailure: func(_ context.Context, event auth.AuditEvent, auditErr error) {
 				logger.Error("authentication audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
 			},

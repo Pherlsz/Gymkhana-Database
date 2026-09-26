@@ -5,7 +5,7 @@ This runbook covers Google OAuth, application sessions, authorization, capabilit
 ## Security guarantees
 
 - Google OAuth is the only application login mechanism; there are no local passwords.
-- Access requires the email to be present in the `allowed_emails` table (database-backed allowlist).
+- Access requires a provisioned, active row in `app_users` (Administração). There is no separate email allowlist table.
 - Account lookup is by email, the same as the legacy application. Google subject is stored as provider metadata and display name is refreshed after each successful login; subject is not the account key.
 - Browser sessions use opaque random values. Only SHA-256 hashes are stored in PostgreSQL.
 - Sessions expire after 24 hours and are revocable server-side.
@@ -78,7 +78,7 @@ GET /api/admin/users/{userID}/capabilities
 | `AUTH_APPLICATION_URL`       | Absolute web application URL used after successful login                                                                       |
 | `VITE_API_BASE_URL`          | Browser-visible API origin                                                                                                     |
 
-Who can sign in lives in Neon: `allowed_emails` plus a provisioned `app_users` row (Administração / provision API). There is no env allowlist or env superadmin bootstrap.
+Who can sign in lives in Neon: a provisioned, active `app_users` row (Administração / provision API). There is no separate email allowlist table and no env allowlist or env superadmin bootstrap.
 
 Never commit real client secrets, database credentials, session values, or production URLs containing credentials. Locally, put them in gitignored `.env` (see `.env.example`).
 
@@ -124,32 +124,22 @@ The API fails closed outside local/test when the database or authentication conf
 
 ### Grant initial access
 
-1. Create the user in Administração with a role (`EXTERNAL` or `ADMIN`). A member also needs at least one capability. This also adds the email to the allowlist.
-2. Ask the user to sign in with Google. Login binds the Google identity to that existing user and keeps the role you set. An allowlisted email without a provisioned user is denied.
+1. Create the user in Administração with a role (`EXTERNAL` or `ADMIN`). A member also needs at least one capability.
+2. Ask the user to sign in with Google. Login binds the Google identity to that existing user and keeps the role you set. An unknown Google email is denied.
 3. Google login never creates users. Seed the first `SUPERADMIN` in Neon (SQL/ops) or use local Dev Login. The protected `SUPERADMIN` role cannot be demoted via the administration API.
 
 ### Remove access immediately
 
-1. Set the user to inactive in the administration panel. This revokes all existing application sessions.
-2. Remove the email from the allowlist:
+1. Set the user to inactive in the administration panel. This revokes all existing application sessions and blocks future Google sign-ins for that email.
+2. Optionally delete the user from Administração when the account should no longer appear in the directory.
 
-```http
-DELETE /api/admin/allowed-emails/user@example.com
-```
-
-Removing only the allowlist entry blocks future sign-ins but does not revoke an already-issued application session. Deactivate the application user first when immediate removal is required.
+Deactivate first when immediate removal is required; deletion is for cleanup after access is already cut.
 
 ### Change a role
 
 Role changes use optimistic concurrency through the user `version`. A stale edit returns a conflict and must be retried after reloading the list. A successful effective change revokes all sessions for that user.
 
 ### Manage capabilities
-
-List all allowed emails:
-
-```http
-GET /api/admin/allowed-emails
-```
 
 List user capabilities:
 
@@ -178,7 +168,7 @@ DELETE /api/admin/users/{userID}/capabilities/profiles
 | Event                          | Typical outcomes                                                                                         |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | `SIGN_IN_SUCCEEDED`            | `SUCCESS`                                                                                                |
-| `SIGN_IN_DENIED`               | `DENIED` for an unallowlisted or inactive account                                                        |
+| `SIGN_IN_DENIED`               | `DENIED` for an unknown or inactive account                                                              |
 | `SIGN_IN_FAILED`               | `FAILURE` for invalid callback input, provider failure, persistence failure, or session creation failure |
 | `SIGN_OUT`                     | `SUCCESS` or `FAILURE`                                                                                   |
 | `USER_ADMINISTRATION_ACCESSED` | `SUCCESS`, `DENIED`, or `FAILURE`                                                                        |
@@ -226,25 +216,23 @@ Existing Gymkhana Database sessions remain valid because they are independent of
 
 ### User email changed
 
-Login identity is the allowlisted email. Keep the same application user.
+Login identity is the provisioned `app_users.email`. Keep the same application user.
 
 1. Update the existing user's email through the administration panel (or a reviewed operational update).
-2. Add the new email to the allowlist and remove the old email.
-3. The user signs in with the new Google account email. Lookup by email loads the same row and refreshes display identity.
+2. The user signs in with the new Google account email. Lookup by email loads the same row and refreshes display identity.
 
 Do not create a second user and transfer capabilities. A new row is created only when an admin provisions that email.
 
 ### Account compromised
 
-1. Deactivate the application user to revoke all sessions.
-2. Remove the email from the allowlist.
-3. Rotate the Google OAuth client secret if the OAuth client itself may be compromised.
-4. Review `auth_audit_events` and structured application logs by request ID.
-5. Revoke any granted capabilities if the account was used maliciously.
+1. Deactivate the application user to revoke all sessions and block future sign-ins.
+2. Rotate the Google OAuth client secret if the OAuth client itself may be compromised.
+3. Review `auth_audit_events` and structured application logs by request ID.
+4. Revoke any granted capabilities if the account was used maliciously.
 
 ### Protected superadmin unavailable
 
-The administration API intentionally cannot demote, deactivate, or replace the protected `SUPERADMIN`. Restore access to the same Google account, or update that user's email and the allowlist in Neon so the same account can sign in.
+The administration API intentionally cannot demote, deactivate, or replace the protected `SUPERADMIN`. Restore access to the same Google account, or update that user's email in Neon so the same account can sign in.
 
 If the Google account is permanently unrecoverable, do not run an ad-hoc partial update. Use a reviewed, transactional operational change that:
 
