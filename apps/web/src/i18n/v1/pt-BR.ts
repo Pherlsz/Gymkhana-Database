@@ -706,6 +706,8 @@ export const tables = {
     chipSession: "Assistente · {title}",
     emptyThread:
       "Pergunte sobre pessoas, documentos ou contas. A resposta vem com a evidência que a sustenta.",
+    loadingHistory: "Carregando conversa…",
+    loadingSessions: "Carregando sessões…",
     thinking: "Pensando…",
     preparing: "Preparando…",
     consulting: "Consultando a base…",
@@ -718,7 +720,8 @@ export const tables = {
       busy: "Esta sessão ainda está respondendo. Aguarde ou pare a resposta atual.",
       rate_limited: "O Gemini recusou por excesso de pedidos. Espere um pouco e tente de novo.",
       quota_exceeded: "A cota do Gemini esgotou. Verifique o plano em Google AI Studio.",
-      timeout: "O Gemini não concluiu a resposta a tempo.",
+      timeout:
+        "A resposta demorou demais (consultas longas ou o Gemini lento). Simplifique a pergunta ou tente de novo.",
       cancelled: "Resposta interrompida.",
       malformed_provider: "O modelo devolveu uma resposta inválida.",
       tool_failed: "Uma consulta à base falhou.",

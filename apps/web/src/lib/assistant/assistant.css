@@ -444,6 +444,83 @@
   text-align: center;
 }
 
+.assistant-float__session-skel,
+.assistant-float__history-skel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.35rem 0.55rem 0.75rem;
+}
+
+.assistant-float__history-skel {
+  padding: 0.85rem 1rem;
+  gap: 0.75rem;
+}
+
+.assistant-float__skel-row,
+.assistant-float__skel-bubble {
+  display: block;
+  border-radius: 0.45rem;
+  background: linear-gradient(
+    90deg,
+    var(--md-state-hover) 0%,
+    var(--md-state-selected) 45%,
+    var(--md-state-hover) 90%
+  );
+  background-size: 200% 100%;
+  animation: assistant-skel 1.1s ease-in-out infinite;
+}
+
+.assistant-float__skel-row {
+  height: 2rem;
+  width: 100%;
+}
+
+.assistant-float__skel-row.is-short {
+  width: 62%;
+}
+
+.assistant-float__skel-bubble {
+  height: 2.75rem;
+  width: min(78%, 18rem);
+}
+
+.assistant-float__skel-bubble.is-user {
+  align-self: flex-end;
+  width: min(70%, 16rem);
+}
+
+.assistant-float__skel-bubble.is-assistant {
+  align-self: flex-start;
+}
+
+.assistant-float__skel-bubble.is-short {
+  height: 1.85rem;
+  width: min(48%, 11rem);
+}
+
+.assistant-float__refresh {
+  margin: 0.35rem 1rem 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--gym-font-size-xs);
+}
+
+@keyframes assistant-skel {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-float__skel-row,
+  .assistant-float__skel-bubble {
+    animation: none;
+  }
+}
+
 .assistant-float__notice {
   flex: none;
   margin: 0.45rem auto 0.9rem;

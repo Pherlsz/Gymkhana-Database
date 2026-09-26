@@ -67,6 +67,7 @@ export function useAssistantChat(open: boolean) {
     queryKey: messagesKey(activeThreadId ?? ""),
     queryFn: ({ signal }) => listChatMessages(activeThreadId ?? "", signal),
     enabled: open && chatReady && activeThreadId !== null,
+    staleTime: 15_000,
   });
 
   useEffect(() => () => stopStream.current?.(), []);
@@ -274,13 +275,15 @@ export function useAssistantChat(open: boolean) {
     capabilityFailed: capability.isError,
     chatReady,
     threads: threadList,
-    threadsLoading: threads.isFetching,
     thread,
     selectThread: (id: string) => {
       setThreadId(id);
     },
     messages: activeThreadId ? (messages.data?.messages ?? []) : [],
-    messagesLoading: messages.isLoading,
+    messagesLoading:
+      Boolean(activeThreadId) && (messages.isPending || messages.isFetching) && !messages.data,
+    messagesRefreshing: Boolean(activeThreadId) && messages.isFetching && Boolean(messages.data),
+    threadsLoading: threads.isPending || (threads.isFetching && threadList.length === 0),
     pending: pending && pending.threadId === activeThreadId ? pending : null,
     // One active turn per float: block compose while startTurn is in flight or a run is streaming.
     busy: send.isPending || (pending !== null && !pending.errorCode),
