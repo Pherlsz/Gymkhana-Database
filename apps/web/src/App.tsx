@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
-const LoginScreen = lazy(() => import("./LoginScreen").then((m) => ({ default: m.LoginScreen })));
 import {
   APIRequestError,
   apiURL,
@@ -12,6 +11,11 @@ import {
 import { createAppRouter } from "./router";
 import { SessionContext, useApplicationSession } from "./session";
 import { ThemeProvider } from "./theme";
+
+const LoginScreen = lazy(() => import("./LoginScreen").then((m) => ({ default: m.LoginScreen })));
+const AuthCheckingScreen = lazy(() =>
+  import("./LoginScreen").then((m) => ({ default: m.AuthCheckingScreen })),
+);
 
 export { useApplicationSession };
 
@@ -34,7 +38,9 @@ export function App() {
   const [signingOut, setSigningOut] = useState(false);
 
   const refreshAuthentication = useCallback(async (signal?: AbortSignal) => {
-    setAuthentication({ kind: "checking" });
+    setAuthentication((current) =>
+      current.kind === "authenticated" ? current : { kind: "checking" },
+    );
     try {
       setAuthentication({ kind: "authenticated", session: await getAuthSession(signal) });
     } catch (error: unknown) {
@@ -69,12 +75,15 @@ export function App() {
     }
   }, [queryClient]);
 
-  const tree =
-    authentication.kind !== "authenticated" ? (
+  let tree;
+  if (authentication.kind === "checking") {
+    tree = (
       <Suspense fallback={null}>
-        <LoginScreen onLogin={() => window.location.assign(apiURL("/auth/login"))} />
+        <AuthCheckingScreen />
       </Suspense>
-    ) : (
+    );
+  } else if (authentication.kind === "authenticated") {
+    tree = (
       <QueryClientProvider client={queryClient}>
         <SessionContext.Provider
           value={{ session: authentication.session, signingOut, signOut: () => void signOut() }}
@@ -83,6 +92,13 @@ export function App() {
         </SessionContext.Provider>
       </QueryClientProvider>
     );
+  } else {
+    tree = (
+      <Suspense fallback={null}>
+        <LoginScreen onLogin={() => window.location.assign(apiURL("/auth/login"))} />
+      </Suspense>
+    );
+  }
 
   return <ThemeProvider forceDark={authentication.kind !== "authenticated"}>{tree}</ThemeProvider>;
 }
