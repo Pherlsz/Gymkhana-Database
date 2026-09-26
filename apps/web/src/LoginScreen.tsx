@@ -81,50 +81,6 @@ export function LoginScreen({ onLogin }: { onLogin: () => void }) {
   return <LoginScreenContent onLogin={onLogin} />;
 }
 
-/** Shown while the SPA verifies the session cookie (F5 / OAuth return) — not the login form. */
-export function AuthCheckingScreen() {
-  const { messages } = useI18n();
-  const copy = messages.auth.login;
-
-  return (
-    <div aria-busy="true" aria-live="polite" className="login-page">
-      {LOGIN_ORBS.map((orb, index) => (
-        <div
-          key={index}
-          aria-hidden
-          className="login-orb"
-          style={
-            {
-              width: orb.w,
-              height: orb.h,
-              top: orb.top,
-              left: orb.left,
-              filter: `blur(${orb.blur}px)`,
-              animationDuration: orb.dur,
-              animationDelay: orb.delay,
-              "--orb-op-light": orb.opLight,
-              "--orb-op-dark": orb.opDark,
-            } as CSSProperties
-          }
-        />
-      ))}
-      <div aria-hidden className="login-vignette" />
-      <main className="login-main">
-        <div className="login-stack">
-          <div className="login-mascot-enter">
-            <div aria-hidden className="login-glow-ring" />
-            <img alt="" className="login-mascot-img" height={220} src="/Gampa.png" width={220} />
-          </div>
-          <p className="login-checking">
-            <span aria-hidden className="login-button__spinner" />
-            <span>{copy.signingIn}</span>
-          </p>
-        </div>
-      </main>
-    </div>
-  );
-}
-
 function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
   const { messages } = useI18n();
   const copy = messages.auth.login;
