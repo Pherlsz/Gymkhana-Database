@@ -28,6 +28,7 @@ import { matchFormula } from "./lib/tables/formulas/catalog";
 import { evalFormula } from "./lib/tables/formulas/eval";
 import { useSheetFormulas } from "./lib/tables/useSheetFormulas";
 import { useSheetColumnWidths } from "./lib/tables/useSheetColumnWidths";
+import { resultColumnWidth } from "./lib/tables/resultColumnWidth";
 import {
   columnGroup,
   columnLabel,
@@ -94,7 +95,8 @@ export function TablesPage() {
   const [localFilters, setLocalFilters] = useState<Record<string, string>>({});
   const [extraPredicates, setExtraPredicates] = useState<Record<string, ColumnPredicate>>({});
   const { formulas, setFormula } = useSheetFormulas(scope);
-  const { widths: columnWidths, setWidth: setColumnWidth } = useSheetColumnWidths(scope);
+  const widthScope = search.result ? `${scope}:recorte` : scope;
+  const { widths: columnWidths, setWidth: setColumnWidth } = useSheetColumnWidths(widthScope);
   const [recorteQuery, setRecorteQuery] = useState("");
   const [recorteFilters, setRecorteFilters] = useState<Record<string, string>>({});
   const [recorteSort, setRecorteSort] = useState<{ field: string; order: "asc" | "desc" }>({
@@ -236,6 +238,7 @@ export function TablesPage() {
             title: column.label,
             label: column.label,
             sortField: column.key,
+            width: resultColumnWidth(column.key, column.label),
             defaultVisible: true,
             locked: true,
           },

@@ -57,9 +57,15 @@ function paintCellWidth(el: HTMLElement, width: number) {
   el.style.setProperty("flex", `0 0 ${px}`);
 }
 
-function paintTableTotalWidth(root: HTMLElement, tableWidth: number) {
+function paintColumnVars(root: HTMLElement, widths: number[], tableWidth: number) {
   const pxTotal = `${tableWidth}px`;
   root.style.setProperty("--spreadsheet-table-width", pxTotal);
+  widths.forEach((width, index) => {
+    root.style.setProperty(`--spreadsheet-col-${index}`, `${width}px`);
+  });
+  for (let index = widths.length; index < 32; index += 1) {
+    root.style.removeProperty(`--spreadsheet-col-${index}`);
+  }
   root.querySelectorAll<HTMLElement>(".ant-table-header table").forEach((table) => {
     table.style.width = pxTotal;
     table.style.minWidth = pxTotal;
@@ -77,6 +83,12 @@ function paintTableTotalWidth(root: HTMLElement, tableWidth: number) {
       row.style.minWidth = pxTotal;
       row.style.maxWidth = pxTotal;
     });
+  root.querySelectorAll(".ant-table-header colgroup").forEach((group) => {
+    widths.forEach((width, index) => {
+      const col = group.children[index];
+      if (col instanceof HTMLElement) col.style.width = `${width}px`;
+    });
+  });
 }
 
 /** Keep header + virtual body on the same pixel widths while dragging. */
@@ -89,8 +101,10 @@ function applyLiveColumnWidth(th: HTMLElement, width: number, tableWidth: number
   if (index < 0) return;
 
   const px = `${width}px`;
+  const pxTotal = `${tableWidth}px`;
+  root.style.setProperty(`--spreadsheet-col-${index}`, px);
+  root.style.setProperty("--spreadsheet-table-width", pxTotal);
 
-  // Header uses table-layout:fixed + colgroup — cell style alone does not move it.
   root.querySelectorAll(".ant-table-header colgroup").forEach((group) => {
     const col = group.children[index];
     if (col instanceof HTMLElement) col.style.width = px;
@@ -110,9 +124,21 @@ function applyLiveColumnWidth(th: HTMLElement, width: number, tableWidth: number
         paintCellWidth(cell, width);
         cell.classList.toggle("is-resizing", resizing);
       }
+      row.style.width = pxTotal;
+      row.style.minWidth = pxTotal;
+      row.style.maxWidth = pxTotal;
     });
 
-  paintTableTotalWidth(root, tableWidth);
+  root.querySelectorAll<HTMLElement>(".ant-table-header table").forEach((table) => {
+    table.style.width = pxTotal;
+    table.style.minWidth = pxTotal;
+    table.style.maxWidth = pxTotal;
+  });
+  root.querySelectorAll<HTMLElement>(".ant-table-tbody-virtual-holder-inner").forEach((inner) => {
+    inner.style.width = pxTotal;
+    inner.style.minWidth = pxTotal;
+    inner.style.maxWidth = pxTotal;
+  });
 }
 
 type VirtualTableHandle = {
@@ -527,23 +553,30 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     return () => observer.disconnect();
   }, [columnLayoutKey, showEmpty]);
 
-  // Ant's virtual header stretches to the viewport when scroll.x is narrower than
-  // the sheet (assistant recorte). Pin header + body to the same pixel total.
-  useLayoutEffect(() => {
-    const root = sheetRef.current?.querySelector(".spreadsheet-table");
-    if (!(root instanceof HTMLElement)) return;
-    paintTableTotalWidth(root, tableWidth);
-
+  const columnWidthStyle = useMemo(() => {
     const widths = [
       ...(rowActions ? [SHEET_COLUMN_WIDTH.actions] : []),
       ...columns.map((column) => resolvedWidth(column)),
     ];
-    root.querySelectorAll(".ant-table-header colgroup").forEach((group) => {
-      widths.forEach((width, index) => {
-        const col = group.children[index];
-        if (col instanceof HTMLElement) col.style.width = `${width}px`;
-      });
+    const style: Record<string, string> = {
+      "--spreadsheet-table-width": `${tableWidth}px`,
+    };
+    widths.forEach((width, index) => {
+      style[`--spreadsheet-col-${index}`] = `${width}px`;
     });
+    return style;
+  }, [columns, resolvedWidth, rowActions, tableWidth]);
+
+  // Column widths are fixed; the sheet scrolls horizontally when their sum exceeds
+  // the visible viewport. Never stretch header/body to fill leftover space.
+  useLayoutEffect(() => {
+    const root = sheetRef.current?.querySelector(".spreadsheet-table");
+    if (!(root instanceof HTMLElement)) return;
+    const widths = [
+      ...(rowActions ? [SHEET_COLUMN_WIDTH.actions] : []),
+      ...columns.map((column) => resolvedWidth(column)),
+    ];
+    paintColumnVars(root, widths, tableWidth);
   }, [columnLayoutKey, columns, resolvedWidth, rowActions, rows.length, tableWidth]);
 
   useEffect(() => {
@@ -658,7 +691,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
           scroll={{ x: tableWidth, y: bodyHeight }}
           showSorterTooltip={false}
           size="small"
-          style={{ ["--spreadsheet-table-width" as string]: `${tableWidth}px` }}
+          style={columnWidthStyle}
           tableLayout="fixed"
           virtual
           listItemHeight={DEFAULT_SHEET_PREFERENCES.rowHeightPx}
