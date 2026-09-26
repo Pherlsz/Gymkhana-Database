@@ -65,9 +65,9 @@ export class ApiContainer extends Container<ApiEnv> {
       OCR_MAX_REQUESTS_PER_HOUR: env.OCR_MAX_REQUESTS_PER_HOUR ?? "10",
       OCR_MAX_PROVIDER_USAGE_PER_HOUR: env.OCR_MAX_PROVIDER_USAGE_PER_HOUR ?? "500000",
       OCR_MAX_SOURCE_BYTES: env.OCR_MAX_SOURCE_BYTES ?? "20971520",
-      AI_CHAT_PROVIDER: env.AI_CHAT_PROVIDER ?? "google",
-      AI_CHAT_MODEL: env.AI_CHAT_MODEL ?? "gemini-2.5-flash",
-      AI_CHAT_RETENTION: env.AI_CHAT_RETENTION ?? "720h",
+      AI_CHAT_PROVIDER: env.AI_CHAT_PROVIDER ?? "",
+      AI_CHAT_MODEL: env.AI_CHAT_MODEL ?? "",
+      AI_CHAT_RETENTION: env.AI_CHAT_RETENTION ?? "",
       GOOGLE_FORMS_OAUTH_CLIENT_ID: env.GOOGLE_FORMS_OAUTH_CLIENT_ID ?? "",
       GOOGLE_FORMS_OAUTH_CLIENT_SECRET: env.GOOGLE_FORMS_OAUTH_CLIENT_SECRET ?? "",
       GOOGLE_FORMS_OAUTH_REDIRECT_URL: env.GOOGLE_FORMS_OAUTH_REDIRECT_URL ?? "",
@@ -86,10 +86,14 @@ export default {
       const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
       const { success } = await env.API_RATE_LIMIT.limit({ key: ip });
       if (!success) {
-        return new Response("Too Many Requests", { status: 429 });
+        return Response.json(
+          { error: "rate_limited", message: "Too many requests" },
+          { status: 429, headers: { "Retry-After": "60" } },
+        );
       }
     }
-    const container = getRandom(env.API_CONTAINER, INSTANCE_COUNT);
+
+    const container = await getRandom(env.API_CONTAINER, INSTANCE_COUNT);
     return container.fetch(request);
   },
 };
