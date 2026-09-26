@@ -8,14 +8,19 @@
     "dev:web": "pnpm --filter @pherlsz/gymkhana-database-web dev",
     "build:web": "pnpm --filter @pherlsz/gymkhana-database-web build",
     "deploy:web:staging": "pnpm build:web && wrangler deploy",
+    "build:api:linux": "mkdir -p .tmp && COMMIT=$(git rev-parse HEAD) && VERSION=sha-$(git rev-parse --short=12 HEAD) && BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ) && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \"-X github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo.Version=$VERSION -X github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo.Commit=$COMMIT -X github.com/Pherlsz/Gymkhana-Database/internal/platform/releaseinfo.BuiltAt=$BUILT_AT\" -o .tmp/api ./cmd/api",
+    "deploy:api:staging": "pnpm build:api:linux && wrangler deploy -c wrangler.api.jsonc",
     "typecheck:web": "pnpm --filter @pherlsz/gymkhana-database-web typecheck",
     "lint:web": "oxlint -c oxlint.json apps",
-    "format": "oxfmt apps scripts .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml wrangler.jsonc --write",
-    "format:check": "oxfmt apps scripts .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml wrangler.jsonc --check",
+    "format": "oxfmt apps scripts workers .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml wrangler.jsonc wrangler.api.jsonc --write",
+    "format:check": "oxfmt apps scripts workers .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml wrangler.jsonc wrangler.api.jsonc --check",
     "test:web": "vitest run",
     "generate:openapi:ts": "openapi-typescript api/openapi.yaml -o apps/web/src/generated/api.ts && openapi-typescript api/search.openapi.yaml -o apps/web/src/generated/search-api.ts && openapi-typescript api/operations.openapi.yaml -o apps/web/src/generated/operations-api.ts && openapi-typescript api/google-forms.openapi.yaml -o apps/web/src/generated/google-forms-api.ts && openapi-typescript api/query.openapi.yaml -o apps/web/src/generated/query-api.ts && openapi-typescript api/matching.openapi.yaml -o apps/web/src/generated/matching-api.ts && openapi-typescript api/chat.openapi.yaml -o apps/web/src/generated/chat-api.ts && openapi-typescript api/ocr.openapi.yaml -o apps/web/src/generated/ocr-api.ts",
     "bundle:check": "node scripts/check-bundle.mjs",
     "check:web": "pnpm typecheck:web && pnpm lint:web && pnpm format:check && pnpm test:web && pnpm bundle:check"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "0.3.7"
   },
   "devDependencies": {
     "@testing-library/dom": "10.4.1",

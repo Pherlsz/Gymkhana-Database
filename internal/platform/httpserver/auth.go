@@ -190,6 +190,15 @@ func authUser(user auth.User) *authUserResponse {
 	}
 }
 
+func cookieSameSite(secure bool) http.SameSite {
+	// Staging/production SPA and API are different hosts (e.g. Workers + Containers).
+	// Credentialed fetches need SameSite=None; Secure. Local HTTP keeps Lax.
+	if secure {
+		return http.SameSiteNoneMode
+	}
+	return http.SameSiteLaxMode
+}
+
 func setOAuthStateCookie(w http.ResponseWriter, value string, secure bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     oauthStateCookieName,
@@ -198,7 +207,7 @@ func setOAuthStateCookie(w http.ResponseWriter, value string, secure bool) {
 		MaxAge:   int(oauthStateTTL.Seconds()),
 		HttpOnly: true,
 		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: cookieSameSite(secure),
 	})
 }
 
@@ -209,7 +218,7 @@ func clearOAuthStateCookie(w http.ResponseWriter, secure bool) {
 		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: cookieSameSite(secure),
 	})
 }
 
@@ -222,7 +231,7 @@ func setSessionCookie(w http.ResponseWriter, value string, expiresAt time.Time, 
 		MaxAge:   int(auth.SessionTTL.Seconds()),
 		HttpOnly: true,
 		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: cookieSameSite(secure),
 	})
 }
 
@@ -233,7 +242,7 @@ func clearSessionCookie(w http.ResponseWriter, secure bool) {
 		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: cookieSameSite(secure),
 	})
 }
 
