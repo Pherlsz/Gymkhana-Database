@@ -33,7 +33,7 @@ func TestRevokeCapabilityKeepsAtLeastOneForMember(t *testing.T) {
 		},
 		caps: []Capability{CapSearch},
 	}
-	service, err := NewService(fakeProvider{}, store, ServiceOptions{AllowlistStore: store})
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}

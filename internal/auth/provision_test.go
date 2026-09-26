@@ -25,7 +25,7 @@ func (store *provisionStore) ProvisionUser(_ context.Context, params ProvisionUs
 
 func TestProvisionUserStoresMemberAccess(t *testing.T) {
 	store := &provisionStore{}
-	service, err := NewService(fakeProvider{}, store, ServiceOptions{AllowlistStore: store})
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -55,7 +55,7 @@ func TestProvisionUserStoresMemberAccess(t *testing.T) {
 
 func TestProvisionUserDropsAdminCapabilities(t *testing.T) {
 	store := &provisionStore{}
-	service, err := NewService(fakeProvider{}, store, ServiceOptions{AllowlistStore: store})
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -77,7 +77,7 @@ func TestProvisionUserDropsAdminCapabilities(t *testing.T) {
 
 func TestProvisionUserRejectsIncompleteAccess(t *testing.T) {
 	store := &provisionStore{}
-	service, err := NewService(fakeProvider{}, store, ServiceOptions{AllowlistStore: store})
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -122,7 +122,7 @@ func TestDeleteUserProtectsSuperadmin(t *testing.T) {
 	store := &deleteStore{user: ManagedUser{User: User{
 		ID: targetID, Email: "owner@example.com", Role: RoleSuperadmin, Active: true,
 	}}}
-	service, err := NewService(fakeProvider{}, store, ServiceOptions{AllowlistStore: store})
+	service, err := NewService(fakeProvider{}, store, ServiceOptions{})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -144,7 +144,7 @@ func (store *deleteStore) FindUserByID(context.Context, Identifier) (ManagedUser
 	return store.user, nil
 }
 
-func (store *deleteStore) DeleteUser(context.Context, Identifier, string) error {
+func (store *deleteStore) DeleteUser(context.Context, Identifier) error {
 	store.deleted = true
 	return nil
 }

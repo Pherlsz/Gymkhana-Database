@@ -153,14 +153,6 @@ func (service *Service) UpdateUserAccess(ctx context.Context, actor Session, par
 		}
 		service.recordAudit(ctx, &actor.User.ID, &params.UserID, AuditEventSessionRevoked, AuditOutcomeSuccess, requestID, updated.User.Email)
 	}
-	if emailChanged && service.allowlistStore != nil {
-		if err := service.allowlistStore.AddAllowedEmail(ctx, email, &actor.User.ID); err != nil {
-			return ManagedUser{}, err
-		}
-		if err := service.allowlistStore.RemoveAllowedEmail(ctx, target.User.Email); err != nil {
-			return ManagedUser{}, err
-		}
-	}
 	return updated, nil
 }
 
@@ -241,7 +233,7 @@ func (service *Service) DeleteUser(ctx context.Context, actor Session, userID Id
 	}
 	store, ok := service.store.(interface {
 		FindUserByID(context.Context, Identifier) (ManagedUser, error)
-		DeleteUser(context.Context, Identifier, string) error
+		DeleteUser(context.Context, Identifier) error
 	})
 	if !ok {
 		service.recordAudit(ctx, &actor.User.ID, &userID, AuditEventUserAccessChanged, AuditOutcomeFailure, requestID, actor.User.Email)
@@ -256,7 +248,7 @@ func (service *Service) DeleteUser(ctx context.Context, actor Session, userID Id
 		service.recordAudit(ctx, &actor.User.ID, &userID, AuditEventUserAccessChanged, AuditOutcomeDenied, requestID, target.User.Email)
 		return ErrProtectedSuperadmin
 	}
-	if err := store.DeleteUser(ctx, userID, target.User.Email); err != nil {
+	if err := store.DeleteUser(ctx, userID); err != nil {
 		service.recordAudit(ctx, &actor.User.ID, &userID, AuditEventUserAccessChanged, AuditOutcomeFailure, requestID, target.User.Email)
 		return err
 	}

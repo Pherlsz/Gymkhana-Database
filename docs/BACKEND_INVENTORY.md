@@ -37,7 +37,7 @@ The rebuild is **ahead of legacy** on Query Engine (typed plans, no client SQL),
 
 **Rebuild: Implemented** (product is implemented; EXTERNAL grants are checked in the API process)
 
-- Google OAuth, email allowlist (`allowed_emails` plus env bootstrap), opaque 24h hashed sessions, roles `EXTERNAL` / `ADMIN` / `SUPERADMIN`, admin user/allowlist/capability APIs, audits.
+- Google OAuth, provisioned `app_users` (active) gate, opaque 24h hashed sessions, roles `EXTERNAL` / `ADMIN` / `SUPERADMIN`, admin user/capability APIs, audits.
 - Account lookup is by email (`internal/auth/service.go` `FindUserByEmail`). Google subject is stored as metadata.
 - `internal/auth/postgres_store.go` implements `UserHasCapability`.
 - `cmd/api/main.go` sets `RequireCapabilityCheck` and `CapabilityCheck` to the auth store when authentication is enabled. EXTERNAL users need an explicit grant. ADMIN/SUPERADMIN bypass the checker.
@@ -316,7 +316,7 @@ Neon (survey 2026-08-16, counts only, no row payloads):
 
 ## 19. Admin users
 
-**Rebuild: Done** — list users, patch role/active (not self, not SUPERADMIN), capabilities, allowlist. Users are created on first allowed Google login.
+**Rebuild: Done** — list users, provision, patch role/active (not self, not SUPERADMIN), capabilities. Google login binds to an existing `app_users` row; it does not create users.
 
 ---
 

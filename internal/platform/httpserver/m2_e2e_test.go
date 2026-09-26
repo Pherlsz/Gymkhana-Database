@@ -113,17 +113,6 @@ func (store *m2Store) FindAuthenticatedSession(_ context.Context, tokenHash []by
 
 func (store *m2Store) TouchSession(context.Context, auth.Identifier) error { return nil }
 
-func (store *m2Store) IsEmailAllowed(_ context.Context, email string) (bool, error) {
-	_, exists := store.usersByEmail[email]
-	return exists, nil
-}
-
-func (store *m2Store) AddAllowedEmail(context.Context, string, *auth.Identifier) error { return nil }
-
-func (store *m2Store) RemoveAllowedEmail(context.Context, string) error { return nil }
-
-func (store *m2Store) ListAllowedEmails(context.Context) ([]string, error) { return nil, nil }
-
 func (store *m2Store) RevokeSessionByTokenHash(_ context.Context, tokenHash []byte) error {
 	key := string(tokenHash)
 	record, exists := store.sessions[key]
@@ -196,8 +185,7 @@ func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
 		t.Fatalf("CreateUser(owner) error = %v", err)
 	}
 	service, err := auth.NewService(provider, store, auth.ServiceOptions{
-		AllowlistStore: store,
-		Now:            func() time.Time { return time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC) },
+		Now: func() time.Time { return time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC) },
 	})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)

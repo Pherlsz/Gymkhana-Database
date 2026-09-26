@@ -145,7 +145,7 @@ Configure the following Secret Manager references with numeric versions, never `
 - `R2_ACCESS_KEY_ID`;
 - `R2_SECRET_ACCESS_KEY`.
 
-The renderer also needs non-secret `ALLOWED_EMAILS` and `SUPERADMIN_EMAIL`. Those bootstrap the first `SUPERADMIN`; runtime access remains the `allowed_emails` table.
+Seed the first `SUPERADMIN` in Neon (`app_users`) before cutover; Google login never creates users. Runtime access is decided solely by a provisioned, active `app_users` row.
 
 ## 7. Render Cloud Run contracts
 
