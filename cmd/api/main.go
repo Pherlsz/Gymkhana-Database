@@ -231,7 +231,13 @@ func run() error {
 				if modelKeys == nil {
 					return errors.New("AI Chat google provider requires the shared model key service")
 				}
-				adapter, err := modelprovider.NewGoogleAdapter(&http.Client{Timeout: 40 * time.Second}, modelprovider.KeyResolver(modelKeys, modelprovider.ProviderGoogle), "")
+				// One generate() call can include large tool context; keep under the 5m run /
+				// 6m write deadlines. A 40s client timeout was aborting long rounds as chat_timeout.
+				adapter, err := modelprovider.NewGoogleAdapter(
+					&http.Client{Timeout: 4*time.Minute + 30*time.Second},
+					modelprovider.KeyResolver(modelKeys, modelprovider.ProviderGoogle),
+					"",
+				)
 				if err != nil {
 					return fmt.Errorf("configure Gemini adapter: %w", err)
 				}

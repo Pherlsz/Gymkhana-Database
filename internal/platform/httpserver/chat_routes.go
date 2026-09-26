@@ -739,7 +739,7 @@ func writeChatError(w http.ResponseWriter, r *http.Request, logger *slog.Logger,
 	case errors.Is(err, chatdomain.ErrCancelled):
 		writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeChatCancelled, Message: "O run foi cancelado"})
 	case errors.Is(err, chatdomain.ErrTimeout):
-		writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeChatTimeout, Message: "O Gemini não concluiu a resposta a tempo"})
+		writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeChatTimeout, Message: "A resposta demorou demais. Simplifique a pergunta ou tente de novo"})
 	case errors.Is(err, chatdomain.ErrUnavailable):
 		writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeChatUnavailable, Message: "O provedor do Chat está indisponível"})
 	case errors.Is(err, chatdomain.ErrMalformedProvider), errors.Is(err, chatdomain.ErrToolFailed), errors.Is(err, chatdomain.ErrUnsafeResult):

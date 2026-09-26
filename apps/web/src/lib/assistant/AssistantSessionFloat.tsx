@@ -214,6 +214,14 @@ export function AssistantSessionFloat({
               <PanelLeftClose aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />
             </button>
           </div>
+          {chat.threadsLoading ? (
+            <div aria-busy="true" aria-live="polite" className="assistant-float__session-skel">
+              <span className="visually-hidden">{copy.loadingSessions}</span>
+              <span aria-hidden className="assistant-float__skel-row" />
+              <span aria-hidden className="assistant-float__skel-row" />
+              <span aria-hidden className="assistant-float__skel-row is-short" />
+            </div>
+          ) : null}
           {chat.threads.map((item) => {
             const active = item.id === chat.thread?.id;
             const editing = editingId === item.id;
@@ -343,46 +351,61 @@ export function AssistantSessionFloat({
           </div>
         </header>
         <div className="assistant-float__chat" ref={chatRef}>
-          {chat.messages.length === 0 && !chat.pending && !chat.messagesLoading ? (
+          {chat.messagesLoading ? (
+            <div aria-busy="true" aria-live="polite" className="assistant-float__history-skel">
+              <span className="visually-hidden">{copy.loadingHistory}</span>
+              <span aria-hidden className="assistant-float__skel-bubble is-user" />
+              <span aria-hidden className="assistant-float__skel-bubble is-assistant" />
+              <span aria-hidden className="assistant-float__skel-bubble is-user is-short" />
+            </div>
+          ) : null}
+          {chat.messagesRefreshing ? (
+            <p aria-live="polite" className="assistant-float__refresh">
+              {copy.loadingHistory}
+            </p>
+          ) : null}
+          {!chat.messagesLoading && chat.messages.length === 0 && !chat.pending ? (
             <p className="assistant-float__empty">{copy.emptyThread}</p>
           ) : null}
-          {chat.messages.map((message) => (
-            <article
-              className={
-                message.role === "USER" ? "assistant-msg is-user" : "assistant-msg is-assistant"
-              }
-              key={message.id}
-            >
-              {message.role === "ASSISTANT" ? (
-                <Sparkles
-                  aria-hidden
-                  className="assistant-msg__mark"
-                  size={ICON.sm}
-                  strokeWidth={ICON_STROKE}
-                />
-              ) : null}
-              <div className="assistant-msg__body">
-                <CollapsedCopy
-                  lessLabel={copy.showLess}
-                  moreLabel={copy.showMore}
-                  text={message.content}
-                />
-                {message.role === "ASSISTANT" &&
-                onShowResult &&
-                message.result_reference_ids.length > 0 ? (
-                  <ResultOnTableAction
-                    activeResultId={activeResultId}
-                    applyLabel={copy.applyToTable}
-                    onShow={onShowResult}
-                    onTableLabel={copy.onTable}
-                    referenceId={
-                      message.result_reference_ids[message.result_reference_ids.length - 1]!
-                    }
-                  />
-                ) : null}
-              </div>
-            </article>
-          ))}
+          {!chat.messagesLoading
+            ? chat.messages.map((message) => (
+                <article
+                  className={
+                    message.role === "USER" ? "assistant-msg is-user" : "assistant-msg is-assistant"
+                  }
+                  key={message.id}
+                >
+                  {message.role === "ASSISTANT" ? (
+                    <Sparkles
+                      aria-hidden
+                      className="assistant-msg__mark"
+                      size={ICON.sm}
+                      strokeWidth={ICON_STROKE}
+                    />
+                  ) : null}
+                  <div className="assistant-msg__body">
+                    <CollapsedCopy
+                      lessLabel={copy.showLess}
+                      moreLabel={copy.showMore}
+                      text={message.content}
+                    />
+                    {message.role === "ASSISTANT" &&
+                    onShowResult &&
+                    message.result_reference_ids.length > 0 ? (
+                      <ResultOnTableAction
+                        activeResultId={activeResultId}
+                        applyLabel={copy.applyToTable}
+                        onShow={onShowResult}
+                        onTableLabel={copy.onTable}
+                        referenceId={
+                          message.result_reference_ids[message.result_reference_ids.length - 1]!
+                        }
+                      />
+                    ) : null}
+                  </div>
+                </article>
+              ))
+            : null}
           {chat.pending ? (
             <article aria-live="polite" className="assistant-msg is-assistant is-pending">
               <Sparkles
