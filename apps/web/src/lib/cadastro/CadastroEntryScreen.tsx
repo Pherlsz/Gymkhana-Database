@@ -114,9 +114,7 @@ export function CadastroEntryScreen({
   const formsCard = (
     <AppCard
       aria-label={
-        formsParked
-          ? `${copy.entryFormsTitle}. ${copy.entryFormsComingSoon}`
-          : copy.entryFormsTitle
+        formsParked ? `${copy.entryFormsTitle}. ${copy.entryFormsComingSoon}` : copy.entryFormsTitle
       }
       badge={copy.cardAutoFormsBadge}
       {...(formsParked ? { className: "app-card--disabled" } : {})}

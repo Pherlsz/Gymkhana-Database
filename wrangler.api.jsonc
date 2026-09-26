@@ -10,22 +10,22 @@
       "class_name": "ApiContainer",
       "image": "./Dockerfile.api",
       "instance_type": "basic",
-      "max_instances": 1
-    }
+      "max_instances": 1,
+    },
   ],
   "durable_objects": {
     "bindings": [
       {
         "name": "API_CONTAINER",
-        "class_name": "ApiContainer"
-      }
-    ]
+        "class_name": "ApiContainer",
+      },
+    ],
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["ApiContainer"]
-    }
+      "new_sqlite_classes": ["ApiContainer"],
+    },
   ],
   "vars": {
     "AUTH_APPLICATION_URL": "https://staging-gymkhana-database.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev",
@@ -40,6 +40,6 @@
     "OCR_TIMEOUT": "90s",
     "OCR_MAX_REQUESTS_PER_HOUR": "10",
     "OCR_MAX_PROVIDER_USAGE_PER_HOUR": "500000",
-    "OCR_MAX_SOURCE_BYTES": "20971520"
-  }
+    "OCR_MAX_SOURCE_BYTES": "20971520",
+  },
 }

@@ -4,3704 +4,3743 @@
  */
 
 export interface paths {
-    "/health/live": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Check whether the API process is alive */
-        get: operations["getLiveHealth"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/health/live": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/health/ready": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Check whether required dependencies are ready */
-        get: operations["getReadyHealth"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Check whether the API process is alive */
+    get: operations["getLiveHealth"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/health/ready": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/auth/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Begin Google OAuth authentication */
-        get: operations["beginGitHubLogin"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Check whether required dependencies are ready */
+    get: operations["getReadyHealth"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/login": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/auth/callback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Complete Google OAuth authentication */
-        get: operations["completeGitHubLogin"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Begin Google OAuth authentication */
+    get: operations["beginGitHubLogin"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/callback": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/auth/session": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read the current protected application session */
-        get: operations["getAuthSession"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Complete Google OAuth authentication */
+    get: operations["completeGitHubLogin"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/auth/session": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/auth/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Revoke the current application session */
-        post: operations["logout"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read the current protected application session */
+    get: operations["getAuthSession"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/auth/logout": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/admin/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List application users for administration */
-        get: operations["listApplicationUsers"];
-        put?: never;
-        /** Create an application user with role and capabilities */
-        post: operations["provisionApplicationUser"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Revoke the current application session */
+    post: operations["logout"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/admin/users/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete an application user */
-        delete: operations["deleteApplicationUser"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List application users for administration */
+    get: operations["listApplicationUsers"];
+    put?: never;
+    /** Create an application user with role and capabilities */
+    post: operations["provisionApplicationUser"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/admin/users/{user_id}/access": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update application role and active status */
-        patch: operations["updateApplicationUserAccess"];
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete an application user */
+    delete: operations["deleteApplicationUser"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}/access": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/admin/model-keys/{provider}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                provider: components["schemas"]["ModelProvider"];
-            };
-            cookie?: never;
-        };
-        /** Shared Assistente model key status (never the secret) */
-        get: operations["getModelKeyStatus"];
-        /** Store or rotate the shared Assistente model key */
-        put: operations["setModelKey"];
-        post?: never;
-        /** Remove the shared Assistente model key */
-        delete: operations["clearModelKey"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update application role and active status */
+    patch: operations["updateApplicationUserAccess"];
+    trace?: never;
+  };
+  "/api/admin/model-keys/{provider}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
     };
-    "/api/v1/profiles": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List physical-person profiles */
-        get: operations["listProfiles"];
-        put?: never;
-        /** Create a physical-person profile */
-        post: operations["createProfile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Shared Assistente model key status (never the secret) */
+    get: operations["getModelKeyStatus"];
+    /** Store or rotate the shared Assistente model key */
+    put: operations["setModelKey"];
+    post?: never;
+    /** Remove the shared Assistente model key */
+    delete: operations["clearModelKey"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/profiles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/profiles/cities": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List distinct cities across profiles matching the given filters */
-        get: operations["listDistinctCities"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List physical-person profiles */
+    get: operations["listProfiles"];
+    put?: never;
+    /** Create a physical-person profile */
+    post: operations["createProfile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/profiles/cities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/profiles/{profile_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                profile_id: string;
-            };
-            cookie?: never;
-        };
-        /** Read one physical-person profile */
-        get: operations["getProfile"];
-        /** Replace canonical profile values using optimistic concurrency */
-        put: operations["updateProfile"];
-        post?: never;
-        /** Permanently delete a profile with explicit confirmation */
-        delete: operations["deleteProfile"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List distinct cities across profiles matching the given filters */
+    get: operations["listDistinctCities"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/profiles/{profile_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        profile_id: string;
+      };
+      cookie?: never;
     };
-    "/api/v1/profiles/{profile_id}/duplicate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Duplicate a profile into an independent profile for review */
-        post: operations["duplicateProfile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read one physical-person profile */
+    get: operations["getProfile"];
+    /** Replace canonical profile values using optimistic concurrency */
+    put: operations["updateProfile"];
+    post?: never;
+    /** Permanently delete a profile with explicit confirmation */
+    delete: operations["deleteProfile"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/profiles/{profile_id}/duplicate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/document-types": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List administrable document types */
-        get: operations["listDocumentTypes"];
-        put?: never;
-        /** Create an administrable document type */
-        post: operations["createDocumentType"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Duplicate a profile into an independent profile for review */
+    post: operations["duplicateProfile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/document-types": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/document-types/{document_type_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_type_id: string;
-            };
-            cookie?: never;
-        };
-        /** Read one document type */
-        get: operations["getDocumentType"];
-        /** Replace document type settings using optimistic concurrency */
-        put: operations["updateDocumentType"];
-        post?: never;
-        /** Permanently delete an unused document type */
-        delete: operations["deleteDocumentType"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List administrable document types */
+    get: operations["listDocumentTypes"];
+    put?: never;
+    /** Create an administrable document type */
+    post: operations["createDocumentType"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/document-types/{document_type_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_type_id: string;
+      };
+      cookie?: never;
     };
-    "/api/v1/document-presences": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Declare absence, indication, or an informed number for a person and document type */
-        put: operations["upsertDocumentPresence"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read one document type */
+    get: operations["getDocumentType"];
+    /** Replace document type settings using optimistic concurrency */
+    put: operations["updateDocumentType"];
+    post?: never;
+    /** Permanently delete an unused document type */
+    delete: operations["deleteDocumentType"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/document-presences": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/documents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Profile-owned documents */
-        get: operations["listDocuments"];
-        put?: never;
-        /** Create a Profile-owned document */
-        post: operations["createDocument"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    /** Declare absence, indication, or an informed number for a person and document type */
+    put: operations["upsertDocumentPresence"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/documents/{document_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        /** Read one document */
-        get: operations["getDocument"];
-        /** Replace document values using optimistic concurrency */
-        put: operations["updateDocument"];
-        post?: never;
-        /** Permanently delete an available document */
-        delete: operations["deleteDocument"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List Profile-owned documents */
+    get: operations["listDocuments"];
+    put?: never;
+    /** Create a Profile-owned document */
+    post: operations["createDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
     };
-    "/api/v1/documents/{document_id}/duplicate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Duplicate a document into an independent record */
-        post: operations["duplicateDocument"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read one document */
+    get: operations["getDocument"];
+    /** Replace document values using optimistic concurrency */
+    put: operations["updateDocument"];
+    post?: never;
+    /** Permanently delete an available document */
+    delete: operations["deleteDocument"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}/duplicate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/documents/{document_id}/current-use": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Assign or replace the current document holder */
-        put: operations["assignDocumentCurrentUse"];
-        post?: never;
-        /** Return a document and remove its current-use relation */
-        delete: operations["returnDocumentCurrentUse"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Duplicate a document into an independent record */
+    post: operations["duplicateDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}/current-use": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/bill-types": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List administrable bill types */
-        get: operations["listBillTypes"];
-        put?: never;
-        /** Create an administrable bill type */
-        post: operations["createBillType"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    /** Assign or replace the current document holder */
+    put: operations["assignDocumentCurrentUse"];
+    post?: never;
+    /** Return a document and remove its current-use relation */
+    delete: operations["returnDocumentCurrentUse"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bill-types": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/bill-types/{bill_type_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                bill_type_id: string;
-            };
-            cookie?: never;
-        };
-        /** Read one bill type */
-        get: operations["getBillType"];
-        /** Replace bill type settings using optimistic concurrency */
-        put: operations["updateBillType"];
-        post?: never;
-        /** Permanently delete an unused bill type */
-        delete: operations["deleteBillType"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List administrable bill types */
+    get: operations["listBillTypes"];
+    put?: never;
+    /** Create an administrable bill type */
+    post: operations["createBillType"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bill-types/{bill_type_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_type_id: string;
+      };
+      cookie?: never;
     };
-    "/api/v1/bills": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Profile-owned bills */
-        get: operations["listBills"];
-        put?: never;
-        /** Create a Profile-owned bill */
-        post: operations["createBill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read one bill type */
+    get: operations["getBillType"];
+    /** Replace bill type settings using optimistic concurrency */
+    put: operations["updateBillType"];
+    post?: never;
+    /** Permanently delete an unused bill type */
+    delete: operations["deleteBillType"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bills": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/bills/{bill_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                bill_id: string;
-            };
-            cookie?: never;
-        };
-        /** Read one bill */
-        get: operations["getBill"];
-        /** Replace bill values using optimistic concurrency */
-        put: operations["updateBill"];
-        post?: never;
-        /** Permanently delete an available bill */
-        delete: operations["deleteBill"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List Profile-owned bills */
+    get: operations["listBills"];
+    put?: never;
+    /** Create a Profile-owned bill */
+    post: operations["createBill"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bills/{bill_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
     };
-    "/api/v1/bills/{bill_id}/duplicate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Duplicate a bill into an independent record */
-        post: operations["duplicateBill"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read one bill */
+    get: operations["getBill"];
+    /** Replace bill values using optimistic concurrency */
+    put: operations["updateBill"];
+    post?: never;
+    /** Permanently delete an available bill */
+    delete: operations["deleteBill"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bills/{bill_id}/duplicate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/bills/{bill_id}/current-use": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Assign or replace the current bill holder when supported */
-        put: operations["assignBillCurrentUse"];
-        post?: never;
-        /** Return a bill to available status */
-        delete: operations["returnBillCurrentUse"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Duplicate a bill into an independent record */
+    post: operations["duplicateBill"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bills/{bill_id}/current-use": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/custom-entity-types": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List custom entity types */
-        get: operations["listCustomEntityTypes"];
-        put?: never;
-        /** Create a custom entity type */
-        post: operations["createCustomEntityType"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    /** Assign or replace the current bill holder when supported */
+    put: operations["assignBillCurrentUse"];
+    post?: never;
+    /** Return a bill to available status */
+    delete: operations["returnBillCurrentUse"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-entity-types": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/custom-entity-types/{entity_type_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_type_id: string;
-            };
-            cookie?: never;
-        };
-        /** Read a custom entity type */
-        get: operations["getCustomEntityType"];
-        /** Update a custom entity type */
-        put: operations["updateCustomEntityType"];
-        post?: never;
-        /** Delete an unused custom entity type */
-        delete: operations["deleteCustomEntityType"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List custom entity types */
+    get: operations["listCustomEntityTypes"];
+    put?: never;
+    /** Create a custom entity type */
+    post: operations["createCustomEntityType"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-entity-types/{entity_type_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_type_id: string;
+      };
+      cookie?: never;
     };
-    "/api/v1/custom-fields": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List custom field definitions */
-        get: operations["listCustomFields"];
-        put?: never;
-        /** Create a custom field definition */
-        post: operations["createCustomField"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read a custom entity type */
+    get: operations["getCustomEntityType"];
+    /** Update a custom entity type */
+    put: operations["updateCustomEntityType"];
+    post?: never;
+    /** Delete an unused custom entity type */
+    delete: operations["deleteCustomEntityType"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-fields": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/custom-fields/{field_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_id: string;
-            };
-            cookie?: never;
-        };
-        /** Read a custom field definition */
-        get: operations["getCustomField"];
-        /** Update a custom field definition */
-        put: operations["updateCustomField"];
-        post?: never;
-        /** Delete an unused custom field definition */
-        delete: operations["deleteCustomField"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List custom field definitions */
+    get: operations["listCustomFields"];
+    put?: never;
+    /** Create a custom field definition */
+    post: operations["createCustomField"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-fields/{field_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
     };
-    "/api/v1/custom-fields/{field_id}/options": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_id: string;
-            };
-            cookie?: never;
-        };
-        /** List select options for a custom field */
-        get: operations["listCustomOptions"];
-        put?: never;
-        /** Create a select option */
-        post: operations["createCustomOption"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read a custom field definition */
+    get: operations["getCustomField"];
+    /** Update a custom field definition */
+    put: operations["updateCustomField"];
+    post?: never;
+    /** Delete an unused custom field definition */
+    delete: operations["deleteCustomField"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-fields/{field_id}/options": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
     };
-    "/api/v1/custom-fields/{field_id}/options/{option_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_id: string;
-                option_id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        /** Update a select option */
-        put: operations["updateCustomOption"];
-        post?: never;
-        /** Delete an unused select option */
-        delete: operations["deleteCustomOption"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List select options for a custom field */
+    get: operations["listCustomOptions"];
+    put?: never;
+    /** Create a select option */
+    post: operations["createCustomOption"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-fields/{field_id}/options/{option_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+        option_id: string;
+      };
+      cookie?: never;
     };
-    "/api/v1/custom-values/{target_kind}/{target_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                target_kind: "profile" | "document" | "bill" | "custom_entity";
-                target_id: string;
-            };
-            cookie?: never;
-        };
-        /** Read custom values for a record */
-        get: operations["getCustomValues"];
-        /** Replace custom values using optimistic concurrency */
-        put: operations["replaceCustomValues"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    /** Update a select option */
+    put: operations["updateCustomOption"];
+    post?: never;
+    /** Delete an unused select option */
+    delete: operations["deleteCustomOption"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-values/{target_kind}/{target_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        target_kind: "profile" | "document" | "bill" | "custom_entity";
+        target_id: string;
+      };
+      cookie?: never;
     };
-    "/api/v1/custom-entities": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List custom entities */
-        get: operations["listCustomEntities"];
-        put?: never;
-        /** Create a custom entity */
-        post: operations["createCustomEntity"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Read custom values for a record */
+    get: operations["getCustomValues"];
+    /** Replace custom values using optimistic concurrency */
+    put: operations["replaceCustomValues"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-entities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/v1/custom-entities/{entity_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_id: string;
-            };
-            cookie?: never;
-        };
-        /** Read a custom entity */
-        get: operations["getCustomEntity"];
-        /** Update a custom entity */
-        put: operations["updateCustomEntity"];
-        post?: never;
-        /** Delete a custom entity */
-        delete: operations["deleteCustomEntity"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List custom entities */
+    get: operations["listCustomEntities"];
+    put?: never;
+    /** Create a custom entity */
+    post: operations["createCustomEntity"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/custom-entities/{entity_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_id: string;
+      };
+      cookie?: never;
     };
+    /** Read a custom entity */
+    get: operations["getCustomEntity"];
+    /** Update a custom entity */
+    put: operations["updateCustomEntity"];
+    post?: never;
+    /** Delete a custom entity */
+    delete: operations["deleteCustomEntity"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        HealthResponse: {
-            /** @enum {string} */
-            status: "ok" | "unavailable";
-            request_id?: string;
-        };
-        AuthSessionResponse: {
-            /** @constant */
-            authenticated: true;
-            user: components["schemas"]["AuthUser"];
-        };
-        AuthUser: {
-            login: string;
-            display_name: string;
-            /** Format: uri */
-            avatar_url?: string;
-            role: components["schemas"]["UserRole"];
-        };
-        /** @enum {string} */
-        UserRole: "EXTERNAL" | "ADMIN" | "SUPERADMIN";
-        AdminUsersResponse: {
-            users: components["schemas"]["AdminUser"][];
-        };
-        AdminUser: {
-            /** Format: uuid */
-            id: string;
-            login: string;
-            display_name: string;
-            /** Format: uri */
-            avatar_url?: string;
-            role: components["schemas"]["UserRole"];
-            active: boolean;
-            /** Format: int64 */
-            version: number;
-        };
-        UpdateUserAccessRequest: {
-            role: components["schemas"]["UserRole"];
-            active: boolean;
-            /** Format: int64 */
-            version: number;
-            display_name?: string;
-            email?: string;
-        };
-        ProvisionUserRequest: {
-            email: string;
-            display_name?: string;
-            /** @enum {string} */
-            role: "EXTERNAL" | "ADMIN";
-            capabilities?: string[];
-        };
-        /** @enum {string} */
-        ModelProvider: "google";
-        ModelKeyStatus: {
-            provider: components["schemas"]["ModelProvider"];
-            configured: boolean;
-            model?: string;
-            /** Format: date-time */
-            updated_at?: string;
-        };
-        SetModelKeyRequest: {
-            /**
-             * Format: password
-             * @description Provider API key. Write-only; never returned.
-             */
-            secret: string;
-            model: string;
-        };
-        DistinctCitiesResponse: {
-            values: string[];
-        };
-        /**
-         * @default full_name
-         * @enum {string}
-         */
-        ProfileSortField: "full_name" | "cpf" | "email" | "address_city" | "address_street" | "address_neighborhood" | "mobile_phone" | "birth_date" | "created_at" | "updated_at";
-        /**
-         * @default asc
-         * @enum {string}
-         */
-        SortOrder: "asc" | "desc";
-        ProfileAddress: {
-            street: string;
-            number: string;
-            complement: string;
-            neighborhood: string;
-            city: string;
-            state: string;
-            postal_code: string;
-        };
-        ProfileValuesRequest: {
-            full_name: string;
-            social_name: string;
-            cpf: string;
-            email: string;
-            mobile_phone: string;
-            landline_phone: string;
-            address: components["schemas"]["ProfileAddress"];
-            notes: string;
-            /** Format: date */
-            birth_date?: string;
-            gender?: string;
-            blood_type?: string;
-            nationality?: string;
-            birth_city?: string;
-            marital_status?: string;
-            /** Format: date */
-            wedding_date?: string;
-            father_name?: string;
-            /** Format: date */
-            father_birth_date?: string;
-            mother_name?: string;
-            /** Format: date */
-            mother_birth_date?: string;
-            health_plan?: string;
-            blood_donor?: boolean;
-            organ_donor?: boolean;
-            team?: string;
-            sector?: string;
-            collections?: string;
-            vehicle_model?: string;
-            vehicle_color?: string;
-            vehicle_plate?: string;
-            vehicle_year?: number;
-            club_membership?: string;
-            membership_type?: string;
-            place_of_origin?: string;
-            birth_country?: string;
-            /** Format: date */
-            parents_wedding_date?: string;
-            supermarket_club?: string;
-            pet?: string;
-            travel_countries?: string;
-            card_brand?: string;
-            card_bank?: string;
-        };
-        UpdateProfileRequest: {
-            full_name: string;
-            social_name: string;
-            cpf: string;
-            email: string;
-            mobile_phone: string;
-            landline_phone: string;
-            address: components["schemas"]["ProfileAddress"];
-            notes: string;
-            /** Format: date */
-            birth_date?: string;
-            gender?: string;
-            blood_type?: string;
-            nationality?: string;
-            birth_city?: string;
-            marital_status?: string;
-            /** Format: date */
-            wedding_date?: string;
-            father_name?: string;
-            /** Format: date */
-            father_birth_date?: string;
-            mother_name?: string;
-            /** Format: date */
-            mother_birth_date?: string;
-            health_plan?: string;
-            blood_donor?: boolean;
-            organ_donor?: boolean;
-            team?: string;
-            sector?: string;
-            collections?: string;
-            vehicle_model?: string;
-            vehicle_color?: string;
-            vehicle_plate?: string;
-            vehicle_year?: number;
-            club_membership?: string;
-            membership_type?: string;
-            place_of_origin?: string;
-            birth_country?: string;
-            /** Format: date */
-            parents_wedding_date?: string;
-            supermarket_club?: string;
-            pet?: string;
-            travel_countries?: string;
-            card_brand?: string;
-            card_bank?: string;
-            /** Format: int64 */
-            version: number;
-        };
-        DeleteProfileRequest: {
-            /** Format: int64 */
-            version: number;
-            /** @constant */
-            confirmation: "Confirmar";
-        };
-        Profile: {
-            /** Format: uuid */
-            id: string;
-            full_name: string;
-            social_name: string;
-            cpf: string;
-            email: string;
-            mobile_phone: string;
-            landline_phone: string;
-            address: components["schemas"]["ProfileAddress"];
-            notes: string;
-            /** Format: date */
-            birth_date?: string;
-            gender?: string;
-            blood_type?: string;
-            nationality?: string;
-            birth_city?: string;
-            marital_status?: string;
-            /** Format: date */
-            wedding_date?: string;
-            father_name?: string;
-            /** Format: date */
-            father_birth_date?: string;
-            mother_name?: string;
-            /** Format: date */
-            mother_birth_date?: string;
-            health_plan?: string;
-            blood_donor?: boolean;
-            organ_donor?: boolean;
-            team?: string;
-            sector?: string;
-            collections?: string;
-            vehicle_model?: string;
-            vehicle_color?: string;
-            vehicle_plate?: string;
-            vehicle_year?: number;
-            club_membership?: string;
-            membership_type?: string;
-            place_of_origin?: string;
-            birth_country?: string;
-            /** Format: date */
-            parents_wedding_date?: string;
-            supermarket_club?: string;
-            pet?: string;
-            travel_countries?: string;
-            card_brand?: string;
-            card_bank?: string;
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-            /** @description Custom field technical_key to display value for this person on the current page. */
-            custom_values?: {
-                [key: string]: string;
-            };
-            /** @description Latest informed identifier_value per document type technical_key for this person, including cpf. */
-            document_identifiers?: {
-                [key: string]: string;
-            };
-            /** @description Positive document-type badges for the current people-listing page. Loaded with WHERE profile_id = ANY($ids); absence and unspecified are omitted. */
-            document_badges?: components["schemas"]["ProfileDocumentBadge"][];
-            /** @description Sparse persisted claims for this person, including absence. Unspecified types are omitted. */
-            document_presences?: components["schemas"]["ProfileDocumentPresence"][];
-        };
-        ProfilePageMeta: {
-            /** Format: int64 */
-            total: number;
-            /** Format: int32 */
-            limit: number;
-            /** Format: int32 */
-            offset: number;
-            sort_field: components["schemas"]["ProfileSortField"];
-            sort_order: components["schemas"]["SortOrder"];
-        };
-        ProfilePageResponse: {
-            profiles: components["schemas"]["Profile"][];
-            page: components["schemas"]["ProfilePageMeta"];
-        };
-        FieldError: {
-            field: string;
-            code: string;
-            message: string;
-        };
-        ErrorResponse: {
-            error: {
-                code: string;
-                message: string;
-            };
-            request_id?: string;
-            field_errors?: components["schemas"]["FieldError"][];
-            /** @description Present when creating a bill and owner_name matches more than one Profile. */
-            candidates?: components["schemas"]["OwnerCandidate"][];
-        };
-        /** @enum {string} */
-        DocumentUniquenessPolicy: "NONE" | "PER_PROFILE" | "GLOBAL_BY_TYPE";
-        /** @enum {string} */
-        DocumentMedium: "PHYSICAL" | "DIGITAL";
-        /** @enum {string} */
-        DocumentStatus: "AVAILABLE" | "IN_USE";
-        /**
-         * @default label
-         * @enum {string}
-         */
-        DocumentTypeSortField: "label" | "technical_key" | "created_at" | "updated_at";
-        /**
-         * @default identifier_value
-         * @enum {string}
-         */
-        DocumentSortField: "identifier_value" | "type_label" | "document_date" | "created_at" | "updated_at";
-        DocumentTypeValuesRequest: {
-            technical_key: string;
-            label: string;
-            active: boolean;
-            uniqueness_policy: components["schemas"]["DocumentUniquenessPolicy"];
-            validation_regex: string;
-            date_required: boolean;
-        };
-        UpdateDocumentTypeRequest: {
-            technical_key: string;
-            label: string;
-            active: boolean;
-            uniqueness_policy: components["schemas"]["DocumentUniquenessPolicy"];
-            validation_regex: string;
-            date_required: boolean;
-            /** Format: int64 */
-            version: number;
-        };
-        DeleteDocumentResourceRequest: {
-            /** Format: int64 */
-            version: number;
-            /** @constant */
-            confirmation: "Confirmar";
-        };
-        DocumentType: {
-            /** Format: uuid */
-            id: string;
-            technical_key: string;
-            label: string;
-            active: boolean;
-            uniqueness_policy: components["schemas"]["DocumentUniquenessPolicy"];
-            validation_regex: string;
-            date_required: boolean;
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-            /**
-             * Format: int64
-             * @description Number of exemplars of this type currently in possession
-             */
-            count?: number;
-        };
-        DocumentValuesRequest: {
-            /** Format: uuid */
-            owner_profile_id: string;
-            /** Format: uuid */
-            document_type_id: string;
-            identifier_value: string;
-            document_date: string;
-            notes: string;
-            medium: components["schemas"]["DocumentMedium"];
-            idle_custody?: components["schemas"]["IdleCustody"];
-            valid_until?: string;
-        };
-        UpdateDocumentRequest: {
-            /** Format: uuid */
-            owner_profile_id: string;
-            /** Format: uuid */
-            document_type_id: string;
-            identifier_value: string;
-            document_date: string;
-            notes: string;
-            medium: components["schemas"]["DocumentMedium"];
-            /** Format: int64 */
-            version: number;
-            idle_custody?: components["schemas"]["IdleCustody"];
-            valid_until?: string;
-        };
-        AssignDocumentCurrentUseRequest: {
-            /** Format: uuid */
-            holder_profile_id: string;
-        };
-        DocumentCurrentUse: {
-            /** Format: uuid */
-            holder_profile_id: string;
-            holder_full_name?: string;
-            /** Format: date-time */
-            assigned_at: string;
-        };
-        Document: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            owner_profile_id: string;
-            owner_full_name: string;
-            /** Format: uuid */
-            document_type_id: string;
-            identifier_value: string;
-            document_date: string;
-            notes: string;
-            medium: components["schemas"]["DocumentMedium"];
-            status?: components["schemas"]["DocumentStatus"];
-            type: components["schemas"]["DocumentType"];
-            current_use: components["schemas"]["DocumentCurrentUse"];
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-            /** @description Custom field technical_key to display value for this document on the current page. */
-            custom_values?: {
-                [key: string]: string;
-            };
-            idle_custody?: components["schemas"]["IdleCustody"];
-            valid_until?: string;
-        };
-        DocumentTypePageMeta: {
-            /** Format: int64 */
-            total: number;
-            /** Format: int32 */
-            limit: number;
-            /** Format: int32 */
-            offset: number;
-            sort_field: components["schemas"]["DocumentTypeSortField"];
-            sort_order: components["schemas"]["SortOrder"];
-        };
-        DocumentPageMeta: {
-            /** Format: int64 */
-            total: number;
-            /** Format: int32 */
-            limit: number;
-            /** Format: int32 */
-            offset: number;
-            sort_field: components["schemas"]["DocumentSortField"];
-            sort_order: components["schemas"]["SortOrder"];
-        };
-        DocumentTypePageResponse: {
-            types: components["schemas"]["DocumentType"][];
-            page: components["schemas"]["DocumentTypePageMeta"];
-        };
-        DocumentPageResponse: {
-            documents: components["schemas"]["Document"][];
-            page: components["schemas"]["DocumentPageMeta"];
-        };
-        /**
-         * @default label
-         * @enum {string}
-         */
-        BillTypeSortField: "label" | "technical_key" | "created_at" | "updated_at";
-        /**
-         * @default reference_value
-         * @enum {string}
-         */
-        BillSortField: "reference_value" | "type_label" | "competence" | "amount" | "created_at" | "updated_at";
-        /** @enum {string} */
-        BillMedium: "PHYSICAL" | "DIGITAL";
-        /** @enum {string} */
-        BillStatus: "AVAILABLE" | "IN_USE";
-        BillTypeValuesRequest: {
-            technical_key: string;
-            label: string;
-            active: boolean;
-        };
-        UpdateBillTypeRequest: {
-            technical_key: string;
-            label: string;
-            active: boolean;
-            /** Format: int64 */
-            version: number;
-        };
-        BillType: {
-            /** Format: uuid */
-            id: string;
-            technical_key: string;
-            label: string;
-            active: boolean;
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-            /**
-             * Format: int64
-             * @description Number of exemplars of this type currently in possession
-             */
-            count?: number;
-        };
-        BillValuesRequest: {
-            /**
-             * Format: uuid
-             * @description Optional when owner_name is provided. Required when more than one Profile matches the name.
-             */
-            owner_profile_id?: string;
-            /** Format: uuid */
-            bill_type_id: string;
-            printed_holder_name: string;
-            printed_address: string;
-            reference_value: string;
-            competence: string;
-            amount: string;
-            currency: string;
-            notes: string;
-            medium: components["schemas"]["BillMedium"];
-            idle_custody?: components["schemas"]["IdleCustody"];
-            /** @description Owner full name used to look up or create a Profile when owner_profile_id is omitted. */
-            owner_name?: string;
-        };
-        UpdateBillRequest: {
-            /** Format: uuid */
-            owner_profile_id: string;
-            /** Format: uuid */
-            bill_type_id: string;
-            printed_holder_name: string;
-            printed_address: string;
-            reference_value: string;
-            competence: string;
-            amount: string;
-            currency: string;
-            notes: string;
-            medium: components["schemas"]["BillMedium"];
-            /** Format: int64 */
-            version: number;
-            idle_custody?: components["schemas"]["IdleCustody"];
-        };
-        DeleteBillResourceRequest: {
-            /** Format: int64 */
-            version: number;
-            /** @constant */
-            confirmation: "Confirmar";
-        };
-        AssignBillCurrentUseRequest: {
-            /** Format: uuid */
-            holder_profile_id: string;
-        };
-        BillCurrentUse: {
-            /** Format: uuid */
-            holder_profile_id: string;
-            holder_full_name?: string;
-            /** Format: date-time */
-            assigned_at: string;
-        };
-        Bill: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            owner_profile_id: string;
-            owner_full_name: string;
-            /** Format: uuid */
-            bill_type_id: string;
-            printed_holder_name: string;
-            printed_address: string;
-            reference_value: string;
-            competence: string;
-            amount: string;
-            currency: string;
-            notes: string;
-            medium: components["schemas"]["BillMedium"];
-            status?: components["schemas"]["BillStatus"];
-            type: components["schemas"]["BillType"];
-            current_use: components["schemas"]["BillCurrentUse"];
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-            /** @description Custom field technical_key to display value for this bill on the current page. */
-            custom_values?: {
-                [key: string]: string;
-            };
-            idle_custody?: components["schemas"]["IdleCustody"];
-        };
-        BillPageMeta: {
-            /** Format: int64 */
-            total: number;
-            /** Format: int32 */
-            limit: number;
-            /** Format: int32 */
-            offset: number;
-            sort_field: components["schemas"]["BillSortField"];
-            sort_order: components["schemas"]["SortOrder"];
-        };
-        BillTypePageResponse: {
-            types: components["schemas"]["BillType"][];
-            page: {
-                /** Format: int64 */
-                total: number;
-                /** Format: int32 */
-                limit: number;
-                /** Format: int32 */
-                offset: number;
-                sort_field: components["schemas"]["BillTypeSortField"];
-                sort_order: components["schemas"]["SortOrder"];
-            };
-        };
-        BillPageResponse: {
-            bills: components["schemas"]["Bill"][];
-            page: components["schemas"]["BillPageMeta"];
-        };
-        /** @enum {string} */
-        CustomTargetKind: "PROFILE" | "DOCUMENT_TYPE" | "BILL_TYPE" | "CUSTOM_ENTITY_TYPE";
-        /** @enum {string} */
-        CustomFieldKind: "TEXT" | "LONG_TEXT" | "INTEGER" | "DECIMAL" | "BOOLEAN" | "CIVIL_DATE" | "CIVIL_MONTH" | "EMAIL" | "PHONE" | "SINGLE_SELECT" | "MULTI_SELECT";
-        /** @enum {string} */
-        CustomProfileCardinality: "" | "ONE_PER_PROFILE" | "MANY_PER_PROFILE";
-        /** @enum {string} */
-        CustomValueTargetKind: "PROFILE" | "DOCUMENT" | "BILL" | "CUSTOM_ENTITY";
-        CustomEntityTypeValuesRequest: {
-            technical_key: string;
-            label: string;
-            active: boolean;
-            profile_cardinality: components["schemas"]["CustomProfileCardinality"];
-        };
-        UpdateCustomEntityTypeRequest: {
-            technical_key: string;
-            label: string;
-            active: boolean;
-            profile_cardinality: components["schemas"]["CustomProfileCardinality"];
-            /** Format: int64 */
-            version: number;
-        };
-        CustomEntityType: {
-            /** Format: uuid */
-            id: string;
-            technical_key: string;
-            label: string;
-            active: boolean;
-            profile_cardinality: components["schemas"]["CustomProfileCardinality"];
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        CustomEntityTypePageResponse: {
-            types: components["schemas"]["CustomEntityType"][];
-            page: {
-                /** Format: int64 */
-                total: number;
-                /** Format: int32 */
-                limit: number;
-                /** Format: int32 */
-                offset: number;
-                sort_field?: string;
-                sort_order?: components["schemas"]["SortOrder"];
-            };
-        };
-        CustomFieldValuesRequest: {
-            target_kind: components["schemas"]["CustomTargetKind"];
-            /** Format: uuid */
-            target_id?: string;
-            technical_key: string;
-            label: string;
-            field_kind: components["schemas"]["CustomFieldKind"];
-            required: boolean;
-            active: boolean;
-            minimum_length?: number;
-            maximum_length?: number;
-            validation_regex?: string;
-            minimum_decimal?: string;
-            maximum_decimal?: string;
-        };
-        UpdateCustomFieldRequest: {
-            target_kind: components["schemas"]["CustomTargetKind"];
-            /** Format: uuid */
-            target_id?: string;
-            technical_key: string;
-            label: string;
-            field_kind: components["schemas"]["CustomFieldKind"];
-            required: boolean;
-            active: boolean;
-            minimum_length?: number;
-            maximum_length?: number;
-            validation_regex?: string;
-            minimum_decimal?: string;
-            maximum_decimal?: string;
-            /** Format: int64 */
-            version: number;
-        };
-        CustomField: {
-            /** Format: uuid */
-            id: string;
-            target_kind: components["schemas"]["CustomTargetKind"];
-            /** Format: uuid */
-            target_id?: string;
-            technical_key: string;
-            label: string;
-            field_kind: components["schemas"]["CustomFieldKind"];
-            required: boolean;
-            active: boolean;
-            minimum_length?: number;
-            maximum_length?: number;
-            validation_regex?: string;
-            minimum_decimal?: string;
-            maximum_decimal?: string;
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        CustomFieldPageResponse: {
-            fields: components["schemas"]["CustomField"][];
-            page: {
-                /** Format: int64 */
-                total: number;
-                /** Format: int32 */
-                limit: number;
-                /** Format: int32 */
-                offset: number;
-                sort_field?: string;
-                sort_order?: components["schemas"]["SortOrder"];
-            };
-        };
-        CustomOptionValuesRequest: {
-            technical_key: string;
-            label: string;
-            active: boolean;
-            sort_order: number;
-        };
-        UpdateCustomOptionRequest: {
-            technical_key: string;
-            label: string;
-            active: boolean;
-            sort_order: number;
-            /** Format: int64 */
-            version: number;
-        };
-        CustomOption: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            field_definition_id: string;
-            technical_key: string;
-            label: string;
-            active: boolean;
-            sort_order: number;
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        CustomOptionListResponse: {
-            options: components["schemas"]["CustomOption"][];
-        };
-        CustomValueInput: {
-            /** Format: uuid */
-            field_definition_id: string;
-            field_kind: components["schemas"]["CustomFieldKind"];
-            text?: string;
-            /** Format: int64 */
-            integer?: number;
-            decimal?: string;
-            boolean?: boolean;
-            /** Format: date */
-            civil_date?: string;
-            civil_month?: string;
-            option_ids?: string[];
-        };
-        CustomStoredValue: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            field_definition_id: string;
-            field_kind: components["schemas"]["CustomFieldKind"];
-            text?: string;
-            /** Format: int64 */
-            integer?: number;
-            decimal?: string;
-            boolean?: boolean;
-            /** Format: date */
-            civil_date?: string;
-            civil_month?: string;
-            option_ids?: string[];
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        CustomValueSet: {
-            target_kind: components["schemas"]["CustomValueTargetKind"];
-            /** Format: uuid */
-            target_id: string;
-            values: components["schemas"]["CustomStoredValue"][];
-            /** Format: int64 */
-            version: number;
-        };
-        ReplaceCustomValuesRequest: {
-            /** Format: int64 */
-            version: number;
-            values: components["schemas"]["CustomValueInput"][];
-        };
-        CreateCustomEntityRequest: {
-            /** Format: uuid */
-            entity_type_id: string;
-            /** Format: uuid */
-            owner_profile_id?: string;
-            values: components["schemas"]["CustomValueInput"][];
-        };
-        UpdateCustomEntityRequest: {
-            /** Format: int64 */
-            version: number;
-            values: components["schemas"]["CustomValueInput"][];
-        };
-        CustomEntity: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            entity_type_id: string;
-            /** Format: uuid */
-            owner_profile_id?: string;
-            profile_cardinality: components["schemas"]["CustomProfileCardinality"];
-            values: components["schemas"]["CustomStoredValue"][];
-            /** Format: int64 */
-            version: number;
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        CustomEntityPageResponse: {
-            entities: components["schemas"]["CustomEntity"][];
-            page: {
-                /** Format: int64 */
-                total: number;
-                /** Format: int32 */
-                limit: number;
-                /** Format: int32 */
-                offset: number;
-                sort_field?: string;
-                sort_order?: components["schemas"]["SortOrder"];
-            };
-        };
-        DeleteCustomDataRequest: {
-            /** Format: int64 */
-            version: number;
-            /** @enum {string} */
-            confirmation: "Confirmar";
-        };
-        /**
-         * @description Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
-         * @enum {string}
-         */
-        IdleCustody: "ORGANIZATION" | "OWNER";
-        /**
-         * @description Persisted presence claim for a document type on a person. Absence is never invented.
-         * @enum {string}
-         */
-        DocumentPresenceClaim: "absence" | "indication" | "informed_number";
-        UpsertDocumentPresenceRequest: {
-            /** Format: uuid */
-            profile_id: string;
-            /** Format: uuid */
-            document_type_id: string;
-            claim: components["schemas"]["DocumentPresenceClaim"];
-            /** @description Required when claim is informed_number; forbidden for absence and indication. */
-            identifier_value?: string;
-        };
-        DocumentPresence: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            profile_id: string;
-            /** Format: uuid */
-            document_type_id: string;
-            claim: components["schemas"]["DocumentPresenceClaim"];
-            identifier_value?: string;
-            /** Format: int64 */
-            version: number;
-        };
-        /**
-         * @description Positive people-listing badge kind for one document type. Absence and unspecified emit no badge.
-         * @enum {string}
-         */
-        DocumentBadgeKind: "indication" | "informed_number" | "physical" | "physical_with_owner" | "digital" | "physical_digital" | "physical_with_owner_digital";
-        /** @description JSON contract for people-listing document badges per type. Frontend renders chips later; this payload is the source of truth. */
-        ProfileDocumentBadge: {
-            /** Format: uuid */
-            document_type_id: string;
-            technical_key: string;
-            /** @description Type label for display; the grid cell uses the type acronym, not this state name. */
-            label: string;
-            claim: components["schemas"]["DocumentPresenceClaim"];
-            badge: components["schemas"]["DocumentBadgeKind"];
-            /** @description Present only when claim is informed_number. */
-            identifier_value?: string;
-            has_physical: boolean;
-            has_digital: boolean;
-            idle_custody?: components["schemas"]["IdleCustody"];
-            /** @description Physical exemplar with ORGANIZATION idle custody or a current use. */
-            in_hands: boolean;
-        };
-        /** @description Persisted presence claim for one document type on a person. Absence is included; unspecified types are omitted. */
-        ProfileDocumentPresence: {
-            /** Format: uuid */
-            document_type_id: string;
-            technical_key: string;
-            label: string;
-            claim: components["schemas"]["DocumentPresenceClaim"];
-            identifier_value?: string;
-            has_physical: boolean;
-            has_digital: boolean;
-        };
-        OwnerCandidate: {
-            /** Format: uuid */
-            id: string;
-            full_name: string;
-        };
+  schemas: {
+    HealthResponse: {
+      /** @enum {string} */
+      status: "ok" | "unavailable";
+      request_id?: string;
     };
-    responses: {
-        /** @description Request is invalid */
-        BadRequest: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description Authentication is required */
-        Unauthorized: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description The current user is not authorized */
-        Forbidden: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description The requested resource was not found */
-        NotFound: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description The requested update conflicts with current state */
-        Conflict: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description One or more fields are invalid */
-        ValidationError: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description Authentication is not configured */
-        AuthUnavailable: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
-        /** @description The requested module is unavailable */
-        ServiceUnavailable: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ErrorResponse"];
-            };
-        };
+    AuthSessionResponse: {
+      /** @constant */
+      authenticated: true;
+      user: components["schemas"]["AuthUser"];
     };
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    AuthUser: {
+      login: string;
+      display_name: string;
+      /** Format: uri */
+      avatar_url?: string;
+      role: components["schemas"]["UserRole"];
+    };
+    /** @enum {string} */
+    UserRole: "EXTERNAL" | "ADMIN" | "SUPERADMIN";
+    AdminUsersResponse: {
+      users: components["schemas"]["AdminUser"][];
+    };
+    AdminUser: {
+      /** Format: uuid */
+      id: string;
+      login: string;
+      display_name: string;
+      /** Format: uri */
+      avatar_url?: string;
+      role: components["schemas"]["UserRole"];
+      active: boolean;
+      /** Format: int64 */
+      version: number;
+    };
+    UpdateUserAccessRequest: {
+      role: components["schemas"]["UserRole"];
+      active: boolean;
+      /** Format: int64 */
+      version: number;
+      display_name?: string;
+      email?: string;
+    };
+    ProvisionUserRequest: {
+      email: string;
+      display_name?: string;
+      /** @enum {string} */
+      role: "EXTERNAL" | "ADMIN";
+      capabilities?: string[];
+    };
+    /** @enum {string} */
+    ModelProvider: "google";
+    ModelKeyStatus: {
+      provider: components["schemas"]["ModelProvider"];
+      configured: boolean;
+      model?: string;
+      /** Format: date-time */
+      updated_at?: string;
+    };
+    SetModelKeyRequest: {
+      /**
+       * Format: password
+       * @description Provider API key. Write-only; never returned.
+       */
+      secret: string;
+      model: string;
+    };
+    DistinctCitiesResponse: {
+      values: string[];
+    };
+    /**
+     * @default full_name
+     * @enum {string}
+     */
+    ProfileSortField:
+      | "full_name"
+      | "cpf"
+      | "email"
+      | "address_city"
+      | "address_street"
+      | "address_neighborhood"
+      | "mobile_phone"
+      | "birth_date"
+      | "created_at"
+      | "updated_at";
+    /**
+     * @default asc
+     * @enum {string}
+     */
+    SortOrder: "asc" | "desc";
+    ProfileAddress: {
+      street: string;
+      number: string;
+      complement: string;
+      neighborhood: string;
+      city: string;
+      state: string;
+      postal_code: string;
+    };
+    ProfileValuesRequest: {
+      full_name: string;
+      social_name: string;
+      cpf: string;
+      email: string;
+      mobile_phone: string;
+      landline_phone: string;
+      address: components["schemas"]["ProfileAddress"];
+      notes: string;
+      /** Format: date */
+      birth_date?: string;
+      gender?: string;
+      blood_type?: string;
+      nationality?: string;
+      birth_city?: string;
+      marital_status?: string;
+      /** Format: date */
+      wedding_date?: string;
+      father_name?: string;
+      /** Format: date */
+      father_birth_date?: string;
+      mother_name?: string;
+      /** Format: date */
+      mother_birth_date?: string;
+      health_plan?: string;
+      blood_donor?: boolean;
+      organ_donor?: boolean;
+      team?: string;
+      sector?: string;
+      collections?: string;
+      vehicle_model?: string;
+      vehicle_color?: string;
+      vehicle_plate?: string;
+      vehicle_year?: number;
+      club_membership?: string;
+      membership_type?: string;
+      place_of_origin?: string;
+      birth_country?: string;
+      /** Format: date */
+      parents_wedding_date?: string;
+      supermarket_club?: string;
+      pet?: string;
+      travel_countries?: string;
+      card_brand?: string;
+      card_bank?: string;
+    };
+    UpdateProfileRequest: {
+      full_name: string;
+      social_name: string;
+      cpf: string;
+      email: string;
+      mobile_phone: string;
+      landline_phone: string;
+      address: components["schemas"]["ProfileAddress"];
+      notes: string;
+      /** Format: date */
+      birth_date?: string;
+      gender?: string;
+      blood_type?: string;
+      nationality?: string;
+      birth_city?: string;
+      marital_status?: string;
+      /** Format: date */
+      wedding_date?: string;
+      father_name?: string;
+      /** Format: date */
+      father_birth_date?: string;
+      mother_name?: string;
+      /** Format: date */
+      mother_birth_date?: string;
+      health_plan?: string;
+      blood_donor?: boolean;
+      organ_donor?: boolean;
+      team?: string;
+      sector?: string;
+      collections?: string;
+      vehicle_model?: string;
+      vehicle_color?: string;
+      vehicle_plate?: string;
+      vehicle_year?: number;
+      club_membership?: string;
+      membership_type?: string;
+      place_of_origin?: string;
+      birth_country?: string;
+      /** Format: date */
+      parents_wedding_date?: string;
+      supermarket_club?: string;
+      pet?: string;
+      travel_countries?: string;
+      card_brand?: string;
+      card_bank?: string;
+      /** Format: int64 */
+      version: number;
+    };
+    DeleteProfileRequest: {
+      /** Format: int64 */
+      version: number;
+      /** @constant */
+      confirmation: "Confirmar";
+    };
+    Profile: {
+      /** Format: uuid */
+      id: string;
+      full_name: string;
+      social_name: string;
+      cpf: string;
+      email: string;
+      mobile_phone: string;
+      landline_phone: string;
+      address: components["schemas"]["ProfileAddress"];
+      notes: string;
+      /** Format: date */
+      birth_date?: string;
+      gender?: string;
+      blood_type?: string;
+      nationality?: string;
+      birth_city?: string;
+      marital_status?: string;
+      /** Format: date */
+      wedding_date?: string;
+      father_name?: string;
+      /** Format: date */
+      father_birth_date?: string;
+      mother_name?: string;
+      /** Format: date */
+      mother_birth_date?: string;
+      health_plan?: string;
+      blood_donor?: boolean;
+      organ_donor?: boolean;
+      team?: string;
+      sector?: string;
+      collections?: string;
+      vehicle_model?: string;
+      vehicle_color?: string;
+      vehicle_plate?: string;
+      vehicle_year?: number;
+      club_membership?: string;
+      membership_type?: string;
+      place_of_origin?: string;
+      birth_country?: string;
+      /** Format: date */
+      parents_wedding_date?: string;
+      supermarket_club?: string;
+      pet?: string;
+      travel_countries?: string;
+      card_brand?: string;
+      card_bank?: string;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      /** @description Custom field technical_key to display value for this person on the current page. */
+      custom_values?: {
+        [key: string]: string;
+      };
+      /** @description Latest informed identifier_value per document type technical_key for this person, including cpf. */
+      document_identifiers?: {
+        [key: string]: string;
+      };
+      /** @description Positive document-type badges for the current people-listing page. Loaded with WHERE profile_id = ANY($ids); absence and unspecified are omitted. */
+      document_badges?: components["schemas"]["ProfileDocumentBadge"][];
+      /** @description Sparse persisted claims for this person, including absence. Unspecified types are omitted. */
+      document_presences?: components["schemas"]["ProfileDocumentPresence"][];
+    };
+    ProfilePageMeta: {
+      /** Format: int64 */
+      total: number;
+      /** Format: int32 */
+      limit: number;
+      /** Format: int32 */
+      offset: number;
+      sort_field: components["schemas"]["ProfileSortField"];
+      sort_order: components["schemas"]["SortOrder"];
+    };
+    ProfilePageResponse: {
+      profiles: components["schemas"]["Profile"][];
+      page: components["schemas"]["ProfilePageMeta"];
+    };
+    FieldError: {
+      field: string;
+      code: string;
+      message: string;
+    };
+    ErrorResponse: {
+      error: {
+        code: string;
+        message: string;
+      };
+      request_id?: string;
+      field_errors?: components["schemas"]["FieldError"][];
+      /** @description Present when creating a bill and owner_name matches more than one Profile. */
+      candidates?: components["schemas"]["OwnerCandidate"][];
+    };
+    /** @enum {string} */
+    DocumentUniquenessPolicy: "NONE" | "PER_PROFILE" | "GLOBAL_BY_TYPE";
+    /** @enum {string} */
+    DocumentMedium: "PHYSICAL" | "DIGITAL";
+    /** @enum {string} */
+    DocumentStatus: "AVAILABLE" | "IN_USE";
+    /**
+     * @default label
+     * @enum {string}
+     */
+    DocumentTypeSortField: "label" | "technical_key" | "created_at" | "updated_at";
+    /**
+     * @default identifier_value
+     * @enum {string}
+     */
+    DocumentSortField:
+      | "identifier_value"
+      | "type_label"
+      | "document_date"
+      | "created_at"
+      | "updated_at";
+    DocumentTypeValuesRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      uniqueness_policy: components["schemas"]["DocumentUniquenessPolicy"];
+      validation_regex: string;
+      date_required: boolean;
+    };
+    UpdateDocumentTypeRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      uniqueness_policy: components["schemas"]["DocumentUniquenessPolicy"];
+      validation_regex: string;
+      date_required: boolean;
+      /** Format: int64 */
+      version: number;
+    };
+    DeleteDocumentResourceRequest: {
+      /** Format: int64 */
+      version: number;
+      /** @constant */
+      confirmation: "Confirmar";
+    };
+    DocumentType: {
+      /** Format: uuid */
+      id: string;
+      technical_key: string;
+      label: string;
+      active: boolean;
+      uniqueness_policy: components["schemas"]["DocumentUniquenessPolicy"];
+      validation_regex: string;
+      date_required: boolean;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      /**
+       * Format: int64
+       * @description Number of exemplars of this type currently in possession
+       */
+      count?: number;
+    };
+    DocumentValuesRequest: {
+      /** Format: uuid */
+      owner_profile_id: string;
+      /** Format: uuid */
+      document_type_id: string;
+      identifier_value: string;
+      document_date: string;
+      notes: string;
+      medium: components["schemas"]["DocumentMedium"];
+      idle_custody?: components["schemas"]["IdleCustody"];
+      valid_until?: string;
+    };
+    UpdateDocumentRequest: {
+      /** Format: uuid */
+      owner_profile_id: string;
+      /** Format: uuid */
+      document_type_id: string;
+      identifier_value: string;
+      document_date: string;
+      notes: string;
+      medium: components["schemas"]["DocumentMedium"];
+      /** Format: int64 */
+      version: number;
+      idle_custody?: components["schemas"]["IdleCustody"];
+      valid_until?: string;
+    };
+    AssignDocumentCurrentUseRequest: {
+      /** Format: uuid */
+      holder_profile_id: string;
+    };
+    DocumentCurrentUse: {
+      /** Format: uuid */
+      holder_profile_id: string;
+      holder_full_name?: string;
+      /** Format: date-time */
+      assigned_at: string;
+    };
+    Document: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      owner_profile_id: string;
+      owner_full_name: string;
+      /** Format: uuid */
+      document_type_id: string;
+      identifier_value: string;
+      document_date: string;
+      notes: string;
+      medium: components["schemas"]["DocumentMedium"];
+      status?: components["schemas"]["DocumentStatus"];
+      type: components["schemas"]["DocumentType"];
+      current_use: components["schemas"]["DocumentCurrentUse"];
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      /** @description Custom field technical_key to display value for this document on the current page. */
+      custom_values?: {
+        [key: string]: string;
+      };
+      idle_custody?: components["schemas"]["IdleCustody"];
+      valid_until?: string;
+    };
+    DocumentTypePageMeta: {
+      /** Format: int64 */
+      total: number;
+      /** Format: int32 */
+      limit: number;
+      /** Format: int32 */
+      offset: number;
+      sort_field: components["schemas"]["DocumentTypeSortField"];
+      sort_order: components["schemas"]["SortOrder"];
+    };
+    DocumentPageMeta: {
+      /** Format: int64 */
+      total: number;
+      /** Format: int32 */
+      limit: number;
+      /** Format: int32 */
+      offset: number;
+      sort_field: components["schemas"]["DocumentSortField"];
+      sort_order: components["schemas"]["SortOrder"];
+    };
+    DocumentTypePageResponse: {
+      types: components["schemas"]["DocumentType"][];
+      page: components["schemas"]["DocumentTypePageMeta"];
+    };
+    DocumentPageResponse: {
+      documents: components["schemas"]["Document"][];
+      page: components["schemas"]["DocumentPageMeta"];
+    };
+    /**
+     * @default label
+     * @enum {string}
+     */
+    BillTypeSortField: "label" | "technical_key" | "created_at" | "updated_at";
+    /**
+     * @default reference_value
+     * @enum {string}
+     */
+    BillSortField:
+      | "reference_value"
+      | "type_label"
+      | "competence"
+      | "amount"
+      | "created_at"
+      | "updated_at";
+    /** @enum {string} */
+    BillMedium: "PHYSICAL" | "DIGITAL";
+    /** @enum {string} */
+    BillStatus: "AVAILABLE" | "IN_USE";
+    BillTypeValuesRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+    };
+    UpdateBillTypeRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      /** Format: int64 */
+      version: number;
+    };
+    BillType: {
+      /** Format: uuid */
+      id: string;
+      technical_key: string;
+      label: string;
+      active: boolean;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      /**
+       * Format: int64
+       * @description Number of exemplars of this type currently in possession
+       */
+      count?: number;
+    };
+    BillValuesRequest: {
+      /**
+       * Format: uuid
+       * @description Optional when owner_name is provided. Required when more than one Profile matches the name.
+       */
+      owner_profile_id?: string;
+      /** Format: uuid */
+      bill_type_id: string;
+      printed_holder_name: string;
+      printed_address: string;
+      reference_value: string;
+      competence: string;
+      amount: string;
+      currency: string;
+      notes: string;
+      medium: components["schemas"]["BillMedium"];
+      idle_custody?: components["schemas"]["IdleCustody"];
+      /** @description Owner full name used to look up or create a Profile when owner_profile_id is omitted. */
+      owner_name?: string;
+    };
+    UpdateBillRequest: {
+      /** Format: uuid */
+      owner_profile_id: string;
+      /** Format: uuid */
+      bill_type_id: string;
+      printed_holder_name: string;
+      printed_address: string;
+      reference_value: string;
+      competence: string;
+      amount: string;
+      currency: string;
+      notes: string;
+      medium: components["schemas"]["BillMedium"];
+      /** Format: int64 */
+      version: number;
+      idle_custody?: components["schemas"]["IdleCustody"];
+    };
+    DeleteBillResourceRequest: {
+      /** Format: int64 */
+      version: number;
+      /** @constant */
+      confirmation: "Confirmar";
+    };
+    AssignBillCurrentUseRequest: {
+      /** Format: uuid */
+      holder_profile_id: string;
+    };
+    BillCurrentUse: {
+      /** Format: uuid */
+      holder_profile_id: string;
+      holder_full_name?: string;
+      /** Format: date-time */
+      assigned_at: string;
+    };
+    Bill: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      owner_profile_id: string;
+      owner_full_name: string;
+      /** Format: uuid */
+      bill_type_id: string;
+      printed_holder_name: string;
+      printed_address: string;
+      reference_value: string;
+      competence: string;
+      amount: string;
+      currency: string;
+      notes: string;
+      medium: components["schemas"]["BillMedium"];
+      status?: components["schemas"]["BillStatus"];
+      type: components["schemas"]["BillType"];
+      current_use: components["schemas"]["BillCurrentUse"];
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      /** @description Custom field technical_key to display value for this bill on the current page. */
+      custom_values?: {
+        [key: string]: string;
+      };
+      idle_custody?: components["schemas"]["IdleCustody"];
+    };
+    BillPageMeta: {
+      /** Format: int64 */
+      total: number;
+      /** Format: int32 */
+      limit: number;
+      /** Format: int32 */
+      offset: number;
+      sort_field: components["schemas"]["BillSortField"];
+      sort_order: components["schemas"]["SortOrder"];
+    };
+    BillTypePageResponse: {
+      types: components["schemas"]["BillType"][];
+      page: {
+        /** Format: int64 */
+        total: number;
+        /** Format: int32 */
+        limit: number;
+        /** Format: int32 */
+        offset: number;
+        sort_field: components["schemas"]["BillTypeSortField"];
+        sort_order: components["schemas"]["SortOrder"];
+      };
+    };
+    BillPageResponse: {
+      bills: components["schemas"]["Bill"][];
+      page: components["schemas"]["BillPageMeta"];
+    };
+    /** @enum {string} */
+    CustomTargetKind: "PROFILE" | "DOCUMENT_TYPE" | "BILL_TYPE" | "CUSTOM_ENTITY_TYPE";
+    /** @enum {string} */
+    CustomFieldKind:
+      | "TEXT"
+      | "LONG_TEXT"
+      | "INTEGER"
+      | "DECIMAL"
+      | "BOOLEAN"
+      | "CIVIL_DATE"
+      | "CIVIL_MONTH"
+      | "EMAIL"
+      | "PHONE"
+      | "SINGLE_SELECT"
+      | "MULTI_SELECT";
+    /** @enum {string} */
+    CustomProfileCardinality: "" | "ONE_PER_PROFILE" | "MANY_PER_PROFILE";
+    /** @enum {string} */
+    CustomValueTargetKind: "PROFILE" | "DOCUMENT" | "BILL" | "CUSTOM_ENTITY";
+    CustomEntityTypeValuesRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      profile_cardinality: components["schemas"]["CustomProfileCardinality"];
+    };
+    UpdateCustomEntityTypeRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      profile_cardinality: components["schemas"]["CustomProfileCardinality"];
+      /** Format: int64 */
+      version: number;
+    };
+    CustomEntityType: {
+      /** Format: uuid */
+      id: string;
+      technical_key: string;
+      label: string;
+      active: boolean;
+      profile_cardinality: components["schemas"]["CustomProfileCardinality"];
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    CustomEntityTypePageResponse: {
+      types: components["schemas"]["CustomEntityType"][];
+      page: {
+        /** Format: int64 */
+        total: number;
+        /** Format: int32 */
+        limit: number;
+        /** Format: int32 */
+        offset: number;
+        sort_field?: string;
+        sort_order?: components["schemas"]["SortOrder"];
+      };
+    };
+    CustomFieldValuesRequest: {
+      target_kind: components["schemas"]["CustomTargetKind"];
+      /** Format: uuid */
+      target_id?: string;
+      technical_key: string;
+      label: string;
+      field_kind: components["schemas"]["CustomFieldKind"];
+      required: boolean;
+      active: boolean;
+      minimum_length?: number;
+      maximum_length?: number;
+      validation_regex?: string;
+      minimum_decimal?: string;
+      maximum_decimal?: string;
+    };
+    UpdateCustomFieldRequest: {
+      target_kind: components["schemas"]["CustomTargetKind"];
+      /** Format: uuid */
+      target_id?: string;
+      technical_key: string;
+      label: string;
+      field_kind: components["schemas"]["CustomFieldKind"];
+      required: boolean;
+      active: boolean;
+      minimum_length?: number;
+      maximum_length?: number;
+      validation_regex?: string;
+      minimum_decimal?: string;
+      maximum_decimal?: string;
+      /** Format: int64 */
+      version: number;
+    };
+    CustomField: {
+      /** Format: uuid */
+      id: string;
+      target_kind: components["schemas"]["CustomTargetKind"];
+      /** Format: uuid */
+      target_id?: string;
+      technical_key: string;
+      label: string;
+      field_kind: components["schemas"]["CustomFieldKind"];
+      required: boolean;
+      active: boolean;
+      minimum_length?: number;
+      maximum_length?: number;
+      validation_regex?: string;
+      minimum_decimal?: string;
+      maximum_decimal?: string;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    CustomFieldPageResponse: {
+      fields: components["schemas"]["CustomField"][];
+      page: {
+        /** Format: int64 */
+        total: number;
+        /** Format: int32 */
+        limit: number;
+        /** Format: int32 */
+        offset: number;
+        sort_field?: string;
+        sort_order?: components["schemas"]["SortOrder"];
+      };
+    };
+    CustomOptionValuesRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      sort_order: number;
+    };
+    UpdateCustomOptionRequest: {
+      technical_key: string;
+      label: string;
+      active: boolean;
+      sort_order: number;
+      /** Format: int64 */
+      version: number;
+    };
+    CustomOption: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      field_definition_id: string;
+      technical_key: string;
+      label: string;
+      active: boolean;
+      sort_order: number;
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    CustomOptionListResponse: {
+      options: components["schemas"]["CustomOption"][];
+    };
+    CustomValueInput: {
+      /** Format: uuid */
+      field_definition_id: string;
+      field_kind: components["schemas"]["CustomFieldKind"];
+      text?: string;
+      /** Format: int64 */
+      integer?: number;
+      decimal?: string;
+      boolean?: boolean;
+      /** Format: date */
+      civil_date?: string;
+      civil_month?: string;
+      option_ids?: string[];
+    };
+    CustomStoredValue: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      field_definition_id: string;
+      field_kind: components["schemas"]["CustomFieldKind"];
+      text?: string;
+      /** Format: int64 */
+      integer?: number;
+      decimal?: string;
+      boolean?: boolean;
+      /** Format: date */
+      civil_date?: string;
+      civil_month?: string;
+      option_ids?: string[];
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    CustomValueSet: {
+      target_kind: components["schemas"]["CustomValueTargetKind"];
+      /** Format: uuid */
+      target_id: string;
+      values: components["schemas"]["CustomStoredValue"][];
+      /** Format: int64 */
+      version: number;
+    };
+    ReplaceCustomValuesRequest: {
+      /** Format: int64 */
+      version: number;
+      values: components["schemas"]["CustomValueInput"][];
+    };
+    CreateCustomEntityRequest: {
+      /** Format: uuid */
+      entity_type_id: string;
+      /** Format: uuid */
+      owner_profile_id?: string;
+      values: components["schemas"]["CustomValueInput"][];
+    };
+    UpdateCustomEntityRequest: {
+      /** Format: int64 */
+      version: number;
+      values: components["schemas"]["CustomValueInput"][];
+    };
+    CustomEntity: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      entity_type_id: string;
+      /** Format: uuid */
+      owner_profile_id?: string;
+      profile_cardinality: components["schemas"]["CustomProfileCardinality"];
+      values: components["schemas"]["CustomStoredValue"][];
+      /** Format: int64 */
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    CustomEntityPageResponse: {
+      entities: components["schemas"]["CustomEntity"][];
+      page: {
+        /** Format: int64 */
+        total: number;
+        /** Format: int32 */
+        limit: number;
+        /** Format: int32 */
+        offset: number;
+        sort_field?: string;
+        sort_order?: components["schemas"]["SortOrder"];
+      };
+    };
+    DeleteCustomDataRequest: {
+      /** Format: int64 */
+      version: number;
+      /** @enum {string} */
+      confirmation: "Confirmar";
+    };
+    /**
+     * @description Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+     * @enum {string}
+     */
+    IdleCustody: "ORGANIZATION" | "OWNER";
+    /**
+     * @description Persisted presence claim for a document type on a person. Absence is never invented.
+     * @enum {string}
+     */
+    DocumentPresenceClaim: "absence" | "indication" | "informed_number";
+    UpsertDocumentPresenceRequest: {
+      /** Format: uuid */
+      profile_id: string;
+      /** Format: uuid */
+      document_type_id: string;
+      claim: components["schemas"]["DocumentPresenceClaim"];
+      /** @description Required when claim is informed_number; forbidden for absence and indication. */
+      identifier_value?: string;
+    };
+    DocumentPresence: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      profile_id: string;
+      /** Format: uuid */
+      document_type_id: string;
+      claim: components["schemas"]["DocumentPresenceClaim"];
+      identifier_value?: string;
+      /** Format: int64 */
+      version: number;
+    };
+    /**
+     * @description Positive people-listing badge kind for one document type. Absence and unspecified emit no badge.
+     * @enum {string}
+     */
+    DocumentBadgeKind:
+      | "indication"
+      | "informed_number"
+      | "physical"
+      | "physical_with_owner"
+      | "digital"
+      | "physical_digital"
+      | "physical_with_owner_digital";
+    /** @description JSON contract for people-listing document badges per type. Frontend renders chips later; this payload is the source of truth. */
+    ProfileDocumentBadge: {
+      /** Format: uuid */
+      document_type_id: string;
+      technical_key: string;
+      /** @description Type label for display; the grid cell uses the type acronym, not this state name. */
+      label: string;
+      claim: components["schemas"]["DocumentPresenceClaim"];
+      badge: components["schemas"]["DocumentBadgeKind"];
+      /** @description Present only when claim is informed_number. */
+      identifier_value?: string;
+      has_physical: boolean;
+      has_digital: boolean;
+      idle_custody?: components["schemas"]["IdleCustody"];
+      /** @description Physical exemplar with ORGANIZATION idle custody or a current use. */
+      in_hands: boolean;
+    };
+    /** @description Persisted presence claim for one document type on a person. Absence is included; unspecified types are omitted. */
+    ProfileDocumentPresence: {
+      /** Format: uuid */
+      document_type_id: string;
+      technical_key: string;
+      label: string;
+      claim: components["schemas"]["DocumentPresenceClaim"];
+      identifier_value?: string;
+      has_physical: boolean;
+      has_digital: boolean;
+    };
+    OwnerCandidate: {
+      /** Format: uuid */
+      id: string;
+      full_name: string;
+    };
+  };
+  responses: {
+    /** @description Request is invalid */
+    BadRequest: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Authentication is required */
+    Unauthorized: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The current user is not authorized */
+    Forbidden: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The requested resource was not found */
+    NotFound: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The requested update conflicts with current state */
+    Conflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description One or more fields are invalid */
+    ValidationError: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description Authentication is not configured */
+    AuthUnavailable: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+    /** @description The requested module is unavailable */
+    ServiceUnavailable: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["ErrorResponse"];
+      };
+    };
+  };
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    getLiveHealth: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description API process is alive */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthResponse"];
-                };
-            };
-        };
-    };
-    getReadyHealth: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description API and required dependencies are ready */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthResponse"];
-                };
-            };
-            /** @description A required dependency is unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthResponse"];
-                };
-            };
-        };
-    };
-    beginGitHubLogin: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Redirect to Google authorization */
-            302: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            503: components["responses"]["AuthUnavailable"];
-        };
-    };
-    completeGitHubLogin: {
-        parameters: {
-            query: {
-                code: string;
-                state: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Authentication completed and redirected to the application */
-            302: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            403: components["responses"]["Forbidden"];
-            /** @description Google authentication failed */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            503: components["responses"]["AuthUnavailable"];
-        };
-    };
-    getAuthSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Authenticated application session */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthSessionResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            503: components["responses"]["AuthUnavailable"];
-        };
-    };
-    logout: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Session revoked or already absent */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            503: components["responses"]["AuthUnavailable"];
-        };
-    };
-    listApplicationUsers: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Application users */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminUsersResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            503: components["responses"]["AuthUnavailable"];
-        };
-    };
-    provisionApplicationUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProvisionUserRequest"];
-            };
-        };
-        responses: {
-            /** @description Created application user */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminUser"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["AuthUnavailable"];
-        };
-    };
-    deleteApplicationUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description User deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["AuthUnavailable"];
-        };
-    };
-    updateApplicationUserAccess: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateUserAccessRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated application user */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AdminUser"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["AuthUnavailable"];
-        };
-    };
-    getModelKeyStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                provider: components["schemas"]["ModelProvider"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Model key status */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ModelKeyStatus"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["AuthUnavailable"];
-        };
-    };
-    setModelKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                provider: components["schemas"]["ModelProvider"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetModelKeyRequest"];
-            };
-        };
-        responses: {
-            /** @description Model key status after the update */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ModelKeyStatus"];
-                };
-            };
-            400: components["responses"]["ValidationError"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["AuthUnavailable"];
-        };
-    };
-    clearModelKey: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                provider: components["schemas"]["ModelProvider"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Model key removed or already absent */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["AuthUnavailable"];
-        };
-    };
-    listProfiles: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-                sort?: components["schemas"]["ProfileSortField"];
-                order?: components["schemas"]["SortOrder"];
-                /** @description Search query language applied as a row recorte of this module. */
-                q?: string;
-                full_name?: string;
-                cpf?: string;
-                email?: string;
-                city?: string;
-                state?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated profile list */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProfilePageResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    createProfile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProfileValuesRequest"];
-            };
-        };
-        responses: {
-            /** @description Created profile */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Profile"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    listDistinctCities: {
-        parameters: {
-            query?: {
-                full_name?: string;
-                cpf?: string;
-                email?: string;
-                state?: string;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Distinct city names */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DistinctCitiesResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    getProfile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                profile_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Profile */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Profile"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    updateProfile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                profile_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateProfileRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated profile */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Profile"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    deleteProfile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                profile_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeleteProfileRequest"];
-            };
-        };
-        responses: {
-            /** @description Profile permanently deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    duplicateProfile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                profile_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Duplicated profile */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Profile"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    listDocumentTypes: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-                sort?: components["schemas"]["DocumentTypeSortField"];
-                order?: components["schemas"]["SortOrder"];
-                label?: string;
-                active?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated document type list */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentTypePageResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    createDocumentType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DocumentTypeValuesRequest"];
-            };
-        };
-        responses: {
-            /** @description Created document type */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentType"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    getDocumentType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_type_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Document type */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentType"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    updateDocumentType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_type_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateDocumentTypeRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated document type */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentType"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    deleteDocumentType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_type_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeleteDocumentResourceRequest"];
-            };
-        };
-        responses: {
-            /** @description Document type permanently deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    upsertDocumentPresence: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpsertDocumentPresenceRequest"];
-            };
-        };
-        responses: {
-            /** @description Persisted presence */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentPresence"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    listDocuments: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-                sort?: components["schemas"]["DocumentSortField"];
-                order?: components["schemas"]["SortOrder"];
-                owner_profile_id?: string;
-                document_type_id?: string;
-                /** @description Search query language applied as a row recorte of documents. */
-                q?: string;
-                identifier?: string;
-                medium?: components["schemas"]["DocumentMedium"];
-                status?: components["schemas"]["DocumentStatus"];
-                holder_profile_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated document list */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentPageResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    createDocument: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DocumentValuesRequest"];
-            };
-        };
-        responses: {
-            /** @description Created document */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Document"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    getDocument: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Document */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Document"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    updateDocument: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateDocumentRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated document */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Document"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    deleteDocument: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeleteDocumentResourceRequest"];
-            };
-        };
-        responses: {
-            /** @description Document permanently deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    duplicateDocument: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Duplicated document */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Document"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    assignDocumentCurrentUse: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AssignDocumentCurrentUseRequest"];
-            };
-        };
-        responses: {
-            /** @description Assigned current use */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentCurrentUse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    returnDocumentCurrentUse: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                document_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Current use returned */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    listBillTypes: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-                sort?: components["schemas"]["BillTypeSortField"];
-                order?: components["schemas"]["SortOrder"];
-                label?: string;
-                active?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated bill type list */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillTypePageResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    createBillType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BillTypeValuesRequest"];
-            };
-        };
-        responses: {
-            /** @description Created bill type */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillType"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    getBillType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                bill_type_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Bill type */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillType"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    updateBillType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                bill_type_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateBillTypeRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated bill type */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillType"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    deleteBillType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                bill_type_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeleteBillResourceRequest"];
-            };
-        };
-        responses: {
-            /** @description Bill type permanently deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    listBills: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-                sort?: components["schemas"]["BillSortField"];
-                order?: components["schemas"]["SortOrder"];
-                owner_profile_id?: string;
-                bill_type_id?: string;
-                /** @description Search query language applied as a row recorte of bills. */
-                q?: string;
-                reference?: string;
-                competence?: string;
-                medium?: components["schemas"]["BillMedium"];
-                status?: components["schemas"]["BillStatus"];
-                holder_profile_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated bill list */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillPageResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    createBill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BillValuesRequest"];
-            };
-        };
-        responses: {
-            /** @description Created bill */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Bill"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    getBill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                bill_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Bill */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Bill"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    updateBill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                bill_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateBillRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated bill */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Bill"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    deleteBill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                bill_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeleteBillResourceRequest"];
-            };
-        };
-        responses: {
-            /** @description Bill permanently deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    duplicateBill: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                bill_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Duplicated bill */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Bill"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    assignBillCurrentUse: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                bill_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AssignBillCurrentUseRequest"];
-            };
-        };
-        responses: {
-            /** @description Current bill use */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BillCurrentUse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    returnBillCurrentUse: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                bill_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Bill returned */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    listCustomEntityTypes: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-                sort?: "label" | "created_at" | "updated_at";
-                order?: components["schemas"]["SortOrder"];
-                label?: string;
-                active?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated custom entity type list */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomEntityTypePageResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    createCustomEntityType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CustomEntityTypeValuesRequest"];
-            };
-        };
-        responses: {
-            /** @description Created custom entity type */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomEntityType"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    getCustomEntityType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_type_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Custom entity type */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomEntityType"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    updateCustomEntityType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_type_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateCustomEntityTypeRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated custom entity type */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomEntityType"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    deleteCustomEntityType: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_type_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeleteCustomDataRequest"];
-            };
-        };
-        responses: {
-            /** @description Deleted custom entity type */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    listCustomFields: {
-        parameters: {
-            query: {
-                limit?: number;
-                offset?: number;
-                target_kind: components["schemas"]["CustomTargetKind"];
-                target_id?: string;
-                sort?: "label" | "technical_key" | "created_at" | "updated_at";
-                order?: components["schemas"]["SortOrder"];
-                label?: string;
-                active?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated custom field list */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomFieldPageResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    createCustomField: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CustomFieldValuesRequest"];
-            };
-        };
-        responses: {
-            /** @description Created custom field */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomField"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    getCustomField: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Custom field */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomField"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    updateCustomField: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateCustomFieldRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated custom field */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomField"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    deleteCustomField: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeleteCustomDataRequest"];
-            };
-        };
-        responses: {
-            /** @description Deleted custom field */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    listCustomOptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Custom field options */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomOptionListResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    createCustomOption: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CustomOptionValuesRequest"];
-            };
-        };
-        responses: {
-            /** @description Created custom option */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomOption"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    updateCustomOption: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_id: string;
-                option_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateCustomOptionRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated custom option */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomOption"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    deleteCustomOption: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_id: string;
-                option_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeleteCustomDataRequest"];
-            };
-        };
-        responses: {
-            /** @description Deleted custom option */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    getCustomValues: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                target_kind: "profile" | "document" | "bill" | "custom_entity";
-                target_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Custom value set */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomValueSet"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    replaceCustomValues: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                target_kind: "profile" | "document" | "bill" | "custom_entity";
-                target_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReplaceCustomValuesRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated custom value set */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomValueSet"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    listCustomEntities: {
-        parameters: {
-            query: {
-                limit?: number;
-                offset?: number;
-                entity_type_id: string;
-                owner_profile_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated custom entity list */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomEntityPageResponse"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    createCustomEntity: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCustomEntityRequest"];
-            };
-        };
-        responses: {
-            /** @description Created custom entity */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomEntity"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    getCustomEntity: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Custom entity */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomEntity"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    updateCustomEntity: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateCustomEntityRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated custom entity */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomEntity"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    deleteCustomEntity: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entity_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeleteCustomDataRequest"];
-            };
-        };
-        responses: {
-            /** @description Deleted custom entity */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
+  getLiveHealth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description API process is alive */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HealthResponse"];
+        };
+      };
+    };
+  };
+  getReadyHealth: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description API and required dependencies are ready */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HealthResponse"];
+        };
+      };
+      /** @description A required dependency is unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HealthResponse"];
+        };
+      };
+    };
+  };
+  beginGitHubLogin: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Redirect to Google authorization */
+      302: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  completeGitHubLogin: {
+    parameters: {
+      query: {
+        code: string;
+        state: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Authentication completed and redirected to the application */
+      302: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      403: components["responses"]["Forbidden"];
+      /** @description Google authentication failed */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErrorResponse"];
+        };
+      };
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  getAuthSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Authenticated application session */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AuthSessionResponse"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  logout: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Session revoked or already absent */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  listApplicationUsers: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Application users */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminUsersResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  provisionApplicationUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProvisionUserRequest"];
+      };
+    };
+    responses: {
+      /** @description Created application user */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminUser"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  deleteApplicationUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description User deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  updateApplicationUserAccess: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateUserAccessRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated application user */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminUser"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  getModelKeyStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Model key status */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModelKeyStatus"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  setModelKey: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetModelKeyRequest"];
+      };
+    };
+    responses: {
+      /** @description Model key status after the update */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModelKeyStatus"];
+        };
+      };
+      400: components["responses"]["ValidationError"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  clearModelKey: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Model key removed or already absent */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  listProfiles: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: components["schemas"]["ProfileSortField"];
+        order?: components["schemas"]["SortOrder"];
+        /** @description Search query language applied as a row recorte of this module. */
+        q?: string;
+        full_name?: string;
+        cpf?: string;
+        email?: string;
+        city?: string;
+        state?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated profile list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProfilePageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProfileValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created profile */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listDistinctCities: {
+    parameters: {
+      query?: {
+        full_name?: string;
+        cpf?: string;
+        email?: string;
+        state?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Distinct city names */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DistinctCitiesResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        profile_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Profile */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        profile_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateProfileRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated profile */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        profile_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteProfileRequest"];
+      };
+    };
+    responses: {
+      /** @description Profile permanently deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  duplicateProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        profile_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Duplicated profile */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listDocumentTypes: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: components["schemas"]["DocumentTypeSortField"];
+        order?: components["schemas"]["SortOrder"];
+        label?: string;
+        active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated document type list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentTypePageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createDocumentType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentTypeValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created document type */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getDocumentType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Document type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateDocumentType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateDocumentTypeRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated document type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteDocumentType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteDocumentResourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Document type permanently deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  upsertDocumentPresence: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpsertDocumentPresenceRequest"];
+      };
+    };
+    responses: {
+      /** @description Persisted presence */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentPresence"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listDocuments: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: components["schemas"]["DocumentSortField"];
+        order?: components["schemas"]["SortOrder"];
+        owner_profile_id?: string;
+        document_type_id?: string;
+        /** @description Search query language applied as a row recorte of documents. */
+        q?: string;
+        identifier?: string;
+        medium?: components["schemas"]["DocumentMedium"];
+        status?: components["schemas"]["DocumentStatus"];
+        holder_profile_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated document list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentPageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created document */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Document */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateDocumentRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated document */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteDocumentResourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Document permanently deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  duplicateDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Duplicated document */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  assignDocumentCurrentUse: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssignDocumentCurrentUseRequest"];
+      };
+    };
+    responses: {
+      /** @description Assigned current use */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentCurrentUse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  returnDocumentCurrentUse: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Current use returned */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listBillTypes: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: components["schemas"]["BillTypeSortField"];
+        order?: components["schemas"]["SortOrder"];
+        label?: string;
+        active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated bill type list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillTypePageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createBillType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BillTypeValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created bill type */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getBillType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Bill type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateBillType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateBillTypeRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated bill type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteBillType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteBillResourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Bill type permanently deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listBills: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: components["schemas"]["BillSortField"];
+        order?: components["schemas"]["SortOrder"];
+        owner_profile_id?: string;
+        bill_type_id?: string;
+        /** @description Search query language applied as a row recorte of bills. */
+        q?: string;
+        reference?: string;
+        competence?: string;
+        medium?: components["schemas"]["BillMedium"];
+        status?: components["schemas"]["BillStatus"];
+        holder_profile_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated bill list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillPageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BillValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created bill */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Bill"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Bill */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Bill"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateBillRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated bill */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Bill"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteBillResourceRequest"];
+      };
+    };
+    responses: {
+      /** @description Bill permanently deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  duplicateBill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Duplicated bill */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Bill"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  assignBillCurrentUse: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssignBillCurrentUseRequest"];
+      };
+    };
+    responses: {
+      /** @description Current bill use */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BillCurrentUse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  returnBillCurrentUse: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        bill_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Bill returned */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listCustomEntityTypes: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+        sort?: "label" | "created_at" | "updated_at";
+        order?: components["schemas"]["SortOrder"];
+        label?: string;
+        active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated custom entity type list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntityTypePageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createCustomEntityType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CustomEntityTypeValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created custom entity type */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntityType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getCustomEntityType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Custom entity type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntityType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateCustomEntityType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCustomEntityTypeRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated custom entity type */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntityType"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteCustomEntityType: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_type_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteCustomDataRequest"];
+      };
+    };
+    responses: {
+      /** @description Deleted custom entity type */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listCustomFields: {
+    parameters: {
+      query: {
+        limit?: number;
+        offset?: number;
+        target_kind: components["schemas"]["CustomTargetKind"];
+        target_id?: string;
+        sort?: "label" | "technical_key" | "created_at" | "updated_at";
+        order?: components["schemas"]["SortOrder"];
+        label?: string;
+        active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated custom field list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomFieldPageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createCustomField: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CustomFieldValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created custom field */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomField"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getCustomField: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Custom field */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomField"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateCustomField: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCustomFieldRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated custom field */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomField"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteCustomField: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteCustomDataRequest"];
+      };
+    };
+    responses: {
+      /** @description Deleted custom field */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listCustomOptions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Custom field options */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomOptionListResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createCustomOption: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CustomOptionValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Created custom option */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomOption"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateCustomOption: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+        option_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCustomOptionRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated custom option */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomOption"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteCustomOption: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        field_id: string;
+        option_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteCustomDataRequest"];
+      };
+    };
+    responses: {
+      /** @description Deleted custom option */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getCustomValues: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        target_kind: "profile" | "document" | "bill" | "custom_entity";
+        target_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Custom value set */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomValueSet"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  replaceCustomValues: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        target_kind: "profile" | "document" | "bill" | "custom_entity";
+        target_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReplaceCustomValuesRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated custom value set */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomValueSet"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listCustomEntities: {
+    parameters: {
+      query: {
+        limit?: number;
+        offset?: number;
+        entity_type_id: string;
+        owner_profile_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated custom entity list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntityPageResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  createCustomEntity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateCustomEntityRequest"];
+      };
+    };
+    responses: {
+      /** @description Created custom entity */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntity"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  getCustomEntity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Custom entity */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntity"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  updateCustomEntity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCustomEntityRequest"];
+      };
+    };
+    responses: {
+      /** @description Updated custom entity */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CustomEntity"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteCustomEntity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        entity_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeleteCustomDataRequest"];
+      };
+    };
+    responses: {
+      /** @description Deleted custom entity */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
 }
