@@ -199,9 +199,7 @@ describe("inferWorkersDevApiOrigin", () => {
       inferWorkersDevApiOrigin(
         "staging-gymkhana-database.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev",
       ),
-    ).toBe(
-      "https://staging-gymkhana-api.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev",
-    );
+    ).toBe("https://staging-gymkhana-api.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev");
   });
 
   it("ignores unrelated hosts", async () => {
