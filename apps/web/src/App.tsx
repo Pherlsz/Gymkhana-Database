@@ -13,9 +13,6 @@ import { SessionContext, useApplicationSession } from "./session";
 import { ThemeProvider } from "./theme";
 
 const LoginScreen = lazy(() => import("./LoginScreen").then((m) => ({ default: m.LoginScreen })));
-const AuthCheckingScreen = lazy(() =>
-  import("./LoginScreen").then((m) => ({ default: m.AuthCheckingScreen })),
-);
 
 export { useApplicationSession };
 
@@ -77,11 +74,9 @@ export function App() {
 
   let tree;
   if (authentication.kind === "checking") {
-    tree = (
-      <Suspense fallback={null}>
-        <AuthCheckingScreen />
-      </Suspense>
-    );
+    // Stay blank until the session cookie is known — never flash LoginScreen on F5/OAuth.
+    // Authenticated routes own their own QueryView / AppCard loading once the shell mounts.
+    tree = null;
   } else if (authentication.kind === "authenticated") {
     tree = (
       <QueryClientProvider client={queryClient}>
