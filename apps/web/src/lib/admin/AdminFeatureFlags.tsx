@@ -9,9 +9,22 @@ import {
   setFeatureFlag,
   type FeatureFlag,
   type FeatureFlagKey,
+  type FeatureFlagsResponse,
 } from "../api/client";
 import { formatDateTime } from "../formatters";
 import { queryKeys } from "../api/queryKeys";
+
+function patchFlag(
+  previous: FeatureFlagsResponse | undefined,
+  next: Pick<FeatureFlag, "key" | "enabled"> & Partial<Pick<FeatureFlag, "updated_at">>,
+): FeatureFlagsResponse | undefined {
+  if (!previous) return previous;
+  return {
+    flags: previous.flags.map((flag) =>
+      flag.key === next.key ? { ...flag, ...next } : flag,
+    ),
+  };
+}
 
 export function AdminFeatureFlags() {
   const { messages } = useI18n();
@@ -25,8 +38,21 @@ export function AdminFeatureFlags() {
   const toggle = useMutation({
     mutationFn: ({ key, enabled }: { key: FeatureFlagKey; enabled: boolean }) =>
       setFeatureFlag(key, enabled),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.featureFlags });
+    onMutate: async ({ key, enabled }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.admin.featureFlags });
+      const previous = queryClient.getQueryData<FeatureFlagsResponse>(queryKeys.admin.featureFlags);
+      queryClient.setQueryData(queryKeys.admin.featureFlags, patchFlag(previous, { key, enabled }));
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.admin.featureFlags, context.previous);
+      }
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.admin.featureFlags, (previous: FeatureFlagsResponse | undefined) =>
+        patchFlag(previous, updated),
+      );
     },
   });
 
@@ -53,13 +79,17 @@ export function AdminFeatureFlags() {
       title: copy.columns.enabled,
       dataIndex: "enabled",
       width: 120,
-      render: (enabled: boolean, row) => (
-        <Switch
-          checked={enabled}
-          loading={toggle.isPending && toggle.variables?.key === row.key}
-          onChange={(next) => toggle.mutate({ key: row.key, enabled: next })}
-        />
-      ),
+      render: (enabled: boolean, row) => {
+        const busy = toggle.isPending && toggle.variables?.key === row.key;
+        return (
+          <Switch
+            checked={enabled}
+            disabled={busy}
+            loading={busy}
+            onChange={(next) => toggle.mutate({ key: row.key, enabled: next })}
+          />
+        );
+      },
     },
   ];
 
