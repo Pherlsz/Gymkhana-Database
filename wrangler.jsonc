@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  // Staging SPA only. The Go API stays on Cloud Run; do not put DATABASE_URL here.
+  // Staging SPA only. Go API is staging-gymkhana-api (Containers); do not put DATABASE_URL here.
   "name": "staging-gymkhana-database",
   "compatibility_date": "2026-09-24",
   "workers_dev": true,
