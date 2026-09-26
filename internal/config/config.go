@@ -64,6 +64,10 @@ type AIChatConfig struct {
 	KeyVersion        uint16
 }
 
+// DefaultAIChatModel is used only when AI_CHAT_MODEL is unset and the shared
+// Administração key has no model yet. The live model comes from Integrações.
+const DefaultAIChatModel = "gemini-2.5-flash"
+
 // AIChatProviders lists the model providers with a production adapter.
 var AIChatProviders = map[string]bool{"google": true}
 
@@ -165,6 +169,9 @@ func Load() (Config, error) {
 	googleFormsRedirectURL := strings.TrimSpace(os.Getenv("GOOGLE_FORMS_OAUTH_REDIRECT_URL"))
 	aiChatProvider := strings.ToLower(strings.TrimSpace(os.Getenv("AI_CHAT_PROVIDER")))
 	aiChatModel := strings.TrimSpace(os.Getenv("AI_CHAT_MODEL"))
+	if aiChatProvider != "" && aiChatModel == "" {
+		aiChatModel = DefaultAIChatModel
+	}
 	ocrProvider := strings.ToLower(strings.TrimSpace(os.Getenv("OCR_PROVIDER")))
 	ocrModel := strings.TrimSpace(os.Getenv("OCR_MODEL"))
 
@@ -327,8 +334,11 @@ func (cfg Config) validate() error {
 		if !cfg.Auth.Enabled {
 			return errors.New("AI_CHAT_PROVIDER requires authentication")
 		}
-		if cfg.AIChat.Provider == "" || cfg.AIChat.Model == "" || cfg.AIChat.Retention == 0 {
-			return errors.New("AI_CHAT_PROVIDER, AI_CHAT_MODEL and AI_CHAT_RETENTION are required when the AI Chat adapter is configured")
+		if cfg.AIChat.Provider == "" || cfg.AIChat.Retention == 0 {
+			return errors.New("AI_CHAT_PROVIDER and AI_CHAT_RETENTION are required when the AI Chat adapter is configured")
+		}
+		if cfg.AIChat.Model == "" {
+			return errors.New("AI_CHAT_MODEL resolved empty; set AI_CHAT_MODEL or rely on DefaultAIChatModel")
 		}
 		if len(cfg.AIChat.Model) > 120 {
 			return errors.New("AI_CHAT_MODEL cannot exceed 120 characters")

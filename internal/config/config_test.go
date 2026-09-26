@@ -214,7 +214,6 @@ func TestLoadKeepsProductionChatBlockedUntilOwnerActivationDecisions(t *testing.
 		model       string
 		retention   string
 	}{
-		{name: "missing model", environment: "test", provider: "fake", retention: "24h"},
 		{name: "missing retention", environment: "test", provider: "fake", model: "deterministic-v1"},
 		{name: "short retention", environment: "test", provider: "fake", model: "deterministic-v1", retention: "30m"},
 		{name: "unsupported local adapter", environment: "local", provider: "fake", model: "deterministic-v1", retention: "24h"},
@@ -249,7 +248,6 @@ func TestLoadAllowsGoogleChatProviderWithSealingKey(t *testing.T) {
 	setValidLocalAuthentication(t)
 	t.Setenv("APP_ENV", "local")
 	t.Setenv("AI_CHAT_PROVIDER", "google")
-	t.Setenv("AI_CHAT_MODEL", "gemini-2.5-flash")
 	t.Setenv("AI_CHAT_RETENTION", "336h")
 	t.Setenv("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY", base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{7}, 32)))
 
@@ -257,7 +255,7 @@ func TestLoadAllowsGoogleChatProviderWithSealingKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if cfg.AIChat.Provider != "google" || cfg.AIChat.KeyVersion != 1 || cfg.AIChat.KeyEncryptionKeys[1] == ([32]byte{}) {
+	if cfg.AIChat.Provider != "google" || cfg.AIChat.Model != DefaultAIChatModel || cfg.AIChat.KeyVersion != 1 || cfg.AIChat.KeyEncryptionKeys[1] == ([32]byte{}) {
 		t.Fatalf("AIChat = %#v", cfg.AIChat)
 	}
 }
