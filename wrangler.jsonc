@@ -5,6 +5,8 @@
   "compatibility_date": "2026-09-24",
   "workers_dev": true,
   "preview_urls": true,
+  // Required by Cloudflare Workers Builds when the deploy command is `wrangler preview`.
+  "previews": {},
   "assets": {
     "directory": "./apps/web/dist",
     "not_found_handling": "single-page-application",
