@@ -1,4 +1,9 @@
 [[IgnoredVulns]]
 id = "GHSA-5p4m-2wfm-xmqj"
-ignoreUntil = 2026-09-07
-reason = "Temporary upstream exception: js-yaml 4.3.1 is listed as the patched 4.x release by the advisory but is not published on npm as of 2026-08-07. The affected package is a transitive development dependency of OpenAPI type generation and parses repository-controlled API definitions. Remove this exception as soon as a compatible patched release is available."
+ignoreUntil = 2027-01-01
+reason = "Temporary upstream exception: js-yaml is a transitive development dependency of OpenAPI type generation and parses repository-controlled API definitions. Remove this exception as soon as a compatible patched release is available."
+
+[[IgnoredVulns]]
+id = "GHSA-2883-xcg3-v3hh"
+ignoreUntil = 2027-01-01
+reason = "Temporary upstream exception: js-yaml is a transitive development dependency of OpenAPI type generation and parses repository-controlled API definitions. Remove this exception as soon as a compatible patched release is available."

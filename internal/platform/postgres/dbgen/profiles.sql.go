@@ -529,8 +529,17 @@ func (q *Queries) ListDistinctCities(ctx context.Context, arg ListDistinctCities
 }
 
 const listProfiles = `-- name: ListProfiles :many
-SELECT id, full_name, social_name, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, birth_date, gender, blood_type, nationality, birth_city, marital_status, wedding_date, father_name, father_birth_date, mother_name, mother_birth_date, health_plan, blood_donor, organ_donor, team, sector, collections, vehicle_model, vehicle_color, vehicle_plate, vehicle_year, club_membership, membership_type, place_of_origin, birth_country, parents_wedding_date, supermarket_club, pet, travel_countries, card_brand, card_bank, version, created_at, updated_at
+SELECT profiles.id, profiles.full_name, profiles.social_name, profiles.email, profiles.mobile_phone, profiles.landline_phone, profiles.address_street, profiles.address_number, profiles.address_complement, profiles.address_neighborhood, profiles.address_city, profiles.address_state, profiles.address_postal_code, profiles.notes, profiles.birth_date, profiles.gender, profiles.blood_type, profiles.nationality, profiles.birth_city, profiles.marital_status, profiles.wedding_date, profiles.father_name, profiles.father_birth_date, profiles.mother_name, profiles.mother_birth_date, profiles.health_plan, profiles.blood_donor, profiles.organ_donor, profiles.team, profiles.sector, profiles.collections, profiles.vehicle_model, profiles.vehicle_color, profiles.vehicle_plate, profiles.vehicle_year, profiles.club_membership, profiles.membership_type, profiles.place_of_origin, profiles.birth_country, profiles.parents_wedding_date, profiles.supermarket_club, profiles.pet, profiles.travel_countries, profiles.card_brand, profiles.card_bank, profiles.version, profiles.created_at, profiles.updated_at
 FROM profiles
+LEFT JOIN LATERAL (
+  SELECT presence.identifier_digits AS cpf_digits
+  FROM document_presences AS presence
+  JOIN document_types AS dt ON dt.id = presence.document_type_id
+  WHERE presence.profile_id = profiles.id
+    AND dt.technical_key = 'cpf'
+    AND presence.claim = 'informed_number'
+  LIMIT 1
+) AS cpf_lookup ON true
 WHERE (
     $1::text = '' OR
     CASE
@@ -599,34 +608,13 @@ ORDER BY
   END ASC,
   CASE
     WHEN $2::text <> '' THEN
-      CASE
-        WHEN (
-          SELECT presence.identifier_digits
-          FROM document_presences AS presence
-          JOIN document_types AS document_type ON document_type.id = presence.document_type_id
-          WHERE presence.profile_id = profiles.id AND document_type.technical_key = 'cpf'
-          LIMIT 1
-        ) LIKE $2::text || '%' THEN 0
-        ELSE 1
-      END
+      CASE WHEN cpf_lookup.cpf_digits LIKE $2::text || '%' THEN 0 ELSE 1 END
     ELSE 0
   END ASC,
   (CASE WHEN $8::text = 'full_name' AND $9::text = 'asc' THEN full_name END) COLLATE gymkhana_pt_br ASC,
   (CASE WHEN $8::text = 'full_name' AND $9::text = 'desc' THEN full_name END) COLLATE gymkhana_pt_br DESC,
-  CASE WHEN $8::text = 'cpf' AND $9::text = 'asc' THEN (
-    SELECT presence.identifier_digits
-    FROM document_presences AS presence
-    JOIN document_types AS document_type ON document_type.id = presence.document_type_id
-    WHERE presence.profile_id = profiles.id AND document_type.technical_key = 'cpf'
-    LIMIT 1
-  ) END ASC NULLS LAST,
-  CASE WHEN $8::text = 'cpf' AND $9::text = 'desc' THEN (
-    SELECT presence.identifier_digits
-    FROM document_presences AS presence
-    JOIN document_types AS document_type ON document_type.id = presence.document_type_id
-    WHERE presence.profile_id = profiles.id AND document_type.technical_key = 'cpf'
-    LIMIT 1
-  ) END DESC NULLS LAST,
+  CASE WHEN $8::text = 'cpf' AND $9::text = 'asc'  THEN cpf_lookup.cpf_digits END ASC NULLS LAST,
+  CASE WHEN $8::text = 'cpf' AND $9::text = 'desc' THEN cpf_lookup.cpf_digits END DESC NULLS LAST,
   CASE WHEN $8::text = 'email' AND $9::text = 'asc' THEN lower(email) END ASC NULLS LAST,
   CASE WHEN $8::text = 'email' AND $9::text = 'desc' THEN lower(email) END DESC NULLS LAST,
   CASE WHEN $8::text = 'address_city' AND $9::text = 'asc' THEN lower(address_city) END ASC NULLS LAST,
@@ -662,6 +650,8 @@ type ListProfilesParams struct {
 	PageLimit      int32         `json:"page_limit"`
 }
 
+// cpf_lookup materializa o CPF de cada perfil uma única vez via LEFT JOIN LATERAL,
+// substituindo as 4 subqueries correlacionadas que existiam no ORDER BY (O(4n) → O(n)).
 func (q *Queries) ListProfiles(ctx context.Context, arg ListProfilesParams) ([]Profile, error) {
 	rows, err := q.db.Query(ctx, listProfiles,
 		arg.FullNameFilter,

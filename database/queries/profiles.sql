@@ -88,6 +88,17 @@ WHERE (
 -- name: ListProfiles :many
 SELECT profiles.*
 FROM profiles
+-- cpf_lookup materializa o CPF de cada perfil uma única vez via LEFT JOIN LATERAL,
+-- substituindo as 4 subqueries correlacionadas que existiam no ORDER BY (O(4n) → O(n)).
+LEFT JOIN LATERAL (
+  SELECT presence.identifier_digits AS cpf_digits
+  FROM document_presences AS presence
+  JOIN document_types AS dt ON dt.id = presence.document_type_id
+  WHERE presence.profile_id = profiles.id
+    AND dt.technical_key = 'cpf'
+    AND presence.claim = 'informed_number'
+  LIMIT 1
+) AS cpf_lookup ON true
 WHERE (
     sqlc.arg(full_name_filter)::text = '' OR
     CASE
@@ -141,17 +152,6 @@ WHERE (
   )
   AND (sqlc.arg(state_filter)::text = '' OR coalesce(address_state, '') = sqlc.arg(state_filter)::text)
   AND (NOT sqlc.arg(restrict_ids)::bool OR id = ANY(sqlc.arg(id_filter)::uuid[]))
--- cpf_lookup materializa o CPF de cada perfil uma única vez via LEFT JOIN LATERAL,
--- substituindo as 4 subqueries correlacionadas que existiam no ORDER BY (O(4n) → O(n)).
-LEFT JOIN LATERAL (
-  SELECT presence.identifier_digits AS cpf_digits
-  FROM document_presences AS presence
-  JOIN document_types AS dt ON dt.id = presence.document_type_id
-  WHERE presence.profile_id = profiles.id
-    AND dt.technical_key = 'cpf'
-    AND presence.claim = 'informed_number'
-  LIMIT 1
-) AS cpf_lookup ON true
 ORDER BY
   CASE
     WHEN sqlc.arg(full_name_filter)::text <> '' THEN
