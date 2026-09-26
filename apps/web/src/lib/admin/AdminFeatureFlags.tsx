@@ -20,9 +20,7 @@ function patchFlag(
 ): FeatureFlagsResponse | undefined {
   if (!previous) return previous;
   return {
-    flags: previous.flags.map((flag) =>
-      flag.key === next.key ? { ...flag, ...next } : flag,
-    ),
+    flags: previous.flags.map((flag) => (flag.key === next.key ? { ...flag, ...next } : flag)),
   };
 }
 
@@ -50,8 +48,9 @@ export function AdminFeatureFlags() {
       }
     },
     onSuccess: (updated) => {
-      queryClient.setQueryData(queryKeys.admin.featureFlags, (previous: FeatureFlagsResponse | undefined) =>
-        patchFlag(previous, updated),
+      queryClient.setQueryData(
+        queryKeys.admin.featureFlags,
+        (previous: FeatureFlagsResponse | undefined) => patchFlag(previous, updated),
       );
     },
   });
