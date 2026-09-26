@@ -8,6 +8,11 @@ import {
   logout,
   type AuthSessionResponse,
 } from "./lib/api/client";
+import {
+  clearCachedAuthSession,
+  readCachedAuthSession,
+  writeCachedAuthSession,
+} from "./lib/authSessionCache";
 import { createAppRouter } from "./router";
 import { SessionContext, useApplicationSession } from "./session";
 import { ThemeProvider } from "./theme";
@@ -23,6 +28,11 @@ type AuthState =
   | { kind: "disabled" }
   | { kind: "unavailable" };
 
+function initialAuthState(): AuthState {
+  const cached = readCachedAuthSession();
+  return cached ? { kind: "authenticated", session: cached } : { kind: "checking" };
+}
+
 export function App() {
   const [queryClient] = useState(
     () =>
@@ -31,26 +41,30 @@ export function App() {
       }),
   );
   const [router] = useState(() => createAppRouter());
-  const [authentication, setAuthentication] = useState<AuthState>({ kind: "checking" });
+  const [authentication, setAuthentication] = useState<AuthState>(initialAuthState);
   const [signingOut, setSigningOut] = useState(false);
 
   const refreshAuthentication = useCallback(async (signal?: AbortSignal) => {
-    setAuthentication((current) =>
-      current.kind === "authenticated" ? current : { kind: "checking" },
-    );
     try {
-      setAuthentication({ kind: "authenticated", session: await getAuthSession(signal) });
+      const session = await getAuthSession(signal);
+      writeCachedAuthSession(session);
+      setAuthentication({ kind: "authenticated", session });
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       if (error instanceof APIRequestError && error.status === 401) {
+        clearCachedAuthSession();
         setAuthentication({ kind: "unauthenticated" });
         return;
       }
-      if (error instanceof APIRequestError && error.status === 503) {
-        setAuthentication({ kind: "disabled" });
-        return;
-      }
-      setAuthentication({ kind: "unavailable" });
+      // Background revalidation failed while we already have a session — keep the shell;
+      // only an explicit 401 (above) disconnects the user.
+      setAuthentication((current) => {
+        if (current.kind === "authenticated") return current;
+        if (error instanceof APIRequestError && error.status === 503) {
+          return { kind: "disabled" };
+        }
+        return { kind: "unavailable" };
+      });
     }
   }, []);
 
@@ -64,6 +78,7 @@ export function App() {
     setSigningOut(true);
     try {
       await logout();
+      clearCachedAuthSession();
       queryClient.clear();
       window.location.replace("/");
     } catch {
@@ -74,8 +89,7 @@ export function App() {
 
   let tree;
   if (authentication.kind === "checking") {
-    // Stay blank until the session cookie is known — never flash LoginScreen on F5/OAuth.
-    // Authenticated routes own their own QueryView / AppCard loading once the shell mounts.
+    // Cold load with no cached session — stay blank until the cookie check returns.
     tree = null;
   } else if (authentication.kind === "authenticated") {
     tree = (
