@@ -90,9 +90,7 @@ export function useAssistantChat(open: boolean) {
       const next: ChatThread = {
         ...existing,
         updated_at: new Date().toISOString(),
-        ...(activeResultReferenceId
-          ? { active_result_reference_id: activeResultReferenceId }
-          : {}),
+        ...(activeResultReferenceId ? { active_result_reference_id: activeResultReferenceId } : {}),
       };
       return {
         ...page,
