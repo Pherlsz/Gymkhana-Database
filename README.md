@@ -98,13 +98,11 @@ Create a Google OAuth client and configure these environment values:
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`, supplied through `.env` locally or the deployment secret manager;
 - `GOOGLE_OAUTH_REDIRECT_URL`, ending in `/auth/callback`;
-- `AUTH_APPLICATION_URL`, the web application URL used after login and the only browser origin trusted for credentialed CORS and state-changing requests;
-- `AUTH_ALLOWED_EMAILS`, a comma-separated bootstrap allowlist (runtime access is the `allowed_emails` table);
-- `AUTH_SUPERADMIN_EMAIL`, which must also appear in the allowlist.
+- `AUTH_APPLICATION_URL`, the web application URL used after login and the only browser origin trusted for credentialed CORS and state-changing requests.
 
 For local testing, use callback `http://localhost:8080/auth/callback` and application URL `http://localhost:5173`. The API stores only SHA-256 session hashes. Browser cookies are HttpOnly, SameSite=Lax, host-only, and become Secure outside local/test. Application sessions expire after 24 hours and logout revokes the server-side session.
 
-The first successful login matching `AUTH_SUPERADMIN_EMAIL` creates the initial `SUPERADMIN`. Every other person must be invited in Administração with a role before they can sign in. Account lookup is by email. Disabled users remain denied even when their email is allowed.
+Who can sign in is decided in Neon: the `allowed_emails` table plus a provisioned `app_users` row (Administração). Google OAuth does not create users. Seed the first `SUPERADMIN` in the database (or use local Dev Login, which uses a fixed `developer@gymkhana.local` identity). Disabled users remain denied even when their email is allowed.
 
 The complete setup, lifecycle, audit, smoke-test, incident, and recovery procedures are in [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
 

@@ -118,6 +118,12 @@ func (store *m2Store) IsEmailAllowed(_ context.Context, email string) (bool, err
 	return exists, nil
 }
 
+func (store *m2Store) AddAllowedEmail(context.Context, string, *auth.Identifier) error { return nil }
+
+func (store *m2Store) RemoveAllowedEmail(context.Context, string) error { return nil }
+
+func (store *m2Store) ListAllowedEmails(context.Context) ([]string, error) { return nil, nil }
+
 func (store *m2Store) RevokeSessionByTokenHash(_ context.Context, tokenHash []byte) error {
 	key := string(tokenHash)
 	record, exists := store.sessions[key]
@@ -178,10 +184,20 @@ func (store *m2Store) RevokeAllSessionsForUser(_ context.Context, userID auth.Id
 func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
 	provider := &m2Provider{identity: auth.GoogleIdentity{Subject: "1", Email: "owner", DisplayName: "Owner"}}
 	store := newM2Store()
+	ownerID, err := auth.NewIdentifier()
+	if err != nil {
+		t.Fatalf("NewIdentifier(owner) error = %v", err)
+	}
+	if _, err := store.CreateUser(context.Background(), auth.CreateUserParams{
+		ID:       ownerID,
+		Identity: auth.GoogleIdentity{Subject: "1", Email: "owner", DisplayName: "Owner"},
+		Role:     auth.RoleSuperadmin,
+	}); err != nil {
+		t.Fatalf("CreateUser(owner) error = %v", err)
+	}
 	service, err := auth.NewService(provider, store, auth.ServiceOptions{
-		AllowedEmails:   []string{"owner", "member"},
-		SuperadminEmail: "owner",
-		Now:             func() time.Time { return time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC) },
+		AllowlistStore: store,
+		Now:            func() time.Time { return time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC) },
 	})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)

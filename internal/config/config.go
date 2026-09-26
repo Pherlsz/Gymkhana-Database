@@ -38,8 +38,6 @@ type AuthConfig struct {
 	GoogleClientSecret string
 	GoogleRedirectURL  string
 	ApplicationURL     string
-	AllowedEmails      []string
-	SuperadminEmail    string
 	SecureCookies      bool
 }
 
@@ -187,8 +185,6 @@ func Load() (Config, error) {
 			GoogleClientSecret: strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_CLIENT_SECRET")),
 			GoogleRedirectURL:  strings.TrimSpace(os.Getenv("GOOGLE_OAUTH_REDIRECT_URL")),
 			ApplicationURL:     strings.TrimSpace(os.Getenv("AUTH_APPLICATION_URL")),
-			AllowedEmails:      commaSeparatedValues(os.Getenv("AUTH_ALLOWED_EMAILS")),
-			SuperadminEmail:    strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_SUPERADMIN_EMAIL"))),
 			SecureCookies:      environment == EnvironmentStaging || environment == EnvironmentProduction,
 		},
 		GoogleForms: GoogleFormsConfig{
@@ -319,22 +315,6 @@ func (cfg Config) validate() error {
 	}
 	if outsideDevelopment && applicationURL.Scheme != "https" {
 		return errors.New("AUTH_APPLICATION_URL must use HTTPS outside local and test environments")
-	}
-	if len(cfg.Auth.AllowedEmails) == 0 {
-		return errors.New("AUTH_ALLOWED_EMAILS must contain at least one email")
-	}
-	if cfg.Auth.SuperadminEmail == "" {
-		return errors.New("AUTH_SUPERADMIN_EMAIL is required when authentication is enabled")
-	}
-	allowed := false
-	for _, email := range cfg.Auth.AllowedEmails {
-		if email == cfg.Auth.SuperadminEmail {
-			allowed = true
-			break
-		}
-	}
-	if !allowed {
-		return errors.New("AUTH_SUPERADMIN_EMAIL must be included in AUTH_ALLOWED_EMAILS")
 	}
 	if cfg.AIChat.Enabled {
 		if cfg.AIChat.Provider == "" || cfg.AIChat.Model == "" || cfg.AIChat.Retention == 0 {

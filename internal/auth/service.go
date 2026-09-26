@@ -101,21 +101,17 @@ type OAuthProvider interface {
 type AuditFailureHandler func(context.Context, AuditEvent, error)
 
 type ServiceOptions struct {
-	AllowedEmails   []string
-	SuperadminEmail string
-	AllowlistStore  AllowlistStore
-	Now             func() time.Time
-	OnAuditFailure  AuditFailureHandler
+	AllowlistStore AllowlistStore
+	Now            func() time.Time
+	OnAuditFailure AuditFailureHandler
 }
 
 type Service struct {
-	provider        OAuthProvider
-	store           Store
-	allowlistStore  AllowlistStore
-	allowedEmails   map[string]struct{}
-	superadminEmail string
-	now             func() time.Time
-	onAuditFailure  AuditFailureHandler
+	provider       OAuthProvider
+	store          Store
+	allowlistStore AllowlistStore
+	now            func() time.Time
+	onAuditFailure AuditFailureHandler
 }
 
 type LoginResult struct {
@@ -128,21 +124,8 @@ func NewService(provider OAuthProvider, store Store, options ServiceOptions) (*S
 	if provider == nil || store == nil {
 		return nil, fmt.Errorf("%w: provider and store are required", ErrInvalidServiceSetup)
 	}
-
-	allowedEmails := make(map[string]struct{}, len(options.AllowedEmails))
-	for _, email := range options.AllowedEmails {
-		normalized := normalizeEmail(email)
-		if normalized != "" {
-			allowedEmails[normalized] = struct{}{}
-		}
-	}
-	if len(allowedEmails) == 0 {
-		return nil, fmt.Errorf("%w: at least one allowed email is required", ErrInvalidServiceSetup)
-	}
-
-	superadminEmail := normalizeEmail(options.SuperadminEmail)
-	if _, allowed := allowedEmails[superadminEmail]; superadminEmail == "" || !allowed {
-		return nil, fmt.Errorf("%w: superadmin email must be allowed", ErrInvalidServiceSetup)
+	if options.AllowlistStore == nil {
+		return nil, fmt.Errorf("%w: allowlist store is required", ErrInvalidServiceSetup)
 	}
 
 	now := options.Now
@@ -151,13 +134,11 @@ func NewService(provider OAuthProvider, store Store, options ServiceOptions) (*S
 	}
 
 	return &Service{
-		provider:        provider,
-		store:           store,
-		allowlistStore:  options.AllowlistStore,
-		allowedEmails:   allowedEmails,
-		superadminEmail: superadminEmail,
-		now:             now,
-		onAuditFailure:  options.OnAuditFailure,
+		provider:       provider,
+		store:          store,
+		allowlistStore: options.AllowlistStore,
+		now:            now,
+		onAuditFailure: options.OnAuditFailure,
 	}, nil
 }
 
@@ -186,22 +167,11 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 		return LoginResult{}, errors.New("oauth provider returned an invalid identity")
 	}
 
-	// Check DB allowlist first if configured, fall back to in-memory map
-	allowed := false
-	if service.allowlistStore != nil {
-		dbAllowed, err := service.allowlistStore.IsEmailAllowed(ctx, identity.Email)
-		if err != nil {
-			service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
-			return LoginResult{}, fmt.Errorf("check email allowlist: %w", err)
-		}
-		allowed = dbAllowed
-	} else {
-		_, allowed = service.allowedEmails[identity.Email]
+	allowed, err := service.allowlistStore.IsEmailAllowed(ctx, identity.Email)
+	if err != nil {
+		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
+		return LoginResult{}, fmt.Errorf("check email allowlist: %w", err)
 	}
-	if !allowed && identity.Email == service.superadminEmail {
-		allowed = true
-	}
-
 	if !allowed {
 		service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
 		return LoginResult{}, ErrAccessDenied
@@ -210,16 +180,8 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 	user, err := service.store.FindUserByEmail(ctx, identity.Email)
 	switch {
 	case errors.Is(err, ErrUserNotFound):
-		if identity.Email != service.superadminEmail {
-			service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
-			return LoginResult{}, ErrAccessDenied
-		}
-		userID, idErr := NewIdentifier()
-		if idErr != nil {
-			service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
-			return LoginResult{}, fmt.Errorf("generate user id: %w", idErr)
-		}
-		user, err = service.store.CreateUser(ctx, CreateUserParams{ID: userID, Identity: identity, Role: RoleSuperadmin})
+		service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
+		return LoginResult{}, ErrAccessDenied
 	case err == nil:
 		if !user.Active {
 			service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)

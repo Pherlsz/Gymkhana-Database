@@ -6,23 +6,23 @@ import (
 	"fmt"
 )
 
-// DevelopmentLogin creates a normal application session for the configured
-// superadmin without contacting the external OAuth provider. HTTP exposure is
-// restricted by the server to development environments.
+// DevelopmentLoginEmail is the fixed local identity used by Dev Login. It is
+// not configurable: staging/production never expose this path.
+const DevelopmentLoginEmail = "developer@gymkhana.local"
+
+// DevelopmentLogin creates a normal application session for the local
+// development user without contacting Google. HTTP exposure is restricted by
+// the server to development environments.
 func (service *Service) DevelopmentLogin(ctx context.Context, requestID string) (LoginResult, error) {
 	identity := normalizeIdentity(GoogleIdentity{
-		Email:       service.superadminEmail,
+		Email:       DevelopmentLoginEmail,
 		DisplayName: "Development User",
 		Subject:     "development",
 	})
 
-	// NewService already requires the configured superadmin to be present in
-	// AUTH_ALLOWED_EMAILS. Development login deliberately uses that local
-	// configuration instead of the database-managed OAuth allowlist so a fresh
-	// development database can be entered before any admin setup has occurred.
-	if _, allowed := service.allowedEmails[identity.Email]; !allowed {
-		service.recordAudit(ctx, nil, nil, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
-		return LoginResult{}, ErrAccessDenied
+	if err := service.allowlistStore.AddAllowedEmail(ctx, identity.Email, nil); err != nil {
+		service.recordAudit(ctx, nil, nil, AuditEventSignInFailed, AuditOutcomeFailure, requestID, identity.Email)
+		return LoginResult{}, fmt.Errorf("ensure development allowlist: %w", err)
 	}
 
 	user, err := service.store.FindUserByEmail(ctx, identity.Email)
