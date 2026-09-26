@@ -57,6 +57,28 @@ function paintCellWidth(el: HTMLElement, width: number) {
   el.style.setProperty("flex", `0 0 ${px}`);
 }
 
+function paintTableTotalWidth(root: HTMLElement, tableWidth: number) {
+  const pxTotal = `${tableWidth}px`;
+  root.style.setProperty("--spreadsheet-table-width", pxTotal);
+  root.querySelectorAll<HTMLElement>(".ant-table-header table").forEach((table) => {
+    table.style.width = pxTotal;
+    table.style.minWidth = pxTotal;
+    table.style.maxWidth = pxTotal;
+  });
+  root.querySelectorAll<HTMLElement>(".ant-table-tbody-virtual-holder-inner").forEach((inner) => {
+    inner.style.width = pxTotal;
+    inner.style.minWidth = pxTotal;
+    inner.style.maxWidth = pxTotal;
+  });
+  root
+    .querySelectorAll<HTMLElement>(".ant-table-tbody-virtual-holder-inner > div")
+    .forEach((row) => {
+      row.style.width = pxTotal;
+      row.style.minWidth = pxTotal;
+      row.style.maxWidth = pxTotal;
+    });
+}
+
 /** Keep header + virtual body on the same pixel widths while dragging. */
 function applyLiveColumnWidth(th: HTMLElement, width: number, tableWidth: number) {
   const root = th.closest(".spreadsheet-table");
@@ -67,7 +89,6 @@ function applyLiveColumnWidth(th: HTMLElement, width: number, tableWidth: number
   if (index < 0) return;
 
   const px = `${width}px`;
-  const pxTotal = `${tableWidth}px`;
 
   // Header uses table-layout:fixed + colgroup — cell style alone does not move it.
   root.querySelectorAll(".ant-table-header colgroup").forEach((group) => {
@@ -89,18 +110,9 @@ function applyLiveColumnWidth(th: HTMLElement, width: number, tableWidth: number
         paintCellWidth(cell, width);
         cell.classList.toggle("is-resizing", resizing);
       }
-      row.style.width = pxTotal;
-      row.style.minWidth = pxTotal;
     });
 
-  root.querySelectorAll<HTMLElement>(".ant-table-header table").forEach((table) => {
-    table.style.width = pxTotal;
-    table.style.minWidth = pxTotal;
-  });
-  root.querySelectorAll<HTMLElement>(".ant-table-tbody-virtual-holder-inner").forEach((inner) => {
-    inner.style.width = pxTotal;
-    inner.style.minWidth = pxTotal;
-  });
+  paintTableTotalWidth(root, tableWidth);
 }
 
 type VirtualTableHandle = {
@@ -181,6 +193,13 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     1,
     (rowActions ? SHEET_COLUMN_WIDTH.actions : 0) +
       columns.reduce((sum, column) => sum + resolvedWidth(column), 0),
+  );
+
+  // Remount when the column set changes (assistant recorte / formulas) so Ant's
+  // header colgroup and virtual body do not keep widths from the previous layout.
+  const columnLayoutKey = useMemo(
+    () => `${rowActions ? "a|" : ""}${columns.map((column) => column.key).join("|")}`,
+    [columns, rowActions],
   );
 
   const startResize = useCallback(
@@ -288,20 +307,22 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
       new Map(
         columns.map((column) => {
           const width = resolvedWidth(column);
+          const locked = {
+            width,
+            minWidth: width,
+            maxWidth: width,
+            flex: `0 0 ${width}px`,
+          };
           return [
             column.key,
             {
-              base: { width, minWidth: width, flex: `0 0 ${width}px` },
+              base: locked,
               header: {
-                width,
-                minWidth: width,
-                flex: `0 0 ${width}px`,
+                ...locked,
                 position: "relative" as const,
               },
               cell: {
-                width,
-                minWidth: width,
-                flex: `0 0 ${width}px`,
+                ...locked,
                 display: "flex",
                 alignItems: "center",
                 padding: "0 0.55rem",
@@ -357,6 +378,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
           style: styles?.header ?? {
             width,
             minWidth: width,
+            maxWidth: width,
             flex: `0 0 ${width}px`,
             position: "relative" as const,
           },
@@ -423,6 +445,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
           style: styles?.cell ?? {
             width,
             minWidth: width,
+            maxWidth: width,
             flex: `0 0 ${width}px`,
             display: "flex",
             alignItems: "center",
@@ -434,7 +457,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     });
     if (!rowActions) return dataColumns;
     const width = SHEET_COLUMN_WIDTH.actions;
-    const cellStyle = { width, minWidth: width, flex: `0 0 ${width}px` };
+    const cellStyle = { width, minWidth: width, maxWidth: width, flex: `0 0 ${width}px` };
     const actionsColumn: NonNullable<TableProps<T>["columns"]>[number] = {
       key: "__actions",
       title: <span className="visually-hidden">{rowActions.label}</span>,
@@ -502,7 +525,26 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     const observer = new ResizeObserver(measure);
     observer.observe(sheet);
     return () => observer.disconnect();
-  }, [columns.length, rowActions, showEmpty]);
+  }, [columnLayoutKey, showEmpty]);
+
+  // Ant's virtual header stretches to the viewport when scroll.x is narrower than
+  // the sheet (assistant recorte). Pin header + body to the same pixel total.
+  useLayoutEffect(() => {
+    const root = sheetRef.current?.querySelector(".spreadsheet-table");
+    if (!(root instanceof HTMLElement)) return;
+    paintTableTotalWidth(root, tableWidth);
+
+    const widths = [
+      ...(rowActions ? [SHEET_COLUMN_WIDTH.actions] : []),
+      ...columns.map((column) => resolvedWidth(column)),
+    ];
+    root.querySelectorAll(".ant-table-header colgroup").forEach((group) => {
+      widths.forEach((width, index) => {
+        const col = group.children[index];
+        if (col instanceof HTMLElement) col.style.width = `${width}px`;
+      });
+    });
+  }, [columnLayoutKey, columns, resolvedWidth, rowActions, rows.length, tableWidth]);
 
   useEffect(() => {
     if (!onRowClick || !selectedRowId) return;
@@ -602,6 +644,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     >
       <div ref={sheetRef} aria-busy={loading} className="spreadsheet-table-card__sheet">
         <VirtualAntdTable<T>
+          key={columnLayoutKey}
           caption={<span className="visually-hidden">{caption}</span>}
           className="spreadsheet-table"
           columns={antdColumns}
@@ -615,6 +658,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
           scroll={{ x: tableWidth, y: bodyHeight }}
           showSorterTooltip={false}
           size="small"
+          style={{ ["--spreadsheet-table-width" as string]: `${tableWidth}px` }}
           tableLayout="fixed"
           virtual
           listItemHeight={DEFAULT_SHEET_PREFERENCES.rowHeightPx}

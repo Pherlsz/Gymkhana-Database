@@ -1,4 +1,4 @@
-import type { AuthSessionResponse } from "./lib/api/client";
+import type { AuthSessionResponse } from "./api/client";
 
 const SESSION_CACHE_KEY = "gymkhana-auth-session";
 

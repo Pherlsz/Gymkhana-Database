@@ -540,6 +540,13 @@
   outline: none;
 }
 
+.assistant-composer.is-busy .assistant-composer__input,
+.assistant-composer__input:disabled {
+  color: var(--md-on-surface-variant);
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 .assistant-composer__send {
   grid-area: 1 / 2;
   display: inline-flex;
