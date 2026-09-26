@@ -191,3 +191,22 @@ describe("generated API client helpers", () => {
     });
   });
 });
+
+describe("inferWorkersDevApiOrigin", () => {
+  it("maps the staging SPA workers.dev host to the API worker", async () => {
+    const { inferWorkersDevApiOrigin } = await import("./client");
+    expect(
+      inferWorkersDevApiOrigin(
+        "staging-gymkhana-database.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev",
+      ),
+    ).toBe(
+      "https://staging-gymkhana-api.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev",
+    );
+  });
+
+  it("ignores unrelated hosts", async () => {
+    const { inferWorkersDevApiOrigin } = await import("./client");
+    expect(inferWorkersDevApiOrigin("localhost")).toBeNull();
+    expect(inferWorkersDevApiOrigin("app.example.com")).toBeNull();
+  });
+});
