@@ -333,6 +333,16 @@
   color: var(--gym-color-text-muted);
 }
 
+.app-card--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cadastro-entry__forms-disabled {
+  display: block;
+  min-width: 0;
+}
+
 .cadastro-single {
   display: flex;
   flex-direction: column;

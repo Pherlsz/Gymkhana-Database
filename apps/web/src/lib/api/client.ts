@@ -216,7 +216,7 @@ export async function listAdminUsers(signal?: AbortSignal): Promise<AdminUsersRe
 
 export type AdminProvisionUser = {
   email: string;
-  display_name: string;
+  display_name?: string;
   role: "EXTERNAL" | "ADMIN";
   capabilities: string[];
 };

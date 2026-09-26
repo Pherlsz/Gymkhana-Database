@@ -225,7 +225,9 @@ func (service *Service) CompleteLogin(ctx context.Context, code, requestID strin
 			service.recordAudit(ctx, &user.ID, &user.ID, AuditEventSignInDenied, AuditOutcomeDenied, requestID, identity.Email)
 			return LoginResult{}, ErrAccessDenied
 		}
-		if user.DisplayName != "" {
+		// Keep an admin-chosen name. Provisional provision uses email as the
+		// placeholder, so the first Google login replaces it with the profile name.
+		if user.DisplayName != "" && !strings.EqualFold(user.DisplayName, user.Email) {
 			identity.DisplayName = user.DisplayName
 		}
 		user, err = service.store.UpdateUserIdentity(ctx, user.ID, identity)

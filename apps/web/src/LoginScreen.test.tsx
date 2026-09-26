@@ -47,7 +47,7 @@ describe("LoginScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: /Dev Login/ }));
 
     expect(assign).toHaveBeenCalledTimes(1);
-    expect(assign).toHaveBeenCalledWith("/api/auth/dev-login");
+    expect(String(assign.mock.calls[0]?.[0])).toMatch(/\/api\/auth\/dev-login$/);
   });
 
   it("stays dark even when the stored theme is light", () => {

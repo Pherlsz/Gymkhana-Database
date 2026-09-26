@@ -43,12 +43,12 @@ export function AdminUsers({ actorLogin }: { actorLogin: string }) {
   const [bulkBusy, setBulkBusy] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const saving = access.provision.isPending || access.updateAccess.isPending || bulkBusy;
-  const canSubmit =
-    name.trim() !== "" && email.trim() !== "" && memberAccessIsComplete(newRole, capabilities);
+  const canSubmit = editingId
+    ? name.trim() !== "" && email.trim() !== "" && memberAccessIsComplete(newRole, capabilities)
+    : email.trim() !== "" && memberAccessIsComplete(newRole, capabilities);
   const createDirty =
     !editingId &&
-    (name.trim() !== "" ||
-      email.trim() !== "" ||
+    (email.trim() !== "" ||
       newRole !== "EXTERNAL" ||
       !sameCapabilities(capabilities, DEFAULT_MEMBER_CAPABILITIES));
   const members = users.filter((user) => user.role === "EXTERNAL");
@@ -118,7 +118,8 @@ export function AdminUsers({ actorLogin }: { actorLogin: string }) {
     event.preventDefault();
     const displayName = name.trim();
     const login = email.trim().toLowerCase();
-    if (!displayName || !login) return;
+    if (!login) return;
+    if (editingId && !displayName) return;
     if (!memberAccessIsComplete(newRole, capabilities)) {
       setFormError(copy.capabilitiesRequired);
       return;
@@ -127,7 +128,7 @@ export function AdminUsers({ actorLogin }: { actorLogin: string }) {
     const selected = newRole === "EXTERNAL" ? capabilities : [];
     if (!editingId) {
       access.provision.mutate(
-        { display_name: displayName, email: login, role: newRole, capabilities: selected },
+        { email: login, role: newRole, capabilities: selected },
         {
           onSuccess: () => {
             resetForm();
@@ -341,16 +342,18 @@ export function AdminUsers({ actorLogin }: { actorLogin: string }) {
       >
         <h2 className="admin-form__title">{editingId ? copy.formEdit : copy.formCreate}</h2>
         <div className="admin-form__grid">
-          <label className="admin-field" htmlFor="admin-user-name">
-            <span>{copy.name}</span>
-            <Input
-              autoComplete="off"
-              id="admin-user-name"
-              name="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </label>
+          {editingId ? (
+            <label className="admin-field" htmlFor="admin-user-name">
+              <span>{copy.name}</span>
+              <Input
+                autoComplete="off"
+                id="admin-user-name"
+                name="name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </label>
+          ) : null}
           <label className="admin-field" htmlFor="admin-user-email">
             <span>{copy.email}</span>
             <Input

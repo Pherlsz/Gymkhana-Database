@@ -39,7 +39,7 @@ describe("cadastroSearch", () => {
     );
   });
 
-  it("keeps Google Forms state on /cadastro", () => {
+  it("drops Google Forms entry mode while the product entry is parked", () => {
     expect(
       normalizeCadastroPageSearch({
         mode: "forms",
@@ -49,10 +49,6 @@ describe("cadastroSearch", () => {
       }),
     ).toEqual({
       table: "people",
-      mode: "forms",
-      tab: "history",
-      source: "019bf789-4400-7f12-9abc-123456789abc",
-      google_forms: "connected",
     });
     expect(normalizeCadastroPageSearch({ mode: "xlsx", tab: "history" })).toEqual({
       table: "people",

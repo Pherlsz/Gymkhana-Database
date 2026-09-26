@@ -359,6 +359,7 @@ export const cadastro = {
   entryFormsFoot: "{n} formulário(s) ativo(s)",
   entryFormsFootNone: "Nenhum formulário ativo",
   entryFormsDisabled: "Somente administradores conectam Google Forms.",
+  entryFormsComingSoon: "em desenvolvimento",
   entryBulkTitle: "Em massa",
   entryBulkBody: "Importar planilha XLSX direto para a tabela de Pessoas, Documentos ou Contas.",
   entryBulkButton: "Abrir importação",

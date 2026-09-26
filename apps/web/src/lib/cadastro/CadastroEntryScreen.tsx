@@ -1,3 +1,4 @@
+import { Tooltip } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { ClipboardList, FileSpreadsheet, IdCard, User, Zap } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
@@ -5,7 +6,11 @@ import { listGoogleFormsSources } from "../api/googleForms";
 import type { OperationImport } from "../api/operations";
 import { listOperationImports } from "../api/operations";
 import { APIRequestError } from "../api/client";
-import { normalizeCadastroPageSearch, type TableKind } from "./cadastroSearch";
+import {
+  CADASTRO_FORMS_ENTRY_ENABLED,
+  normalizeCadastroPageSearch,
+  type TableKind,
+} from "./cadastroSearch";
 import { queryKeys } from "../api/queryKeys";
 import { AppCard } from "../../components/AppCard";
 import { useI18n } from "../../i18n";
@@ -30,6 +35,7 @@ export function CadastroEntryScreen({
   const session = useApplicationSession();
   const canUseForms = propCanUseForms ?? canManageUsers(session.user.role);
   const navigate = useNavigate();
+  const formsParked = !CADASTRO_FORMS_ENTRY_ENABLED;
 
   const handleSelectTable =
     onSelectTable ??
@@ -88,6 +94,7 @@ export function CadastroEntryScreen({
   const formsSources = useQuery({
     queryKey: queryKeys.cadastro.entryFormsSources,
     queryFn: ({ signal }) => listGoogleFormsSources(signal),
+    enabled: !formsParked && canUseForms,
   });
   const imports = useQuery({
     queryKey: queryKeys.cadastro.entryImports,
@@ -103,6 +110,42 @@ export function CadastroEntryScreen({
     b.created_at.localeCompare(a.created_at),
   )[0];
   const latestRowCount = (latestImport?.inserted_count ?? 0) + (latestImport?.updated_count ?? 0);
+
+  const formsCard = (
+    <AppCard
+      aria-label={
+        formsParked
+          ? `${copy.entryFormsTitle}. ${copy.entryFormsComingSoon}`
+          : copy.entryFormsTitle
+      }
+      badge={copy.cardAutoFormsBadge}
+      {...(formsParked ? { className: "app-card--disabled" } : {})}
+      icon={<ClipboardList size={22} strokeWidth={1.75} />}
+      {...(formsParked ? {} : { onClick: handleOpenForms })}
+      title={copy.entryFormsTitle}
+      variant="forms"
+    >
+      <p className="app-card__desc">{copy.entryFormsBody}</p>
+      {formsParked ? (
+        <span className="cadastro-entry__disabled">{copy.entryFormsComingSoon}</span>
+      ) : canUseForms ? null : (
+        <span className="cadastro-entry__disabled">{copy.entryFormsDisabled}</span>
+      )}
+      <div className="app-card__foot">
+        <span
+          aria-hidden="true"
+          className={
+            formsParked || activeSources.length === 0
+              ? "cadastro-entry__dot cadastro-entry__dot--idle"
+              : "cadastro-entry__dot"
+          }
+        />
+        {!formsParked && activeSources.length > 0
+          ? t(copy.entryFormsFoot, { n: activeSources.length })
+          : copy.entryFormsFootNone}
+      </div>
+    </AppCard>
+  );
 
   return (
     <section aria-label={copy.targetLabel} className="cadastro-entry">
@@ -142,24 +185,13 @@ export function CadastroEntryScreen({
       <div className="cadastro-entry__section">
         <h3 className="cadastro-entry__section-title">{copy.entryAutomationSection}</h3>
         <div className="cadastro-entry__cards cadastro-entry__cards--automation">
-          <AppCard
-            badge={copy.cardAutoFormsBadge}
-            icon={<ClipboardList size={22} strokeWidth={1.75} />}
-            onClick={handleOpenForms}
-            title={copy.entryFormsTitle}
-            variant="forms"
-          >
-            <p className="app-card__desc">{copy.entryFormsBody}</p>
-            {canUseForms ? null : (
-              <span className="cadastro-entry__disabled">{copy.entryFormsDisabled}</span>
-            )}
-            <div className="app-card__foot">
-              <span aria-hidden="true" className="cadastro-entry__dot" />
-              {activeSources.length > 0
-                ? t(copy.entryFormsFoot, { n: activeSources.length })
-                : copy.entryFormsFootNone}
-            </div>
-          </AppCard>
+          {formsParked ? (
+            <Tooltip title={copy.entryFormsComingSoon}>
+              <span className="cadastro-entry__forms-disabled">{formsCard}</span>
+            </Tooltip>
+          ) : (
+            formsCard
+          )}
           <AppCard
             badge={copy.cardAutoMassBadge}
             icon={<FileSpreadsheet size={22} strokeWidth={1.75} />}

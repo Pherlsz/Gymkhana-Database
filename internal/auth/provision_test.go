@@ -92,11 +92,12 @@ func TestProvisionUserRejectsIncompleteAccess(t *testing.T) {
 	}
 	actor := Session{User: User{Email: "admin@example.com", Role: RoleAdmin, Active: true}}
 	_, err = service.ProvisionUser(context.Background(), actor, ProvisionUserParams{
-		Email: "member@example.com", DisplayName: " ", Role: RoleExternal,
+		Email: "member@example.com", DisplayName: " ", Role: RoleExternal, Capabilities: []Capability{CapSearch},
 	}, "request-provision")
-	if err != ErrInvalidUserAccess || store.called {
-		t.Fatalf("blank name error = %v, called = %v", err, store.called)
+	if err != nil || !store.called || store.params.DisplayName != "member@example.com" {
+		t.Fatalf("blank name error = %v, called = %v, params = %#v", err, store.called, store.params)
 	}
+	store.called = false
 	_, err = service.ProvisionUser(context.Background(), actor, ProvisionUserParams{
 		Email: "member@example.com", DisplayName: "Member", Role: RoleSuperadmin,
 	}, "request-provision")
@@ -104,7 +105,7 @@ func TestProvisionUserRejectsIncompleteAccess(t *testing.T) {
 		t.Fatalf("superadmin role error = %v", err)
 	}
 	_, err = service.ProvisionUser(context.Background(), actor, ProvisionUserParams{
-		Email: "member@example.com", DisplayName: "Member", Role: RoleExternal,
+		Email: "member2@example.com", DisplayName: "Member", Role: RoleExternal,
 	}, "request-provision")
 	if err != ErrMemberNeedsCapability || store.called {
 		t.Fatalf("missing capability error = %v, called = %v", err, store.called)
