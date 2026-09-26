@@ -32,7 +32,14 @@
     "AUTH_ALLOWED_EMAILS": "tocadogamba.database@gmail.com",
     "AUTH_SUPERADMIN_EMAIL": "tocadogamba.database@gmail.com",
     "GOOGLE_OAUTH_REDIRECT_URL": "https://staging-gymkhana-api.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev/auth/callback",
-    "R2_ENABLED": "false",
-    "R2_BUCKET": "gymkhana-files"
+    "R2_ENABLED": "true",
+    "R2_BUCKET": "gymkhana-files",
+    "OCR_ENABLED": "true",
+    "OCR_PROVIDER": "google",
+    "OCR_MODEL": "gemini-2.5-flash",
+    "OCR_TIMEOUT": "90s",
+    "OCR_MAX_REQUESTS_PER_HOUR": "10",
+    "OCR_MAX_PROVIDER_USAGE_PER_HOUR": "500000",
+    "OCR_MAX_SOURCE_BYTES": "20971520"
   }
 }
