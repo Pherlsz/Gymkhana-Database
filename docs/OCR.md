@@ -1,33 +1,26 @@
 # Multimodal OCR operations runbook
 
-Multimodal OCR is a private, permission-aware extraction workspace for existing PDF, JPEG, and PNG attachments. Extraction creates typed suggestions with evidence; it never mutates canonical data. A user must review each suggestion and then perform a separate confirmed application protected by current target versions.
+Multimodal OCR is a private, permission-aware extraction path for existing PDF, JPEG, and PNG attachments. There is no `/ocr` destination (Orchestration §12.0); review happens on the record form. Extraction creates typed suggestions with evidence; it never mutates canonical data. A user must review each suggestion and then perform a separate confirmed application protected by current target versions.
 
 ## Activation boundary
 
-The feature is disabled by default. The repository currently contains only a deterministic fake extractor, and configuration accepts it only in `APP_ENV=test`. Staging and production therefore fail closed if `OCR_ENABLED=true`.
+The feature is disabled by default. Production uses Gemini (`OCR_PROVIDER=google`) with the shared Administração model key — the same sealed secret Assistente uses. `fake` stays in `APP_ENV=test`. Staging and production fail closed if `OCR_ENABLED=true` without a supported provider, and the Gemini path stays off for everyone until an ADMIN/SUPERADMIN stores the key.
 
-Production activation requires an owner decision and reviewed implementation for all of the following:
+Use a model (Gemini) only when that is the adequate extraction path. Without the shared key the model path stays off. Do not send private attachments to Gemini unless the flag is on and the key is present.
 
-1. select the provider, API, exact model, region, retention policy, and contractual privacy terms;
-2. confirm which private attachment classes may be transmitted outside the application boundary;
-3. implement a narrow adapter for the existing `Extractor` port using the fixed provider-neutral schema;
-4. add credentials through the deployment secret manager, never the repository or database;
-5. document provider deletion/incident procedures and validate them with the privacy owner;
-6. complete security, quota, timeout, malformed-output, cancellation, and staging smoke tests before enabling the switch.
-
-Do not reuse `fake`, add a provider SDK, invent credential variables, or select a provider/model by assumption.
+Production activation requires `OCR_ENABLED=true`, `OCR_PROVIDER=google`, `OCR_MODEL` as the default when Administração did not choose one, and `GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY` to seal the shared key. The extractor is `internal/modelprovider` over Gymkhana-Core `ocr` (`schema_guided`; host still supplies authorized bytes). Do not put the provider key in `.env`.
 
 ## Configuration contract
 
-| Variable                          | Contract                                                                      |
-| --------------------------------- | ----------------------------------------------------------------------------- |
-| `OCR_ENABLED`                     | Explicit switch; defaults to `false`                                          |
-| `OCR_PROVIDER`                    | Required when enabled; currently only `fake` in `APP_ENV=test`                |
-| `OCR_MODEL`                       | Required when enabled; nonempty identifier, at most 120 characters            |
-| `OCR_TIMEOUT`                     | Extraction deadline from `1s` through `5m`; defaults to `90s`                 |
+| Variable                          | Contract                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------ |
+| `OCR_ENABLED`                     | Explicit switch; defaults to `false`                                           |
+| `OCR_PROVIDER`                    | Required when enabled; `google`, or `fake` in `APP_ENV=test`                   |
+| `OCR_MODEL`                       | Required when enabled; default model when Administração did not choose one     |
+| `OCR_TIMEOUT`                     | Extraction deadline from `1s` through `5m`; defaults to `90s`                  |
 | `OCR_MAX_REQUESTS_PER_HOUR`       | Persistent per-user request limit from 1 through 1,000; defaults to 10         |
 | `OCR_MAX_PROVIDER_USAGE_PER_HOUR` | Persistent per-user provider-usage limit through 100,000,000; defaults 500,000 |
-| `OCR_MAX_SOURCE_BYTES`            | Source limit through 20 MiB; defaults to 20 MiB                               |
+| `OCR_MAX_SOURCE_BYTES`            | Source limit through 20 MiB; defaults to 20 MiB                                |
 
 OCR also requires authentication, PostgreSQL, private attachment storage, and the Profile, Document, Bill, and Custom Data services. A missing dependency stops startup. While disabled, the authenticated capability endpoint reports `enabled=false` and safe fixed limits; lifecycle routes return `ocr_unavailable`.
 
@@ -56,9 +49,9 @@ The worker then enforces:
 - exact byte count and SHA-256, with at most 20 MiB;
 - unencrypted, structurally bounded PDF input with 1 through 20 pages;
 - decodable JPEG/PNG input with at most 40,000,000 pixels;
-- a second current-user, attachment, owner, and catalog authorization check immediately before provider execution;
-- a fixed field catalog containing logical keys, labels, required flags, and value kinds only;
-- at most 100 unique suggestions, closed field keys, typed normalized values, bounded evidence, and provider usage through 100,000,000.
+- a second current-user, attachment, owner, and catalog authorization check immediately before provider execution.
+
+The extractor sees a Gymkhana-Core `ExtractionRequest` (mode, source id/modality/media type, target schema, max candidates) and must return a Core `ExtractionResult`. Attachment bytes never enter the Core request object. Core validation failures become `ocr_malformed_provider` without embedding source text. After a valid result, Database keeps at most 100 unique suggestions, closed field keys, typed normalized values, bounded evidence (confidence `0..10000`, regions in millionths), and provider usage through 100,000,000.
 
 Attachment text, evidence, labels, and recognized values are untrusted data. Instruction-like content grants no permission, cannot expand the field catalog, and is rendered as text. Provider output cannot select a target, physical table/column, SQL, URL, tool, or mutation.
 
@@ -101,7 +94,7 @@ Each group produces durable per-suggestion `APPLIED`, `STALE`, or `FAILED` resul
 | --------------------------------------------- | -------------------------------------------------------------------------------- |
 | Disabled runtime                              | Capability says disabled; lifecycle routes fail closed; no provider call         |
 | Missing/revoked session or role               | Source/job/suggestion/application denied without content disclosure              |
-| Trashed, purged, changed, spoofed source      | Not found or `ocr_unsafe_source`; provider is not called                          |
+| Trashed, purged, changed, spoofed source      | Not found or `ocr_unsafe_source`; provider is not called                         |
 | Oversized, encrypted, corrupt, or mismatched  | Deterministic source rejection before provider execution                         |
 | Unknown/duplicate field or malformed evidence | Whole provider result rejected; no suggestion or canonical mutation is committed |
 | Prompt/instruction markup in evidence/value   | Preserved only as bounded inert data and rendered as text                        |
@@ -111,11 +104,11 @@ Each group produces durable per-suggestion `APPLIED`, `STALE`, or `FAILED` resul
 | Partial target failure                        | Durable per-item results; successful unrelated targets remain explicit           |
 | Duplicate start/apply request                 | Same fingerprint replays one job/receipt; changed payload conflicts              |
 | Transient pre-provider outage                 | At most three automatic attempts with reauthorization                            |
-| Provider-phase ambiguity or worker loss       | Terminal safe failure; only an explicit linked retry may run again                |
-| Attachment trash/purge                        | Hidden/denied immediately; generated content cascades on purge; audit survives    |
-| Logs and audits                               | IDs, logical field/action, counts, outcomes, and stable codes only                |
+| Provider-phase ambiguity or worker loss       | Terminal safe failure; only an explicit linked retry may run again               |
+| Attachment trash/purge                        | Hidden/denied immediately; generated content cascades on purge; audit survives   |
+| Logs and audits                               | IDs, logical field/action, counts, outcomes, and stable codes only               |
 
-The unit, HTTP, frontend, PostgreSQL integration, migration, generated-contract, race, static-analysis, and security suites enforce these cases without a production provider credential.
+The unit, HTTP, frontend, PostgreSQL integration, migration, generated-contract, race, static-analysis, and security suites enforce these cases. Gemini extractor tests use a local httptest double, never a production credential.
 
 ## Smoke test
 
@@ -123,7 +116,7 @@ Run the deterministic path only in an isolated test environment:
 
 1. apply all application and River migrations to a disposable PostgreSQL database;
 2. configure authentication, private object storage, canonical target services, and the test-only OCR values above;
-3. sign in as an active member and confirm `/api/v1/ocr/capability` reports enabled with the fixed limits;
+3. sign in as an active EXTERNAL user and confirm `/api/v1/ocr/capability` reports enabled with the fixed limits;
 4. upload one valid PDF/image, start a job, observe ordered SSE, and reconnect from a recorded sequence;
 5. compare current/proposed/evidence values, edit and accept one suggestion, reject another, and confirm neither action changed canonical data;
 6. select an accepted suggestion, inspect the confirmation step, apply it, and replay the same application key;

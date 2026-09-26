@@ -13,10 +13,11 @@ import (
 const (
 	BulkDeleteConfirmation = "Confirmar"
 	MaximumFileSize        = int64(25 << 20)
-	MaximumRows            = 10_000
+	MaximumRows            = 100_000
 	MaximumExportRows      = 1_048_575 // One header row plus Excel's worksheet row limit.
 	MaximumColumns         = 256
-	MaximumCells           = 1_000_000
+	MaximumCells           = 6_000_000
+	headerRowSlack         = 8 // Title rows plus header before data, as in TNC/Forms dumps.
 	MaximumCellBytes       = 32_768
 	MaximumPreviewRows     = 200
 	MaximumReportRows      = 500
@@ -83,6 +84,10 @@ func (module Module) Label() string {
 	default:
 		return ""
 	}
+}
+
+func SupportedModules() []Module {
+	return []Module{ModuleProfiles, ModuleDocuments, ModuleBills}
 }
 
 type SourceKind string

@@ -21,6 +21,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/search/suggest": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Suggest nearby values for the current Search token */
+    get: operations["suggestSearchValues"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/search": {
     parameters: {
       query?: never;
@@ -32,7 +49,7 @@ export interface paths {
     put?: never;
     /**
      * Execute a bounded Search using logical identifiers
-     * @description Terms are treated as literal character sequences. Results and catalog are permission-filtered.
+     * @description Parse q as the Search query language. terms is a compatibility alias of bare AND words.
      */
     post: operations["executeSearch"];
     delete?: never;
@@ -58,7 +75,10 @@ export interface components {
     SearchCatalogField: {
       /** @description Opaque logical identifier from the authorized catalog. */
       key: string;
+      /** @description Search result module used for authorization and hit shape. */
       module: components["schemas"]["SearchModule"];
+      /** @description UI bucket for the fields filter (owner of the field). */
+      group: components["schemas"]["SearchModule"];
       label: string;
       kind: string;
     };
@@ -76,10 +96,26 @@ export interface components {
     SearchCatalogResponse: {
       modules: components["schemas"]["SearchCatalogModule"][];
       fields: components["schemas"]["SearchCatalogField"][];
+      operators: components["schemas"]["SearchOperator"][];
       limits: components["schemas"]["SearchCatalogLimits"];
     };
+    SearchOperator: {
+      token: string;
+      insert: string;
+      kind: string;
+      description: string;
+    };
+    SearchSuggestResponse: {
+      suggestions: components["schemas"]["SearchSuggestHit"][];
+    };
+    SearchSuggestHit: {
+      value: string;
+      label: string;
+    };
     SearchRequest: {
-      terms: string[];
+      /** @description Search query language. Portuguese tokens (tipo, cidade, OU, cpf:). */
+      q?: string;
+      terms?: string[];
       modules?: components["schemas"]["SearchModule"][];
       fields?: string[];
       /**
@@ -239,6 +275,35 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  suggestSearchValues: {
+    parameters: {
+      query: {
+        field: string;
+        q?: string;
+        grain?: components["schemas"]["SearchModule"];
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Proximity-ranked value suggestions */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SearchSuggestResponse"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationError"];
       503: components["responses"]["ServiceUnavailable"];
     };
   };

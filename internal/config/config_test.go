@@ -107,6 +107,22 @@ func TestLoadUsesSafeTypedDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadTreatsDevelopmentAsLocal(t *testing.T) {
+	for _, value := range []string{"development", "dev", "DEVELOPMENT"} {
+		t.Run(value, func(t *testing.T) {
+			clearConfiguration(t)
+			t.Setenv("APP_ENV", value)
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load() error = %v", err)
+			}
+			if cfg.Environment != EnvironmentLocal {
+				t.Fatalf("Environment = %q, want %q", cfg.Environment, EnvironmentLocal)
+			}
+		})
+	}
+}
+
 func TestLoadRejectsInvalidTypedValues(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -170,7 +186,8 @@ func TestLoadKeepsProductionOCRBlockedUntilOwnerActivationDecision(t *testing.T)
 		{name: "missing provider", environment: "test", model: "deterministic-v1"},
 		{name: "missing model", environment: "test", provider: "fake"},
 		{name: "unsupported local adapter", environment: "local", provider: "fake", model: "deterministic-v1"},
-		{name: "production adapter absent", environment: "production", provider: "vendor", model: "vision-v1"},
+		{name: "unknown provider", environment: "production", provider: "vendor", model: "vision-v1"},
+		{name: "google without sealing key", environment: "local", provider: "google", model: "gemini-2.5-flash"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			clearConfiguration(t)
@@ -217,6 +234,8 @@ func TestLoadKeepsProductionChatBlockedUntilOwnerActivationDecisions(t *testing.
 		{name: "missing retention", environment: "test", provider: "fake", model: "deterministic-v1"},
 		{name: "short retention", environment: "test", provider: "fake", model: "deterministic-v1", retention: "30m"},
 		{name: "unsupported local adapter", environment: "local", provider: "fake", model: "deterministic-v1", retention: "24h"},
+		{name: "unknown provider", environment: "local", provider: "openai", model: "gpt", retention: "24h"},
+		{name: "google without sealing key", environment: "local", provider: "google", model: "gemini-2.5-flash", retention: "336h"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			clearConfiguration(t)
@@ -240,6 +259,43 @@ func TestLoadKeepsProductionChatBlockedUntilOwnerActivationDecisions(t *testing.
 	t.Setenv("AI_CHAT_RETENTION", "24h")
 	if _, err := Load(); err == nil {
 		t.Fatal("Load() error = nil, want authentication dependency error")
+	}
+}
+
+func TestLoadAllowsGoogleChatProviderWithSealingKey(t *testing.T) {
+	clearConfiguration(t)
+	setValidLocalAuthentication(t)
+	t.Setenv("APP_ENV", "local")
+	t.Setenv("AI_CHAT_ENABLED", "true")
+	t.Setenv("AI_CHAT_PROVIDER", "google")
+	t.Setenv("AI_CHAT_MODEL", "gemini-2.5-flash")
+	t.Setenv("AI_CHAT_RETENTION", "336h")
+	t.Setenv("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY", base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{7}, 32)))
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.AIChat.Provider != "google" || cfg.AIChat.KeyVersion != 1 || cfg.AIChat.KeyEncryptionKeys[1] == ([32]byte{}) {
+		t.Fatalf("AIChat = %#v", cfg.AIChat)
+	}
+}
+
+func TestLoadAllowsGoogleOCRProviderWithSealingKey(t *testing.T) {
+	clearConfiguration(t)
+	setValidLocalAuthentication(t)
+	t.Setenv("APP_ENV", "local")
+	t.Setenv("OCR_ENABLED", "true")
+	t.Setenv("OCR_PROVIDER", "google")
+	t.Setenv("OCR_MODEL", "gemini-2.5-flash")
+	t.Setenv("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY", base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{7}, 32)))
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if !cfg.OCR.Enabled || cfg.OCR.Provider != "google" || !cfg.UsesSharedModelKey() {
+		t.Fatalf("OCR = %#v", cfg.OCR)
 	}
 }
 

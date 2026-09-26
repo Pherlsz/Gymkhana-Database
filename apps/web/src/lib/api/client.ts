@@ -9,20 +9,32 @@ export type AdminUsersResponse =
   paths["/api/admin/users"]["get"]["responses"][200]["content"]["application/json"];
 export type AdminUser = AdminUsersResponse["users"][number];
 export type UserRole = AdminUser["role"];
+export type ModelKeyStatus = components["schemas"]["ModelKeyStatus"];
+export type ModelProvider = components["schemas"]["ModelProvider"];
+export type SetModelKeyRequest = components["schemas"]["SetModelKeyRequest"];
 export type ProfilePageResponse =
   paths["/api/v1/profiles"]["get"]["responses"][200]["content"]["application/json"];
-export type Profile = ProfilePageResponse["profiles"][number];
+export type Profile = ProfilePageResponse["profiles"][number] & {
+  custom_values?: Record<string, string>;
+  document_identifiers?: Record<string, string>;
+  document_badges?: ProfilePageResponse["profiles"][number]["document_badges"];
+  document_presences?: ProfilePageResponse["profiles"][number]["document_presences"];
+  cpf_digit_sum?: number | null;
+};
+export type ProfileDocumentBadge = NonNullable<Profile["document_badges"]>[number];
+export type ProfileDocumentPresence = NonNullable<Profile["document_presences"]>[number];
 export type ProfileValuesRequest =
   paths["/api/v1/profiles"]["post"]["requestBody"]["content"]["application/json"];
 export type UpdateProfileRequest =
   paths["/api/v1/profiles/{profile_id}"]["put"]["requestBody"]["content"]["application/json"];
-
 export type DocumentTypePageResponse =
   paths["/api/v1/document-types"]["get"]["responses"][200]["content"]["application/json"];
 export type DocumentType = DocumentTypePageResponse["types"][number];
 export type DocumentPageResponse =
   paths["/api/v1/documents"]["get"]["responses"][200]["content"]["application/json"];
-export type DocumentRecord = DocumentPageResponse["documents"][number];
+export type DocumentRecord = DocumentPageResponse["documents"][number] & {
+  custom_values?: Record<string, string>;
+};
 export type DocumentValuesRequest =
   paths["/api/v1/documents"]["post"]["requestBody"]["content"]["application/json"];
 export type UpdateDocumentRequest =
@@ -37,7 +49,9 @@ export type BillTypePageResponse =
 export type BillType = BillTypePageResponse["types"][number];
 export type BillPageResponse =
   paths["/api/v1/bills"]["get"]["responses"][200]["content"]["application/json"];
-export type BillRecord = BillPageResponse["bills"][number];
+export type BillRecord = BillPageResponse["bills"][number] & {
+  custom_values?: Record<string, string>;
+};
 export type BillValuesRequest =
   paths["/api/v1/bills"]["post"]["requestBody"]["content"]["application/json"];
 export type UpdateBillRequest =
@@ -47,22 +61,12 @@ export type BillTypeValuesRequest =
 export type UpdateBillTypeRequest =
   paths["/api/v1/bill-types/{bill_type_id}"]["put"]["requestBody"]["content"]["application/json"];
 
-export type CustomEntityType = components["schemas"]["CustomEntityType"];
-export type CustomEntityTypeValuesRequest = components["schemas"]["CustomEntityTypeValuesRequest"];
-export type UpdateCustomEntityTypeRequest = components["schemas"]["UpdateCustomEntityTypeRequest"];
 export type CustomField = components["schemas"]["CustomField"];
-export type CustomFieldValuesRequest = components["schemas"]["CustomFieldValuesRequest"];
-export type UpdateCustomFieldRequest = components["schemas"]["UpdateCustomFieldRequest"];
 export type CustomOption = components["schemas"]["CustomOption"];
-export type CustomOptionValuesRequest = components["schemas"]["CustomOptionValuesRequest"];
-export type UpdateCustomOptionRequest = components["schemas"]["UpdateCustomOptionRequest"];
 export type CustomValueInput = components["schemas"]["CustomValueInput"];
 export type CustomValueSet = components["schemas"]["CustomValueSet"];
-export type CustomEntity = components["schemas"]["CustomEntity"];
-export type CreateCustomEntityRequest = components["schemas"]["CreateCustomEntityRequest"];
-export type UpdateCustomEntityRequest = components["schemas"]["UpdateCustomEntityRequest"];
 export type CustomTargetKind = components["schemas"]["CustomTargetKind"];
-export type CustomValueTargetKind = "profile" | "document" | "bill" | "custom_entity";
+export type CustomValueTargetKind = "profile" | "document" | "bill";
 export type SearchCatalogResponse =
   searchPaths["/api/v1/search/catalog"]["get"]["responses"][200]["content"]["application/json"];
 export type SearchRequest =
@@ -70,9 +74,6 @@ export type SearchRequest =
 export type SearchPageResponse =
   searchPaths["/api/v1/search"]["post"]["responses"][200]["content"]["application/json"];
 export type SearchResult = SearchPageResponse["results"][number];
-
-type UpdateUserAccessRequest =
-  paths["/api/admin/users/{user_id}/access"]["patch"]["requestBody"]["content"]["application/json"];
 
 type FieldError = { field: string; code: string; message: string };
 type ErrorPayload = {
@@ -105,7 +106,12 @@ export class APIRequestError extends Error {
 }
 
 export function apiURL(path: string): string {
-  const baseURL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+  if (import.meta.env.DEV && (path.startsWith("/api/") || path.startsWith("/health/"))) {
+    return path;
+  }
+  const baseURL = (
+    import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8080" : "")
+  ).replace(/\/$/, "");
   return `${baseURL}${path}`;
 }
 
@@ -175,16 +181,57 @@ export async function logout(): Promise<void> {
   await requestNoContent("/api/auth/logout", { method: "POST" });
 }
 
-export async function listApplicationUsers(signal?: AbortSignal): Promise<AdminUsersResponse> {
-  return requestJSON<AdminUsersResponse>(
-    "/api/admin/users?limit=100&offset=0",
-    signal ? { signal } : {},
+export async function getModelKeyStatus(
+  provider: ModelProvider,
+  signal?: AbortSignal,
+): Promise<ModelKeyStatus> {
+  return requestJSON<ModelKeyStatus>(`/api/admin/model-keys/${provider}`, signal ? { signal } : {});
+}
+
+export async function setModelKey(
+  provider: ModelProvider,
+  request: SetModelKeyRequest,
+): Promise<ModelKeyStatus> {
+  return requestJSON<ModelKeyStatus>(
+    `/api/admin/model-keys/${provider}`,
+    jsonRequest("PUT", request),
   );
 }
 
-export async function updateApplicationUserAccess(
+export async function clearModelKey(provider: ModelProvider): Promise<void> {
+  await requestNoContent(`/api/admin/model-keys/${provider}`, { method: "DELETE" });
+}
+
+export async function listAdminUsers(signal?: AbortSignal): Promise<AdminUsersResponse> {
+  return requestJSON<AdminUsersResponse>("/api/admin/users", signal ? { signal } : {});
+}
+
+export type AdminProvisionUser = {
+  email: string;
+  display_name: string;
+  role: "EXTERNAL" | "ADMIN";
+  capabilities: string[];
+};
+
+export async function provisionAdminUser(request: AdminProvisionUser): Promise<AdminUser> {
+  return requestJSON<AdminUser>("/api/admin/users", jsonRequest("POST", request));
+}
+
+export async function deleteAdminUser(userId: string): Promise<void> {
+  await requestNoContent(`/api/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
+}
+
+export type AdminAccessUpdate = {
+  role: "EXTERNAL" | "ADMIN";
+  active: boolean;
+  version: number;
+  display_name: string;
+  email: string;
+};
+
+export async function updateAdminUserAccess(
   userId: string,
-  request: UpdateUserAccessRequest,
+  request: AdminAccessUpdate,
 ): Promise<AdminUser> {
   return requestJSON<AdminUser>(
     `/api/admin/users/${encodeURIComponent(userId)}/access`,
@@ -192,11 +239,49 @@ export async function updateApplicationUserAccess(
   );
 }
 
+type UserCapabilitiesResponse = { capabilities?: string[] | null };
+
+export async function listUserCapabilities(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const body = await requestJSON<UserCapabilitiesResponse>(
+    `/api/admin/users/${encodeURIComponent(userId)}/capabilities`,
+    signal ? { signal } : {},
+  );
+  return body.capabilities ?? [];
+}
+
+export async function grantUserCapability(userId: string, capability: string): Promise<void> {
+  await requestJSON<unknown>(
+    `/api/admin/users/${encodeURIComponent(userId)}/capabilities`,
+    jsonRequest("POST", { capability }),
+  );
+}
+
+export async function revokeUserCapability(userId: string, capability: string): Promise<void> {
+  await requestNoContent(
+    `/api/admin/users/${encodeURIComponent(userId)}/capabilities/${encodeURIComponent(capability)}`,
+    { method: "DELETE" },
+  );
+}
+
 export type ProfileListSearch = {
   page: number;
   limit: number;
-  sort: "full_name" | "cpf" | "email" | "address_city" | "created_at" | "updated_at";
+  sort:
+    | "full_name"
+    | "cpf"
+    | "email"
+    | "address_city"
+    | "address_street"
+    | "address_neighborhood"
+    | "mobile_phone"
+    | "birth_date"
+    | "created_at"
+    | "updated_at";
   order: "asc" | "desc";
+  q: string;
   full_name: string;
   cpf: string;
   email: string;
@@ -211,7 +296,7 @@ export type ProfileListSearch = {
   document_order: "asc" | "desc";
   document_identifier: string;
   document_status: "" | "AVAILABLE" | "IN_USE";
-  document_state: "" | "CURRENT" | "REPLACED" | "EXPIRED" | "ARCHIVED";
+  document_medium: "" | "PHYSICAL" | "DIGITAL";
   document_type: string;
   document_selected: string | undefined;
   document_mode: "create" | "view" | "edit" | "types" | undefined;
@@ -228,10 +313,16 @@ export type ProfileListSearch = {
   bill_reference: string;
   bill_competence: string;
   bill_status: "" | "AVAILABLE" | "IN_USE";
-  bill_state: "" | "CURRENT" | "REPLACED" | "EXPIRED" | "ARCHIVED";
+  bill_medium: "" | "PHYSICAL" | "DIGITAL";
   bill_type: string;
   bill_selected: string | undefined;
   bill_mode: "create" | "view" | "edit" | "types" | undefined;
+  records_owner: string | undefined;
+  cols: string;
+  /** Assistant recorte marker. "on", or the extra column keys it turned on. */
+  recorte: string;
+  /** Assistant result reference. The open sheet pages this plan. */
+  result: string;
 };
 
 export async function listProfiles(
@@ -244,17 +335,100 @@ export async function listProfiles(
     sort: search.sort,
     order: search.order,
   });
+  if (search.q) query.set("q", search.q);
   for (const key of ["full_name", "cpf", "email", "city", "state"] as const) {
     if (search[key]) query.set(key, search[key]);
   }
   return requestJSON<ProfilePageResponse>(`/api/v1/profiles?${query}`, signal ? { signal } : {});
 }
 
-export async function listProfilesForSelection(signal?: AbortSignal): Promise<ProfilePageResponse> {
-  return requestJSON<ProfilePageResponse>(
-    "/api/v1/profiles?limit=1000&offset=0&sort=full_name&order=asc",
+export async function listDistinctCities(
+  filters: Pick<ProfileListSearch, "full_name" | "cpf" | "email" | "state">,
+  signal?: AbortSignal,
+): Promise<{ values: string[] }> {
+  const query = new URLSearchParams({ limit: "500" });
+  for (const key of ["full_name", "cpf", "email", "state"] as const) {
+    if (filters[key]) query.set(key, filters[key]);
+  }
+  return requestJSON<{ values: string[] }>(
+    `/api/v1/profiles/cities?${query}`,
     signal ? { signal } : {},
   );
+}
+
+export async function getProfileListTotals(signal?: AbortSignal): Promise<ProfilePageResponse> {
+  return requestJSON<ProfilePageResponse>(
+    "/api/v1/profiles?limit=1&offset=0&sort=updated_at&order=desc",
+    signal ? { signal } : {},
+  );
+}
+
+export async function getDocumentListTotals(
+  status?: components["schemas"]["DocumentStatus"],
+  signal?: AbortSignal,
+  typeId?: string,
+): Promise<DocumentPageResponse> {
+  const query = new URLSearchParams({
+    limit: "1",
+    offset: "0",
+    sort: "updated_at",
+    order: "desc",
+  });
+  if (status) query.set("status", status);
+  if (typeId) query.set("document_type_id", typeId);
+  return requestJSON<DocumentPageResponse>(`/api/v1/documents?${query}`, signal ? { signal } : {});
+}
+
+export async function listDocumentsInUse(signal?: AbortSignal): Promise<DocumentPageResponse> {
+  return requestJSON<DocumentPageResponse>(
+    "/api/v1/documents?limit=50&offset=0&sort=updated_at&order=desc&status=IN_USE",
+    signal ? { signal } : {},
+  );
+}
+
+export async function getBillListTotals(
+  status?: components["schemas"]["BillStatus"],
+  signal?: AbortSignal,
+  typeId?: string,
+): Promise<BillPageResponse> {
+  const query = new URLSearchParams({
+    limit: "1",
+    offset: "0",
+    sort: "updated_at",
+    order: "desc",
+  });
+  if (status) query.set("status", status);
+  if (typeId) query.set("bill_type_id", typeId);
+  return requestJSON<BillPageResponse>(`/api/v1/bills?${query}`, signal ? { signal } : {});
+}
+
+export async function listBillsInUse(signal?: AbortSignal): Promise<BillPageResponse> {
+  return requestJSON<BillPageResponse>(
+    "/api/v1/bills?limit=50&offset=0&sort=updated_at&order=desc&status=IN_USE",
+    signal ? { signal } : {},
+  );
+}
+
+export async function listProfilesLookup(
+  q: string,
+  signal?: AbortSignal,
+): Promise<ProfilePageResponse> {
+  const trimmed = q.trim();
+  const query = new URLSearchParams({
+    limit: "50",
+    offset: "0",
+    sort: "full_name",
+    order: "asc",
+  });
+  if (trimmed) {
+    const cleanDigits = trimmed.replace(/\D/g, "");
+    if (cleanDigits.length >= 3 && /^[0-9.\-\s/]+$/.test(trimmed)) {
+      query.set("cpf", cleanDigits);
+    } else {
+      query.set("full_name", trimmed);
+    }
+  }
+  return requestJSON<ProfilePageResponse>(`/api/v1/profiles?${query}`, signal ? { signal } : {});
 }
 
 export async function createProfile(request: ProfileValuesRequest): Promise<Profile> {
@@ -266,12 +440,6 @@ export async function updateProfile(id: string, request: UpdateProfileRequest): 
     `/api/v1/profiles/${encodeURIComponent(id)}`,
     jsonRequest("PUT", request),
   );
-}
-
-export async function duplicateProfile(id: string): Promise<Profile> {
-  return requestJSON<Profile>(`/api/v1/profiles/${encodeURIComponent(id)}/duplicate`, {
-    method: "POST",
-  });
 }
 
 export async function deleteProfile(
@@ -287,13 +455,14 @@ export async function deleteProfile(
 
 export type DocumentListSearch = Pick<
   ProfileListSearch,
+  | "q"
   | "document_page"
   | "document_limit"
   | "document_sort"
   | "document_order"
   | "document_identifier"
   | "document_status"
-  | "document_state"
+  | "document_medium"
   | "document_type"
 >;
 
@@ -331,21 +500,29 @@ export async function deleteDocumentType(
   );
 }
 
+export async function getProfile(id: string, signal?: AbortSignal): Promise<Profile> {
+  return requestJSON<Profile>(
+    `/api/v1/profiles/${encodeURIComponent(id)}`,
+    signal ? { signal } : {},
+  );
+}
+
 export async function listDocuments(
-  profileId: string,
+  profileId: string | undefined,
   search: DocumentListSearch,
   signal?: AbortSignal,
 ): Promise<DocumentPageResponse> {
   const query = new URLSearchParams({
-    owner_profile_id: profileId,
     limit: String(search.document_limit),
     offset: String((search.document_page - 1) * search.document_limit),
     sort: search.document_sort,
     order: search.document_order,
   });
+  if (profileId) query.set("owner_profile_id", profileId);
+  if (search.q) query.set("q", search.q);
   if (search.document_identifier) query.set("identifier", search.document_identifier);
   if (search.document_status) query.set("status", search.document_status);
-  if (search.document_state) query.set("record_state", search.document_state);
+  if (search.document_medium) query.set("medium", search.document_medium);
   if (search.document_type) query.set("document_type_id", search.document_type);
   return requestJSON<DocumentPageResponse>(`/api/v1/documents?${query}`, signal ? { signal } : {});
 }
@@ -399,6 +576,7 @@ export async function returnDocumentCurrentUse(id: string): Promise<void> {
 
 export type BillListSearch = Pick<
   ProfileListSearch,
+  | "q"
   | "bill_page"
   | "bill_limit"
   | "bill_sort"
@@ -406,7 +584,7 @@ export type BillListSearch = Pick<
   | "bill_reference"
   | "bill_competence"
   | "bill_status"
-  | "bill_state"
+  | "bill_medium"
   | "bill_type"
 >;
 
@@ -443,21 +621,22 @@ export async function deleteBillType(
 }
 
 export async function listBills(
-  profileId: string,
+  profileId: string | undefined,
   search: BillListSearch,
   signal?: AbortSignal,
 ): Promise<BillPageResponse> {
   const query = new URLSearchParams({
-    owner_profile_id: profileId,
     limit: String(search.bill_limit),
     offset: String((search.bill_page - 1) * search.bill_limit),
     sort: search.bill_sort,
     order: search.bill_order,
   });
+  if (profileId) query.set("owner_profile_id", profileId);
+  if (search.q) query.set("q", search.q);
   if (search.bill_reference) query.set("reference", search.bill_reference);
   if (search.bill_competence) query.set("competence", search.bill_competence);
   if (search.bill_status) query.set("status", search.bill_status);
-  if (search.bill_state) query.set("record_state", search.bill_state);
+  if (search.bill_medium) query.set("medium", search.bill_medium);
   if (search.bill_type) query.set("bill_type_id", search.bill_type);
   return requestJSON<BillPageResponse>(`/api/v1/bills?${query}`, signal ? { signal } : {});
 }
@@ -510,46 +689,33 @@ export async function executeSearch(
   request: SearchRequest,
   signal?: AbortSignal,
 ): Promise<SearchPageResponse> {
+  const body: SearchRequest = {
+    q: request.q ?? "",
+    limit: Math.trunc(Number(request.limit)) || 50,
+    offset: Math.max(0, Math.trunc(Number(request.offset)) || 0),
+    sort: request.sort === "updated_at" ? "updated_at" : "relevance",
+    order: request.order === "asc" ? "asc" : "desc",
+  };
+  if (request.terms?.length) body.terms = request.terms;
+  if (request.modules?.length) body.modules = request.modules;
+  if (request.fields?.length) body.fields = request.fields;
   return requestJSON<SearchPageResponse>("/api/v1/search", {
-    ...jsonRequest("POST", request),
+    ...jsonRequest("POST", body),
     ...(signal ? { signal } : {}),
   });
 }
 
-export async function listCustomEntityTypes(
+export async function suggestSearchValues(
+  input: { field: string; q: string; grain?: "profiles" | "documents" | "bills"; limit?: number },
   signal?: AbortSignal,
-): Promise<components["schemas"]["CustomEntityTypePageResponse"]> {
-  return requestJSON(
-    "/api/v1/custom-entity-types?limit=1000&offset=0&sort=label&order=asc",
-    signal ? { signal } : {},
-  );
-}
-
-export async function createCustomEntityType(
-  request: CustomEntityTypeValuesRequest,
-): Promise<CustomEntityType> {
-  return requestJSON("/api/v1/custom-entity-types", jsonRequest("POST", request));
-}
-
-export async function updateCustomEntityType(
-  id: string,
-  request: UpdateCustomEntityTypeRequest,
-): Promise<CustomEntityType> {
-  return requestJSON(
-    `/api/v1/custom-entity-types/${encodeURIComponent(id)}`,
-    jsonRequest("PUT", request),
-  );
-}
-
-export async function deleteCustomEntityType(
-  id: string,
-  version: number,
-  confirmation: string,
-): Promise<void> {
-  await requestNoContent(
-    `/api/v1/custom-entity-types/${encodeURIComponent(id)}`,
-    jsonRequest("DELETE", { version, confirmation }),
-  );
+): Promise<{ suggestions: Array<{ value: string; label: string }> }> {
+  const query = new URLSearchParams({
+    field: input.field,
+    q: input.q,
+    limit: String(input.limit ?? 50),
+  });
+  if (input.grain) query.set("grain", input.grain);
+  return requestJSON(`/api/v1/search/suggest?${query}`, signal ? { signal } : {});
 }
 
 export async function listCustomFields(
@@ -568,31 +734,6 @@ export async function listCustomFields(
   return requestJSON(`/api/v1/custom-fields?${query}`, signal ? { signal } : {});
 }
 
-export async function createCustomField(request: CustomFieldValuesRequest): Promise<CustomField> {
-  return requestJSON("/api/v1/custom-fields", jsonRequest("POST", request));
-}
-
-export async function updateCustomField(
-  id: string,
-  request: UpdateCustomFieldRequest,
-): Promise<CustomField> {
-  return requestJSON(
-    `/api/v1/custom-fields/${encodeURIComponent(id)}`,
-    jsonRequest("PUT", request),
-  );
-}
-
-export async function deleteCustomField(
-  id: string,
-  version: number,
-  confirmation: string,
-): Promise<void> {
-  await requestNoContent(
-    `/api/v1/custom-fields/${encodeURIComponent(id)}`,
-    jsonRequest("DELETE", { version, confirmation }),
-  );
-}
-
 export async function listCustomOptions(
   fieldId: string,
   signal?: AbortSignal,
@@ -600,39 +741,6 @@ export async function listCustomOptions(
   return requestJSON(
     `/api/v1/custom-fields/${encodeURIComponent(fieldId)}/options`,
     signal ? { signal } : {},
-  );
-}
-
-export async function createCustomOption(
-  fieldId: string,
-  request: CustomOptionValuesRequest,
-): Promise<CustomOption> {
-  return requestJSON(
-    `/api/v1/custom-fields/${encodeURIComponent(fieldId)}/options`,
-    jsonRequest("POST", request),
-  );
-}
-
-export async function updateCustomOption(
-  fieldId: string,
-  optionId: string,
-  request: UpdateCustomOptionRequest,
-): Promise<CustomOption> {
-  return requestJSON(
-    `/api/v1/custom-fields/${encodeURIComponent(fieldId)}/options/${encodeURIComponent(optionId)}`,
-    jsonRequest("PUT", request),
-  );
-}
-
-export async function deleteCustomOption(
-  fieldId: string,
-  optionId: string,
-  version: number,
-  confirmation: string,
-): Promise<void> {
-  await requestNoContent(
-    `/api/v1/custom-fields/${encodeURIComponent(fieldId)}/options/${encodeURIComponent(optionId)}`,
-    jsonRequest("DELETE", { version, confirmation }),
   );
 }
 
@@ -656,46 +764,5 @@ export async function replaceCustomValues(
   return requestJSON(
     `/api/v1/custom-values/${targetKind}/${encodeURIComponent(targetId)}`,
     jsonRequest("PUT", { version, values }),
-  );
-}
-
-export async function listCustomEntities(
-  entityTypeId: string,
-  ownerProfileId?: string,
-  signal?: AbortSignal,
-): Promise<components["schemas"]["CustomEntityPageResponse"]> {
-  const query = new URLSearchParams({
-    entity_type_id: entityTypeId,
-    limit: "1000",
-    offset: "0",
-  });
-  if (ownerProfileId) query.set("owner_profile_id", ownerProfileId);
-  return requestJSON(`/api/v1/custom-entities?${query}`, signal ? { signal } : {});
-}
-
-export async function createCustomEntity(
-  request: CreateCustomEntityRequest,
-): Promise<CustomEntity> {
-  return requestJSON("/api/v1/custom-entities", jsonRequest("POST", request));
-}
-
-export async function updateCustomEntity(
-  id: string,
-  request: UpdateCustomEntityRequest,
-): Promise<CustomEntity> {
-  return requestJSON(
-    `/api/v1/custom-entities/${encodeURIComponent(id)}`,
-    jsonRequest("PUT", request),
-  );
-}
-
-export async function deleteCustomEntity(
-  id: string,
-  version: number,
-  confirmation: string,
-): Promise<void> {
-  await requestNoContent(
-    `/api/v1/custom-entities/${encodeURIComponent(id)}`,
-    jsonRequest("DELETE", { version, confirmation }),
   );
 }

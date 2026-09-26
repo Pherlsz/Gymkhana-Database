@@ -34,7 +34,10 @@ func registerCustomDataDefinitionRoutes(mux *http.ServeMux, logger *slog.Logger,
 			writeCustomError(w, r, logger, "list custom entity types", err)
 			return
 		}
-		response := customEntityTypePageResponse{Page: customPageMeta{Total: page.Total, Limit: page.Limit, Offset: page.Offset, SortField: string(page.SortField), SortOrder: string(page.SortOrder)}}
+		response := customEntityTypePageResponse{
+			Types: make([]customEntityTypeResponse, 0, len(page.Types)),
+			Page:  customPageMeta{Total: page.Total, Limit: page.Limit, Offset: page.Offset, SortField: string(page.SortField), SortOrder: string(page.SortOrder)},
+		}
 		for _, value := range page.Types {
 			response.Types = append(response.Types, customEntityTypeFromDomain(value))
 		}

@@ -13,13 +13,14 @@ import (
 
 	chatdomain "github.com/Pherlsz/Gymkhana-Database/internal/aichat"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
+	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 )
 
 const chatStreamPollInterval = 200 * time.Millisecond
 const chatStreamHeartbeatInterval = 10 * time.Second
 
 type chatService interface {
-	Capability() chatdomain.Capability
+	Capability(context.Context) chatdomain.Capability
 	CreateThread(context.Context, auth.Session, string, string) (chatdomain.Thread, error)
 	Threads(context.Context, auth.Session, int, int, string) (chatdomain.ThreadPage, error)
 	Thread(context.Context, auth.Session, chatdomain.Identifier, string) (chatdomain.Thread, error)
@@ -36,6 +37,8 @@ type chatService interface {
 
 type chatResultReader interface {
 	ReadResult(context.Context, auth.Session, chatdomain.Identifier, int, int, string) (chatdomain.ToolOutput, error)
+	ReadPage(context.Context, auth.Session, chatdomain.Identifier, int, int, string) (chatdomain.ResultGrid, error)
+	ExportRecorte(context.Context, auth.Session, chatdomain.Identifier, string) (chatdomain.RecorteWorkbook, error)
 }
 
 type chatRunLauncher interface {
@@ -171,7 +174,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			writeJSON(w, http.StatusOK, chatCapabilityFromDomain(chatdomain.DefaultCapability()))
 			return
 		}
-		writeJSON(w, http.StatusOK, chatCapabilityFromDomain(service.Capability()))
+		writeJSON(w, http.StatusOK, chatCapabilityFromDomain(service.Capability(r.Context())))
 	}))
 
 	mux.HandleFunc("GET /api/v1/chat/threads", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
@@ -433,6 +436,73 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 		writeJSON(w, http.StatusOK, chatReferenceResultResponse{Reference: chatResultReferenceFromDomain(reference), Data: output.Payload,
 			RowCount: output.RowCount, FieldCount: output.FieldCount})
 	}))
+
+	mux.HandleFunc("GET /api/v1/chat/result-references/{reference_id}/recorte", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		if !ok {
+			return
+		}
+		id, ok := chatPathIdentifier(w, r, "reference_id")
+		if !ok {
+			return
+		}
+		requestID := requestIDFromContext(r.Context())
+		reference, err := service.ResultReference(r.Context(), actor, id, requestID)
+		if err != nil {
+			writeChatError(w, r, logger, "read AI Chat result reference", err)
+			return
+		}
+		recorte, err := chatdomain.CompileTableRecorte(reference.Kind, reference.LogicalRequest)
+		if err != nil {
+			writeChatError(w, r, logger, "compile AI Chat recorte", err)
+			return
+		}
+		writeJSON(w, http.StatusOK, recorte)
+	}))
+
+	mux.HandleFunc("GET /api/v1/chat/result-references/{reference_id}/page", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		if !ok {
+			return
+		}
+		id, ok := chatPathIdentifier(w, r, "reference_id")
+		if !ok {
+			return
+		}
+		limit, offset, problem := chatPagination(r, chatdomain.MaximumResultPage, 10_000)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		page, err := results.ReadPage(r.Context(), actor, id, limit, offset, requestIDFromContext(r.Context()))
+		if err != nil {
+			writeChatError(w, r, logger, "read AI Chat result page", err)
+			return
+		}
+		writeJSON(w, http.StatusOK, page)
+	}))
+
+	mux.HandleFunc("GET /api/v1/chat/result-references/{reference_id}/xlsx", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		if !ok {
+			return
+		}
+		id, ok := chatPathIdentifier(w, r, "reference_id")
+		if !ok {
+			return
+		}
+		workbook, err := results.ExportRecorte(r.Context(), actor, id, requestIDFromContext(r.Context()))
+		if err != nil {
+			writeChatError(w, r, logger, "export AI Chat recorte", err)
+			return
+		}
+		data, err := operations.WriteWorkbook(workbook.Sheet, workbook.Headers, workbook.Rows)
+		if err != nil {
+			writeChatError(w, r, logger, "write AI Chat recorte workbook", chatdomain.ErrInvalidInput)
+			return
+		}
+		writeXLSXAttachment(w, workbook.Filename, data)
+	}))
 }
 
 func configuredChatActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service chatService, results chatResultReader, launcher chatRunLauncher) (auth.Session, bool) {
@@ -637,6 +707,17 @@ func chatIdentifierString(value *chatdomain.Identifier) *string {
 	return &encoded
 }
 
+func writeXLSXAttachment(w http.ResponseWriter, filename string, data []byte) {
+	if strings.TrimSpace(filename) == "" {
+		filename = "recorte.xlsx"
+	}
+	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(filename))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
 func writeChatError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, operation string, err error) {
 	code := chatErrorCode(err)
 	switch {
@@ -649,15 +730,15 @@ func writeChatError(w http.ResponseWriter, r *http.Request, logger *slog.Logger,
 	case errors.Is(err, chatdomain.ErrInvalidInput):
 		writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Revise os dados enviados ao Chat"})
 	case errors.Is(err, chatdomain.ErrRateLimited):
-		writeProblem(w, r, Problem{Status: http.StatusTooManyRequests, Code: ErrorCodeRateLimited, Message: "Limite de mensagens atingido. Aguarde antes de tentar novamente"})
+		writeProblem(w, r, Problem{Status: http.StatusTooManyRequests, Code: ErrorCodeRateLimited, Message: "O Gemini recusou por excesso de pedidos. Espere um pouco e tente de novo"})
 	case errors.Is(err, chatdomain.ErrQuotaExceeded):
-		writeProblem(w, r, Problem{Status: http.StatusTooManyRequests, Code: ErrorCodeChatQuota, Message: "O run atingiu um limite seguro de uso, ferramentas ou resultados"})
+		writeProblem(w, r, Problem{Status: http.StatusTooManyRequests, Code: ErrorCodeChatQuota, Message: "A cota do Gemini esgotou. Verifique o plano em Google AI Studio"})
 	case errors.Is(err, chatdomain.ErrStaleContext):
 		writeProblem(w, r, Problem{Status: http.StatusGone, Code: ErrorCodeChatStaleContext, Message: "O contexto de resultado expirou ou não corresponde mais à conversa"})
 	case errors.Is(err, chatdomain.ErrCancelled):
 		writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeChatCancelled, Message: "O run foi cancelado"})
 	case errors.Is(err, chatdomain.ErrTimeout):
-		writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeChatTimeout, Message: "O run excedeu o tempo seguro"})
+		writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeChatTimeout, Message: "O Gemini não concluiu a resposta a tempo"})
 	case errors.Is(err, chatdomain.ErrUnavailable):
 		writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeChatUnavailable, Message: "O provedor do Chat está indisponível"})
 	case errors.Is(err, chatdomain.ErrMalformedProvider), errors.Is(err, chatdomain.ErrToolFailed), errors.Is(err, chatdomain.ErrUnsafeResult):

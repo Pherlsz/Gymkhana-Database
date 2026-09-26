@@ -14,9 +14,12 @@ import (
 type searchService interface {
 	Catalog(context.Context, auth.Session) (searchdomain.Catalog, error)
 	Search(context.Context, auth.Session, searchdomain.Query) (searchdomain.Page, error)
+	MatchIDs(context.Context, auth.Session, searchdomain.Query, searchdomain.Module) ([]string, error)
+	Suggest(context.Context, auth.Session, searchdomain.SuggestQuery) ([]searchdomain.SuggestHit, error)
 }
 
 type searchRequest struct {
+	Q       string                 `json:"q,omitempty"`
 	Terms   []string               `json:"terms"`
 	Modules []searchdomain.Module  `json:"modules,omitempty"`
 	Fields  []string               `json:"fields,omitempty"`
@@ -34,6 +37,7 @@ type searchCatalogModuleResponse struct {
 type searchCatalogFieldResponse struct {
 	Key    string              `json:"key"`
 	Module searchdomain.Module `json:"module"`
+	Group  searchdomain.Module `json:"group"`
 	Label  string              `json:"label"`
 	Kind   string              `json:"kind"`
 }
@@ -48,9 +52,26 @@ type searchCatalogLimitsResponse struct {
 }
 
 type searchCatalogResponse struct {
-	Modules []searchCatalogModuleResponse `json:"modules"`
-	Fields  []searchCatalogFieldResponse  `json:"fields"`
-	Limits  searchCatalogLimitsResponse   `json:"limits"`
+	Modules   []searchCatalogModuleResponse `json:"modules"`
+	Fields    []searchCatalogFieldResponse  `json:"fields"`
+	Operators []searchOperatorResponse      `json:"operators"`
+	Limits    searchCatalogLimitsResponse   `json:"limits"`
+}
+
+type searchOperatorResponse struct {
+	Token       string `json:"token"`
+	Insert      string `json:"insert"`
+	Kind        string `json:"kind"`
+	Description string `json:"description"`
+}
+
+type searchSuggestResponse struct {
+	Suggestions []searchSuggestHitResponse `json:"suggestions"`
+}
+
+type searchSuggestHitResponse struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
 }
 
 type searchResultResponse struct {
@@ -116,7 +137,7 @@ func registerSearchRoutes(mux *http.ServeMux, logger *slog.Logger, authenticatio
 			return
 		}
 		page, err := service.Search(r.Context(), actor, searchdomain.Query{
-			Terms: request.Terms, Modules: request.Modules, Fields: request.Fields,
+			Q: request.Q, Terms: request.Terms, Modules: request.Modules, Fields: request.Fields,
 			Limit: request.Limit, Offset: request.Offset, Sort: request.Sort, Order: request.Order,
 		})
 		if err != nil {
@@ -125,12 +146,45 @@ func registerSearchRoutes(mux *http.ServeMux, logger *slog.Logger, authenticatio
 		}
 		writeJSON(w, http.StatusOK, searchPageFromDomain(page))
 	}))
+
+	mux.HandleFunc("GET /api/v1/search/suggest", requireCapability(auth.CapSearch, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
+		actor, problem := authenticatedSession(r, authentication)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		if service == nil {
+			writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "O módulo de busca não está configurado"})
+			return
+		}
+		limit, parseProblem := parseBoundedInt32(r.URL.Query().Get("limit"), 50, 1, 50)
+		if parseProblem != nil {
+			writeProblem(w, r, *parseProblem)
+			return
+		}
+		hits, err := service.Suggest(r.Context(), actor, searchdomain.SuggestQuery{
+			Field: r.URL.Query().Get("field"),
+			Q:     r.URL.Query().Get("q"),
+			Limit: limit,
+			Grain: searchdomain.Module(r.URL.Query().Get("grain")),
+		})
+		if err != nil {
+			writeSearchError(w, r, logger, "suggest Search values", err)
+			return
+		}
+		response := searchSuggestResponse{Suggestions: make([]searchSuggestHitResponse, 0, len(hits))}
+		for _, hit := range hits {
+			response.Suggestions = append(response.Suggestions, searchSuggestHitResponse{Value: hit.Value, Label: hit.Label})
+		}
+		writeJSON(w, http.StatusOK, response)
+	}))
 }
 
 func searchCatalogFromDomain(catalog searchdomain.Catalog) searchCatalogResponse {
 	response := searchCatalogResponse{
-		Modules: make([]searchCatalogModuleResponse, 0, len(catalog.Modules)),
-		Fields:  make([]searchCatalogFieldResponse, 0, len(catalog.Fields)),
+		Modules:   make([]searchCatalogModuleResponse, 0, len(catalog.Modules)),
+		Fields:    make([]searchCatalogFieldResponse, 0, len(catalog.Fields)),
+		Operators: make([]searchOperatorResponse, 0, len(catalog.Operators)),
 		Limits: searchCatalogLimitsResponse{
 			MaximumTerms: catalog.Limits.MaximumTerms, MaximumTermLength: catalog.Limits.MaximumTermLength,
 			MaximumFields: catalog.Limits.MaximumFields, MaximumPageSize: catalog.Limits.MaximumPageSize,
@@ -141,7 +195,18 @@ func searchCatalogFromDomain(catalog searchdomain.Catalog) searchCatalogResponse
 		response.Modules = append(response.Modules, searchCatalogModuleResponse{Key: module.Key, Label: module.Label})
 	}
 	for _, field := range catalog.Fields {
-		response.Fields = append(response.Fields, searchCatalogFieldResponse{Key: field.Key, Module: field.Module, Label: field.Label, Kind: field.Kind})
+		group := field.Group
+		if group == "" {
+			group = field.Module
+		}
+		response.Fields = append(response.Fields, searchCatalogFieldResponse{
+			Key: field.Key, Module: field.Module, Group: group, Label: field.Label, Kind: field.Kind,
+		})
+	}
+	for _, operator := range catalog.Operators {
+		response.Operators = append(response.Operators, searchOperatorResponse{
+			Token: operator.Token, Insert: operator.Insert, Kind: string(operator.Kind), Description: operator.Description,
+		})
 	}
 	return response
 }
@@ -168,7 +233,11 @@ func writeSearchError(w http.ResponseWriter, r *http.Request, logger *slog.Logge
 	case errors.As(err, &validation):
 		fields := make([]FieldProblem, 0, len(validation.Fields))
 		for _, field := range validation.Fields {
-			fields = append(fields, FieldProblem{Field: field.Field, Code: field.Code, Message: searchFieldMessage(field.Code)})
+			message := searchFieldMessage(field.Code)
+			if field.Detail != "" {
+				message = message + ": " + field.Detail
+			}
+			fields = append(fields, FieldProblem{Field: field.Field, Code: field.Code, Message: message})
 		}
 		writeProblem(w, r, Problem{Status: http.StatusUnprocessableEntity, Code: ErrorCodeValidation, Message: "Revise os parâmetros da busca", FieldErrors: fields})
 	case errors.Is(err, searchdomain.ErrForbidden):
@@ -193,6 +262,16 @@ func searchFieldMessage(code string) string {
 	switch code {
 	case "required":
 		return "Informe ao menos um termo"
+	case "unknown_field":
+		return "Campo desconhecido. Use o menu / para ver os operadores em português"
+	case "physical_name":
+		return "Use o nome lógico do campo, não o nome da tabela"
+	case "unknown_module":
+		return "Módulo desconhecido. Use em:pessoas, em:documentos, em:contas ou em:anexos"
+	case "unclosed_quote":
+		return "Aspas sem fechamento"
+	case "invalid_syntax":
+		return "A consulta não pôde ser lida"
 	case "empty":
 		return "Termos vazios não são permitidos"
 	case "too_many":

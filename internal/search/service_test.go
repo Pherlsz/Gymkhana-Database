@@ -14,6 +14,8 @@ type fakeStore struct {
 	results      []Result
 	total        int64
 	plan         Plan
+	ids          []string
+	suggestions  []SuggestHit
 	reservations int
 	reserveErr   error
 	executeErr   error
@@ -38,6 +40,22 @@ func (store *fakeStore) Execute(ctx context.Context, plan Plan) ([]Result, int64
 	return store.results, store.total, store.executeErr
 }
 
+func (store *fakeStore) MatchIDs(ctx context.Context, plan Plan, _ Module) ([]string, error) {
+	store.plan = plan
+	if store.waitForDone {
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+	if store.executeErr != nil {
+		return nil, store.executeErr
+	}
+	return store.ids, nil
+}
+
+func (store *fakeStore) Suggest(context.Context, SuggestQuery) ([]SuggestHit, error) {
+	return store.suggestions, store.executeErr
+}
+
 func searchActor(t *testing.T, active bool) auth.Session {
 	t.Helper()
 	id, err := auth.NewIdentifier()
@@ -49,7 +67,7 @@ func searchActor(t *testing.T, active bool) auth.Session {
 
 func TestCatalogIsLogicalPermissionFilteredAndDynamic(t *testing.T) {
 	store := &fakeStore{fields: []FieldDefinition{
-		{Key: "custom.11111111-1111-1111-1111-111111111111", Module: ModuleCustomData, Label: "Equipe · Pessoa", Kind: "text"},
+		{Key: "custom.11111111-1111-1111-1111-111111111111", Module: ModuleCustomData, Group: ModuleProfiles, Label: "Equipe · Pessoa", Kind: "text"},
 		{Key: "custom.not-a-uuid", Module: ModuleCustomData, Label: "Invalid", Kind: "text"},
 		{Key: "physical.secret", Module: Module("physical_table"), Label: "Hidden", Kind: "text"},
 	}}
@@ -66,6 +84,9 @@ func TestCatalogIsLogicalPermissionFilteredAndDynamic(t *testing.T) {
 	}
 	foundDynamic := false
 	for _, field := range catalog.Fields {
+		if field.Key == "profile.cpf" {
+			t.Fatal("catalog must not expose profile.cpf")
+		}
 		if field.Key == "physical.secret" || field.Key == "custom.not-a-uuid" {
 			t.Fatal("catalog exposed a non-allowlisted logical field")
 		}
@@ -102,10 +123,10 @@ func TestSearchBuildsBoundedLiteralDeterministicPlan(t *testing.T) {
 	if page.Total != 1 || page.Limit != 50 || page.Sort != SortRelevance || page.Order != SortDescending {
 		t.Fatalf("page = %#v", page)
 	}
-	if store.reservations != 1 || len(store.plan.Terms) != 2 || store.plan.Terms[0] != "001" {
+	if store.reservations != 1 || len(store.plan.Terms) != 2 || store.plan.Terms[0] != "001" || len(store.plan.Includes) < 2 {
 		t.Fatalf("plan = %#v, reservations = %d", store.plan, store.reservations)
 	}
-	if got, want := store.plan.LiteralPatterns[1], `%50\%\_\\%`; got != want {
+	if got, want := store.plan.Includes[1].Pattern, `%50\%\_\\%`; got != want {
 		t.Fatalf("literal pattern = %q, want %q", got, want)
 	}
 	if store.plan.StatementTimeout != 2*time.Second {
@@ -129,8 +150,45 @@ func TestSearchRejectsUnknownLogicalIdentifiersBeforeReservation(t *testing.T) {
 	}
 }
 
-func TestSearchRequiresAnExplicitBoundedFieldSelectionForLargeCatalogs(t *testing.T) {
+func TestSearchWithoutExplicitSelectionSearchesEveryAuthorizedField(t *testing.T) {
+	store := &fakeStore{fields: oversizedFieldSet(t)}
+	service, _ := NewService(store, ServiceOptions{})
+	_, err := service.Search(context.Background(), searchActor(t, true), Query{Terms: []string{"value"}})
+	if err != nil || store.reservations != 1 {
+		t.Fatalf("Search() error = %v, reservations = %d", err, store.reservations)
+	}
+}
+
+func TestSearchRejectsExplicitFieldSelectionsBeyondTheLimit(t *testing.T) {
+	fields := oversizedFieldSet(t)
+	keys := make([]string, 0, len(fields)+len(staticFields))
+	for _, field := range fields {
+		keys = append(keys, field.Key)
+	}
+	for _, field := range staticFields {
+		keys = append(keys, field.Key)
+	}
+	if len(keys) <= MaxFields {
+		t.Fatalf("setup produced %d fields, need more than %d", len(keys), MaxFields)
+	}
+	store := &fakeStore{fields: fields}
+	service, _ := NewService(store, ServiceOptions{})
+	_, err := service.Search(context.Background(), searchActor(t, true), Query{
+		Terms:  []string{"value"},
+		Fields: keys,
+	})
+	var validation *ValidationError
+	if !errors.As(err, &validation) || store.reservations != 0 {
+		t.Fatalf("Search() error = %v, reservations = %d", err, store.reservations)
+	}
+}
+
+func oversizedFieldSet(t *testing.T) []FieldDefinition {
+	t.Helper()
 	dynamicCount := MaxFields - len(staticFields) + 1
+	if dynamicCount < 1 {
+		dynamicCount = 1
+	}
 	fields := make([]FieldDefinition, 0, dynamicCount)
 	for range dynamicCount {
 		identifier, err := auth.NewIdentifier()
@@ -138,16 +196,10 @@ func TestSearchRequiresAnExplicitBoundedFieldSelectionForLargeCatalogs(t *testin
 			t.Fatalf("auth.NewIdentifier() error = %v", err)
 		}
 		fields = append(fields, FieldDefinition{
-			Key: "custom." + identifier.String(), Module: ModuleCustomData, Label: "Campo", Kind: "text",
+			Key: "custom." + identifier.String(), Module: ModuleCustomData, Group: ModuleCustomData, Label: "Campo", Kind: "text",
 		})
 	}
-	store := &fakeStore{fields: fields}
-	service, _ := NewService(store, ServiceOptions{})
-	_, err := service.Search(context.Background(), searchActor(t, true), Query{Terms: []string{"value"}})
-	var validation *ValidationError
-	if !errors.As(err, &validation) || store.reservations != 0 {
-		t.Fatalf("Search() error = %v, reservations = %d", err, store.reservations)
-	}
+	return fields
 }
 
 func TestSearchRejectsStoreResultsOutsideAuthorizedCatalog(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -19,6 +20,8 @@ const (
 	maximumProviderDelta   = 1000
 	maximumProviderUsage   = 100_000_000
 	finalizationTimeout    = 5 * time.Second
+	cancelCheckInterval    = 20 // poll run state every N streaming deltas
+	minimumContextMessages = 3  // always include this many most-recent messages
 )
 
 type TurnRunner interface {
@@ -71,7 +74,11 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 	if err != nil {
 		return err
 	}
-	request := ModelRequest{Policy: ReadOnlySystemPolicy, Messages: messages, Tools: orchestrator.tools.Schemas()}
+	policy := ReadOnlySystemPolicy
+	if note, err := orchestrator.tools.CompactCatalogNote(runContext, actor, requestID); err == nil && note != "" {
+		policy += "\n" + note
+	}
+	request := ModelRequest{Policy: policy, Messages: messages, Tools: orchestrator.tools.Schemas()}
 	if thread.ActiveResultReferenceID != nil {
 		request.ActiveResultReferenceID = thread.ActiveResultReferenceID.String()
 	}
@@ -79,7 +86,12 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 	var roundAssistant strings.Builder
 	assistantRunes := 0
 	var inputUsage, outputUsage int64
-	for round := 0; round <= MaximumToolCalls; round++ {
+	capability := orchestrator.service.Capability(runContext)
+	maximumCalls := capability.MaximumToolCalls
+	if maximumCalls <= 0 {
+		maximumCalls = MaximumToolCalls
+	}
+	for round := 0; round <= maximumCalls; round++ {
 		current, err := orchestrator.service.Run(runContext, actor, runID)
 		if err != nil {
 			return err
@@ -87,17 +99,21 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 		if current.CancelRequestedAt != nil || current.State == RunCancelled {
 			return ErrCancelled
 		}
+		var deltaCount int
 		response, err := orchestrator.provider.Generate(runContext, request, func(delta string) error {
 			deltaRunes := utf8.RuneCountInString(delta)
 			if !validProviderDelta(delta) || assistantRunes+deltaRunes > MaximumMessageRunes {
 				return ErrMalformedProvider
 			}
-			current, err := orchestrator.service.Run(runContext, actor, runID)
-			if err != nil {
-				return err
-			}
-			if current.CancelRequestedAt != nil || current.State == RunCancelled {
-				return ErrCancelled
+			deltaCount++
+			if deltaCount%cancelCheckInterval == 0 {
+				current, err := orchestrator.service.Run(runContext, actor, runID)
+				if err != nil {
+					return err
+				}
+				if current.CancelRequestedAt != nil || current.State == RunCancelled {
+					return ErrCancelled
+				}
 			}
 			if _, err := orchestrator.service.appendText(runContext, actor, runID, delta); err != nil {
 				return err
@@ -133,7 +149,7 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 			_, _, err := orchestrator.service.completeRun(runContext, actor, runID, content, inputUsage, outputUsage, requestID)
 			return err
 		}
-		if round == MaximumToolCalls {
+		if round == maximumCalls {
 			return ErrQuotaExceeded
 		}
 		call := *response.ToolCall
@@ -152,6 +168,7 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 			return err
 		}
 		failStep := func(stepErr error) {
+			slog.Warn("AI Chat tool step failed", "run_id", runID.String(), "step", step.Sequence, "tool_name", call.Name, "error", stepErr)
 			finalCtx, finalCancel := detachedFinalizationContext(runContext)
 			defer finalCancel()
 			_, _ = orchestrator.service.failTool(finalCtx, actor, step.ID, runID, publicErrorCode(stepErr), requestID)
@@ -161,20 +178,34 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 			failStep(err)
 			return err
 		}
+		thread = currentThread
 		output, err := orchestrator.tools.Execute(runContext, actor, currentThread.ActiveResultReferenceID, runID, step.Sequence, call, currentThread.RetentionExpiresAt, requestID)
 		if err != nil {
+			if payload, ok := correctableToolPayload(err); ok {
+				if _, stepErr := orchestrator.service.failTool(runContext, actor, step.ID, runID, "invalid_input", requestID); stepErr != nil {
+					return stepErr
+				}
+				request.ToolResults = append(request.ToolResults, ModelToolResult{
+					CallID: call.ID, ToolName: call.Name, Arguments: append([]byte(nil), call.Arguments...), Data: payload, Untrusted: true,
+				})
+				if roundAssistant.Len() > 0 {
+					request.Messages = append(request.Messages, ModelMessage{Role: MessageAssistant, Content: roundAssistant.String(), Untrusted: true})
+					roundAssistant.Reset()
+				}
+				continue
+			}
 			if errors.Is(err, ErrInvalidInput) {
 				err = ErrMalformedProvider
 			}
 			failStep(err)
 			return err
 		}
-		_, reference, err := orchestrator.service.completeTool(runContext, actor, step, output, requestID)
+		_, reference, err := orchestrator.service.completeTool(runContext, actor, step, thread.ID, output, requestID)
 		if err != nil {
 			failStep(err)
 			return err
 		}
-		toolResult := ModelToolResult{CallID: call.ID, ToolName: call.Name, Data: append([]byte(nil), output.Payload...), Untrusted: true}
+		toolResult := ModelToolResult{CallID: call.ID, ToolName: call.Name, Arguments: append([]byte(nil), call.Arguments...), Data: append([]byte(nil), output.Payload...), Untrusted: true}
 		if reference != nil {
 			toolResult.ReferenceID = reference.ID.String()
 			request.ActiveResultReferenceID = reference.ID.String()
@@ -206,11 +237,15 @@ func (orchestrator *Orchestrator) contextMessages(ctx context.Context, actor aut
 	selected := make([]Message, 0, maximumContextMessages)
 	runes := 0
 	for index := len(page.Messages) - 1; index >= 0 && len(selected) < maximumContextMessages; index-- {
-		count := utf8.RuneCountInString(page.Messages[index].Content)
-		if runes+count > maximumContextRunes && len(selected) > 0 {
+		msg := page.Messages[index]
+		count := utf8.RuneCountInString(msg.Content)
+		// Always include the most recent minimumContextMessages messages, even if
+		// they are long. Only apply the rune budget to older messages.
+		recent := index >= len(page.Messages)-minimumContextMessages
+		if !recent && runes+count > maximumContextRunes && len(selected) > 0 {
 			break
 		}
-		selected = append(selected, page.Messages[index])
+		selected = append(selected, msg)
 		runes += count
 	}
 	result := make([]ModelMessage, len(selected))
@@ -266,7 +301,7 @@ func (service *Service) beginTool(ctx context.Context, actor auth.Session, runID
 	return service.store.BeginTool(ctx, BeginToolInput{ID: id, RunID: runID, OwnerUserID: user.ID, Kind: kind, ArgumentsFingerprint: fingerprint, Now: service.now().UTC()})
 }
 
-func (service *Service) completeTool(ctx context.Context, actor auth.Session, step ToolStep, output ToolOutput, requestID string) (ToolStep, *ResultReference, error) {
+func (service *Service) completeTool(ctx context.Context, actor auth.Session, step ToolStep, threadID Identifier, output ToolOutput, requestID string) (ToolStep, *ResultReference, error) {
 	user, err := service.authorize(ctx, actor)
 	if err != nil {
 		return ToolStep{}, nil, err
@@ -279,10 +314,6 @@ func (service *Service) completeTool(ctx context.Context, actor auth.Session, st
 	if output.Reference != nil && !validResultReferenceDraft(*output.Reference, output, service.now().UTC()) {
 		return ToolStep{}, nil, ErrUnsafeResult
 	}
-	run, err := service.store.GetRun(ctx, step.RunID, user.ID)
-	if err != nil {
-		return ToolStep{}, nil, err
-	}
 	input := CompleteToolInput{StepID: step.ID, RunID: step.RunID, OwnerUserID: user.ID,
 		RowCount: output.RowCount, ResultBytes: output.ByteCount, Now: service.now().UTC()}
 	if output.Reference != nil {
@@ -291,7 +322,7 @@ func (service *Service) completeTool(ctx context.Context, actor auth.Session, st
 			return ToolStep{}, nil, fmt.Errorf("generate AI Chat result reference identifier: %w", err)
 		}
 		draft := output.Reference
-		input.ResultReference = &CreateResultReferenceInput{ID: id, ThreadID: run.ThreadID, RunID: run.ID, OwnerUserID: user.ID,
+		input.ResultReference = &CreateResultReferenceInput{ID: id, ThreadID: threadID, RunID: step.RunID, OwnerUserID: user.ID,
 			Kind: draft.Kind, QueryExecutionID: draft.QueryExecutionID, LogicalRequest: draft.LogicalRequest,
 			ContextFingerprint: draft.ContextFingerprint, Label: draft.Label, RowCount: draft.RowCount,
 			ColumnCount: draft.ColumnCount, ExpiresAt: draft.ExpiresAt, Now: input.Now}
@@ -310,6 +341,9 @@ func validResultReferenceDraft(reference ResultReferenceDraft, output ToolOutput
 		len(reference.LogicalRequest) > 32*1024 || !json.Valid(reference.LogicalRequest) ||
 		reference.ContextFingerprint == ([sha256.Size]byte{}) || !reference.ExpiresAt.After(now) {
 		return false
+	}
+	if reference.Kind == ResultReferenceQuery && reference.QueryExecutionID == nil {
+		return referencePlanNeedsShape(reference.LogicalRequest)
 	}
 	return (reference.Kind == ResultReferenceQuery) == (reference.QueryExecutionID != nil)
 }
@@ -392,18 +426,8 @@ func toolArgumentsFingerprint(raw json.RawMessage) ([sha256.Size]byte, error) {
 }
 
 func toolKindFromName(value string) (ToolKind, bool) {
-	switch value {
-	case "catalog":
-		return ToolCatalog, true
-	case "search":
-		return ToolSearch, true
-	case "query":
-		return ToolQuery, true
-	case "result":
-		return ToolResult, true
-	default:
-		return "", false
-	}
+	kind, ok := toolNameToKind[value]
+	return kind, ok
 }
 
 func validProviderDelta(value string) bool {
@@ -420,6 +444,10 @@ func normalizeProviderError(ctx context.Context, err error) error {
 		return ErrCancelled
 	case errors.Is(err, context.DeadlineExceeded), errors.Is(ctx.Err(), context.DeadlineExceeded), errors.Is(err, ErrProviderTimeout):
 		return ErrTimeout
+	case errors.Is(err, ErrRateLimited):
+		return ErrRateLimited
+	case errors.Is(err, ErrQuotaExceeded):
+		return ErrQuotaExceeded
 	case errors.Is(err, ErrMalformedProvider), errors.Is(err, ErrInvalidInput):
 		return ErrMalformedProvider
 	case errors.Is(err, ErrProviderUnavailable):

@@ -2,7 +2,6 @@ package ocr
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"fmt"
 	"image"
 	_ "image/jpeg"
@@ -11,12 +10,19 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/Pherlsz/Gymkhana-Core/civiltime"
+	"github.com/Pherlsz/Gymkhana-Core/fingerprint"
 	"github.com/Pherlsz/Gymkhana-Core/normalize"
 )
+
+type providerCandidate struct {
+	FieldKey string
+	Value    string
+	Evidence Evidence
+}
 
 var (
 	pdfPagePattern = regexp.MustCompile(`/Type[[:space:]]*/Page([^sA-Za-z]|$)`)
@@ -50,7 +56,7 @@ func ValidateSource(reader io.Reader, mime string, expectedSize int64, expectedS
 	if err != nil {
 		return ValidatedSource{}, fmt.Errorf("read OCR source: %w", err)
 	}
-	if int64(len(content)) != expectedSize || int64(len(content)) > maximumBytes || sha256.Sum256(content) != expectedSHA256 {
+	if int64(len(content)) != expectedSize || int64(len(content)) > maximumBytes || [32]byte(fingerprint.Sum(content)) != expectedSHA256 {
 		return ValidatedSource{}, ErrUnsafeSource
 	}
 	if mime == "application/pdf" {
@@ -98,8 +104,8 @@ func validatePDF(content []byte) (ValidatedSource, error) {
 	return ValidatedSource{Bytes: content, PageCount: pageCount}, nil
 }
 
-func normalizeProviderSuggestions(response ExtractionResponse, catalog Catalog, pageCount int) ([]CompleteSuggestionInput, error) {
-	if response.Usage < 0 || response.Usage > MaximumProviderUsage || len(response.Suggestions) > MaximumSuggestions || pageCount < 1 || pageCount > MaximumPages {
+func normalizeProviderSuggestions(candidates []providerCandidate, catalog Catalog, pageCount int) ([]CompleteSuggestionInput, error) {
+	if len(candidates) > MaximumSuggestions || pageCount < 1 || pageCount > MaximumPages {
 		return nil, ErrMalformedProvider
 	}
 	fields := make(map[string]FieldSchema, len(catalog.Fields))
@@ -109,9 +115,9 @@ func normalizeProviderSuggestions(response ExtractionResponse, catalog Catalog, 
 		}
 		fields[field.Key] = field
 	}
-	result := make([]CompleteSuggestionInput, 0, len(response.Suggestions))
-	seen := make(map[string]struct{}, len(response.Suggestions))
-	for index, raw := range response.Suggestions {
+	result := make([]CompleteSuggestionInput, 0, len(candidates))
+	seen := make(map[string]struct{}, len(candidates))
+	for index, raw := range candidates {
 		field, exists := fields[raw.FieldKey]
 		if !exists {
 			return nil, ErrMalformedProvider
@@ -150,7 +156,7 @@ func normalizeEvidence(value Evidence, pageCount int) (Evidence, error) {
 	if utf8.RuneCountInString(value.Excerpt) > MaximumEvidenceRunes || containsUnsafeControl(value.Excerpt, true) {
 		return Evidence{}, ErrInvalidInput
 	}
-	if value.Confidence != nil && (*value.Confidence < 0 || *value.Confidence > 1000) {
+	if value.Confidence != nil && (*value.Confidence < 0 || *value.Confidence > MaximumConfidence) {
 		return Evidence{}, ErrInvalidInput
 	}
 	return value, nil
@@ -187,17 +193,17 @@ func normalizeValue(kind ValueKind, value string, allowEmpty bool) (string, erro
 		}
 		return value, nil
 	case ValueCivilDate:
-		parsed, err := time.Parse("2006-01-02", value)
+		parsed, err := civiltime.ParseCivilDate(value)
 		if err != nil {
 			return "", ErrInvalidInput
 		}
-		return parsed.Format("2006-01-02"), nil
+		return parsed.String(), nil
 	case ValueCivilMonth:
-		parsed, err := time.Parse("2006-01", value)
+		parsed, err := civiltime.ParseYearMonth(value)
 		if err != nil {
 			return "", ErrInvalidInput
 		}
-		return parsed.Format("2006-01"), nil
+		return parsed.String(), nil
 	case ValueEmail:
 		normalized, err := normalize.CanonicalEmail(value)
 		if err != nil {

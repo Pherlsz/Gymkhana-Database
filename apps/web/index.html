@@ -1,12 +1,42 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme-boot>
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover is what makes env(safe-area-inset-*) resolve to
+         anything but zero on a notched iOS device; the stylesheets already
+         depend on those insets. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Oswald:wght@600;700&display=swap"
+    />
     <title>Gymkhana Database</title>
+
+    <!--
+      Installable only: a manifest, icons and the platform metas, with no service
+      worker and no cache. Orchestration §2 and §26 rule out offline-first and
+      nothing here stores a response. In practice iOS "Adicionar à Tela de
+      Início" works fully, while Android and Edge offer installation from the
+      browser menu; the automatic install prompt still requires a fetch handler
+      and so will not appear.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Matches --gray-1 in shell.css per scheme, so the browser chrome
+         continues the page instead of framing it. -->
+    <meta name="theme-color" content="#fdfdfc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d0c0a" media="(prefers-color-scheme: dark)" />
+    <meta name="application-name" content="Gymkhana Database" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Gymkhana" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
     <script>
       (function () {
         try {

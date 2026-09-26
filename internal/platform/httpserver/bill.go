@@ -9,6 +9,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/bill"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
+	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
 )
 
 type billService interface {
@@ -28,22 +29,21 @@ type billService interface {
 }
 
 type billTypeValuesRequest struct {
-	TechnicalKey       string `json:"technical_key"`
-	Label              string `json:"label"`
-	Active             bool   `json:"active"`
-	SupportsCurrentUse bool   `json:"supports_current_use"`
+	TechnicalKey string `json:"technical_key"`
+	Label        string `json:"label"`
+	Active       bool   `json:"active"`
 }
 
 type updateBillTypeRequest struct {
-	TechnicalKey       string `json:"technical_key"`
-	Label              string `json:"label"`
-	Active             bool   `json:"active"`
-	SupportsCurrentUse bool   `json:"supports_current_use"`
-	Version            int64  `json:"version"`
+	TechnicalKey string `json:"technical_key"`
+	Label        string `json:"label"`
+	Active       bool   `json:"active"`
+	Version      int64  `json:"version"`
 }
 
 type billValuesRequest struct {
 	OwnerProfileID    string           `json:"owner_profile_id"`
+	OwnerName         string           `json:"owner_name"`
 	BillTypeID        string           `json:"bill_type_id"`
 	PrintedHolderName string           `json:"printed_holder_name"`
 	PrintedAddress    string           `json:"printed_address"`
@@ -52,7 +52,8 @@ type billValuesRequest struct {
 	Amount            string           `json:"amount"`
 	Currency          string           `json:"currency"`
 	Notes             string           `json:"notes"`
-	RecordState       bill.RecordState `json:"record_state"`
+	Medium            bill.Medium      `json:"medium"`
+	IdleCustody       bill.IdleCustody `json:"idle_custody"`
 }
 
 type updateBillRequest struct {
@@ -65,7 +66,8 @@ type updateBillRequest struct {
 	Amount            string           `json:"amount"`
 	Currency          string           `json:"currency"`
 	Notes             string           `json:"notes"`
-	RecordState       bill.RecordState `json:"record_state"`
+	Medium            bill.Medium      `json:"medium"`
+	IdleCustody       bill.IdleCustody `json:"idle_custody"`
 	Version           int64            `json:"version"`
 }
 
@@ -78,22 +80,24 @@ type assignBillCurrentUseRequest struct {
 }
 
 type billTypeResponse struct {
-	ID                 string    `json:"id"`
-	TechnicalKey       string    `json:"technical_key"`
-	Label              string    `json:"label"`
-	Active             bool      `json:"active"`
-	SupportsCurrentUse bool      `json:"supports_current_use"`
-	Version            int64     `json:"version"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	ID           string    `json:"id"`
+	TechnicalKey string    `json:"technical_key"`
+	Label        string    `json:"label"`
+	Active       bool      `json:"active"`
+	Count        int64     `json:"count"`
+	Version      int64     `json:"version"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 type billCurrentUseResponse struct {
 	HolderProfileID string    `json:"holder_profile_id"`
+	HolderFullName  string    `json:"holder_full_name,omitempty"`
 	AssignedAt      time.Time `json:"assigned_at"`
 }
 type billResponse struct {
 	ID                string                  `json:"id"`
 	OwnerProfileID    string                  `json:"owner_profile_id"`
+	OwnerFullName     string                  `json:"owner_full_name"`
 	BillTypeID        string                  `json:"bill_type_id"`
 	PrintedHolderName string                  `json:"printed_holder_name"`
 	PrintedAddress    string                  `json:"printed_address"`
@@ -102,10 +106,12 @@ type billResponse struct {
 	Amount            string                  `json:"amount"`
 	Currency          string                  `json:"currency"`
 	Notes             string                  `json:"notes"`
-	RecordState       bill.RecordState        `json:"record_state"`
-	Status            bill.Status             `json:"status"`
+	Medium            bill.Medium             `json:"medium"`
+	IdleCustody       bill.IdleCustody        `json:"idle_custody,omitempty"`
+	Status            bill.Status             `json:"status,omitempty"`
 	Type              billTypeResponse        `json:"type"`
 	CurrentUse        *billCurrentUseResponse `json:"current_use"`
+	CustomValues      map[string]string       `json:"custom_values"`
 	Version           int64                   `json:"version"`
 	CreatedAt         time.Time               `json:"created_at"`
 	UpdatedAt         time.Time               `json:"updated_at"`
@@ -126,7 +132,7 @@ type billPageResponse struct {
 	Page  billPageMeta   `json:"page"`
 }
 
-func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service billService) {
+func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service billService, search searchService, pool listEnrichmentQuerier) {
 	mux.HandleFunc("GET /api/v1/bill-types", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := billActor(w, r, authentication, service)
 		if !ok {
@@ -250,6 +256,13 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			writeProblem(w, r, *problem)
 			return
 		}
+		restrict, ids, searchProblem := applySearchQ(r, actor, search, searchdomain.ModuleBills)
+		if searchProblem != nil {
+			writeProblem(w, r, *searchProblem)
+			return
+		}
+		options.Filters.RestrictIDs = restrict
+		options.Filters.IDFilter = billIDsFromSearch(ids)
 		page, err := service.List(r.Context(), actor, options)
 		if err != nil {
 			writeBillError(w, r, logger, "list bills", err)
@@ -259,6 +272,7 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 		for _, value := range page.Bills {
 			response.Bills = append(response.Bills, billFromDomain(value))
 		}
+		enrichBillList(r.Context(), pool, logger, response.Bills)
 		writeJSON(w, http.StatusOK, response)
 	}))
 

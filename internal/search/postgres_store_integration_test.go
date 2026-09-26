@@ -56,19 +56,24 @@ VALUES($1,$2,$3,$4)`, profileID.String(), "Ana Percentual", "Recife", "00123456"
 VALUES($1,$2,$3,true,'NONE',false)`, documentTypeID.String(), key+"_doc", "RG de teste"); err != nil {
 		t.Fatalf("insert document type: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO documents
-(id, owner_profile_id, document_type_id, identifier_value, uniqueness_policy)
-VALUES($1,$2,$3,$4,'NONE')`, documentID.String(), profileID.String(), documentTypeID.String(), `00%_ABC`); err != nil {
+	if _, err := pool.Exec(ctx, `WITH presence AS (
+  INSERT INTO document_presences (id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value)
+  SELECT gen_random_uuid(), $2, document_type.id, document_type.uniqueness_policy, 'informed_number', $4
+  FROM document_types AS document_type WHERE document_type.id = $3
+  RETURNING id
+)
+INSERT INTO documents (id, presence_id, medium, idle_custody)
+SELECT $1, presence.id, 'PHYSICAL', 'ORGANIZATION' FROM presence`, documentID.String(), profileID.String(), documentTypeID.String(), `00%_ABC`); err != nil {
 		t.Fatalf("insert document: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO bill_types
-(id, technical_key, label, active, supports_current_use)
-VALUES($1,$2,$3,true,false)`, billTypeID.String(), key+"_bill", "Energia de teste"); err != nil {
+(id, technical_key, label, active)
+VALUES($1,$2,$3,true)`, billTypeID.String(), key+"_bill", "Energia de teste"); err != nil {
 		t.Fatalf("insert bill type: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO bills
-(id, owner_profile_id, bill_type_id, printed_holder_name, printed_address, reference_value)
-VALUES($1,$2,$3,$4,$5,$6)`, billID.String(), profileID.String(), billTypeID.String(), "Ana Percentual", "Rua do Sol 100", "UC-42"); err != nil {
+(id, owner_profile_id, bill_type_id, printed_holder_name, printed_address, reference_value, medium, idle_custody)
+VALUES($1,$2,$3,$4,$5,$6,'PHYSICAL','ORGANIZATION')`, billID.String(), profileID.String(), billTypeID.String(), "Ana Percentual", "Rua do Sol 100", "UC-42"); err != nil {
 		t.Fatalf("insert bill: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `INSERT INTO custom_field_definitions
@@ -97,13 +102,14 @@ VALUES($1,'DOCUMENT',$2,$3,'application/pdf','application/pdf',128,$4,$5,'ACTIVE
 		_, _ = pool.Exec(cleanup, "DELETE FROM bills WHERE id=$1", billID.String())
 		_, _ = pool.Exec(cleanup, "DELETE FROM bill_types WHERE id=$1", billTypeID.String())
 		_, _ = pool.Exec(cleanup, "DELETE FROM documents WHERE id=$1", documentID.String())
+		_, _ = pool.Exec(cleanup, "DELETE FROM document_presences WHERE profile_id=$1", profileID.String())
 		_, _ = pool.Exec(cleanup, "DELETE FROM document_types WHERE id=$1", documentTypeID.String())
 		_, _ = pool.Exec(cleanup, "DELETE FROM profiles WHERE id=$1", profileID.String())
 		_, _ = pool.Exec(cleanup, "DELETE FROM app_users WHERE id=$1", actorID.String())
 	}()
 
 	store := NewPostgresStore(pool)
-	service, err := NewService(store, ServiceOptions{RateLimit: 100})
+	service, err := NewService(store, ServiceOptions{RateLimit: 100, Timeout: 10 * time.Second})
 	if err != nil {
 		t.Fatalf("NewService() error = %v", err)
 	}
@@ -164,6 +170,29 @@ VALUES($1,'DOCUMENT',$2,$3,'application/pdf','application/pdf',128,$4,$5,'ACTIVE
 	repeatedPage, err := service.Search(ctx, actor, Query{Terms: []string{"Ana"}, Modules: []Module{ModuleProfiles}, Limit: 1})
 	if err != nil || firstPage.Results[0] != repeatedPage.Results[0] {
 		t.Fatalf("pagination is not deterministic: first=%#v repeated=%#v error=%v", firstPage, repeatedPage, err)
+	}
+
+	if _, err := pool.Exec(ctx, `
+INSERT INTO document_presences (id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value)
+SELECT gen_random_uuid(), $1, document_type.id, document_type.uniqueness_policy, 'informed_number', '52998224725'
+FROM document_types AS document_type
+WHERE document_type.technical_key = 'cpf'
+LIMIT 1`, profileID.String()); err != nil {
+		t.Fatalf("insert cpf presence: %v", err)
+	}
+	formattedCPF, err := service.Search(ctx, actor, Query{Q: "cpf:529.982.247-25", Limit: 20})
+	if err != nil {
+		t.Fatalf("formatted CPF Search() error = %v", err)
+	}
+	foundCPF := false
+	for _, result := range formattedCPF.Results {
+		if result.ProfileID == profileID.String() && (result.FieldKey == "profile.document_identifier" || result.FieldKey == "document.identifier" || result.FieldKey == "document.type") {
+			foundCPF = true
+			break
+		}
+	}
+	if !foundCPF {
+		t.Fatalf("formatted CPF search missed presence: %#v", formattedCPF)
 	}
 
 	if _, err := pool.Exec(ctx, "DELETE FROM search_rate_limits WHERE actor_user_id=$1", actorID.String()); err != nil {

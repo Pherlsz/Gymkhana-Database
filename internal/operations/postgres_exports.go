@@ -136,7 +136,12 @@ func (store *PostgresStore) ExportDataset(ctx context.Context, module Module) (E
 	switch module {
 	case ModuleProfiles:
 		rows, err := store.pool.Query(ctx, `SELECT id::text, version::text, full_name,
-  COALESCE(social_name,''), COALESCE(cpf,''), COALESCE(email,''),
+  COALESCE(social_name,''), COALESCE((
+    SELECT presence.identifier_value FROM document_presences presence
+    JOIN document_types document_type ON document_type.id = presence.document_type_id
+    WHERE presence.profile_id = profiles.id AND document_type.technical_key = 'cpf' AND presence.claim = 'informed_number'
+    LIMIT 1
+  ),''), COALESCE(email,''),
   COALESCE(mobile_phone,''), COALESCE(landline_phone,''), COALESCE(address_street,''),
   COALESCE(address_number,''), COALESCE(address_complement,''), COALESCE(address_neighborhood,''),
   COALESCE(address_city,''), COALESCE(address_state,''), COALESCE(address_postal_code,''), COALESCE(notes,'')
@@ -150,22 +155,25 @@ func (store *PostgresStore) ExportDataset(ctx context.Context, module Module) (E
 		}
 		return store.appendProfileCustomFieldExport(ctx, dataset)
 	case ModuleDocuments:
-		rows, err := store.pool.Query(ctx, `SELECT id::text, version::text, owner_profile_id::text,
-  document_type_id::text, identifier_value, COALESCE(document_date::text,''),
-  COALESCE(notes,''), record_state FROM documents ORDER BY id`)
+		rows, err := store.pool.Query(ctx, `SELECT document.id::text, document.version::text, presence.profile_id::text,
+  presence.document_type_id::text, COALESCE(presence.identifier_value,''), COALESCE(document.document_date::text,''),
+  COALESCE(document.notes,''), document.medium
+ FROM documents document
+ JOIN document_presences presence ON presence.id = document.presence_id
+ ORDER BY document.id`)
 		if err != nil {
 			return ExportDataset{}, fmt.Errorf("query document export: %w", err)
 		}
-		return collectDataset(rows, []string{"record_id", "version", "owner_profile_id", "document_type_id", "identifier_value", "document_date", "notes", "record_state"})
+		return collectDataset(rows, []string{"record_id", "version", "owner_profile_id", "document_type_id", "identifier_value", "document_date", "notes", "medium"})
 	case ModuleBills:
 		rows, err := store.pool.Query(ctx, `SELECT id::text, version::text, owner_profile_id::text,
   bill_type_id::text, COALESCE(printed_holder_name,''), COALESCE(printed_address,''),
   COALESCE(reference_value,''), COALESCE(competence,''), COALESCE(amount::text,''),
-  COALESCE(currency,''), COALESCE(notes,''), record_state FROM bills ORDER BY id`)
+  COALESCE(currency,''), COALESCE(notes,''), medium FROM bills ORDER BY id`)
 		if err != nil {
 			return ExportDataset{}, fmt.Errorf("query bill export: %w", err)
 		}
-		return collectDataset(rows, []string{"record_id", "version", "owner_profile_id", "bill_type_id", "printed_holder_name", "printed_address", "reference_value", "competence", "amount", "currency", "notes", "record_state"})
+		return collectDataset(rows, []string{"record_id", "version", "owner_profile_id", "bill_type_id", "printed_holder_name", "printed_address", "reference_value", "competence", "amount", "currency", "notes", "medium"})
 	default:
 		return ExportDataset{}, ErrInvalidInput
 	}
@@ -318,9 +326,12 @@ func (store *PostgresStore) ClaimCleanupCandidates(ctx context.Context, now time
 	result := make([]CleanupCandidate, 0, limit)
 	rows, err := tx.Query(ctx, `WITH candidates AS (
   SELECT id FROM operation_imports
-   WHERE expires_at<=$1 AND object_deleted_at IS NULL
-	 AND (state NOT IN ('PARSING','RUNNING') OR updated_at<=$3)
+   WHERE object_deleted_at IS NULL
      AND (cleanup_claimed_at IS NULL OR cleanup_claimed_at<=$3)
+     AND (
+       (expires_at<=$1 AND (state NOT IN ('PARSING','RUNNING') OR updated_at<=$3))
+       OR (state='UPLOADING' AND created_at<=$1 - INTERVAL '15 minutes')
+     )
    ORDER BY expires_at, id
    FOR UPDATE SKIP LOCKED
    LIMIT $2
@@ -560,10 +571,10 @@ func (store *PostgresStore) BillType(ctx context.Context, id bill.Identifier) (b
 	var value bill.TypeDefinition
 	var databaseID pgtype.UUID
 	if err := store.pool.QueryRow(ctx, `SELECT id, technical_key, label, active,
-  supports_current_use, version, created_at, updated_at
+  version, created_at, updated_at
  FROM bill_types WHERE id=$1`, databaseUUID(Identifier(id))).Scan(&databaseID,
 		&value.Values.TechnicalKey, &value.Values.Label, &value.Values.Active,
-		&value.Values.SupportsCurrentUse, &value.Version, &value.CreatedAt, &value.UpdatedAt); errors.Is(err, pgx.ErrNoRows) {
+		&value.Version, &value.CreatedAt, &value.UpdatedAt); errors.Is(err, pgx.ErrNoRows) {
 		return bill.TypeDefinition{}, ErrInvalidInput
 	} else if err != nil {
 		return bill.TypeDefinition{}, fmt.Errorf("get bill type for import: %w", err)

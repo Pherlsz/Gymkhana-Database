@@ -1,0 +1,4 @@
+# oxfmt reads this file. The TanStack route tree is generated and its own header
+# asks formatters to skip it; formatting it only creates a diff that the router
+# plugin reverts on the next regeneration.
+apps/web/src/routeTree.gen.ts

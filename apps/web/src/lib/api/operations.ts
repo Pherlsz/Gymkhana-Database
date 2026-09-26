@@ -1,5 +1,5 @@
 import type { paths } from "../../generated/operations-api";
-import { APIRequestError, apiURL } from "./client";
+import { APIRequestError, apiURL, requestNoContent } from "./client";
 
 export type OperationsCatalog =
   paths["/api/v1/operations/catalog"]["get"]["responses"][200]["content"]["application/json"];
@@ -18,6 +18,8 @@ export type OperationMapping =
   paths["/api/v1/operations/imports/{import_id}/mapping"]["put"]["requestBody"]["content"]["application/json"]["mapping"];
 export type OperationDecision =
   paths["/api/v1/operations/imports/{import_id}/decisions"]["put"]["requestBody"]["content"]["application/json"]["decisions"][number];
+export type ImportRow = OperationImport["preview"][number];
+export type ImportReportRow = OperationReport["rows"][number];
 
 type ErrorPayload = {
   error?: { code?: string; message?: string };
@@ -202,6 +204,12 @@ export function cancelOperationImport(value: OperationImport): Promise<Operation
     `/api/v1/operations/imports/${encodeURIComponent(value.id)}/cancel`,
     jsonRequest("POST", { version: value.version }),
   );
+}
+
+export function deleteOperationImport(id: string): Promise<void> {
+  return requestNoContent(`/api/v1/operations/imports/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }
 
 export function listOperationExports(signal?: AbortSignal): Promise<OperationExportPage> {

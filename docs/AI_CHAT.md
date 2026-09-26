@@ -1,29 +1,35 @@
 # AI Chat operations runbook
 
-AI Chat is a private, permission-aware, read-only interface over the existing Search and Query Engine services. It has no arbitrary database, SQL, code, HTTP, or mutation tool. This runbook describes its configuration, privacy boundary, limits, recovery, smoke test, and rollback.
+The Assistente lives on the open table (Pessoas, Documentos or Contas). Production uses Gemini only (`AI_CHAT_PROVIDER=google`). `fake` stays in `APP_ENV=test`. There is no second provider, no `/chat` route, and no assistant on Search.
+
+The open sheet lends its page, page size (up to 500) and row click. One plan can return people, documents and bills together. When a turn returns rows, the grid switches to that result. The address keeps the result id (`result`); opening the link recomputes the plan with the visitor's own permission and page. Clearing the id restores the previous sheet. A click opens the row's record without changing the section. A criterion with no catalog field stays in the chat and does not write the address.
+
+HTTP, capability `CHAT`, and this runbook still use the `/api/v1/chat` engine: a private, permission-aware, read-only interface over the Query Engine. It has no arbitrary database, SQL, code, HTTP, or mutation tool. The model never authors SQL. It calls `catalog` and `query`, and may reopen a reference with `result`. The answer does not mention tools, SQL or field keys. This runbook describes configuration, privacy boundary, limits, recovery, smoke test, and rollback.
 
 ## Activation boundary
 
-The feature is disabled by default. The repository currently contains only a deterministic fake model adapter, and configuration accepts that adapter only in `APP_ENV=test`. Staging and production therefore fail closed if `AI_CHAT_ENABLED=true`.
+The feature is disabled by default. Two adapters exist: the deterministic `fake` (accepted only in `APP_ENV=test`) and `google` (Gemini through `internal/modelprovider`, an `assistant.ProviderAdapter` from Gymkhana-Core validated with `assistant/adaptertest`). Core keeps provider HTTP payloads out of its module, so the adapter lives here.
 
-Production activation requires all of the following owner decisions and implementation work:
+With `AI_CHAT_PROVIDER=google` the process starts, but the Assistente stays **fail-closed until an ADMIN/SUPERADMIN stores the shared provider key** in Administração → Integrações (*Chaves de IA*). The key is sealed with the versioned AES-256-GCM material from `GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY` and stored in `ai_model_keys`; no route returns it. Without a key, `/api/v1/chat/capability` reports `enabled=false` and every run fails with `chat_unavailable`. EXTERNAL users need the `CHAT` capability and never see the secret. OCR with `OCR_PROVIDER=google` uses this same key.
 
-1. select the provider, API, and exact model;
-2. select the default conversation/result retention period;
-3. implement and review a narrow production adapter for the existing `ModelClient` port;
-4. add its credentials through the deployment secret manager, never the repository;
-5. extend fail-closed configuration for that specific adapter and validate the complete flow in staging.
+Still open before production:
 
-Do not reuse `fake`, add a provider SDK, invent a credential variable, or choose retention by assumption.
+1. streaming (`streamGenerateContent`) — today text arrives at once and is re-chunked;
+2. staging validation of the complete flow.
+
+Do not reuse `fake` in staging/production or put the provider key in `.env`; the shared key belongs to Administração.
 
 ## Configuration contract
 
-| Variable            | Contract                                                                          |
-| ------------------- | --------------------------------------------------------------------------------- |
-| `AI_CHAT_ENABLED`   | Explicit switch; defaults to `false`                                              |
-| `AI_CHAT_PROVIDER`  | Required only when enabled; currently only `fake` in `APP_ENV=test`               |
-| `AI_CHAT_MODEL`     | Required only when enabled; nonempty model identifier, at most 120 characters     |
-| `AI_CHAT_RETENTION` | Required only when enabled; Go duration from `1h` through `8760h` with no default |
+| Variable                            | Contract                                                                                   |
+| ----------------------------------- | ------------------------------------------------------------------------------------------ |
+| `AI_CHAT_ENABLED`                   | Explicit switch; defaults to `false`                                                       |
+| `AI_CHAT_PROVIDER`                  | Required only when enabled; `google`, or `fake` in `APP_ENV=test`                          |
+| `AI_CHAT_MODEL`                     | Required only when enabled; default model when Administração did not choose one (≤ 120)    |
+| `AI_CHAT_RETENTION`                 | Required only when enabled; Go duration from `1h` through `8760h`; `336h` (14 days) advised |
+| `GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY` | Required with `google`; seals the shared model key (shared with Google Forms tokens)        |
+
+Administrative routes (ADMIN/SUPERADMIN): `GET/PUT/DELETE /api/admin/model-keys/{provider}`. `PUT` receives `{ "secret", "model" }`; responses carry only provider, `configured`, model and `updated_at`.
 
 Chat also requires enabled application authentication, PostgreSQL, Search, and Query Engine. Enabling it with any missing dependency stops startup. The capability endpoint remains authenticated while disabled and reports only `enabled=false` plus safe fixed limits; every lifecycle route returns the stable `chat_unavailable` contract.
 
@@ -44,13 +50,18 @@ The normal authentication and database variables are still required. These value
 The application owns a fixed registry containing only:
 
 - permission-filtered logical catalog inspection;
-- Search execution;
-- QueryPlan v1 execution;
+- one query plan: filter, derive, match, sequence, group, and combine;
 - reopening an existing owner-scoped result reference.
 
-Tool schemas reject unknown fields. Model arguments cannot select a new tool, increase a server limit, supply SQL, use physical schema names, or introduce a mutation. Search and Query reauthorize the current user during catalog access, execution, refinement, pagination, and result serialization. Result references are owner- and thread-scoped and are reloaded through the underlying service rather than trusting cached rows.
+`search`, `sequencia` and `tarefa` stay callable for older tests. They are not in the schema sent to the model. A plan with derive, match or sequence is stored without a query execution and recomputed by `GET /api/v1/chat/result-references/{id}/page`. Group, pattern, set and combination plans still keep an execution. The page accepts the open sheet's limit, up to 500, which is wider than the query engine's 100-row page. The scan that materializes a shaped result stays at 4,000 rows; the chat says when that cut may leave the chain incomplete. Each match or search column lists the values that fit, at most 256 distinct values and 500 runes, and the chat states the full count when the cell is cut.
+
+Tool schemas reject unknown fields. Model arguments cannot select a new tool, increase a server limit, supply SQL, use physical schema names, or introduce a mutation. Query reauthorizes the current user during catalog access, execution, refinement, pagination, and result serialization. Result references are owner- and thread-scoped and are reloaded through the underlying service rather than trusting cached rows.
 
 All user messages, prior assistant messages, and database/tool values are marked as untrusted model input. Instruction-like text in those values grants no permission and cannot create a tool call. Saved queries are not selected or executed from manually typed text.
+
+## What the plan can say
+
+A pasted proof is still a question. The model composes one plan. A requirement the catalog does not store, such as a clip or a placement, is answered in the chat and does not replace the grid. Operational detail for the older task runner lives in [`TASKS.md`](TASKS.md).
 
 ## Persistent data and privacy
 
@@ -72,11 +83,11 @@ Application logs and audits must never include prompts, message bodies, text del
 | Boundary                        |                                                  Limit |
 | ------------------------------- | -----------------------------------------------------: |
 | Active runs                     |                                           1 per thread |
-| New runs                        |             30 per user per one-hour persistent window |
-| Model usage                     |           200,000 input + output units per user window |
-| Run wall time                   |                                             45 seconds |
+| New runs / usage window         | Gemini quota and 429 responses; no extra app hourly cap |
+| Run wall time                   |                                              5 minutes |
 | Tool calls                      |                                              8 per run |
-| Rows                            |                               100 per tool result/page |
+| Rows returned to the model       |                               100 per tool result/page |
+| Rows on the open sheet           |                          500, paged from the stored plan |
 | Projected fields                |                                                     20 |
 | Tool/result bytes               |            256 KiB per result and cumulatively per run |
 | User or final assistant message |                             20,000 Unicode code points |
@@ -93,7 +104,7 @@ SSE emits only persisted normalized events in sequence order. The server polls e
 
 Cancellation is persisted first and then signals the in-process coordinator. Cancellation wins a concurrent completion when its request obtains the run lock first; either way there is exactly one terminal state and event. Partial text stays readable, but no work continues after the orchestrator observes cancellation or a terminal state.
 
-Graceful shutdown cancels the root orchestration context and waits within the configured shutdown timeout. If a process exits abruptly, an active run can no longer be owned by an in-memory coordinator. The cleanup loop runs at startup and once per minute; after the 45-second run deadline plus a 5-second safety grace it atomically:
+Graceful shutdown cancels the root orchestration context and waits within the configured shutdown timeout. If a process exits abruptly, an active run can no longer be owned by an in-memory coordinator. The cleanup loop runs at startup and once per minute; after the 5-minute run deadline plus a 5-second safety grace it atomically:
 
 - marks running tool steps `FAILED` or `CANCELLED`;
 - marks the run `FAILED/timeout` or `CANCELLED/cancelled`;
@@ -114,9 +125,9 @@ Run the deterministic path only in an isolated test environment:
 
 1. apply all migrations to a disposable PostgreSQL database;
 2. configure application authentication plus the test-only values above;
-3. sign in as an active member and confirm `/api/v1/chat/capability` reports `enabled=true` and the fixed limits;
+3. sign in as an active EXTERNAL user and confirm `/api/v1/chat/capability` reports `enabled=true` and the fixed limits;
 4. create a private thread, submit a turn, observe ordered SSE text, and reconnect from a recorded sequence;
-5. exercise Search and Query evidence, select/clear active context, and submit a follow-up;
+5. exercise a query whose rows appear on the open table, open the second page, and clear the result;
 6. cancel a run, retry it explicitly, rename the thread, and delete it;
 7. repeat thread, run, SSE, tool, and result-reference reads as another or revoked user and confirm they are denied without content leakage;
 8. inspect logs and audits for IDs/counts/codes only, then advance an explicit test clock or expiry and verify cleanup.
@@ -126,7 +137,7 @@ The deterministic fake returns a fixed text response when the full API process i
 ## Failure handling and rollback
 
 - `chat_busy`: wait for, cancel, or recover the one active run; do not create a parallel run for the same thread.
-- `rate_limited` or `chat_quota_exceeded`: wait for the persistent window or narrow the request. Do not raise limits from client/model input.
+- `rate_limited` or `chat_quota_exceeded`: wait for Gemini or check the Google AI Studio quota. Do not raise limits from client/model input.
 - `chat_timeout`: use the explicit retry action after the terminal event; investigate repeated tool latency using safe IDs and timing only.
 - `chat_stale_context`: clear the active result and reopen or execute a fresh authorized result.
 - `chat_malformed_provider`, `chat_tool_failed`, or `chat_unsafe_result`: keep the provider payload redacted, correlate by request/run ID, and disable Chat if failures repeat.

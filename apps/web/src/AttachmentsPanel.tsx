@@ -1,8 +1,7 @@
-function toneToType(tone: string): "info" | "success" | "warning" | "error" {
-  return tone === "danger" ? "error" : (tone as any);
-}
-
-import { Alert, Button, Card, Flex, Tag } from "antd";
+import { Button, Card, Checkbox, Flex, Tag } from "antd";
+import { InlineStatus } from "./components/InlineStatus";
+import { StatusBanner } from "./components/StatusBanner";
+import "./attachments.css";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import {
@@ -15,6 +14,9 @@ import {
   type AttachmentRecord,
 } from "./lib/api/attachments";
 import { APIRequestError } from "./lib/api/client";
+import { queryKeys } from "./lib/api/queryKeys";
+import { formatBytes, formatDateTime as formatDate } from "./lib/formatters";
+import { useI18n } from "./i18n";
 
 const acceptedMIMEs = [
   "application/pdf",
@@ -43,18 +45,20 @@ export function AttachmentsPanel({
   title?: string;
   description?: string;
 }) {
+  const { messages } = useI18n();
+  const copy = messages.attachments;
   const queryClient = useQueryClient();
   const inputID = useId();
   const [showTrash, setShowTrash] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const queryKey = ["attachments", owner, showTrash] as const;
+  const queryKey = queryKeys.attachments.byOwner(owner, showTrash);
   const query = useQuery({
     queryKey,
     queryFn: ({ signal }) => listAttachments(owner, showTrash, signal),
   });
   const refresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["attachments", owner] });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.attachments.byOwner(owner) });
   };
   const upload = useMutation({
     mutationFn: (file: File) => uploadAttachment(owner, file, setProgress),
@@ -105,40 +109,29 @@ export function AttachmentsPanel({
   };
 
   return (
-    <Card className="attachments-panel" style={{ padding: "1rem" }}>
+    <Card className="attachments-panel">
       <Flex vertical gap="1rem">
         <div className="attachments-panel__header">
           <div>
             <h3>{title}</h3>
             <p>{description}</p>
           </div>
-          <label className="attachments-panel__trash-toggle">
-            <input
-              checked={showTrash}
-              type="checkbox"
-              onChange={(event) => setShowTrash(event.target.checked)}
-            />
+          <Checkbox
+            checked={showTrash}
+            className="attachments-panel__trash-toggle"
+            onChange={(event) => setShowTrash(event.target.checked)}
+          >
             Mostrar lixeira
-          </label>
+          </Checkbox>
         </div>
         {notice ? (
-          <Alert
-            title="Anexos"
-            type={toneToType(
-              notice.includes("Arquivo verificado") ||
-                notice.includes("restaurado") ||
-                notice.includes("movido")
-                ? "success"
-                : "warning",
-            )}
-            description={<>{notice}</>}
-          />
+          <StatusBanner description={notice} title={copy.noticeTitle} tone="success" />
         ) : null}
         {error ? (
-          <Alert
-            message="Não foi possível concluir a operação"
-            type="error"
-            description={<>{attachmentError(error)}</>}
+          <StatusBanner
+            description={attachmentError(error)}
+            title={copy.operationError}
+            tone="error"
           />
         ) : null}
         <div className="attachments-panel__upload">
@@ -161,11 +154,9 @@ export function AttachmentsPanel({
             </div>
           ) : null}
         </div>
-        {query.isLoading ? <p aria-live="polite">Carregando anexos...</p> : null}
+        {query.isLoading ? <InlineStatus kind="loading" label={copy.loading} /> : null}
         {!query.isLoading && (query.data?.length ?? 0) === 0 ? (
-          <p className="attachments-panel__empty">
-            {showTrash ? "Nenhum anexo ativo ou recuperável." : "Nenhum anexo ativo."}
-          </p>
+          <InlineStatus kind="empty" label={showTrash ? copy.emptyWithTrash : copy.empty} />
         ) : null}
         <div className="attachments-panel__list">
           {query.data?.map((value) => (
@@ -215,16 +206,6 @@ function AttachmentCard({
         </Tag>
         {value.lifecycle_state === "ACTIVE" ? (
           <>
-            {["application/pdf", "image/jpeg", "image/png"].includes(value.detected_mime) ? (
-              <Button
-                disabled={pending || value.byte_size > 20 * 1024 * 1024}
-                onClick={() =>
-                  window.location.assign(`/ocr?attachment=${encodeURIComponent(value.id)}`)
-                }
-              >
-                Revisar com OCR
-              </Button>
-            ) : null}
             <Button disabled={pending} onClick={onDownload}>
               Baixar
             </Button>
@@ -251,16 +232,4 @@ function attachmentError(error: unknown): string {
     return error.message;
   }
   return error instanceof Error ? error.message : "Erro inesperado ao processar o anexo.";
-}
-
-function formatBytes(value: number): string {
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
-  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
-    new Date(value),
-  );
 }

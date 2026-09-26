@@ -94,7 +94,7 @@
   justify-content: flex-end;
 }
 
-@media (max-width: 48rem) {
+@media (max-width: 768px) {
   .attachments-panel__header,
   .attachment-card {
     align-items: stretch;

@@ -24,23 +24,29 @@ type SortField string
 type SortOrder string
 
 const (
-	SortFullName  SortField = "full_name"
-	SortCPF       SortField = "cpf"
-	SortEmail     SortField = "email"
-	SortCity      SortField = "address_city"
-	SortCreatedAt SortField = "created_at"
-	SortUpdatedAt SortField = "updated_at"
+	SortFullName     SortField = "full_name"
+	SortCPF          SortField = "cpf"
+	SortEmail        SortField = "email"
+	SortCity         SortField = "address_city"
+	SortStreet       SortField = "address_street"
+	SortNeighborhood SortField = "address_neighborhood"
+	SortMobilePhone  SortField = "mobile_phone"
+	SortBirthDate    SortField = "birth_date"
+	SortCreatedAt    SortField = "created_at"
+	SortUpdatedAt    SortField = "updated_at"
 
 	SortAscending  SortOrder = "asc"
 	SortDescending SortOrder = "desc"
 )
 
 type Filters struct {
-	FullName string
-	CPF      string
-	Email    string
-	City     string
-	State    string
+	FullName    string
+	CPF         string
+	Email       string
+	City        string
+	State       string
+	RestrictIDs bool
+	IDFilter    []Identifier
 }
 
 type ListOptions struct {
@@ -78,10 +84,6 @@ type AuditEvent struct {
 	EventType       AuditEventType
 	Outcome         auth.AuditOutcome
 	RequestID       string
-}
-
-type AuditStore interface {
-	RecordAuditEvent(context.Context, AuditEvent) error
 }
 
 type AuditFailureHandler func(context.Context, AuditEvent, error)
@@ -139,6 +141,26 @@ func (service *Service) Get(ctx context.Context, actor auth.Session, id Identifi
 		return Profile{}, ErrForbidden
 	}
 	return service.store.Get(ctx, id)
+}
+
+// DistinctCities returns the distinct non-empty cities across the profile set
+// that matches the given filters, so the grid's filter-by-values menu can list
+// every city instead of only the ones on the loaded page.
+func (service *Service) DistinctCities(ctx context.Context, actor auth.Session, filters Filters, limit int32) ([]string, error) {
+	if !actor.User.Active || !actor.User.Role.CanReadProfiles() {
+		return nil, ErrForbidden
+	}
+	normalized, err := normalizeListOptions(ListOptions{Limit: 1, Filters: filters})
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 {
+		limit = 500
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+	return service.store.DistinctCities(ctx, normalized.Filters, limit)
 }
 
 func (service *Service) Create(ctx context.Context, actor auth.Session, values Values, requestID string) (Profile, error) {
@@ -229,6 +251,20 @@ func (service *Service) Delete(ctx context.Context, actor auth.Session, id Ident
 	return nil
 }
 
+func normalizeFilterPattern(raw string, fn func(string) string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if strings.HasPrefix(raw, "^") {
+		return "^" + fn(raw[1:])
+	}
+	if strings.HasPrefix(raw, "=") {
+		return "=" + fn(raw[1:])
+	}
+	return fn(raw)
+}
+
 func normalizeListOptions(options ListOptions) (ListOptions, error) {
 	if options.Limit == 0 {
 		options.Limit = 100
@@ -245,10 +281,10 @@ func normalizeListOptions(options ListOptions) (ListOptions, error) {
 	if !options.SortField.Valid() || !options.SortOrder.Valid() {
 		return ListOptions{}, ErrInvalidListOptions
 	}
-	options.Filters.FullName = normalize.SearchText(options.Filters.FullName)
-	options.Filters.CPF = normalize.Digits(options.Filters.CPF)
-	options.Filters.Email = strings.ToLower(strings.TrimSpace(options.Filters.Email))
-	options.Filters.City = normalize.SearchText(options.Filters.City)
+	options.Filters.FullName = normalizeFilterPattern(options.Filters.FullName, normalize.SearchText)
+	options.Filters.CPF = normalizeFilterPattern(options.Filters.CPF, normalize.Digits)
+	options.Filters.Email = normalizeFilterPattern(options.Filters.Email, func(s string) string { return strings.ToLower(strings.TrimSpace(s)) })
+	options.Filters.City = normalizeFilterPattern(options.Filters.City, normalize.SearchText)
 	options.Filters.State = strings.ToUpper(strings.TrimSpace(options.Filters.State))
 	if options.Filters.State != "" && len(options.Filters.State) != 2 {
 		return ListOptions{}, ErrInvalidListOptions
@@ -258,7 +294,8 @@ func normalizeListOptions(options ListOptions) (ListOptions, error) {
 
 func (field SortField) Valid() bool {
 	switch field {
-	case SortFullName, SortCPF, SortEmail, SortCity, SortCreatedAt, SortUpdatedAt:
+	case SortFullName, SortCPF, SortEmail, SortCity, SortStreet, SortNeighborhood,
+		SortMobilePhone, SortBirthDate, SortCreatedAt, SortUpdatedAt:
 		return true
 	default:
 		return false

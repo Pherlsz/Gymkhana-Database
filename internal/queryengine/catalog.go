@@ -58,11 +58,12 @@ func loadCatalog(ctx context.Context, store Store, role auth.Role) (resolvedCata
 	if role.CanReadDocuments() {
 		resolved.addEntity(sqlEntityDefinition{Public: EntityDefinition{Key: "documents", Label: "Documentos", Kind: "document", Navigable: true, DefaultSort: "document.identifier"},
 			FromTemplate: `documents {root}
-JOIN document_types {type} ON {type}.id={root}.document_type_id
-JOIN profiles {owner} ON {owner}.id={root}.owner_profile_id
+JOIN document_presences {presence} ON {presence}.id={root}.presence_id
+JOIN document_types {type} ON {type}.id={presence}.document_type_id
+JOIN profiles {owner} ON {owner}.id={presence}.profile_id
 LEFT JOIN document_current_uses {current} ON {current}.document_id={root}.id
 LEFT JOIN profiles {holder} ON {holder}.id={current}.holder_profile_id`,
-			IDExpression: "{root}.id::text", LabelExpression: "concat({type}.label, ' · ', {root}.identifier_value)", UpdatedExpression: "{root}.updated_at"})
+			IDExpression: "{root}.id::text", LabelExpression: "concat({type}.label, ' · ', COALESCE({presence}.identifier_value, ''))", UpdatedExpression: "{root}.updated_at"})
 	}
 	if role.CanReadBills() {
 		resolved.addEntity(sqlEntityDefinition{Public: EntityDefinition{Key: "bills", Label: "Contas e comprovantes", Kind: "bill", Navigable: true, DefaultSort: "bill.updated_at"},
@@ -111,28 +112,63 @@ func addStaticFields(catalog *resolvedCatalog) {
 	fields := []sqlFieldDefinition{
 		field("profile.id", "profiles", "ID", ValueIdentifier, false, true, true, true, "{root}.id"),
 		field("profile.full_name", "profiles", "Nome completo", ValueText, false, true, true, true, "{root}.full_name"),
+		nameInitialField(),
 		field("profile.social_name", "profiles", "Nome social", ValueText, true, true, true, true, "{root}.social_name"),
-		field("profile.cpf", "profiles", "CPF", ValueIdentifier, true, true, true, true, "{root}.cpf"),
+		field("profile.cpf", "profiles", "CPF", ValueIdentifier, true, true, true, true, `(SELECT presence.identifier_value FROM document_presences presence JOIN document_types document_type ON document_type.id=presence.document_type_id WHERE presence.profile_id={root}.id AND document_type.technical_key='cpf' AND presence.claim='informed_number' LIMIT 1)`),
 		field("profile.email", "profiles", "E-mail", ValueText, true, true, true, true, "{root}.email"),
 		field("profile.mobile_phone", "profiles", "Celular", ValueIdentifier, true, true, true, true, "{root}.mobile_phone"),
 		field("profile.landline_phone", "profiles", "Telefone", ValueIdentifier, true, true, true, true, "{root}.landline_phone"),
 		field("profile.address_street", "profiles", "Logradouro", ValueText, true, true, true, true, "{root}.address_street"),
 		field("profile.address_number", "profiles", "Número", ValueText, true, true, true, true, "{root}.address_number"),
+		houseNumberField(),
 		field("profile.address_complement", "profiles", "Complemento", ValueText, true, true, true, false, "{root}.address_complement"),
 		field("profile.address_neighborhood", "profiles", "Bairro", ValueText, true, true, true, true, "{root}.address_neighborhood"),
 		field("profile.address_city", "profiles", "Cidade", ValueText, true, true, true, true, "{root}.address_city"),
 		field("profile.address_state", "profiles", "UF", ValueEnum, true, true, true, true, "{root}.address_state"),
 		field("profile.address_postal_code", "profiles", "CEP", ValueIdentifier, true, true, true, true, "{root}.address_postal_code"),
 		field("profile.notes", "profiles", "Observações", ValueLongText, true, true, true, false, "{root}.notes"),
+		field("profile.team", "profiles", "Equipe", ValueText, true, true, true, true, "{root}.team"),
+		field("profile.club_membership", "profiles", "Sócio clube", ValueText, true, true, true, true, "{root}.club_membership"),
+		field("profile.membership_type", "profiles", "Categoria de sócio", ValueText, true, true, true, true, "{root}.membership_type"),
+		field("profile.place_of_origin", "profiles", "Naturalidade", ValueText, true, true, true, true, "{root}.place_of_origin"),
+		field("profile.birth_country", "profiles", "País de nascimento", ValueText, true, true, true, true, "{root}.birth_country"),
+		field("profile.parents_wedding_date", "profiles", "Casamento dos pais", ValueCivilDate, true, true, true, true, "{root}.parents_wedding_date"),
+		field("profile.supermarket_club", "profiles", "Clube de supermercado", ValueText, true, true, true, true, "{root}.supermarket_club"),
+		field("profile.pet", "profiles", "Animal", ValueText, true, true, true, true, "{root}.pet"),
+		field("profile.travel_countries", "profiles", "Viagem", ValueLongText, true, true, true, false, "{root}.travel_countries"),
+		field("profile.card_brand", "profiles", "Bandeira do cartão", ValueText, true, true, true, true, "{root}.card_brand"),
+		field("profile.card_bank", "profiles", "Banco do cartão", ValueText, true, true, true, true, "{root}.card_bank"),
+		field("profile.birth_date", "profiles", "Data de nascimento", ValueCivilDate, true, true, true, true, "{root}.birth_date"),
+		field("profile.gender", "profiles", "Sexo", ValueText, true, true, true, true, "{root}.gender"),
+		field("profile.blood_type", "profiles", "Tipo sanguíneo", ValueText, true, true, true, true, "{root}.blood_type"),
+		field("profile.nationality", "profiles", "Nacionalidade", ValueText, true, true, true, true, "{root}.nationality"),
+		field("profile.birth_city", "profiles", "Cidade de nascimento", ValueText, true, true, true, true, "{root}.birth_city"),
+		field("profile.marital_status", "profiles", "Estado civil", ValueText, true, true, true, true, "{root}.marital_status"),
+		field("profile.wedding_date", "profiles", "Data de casamento", ValueCivilDate, true, true, true, true, "{root}.wedding_date"),
+		field("profile.father_name", "profiles", "Nome do pai", ValueText, true, true, true, true, "{root}.father_name"),
+		field("profile.father_birth_date", "profiles", "Nascimento do pai", ValueCivilDate, true, true, true, true, "{root}.father_birth_date"),
+		field("profile.mother_name", "profiles", "Nome da mãe", ValueText, true, true, true, true, "{root}.mother_name"),
+		field("profile.mother_birth_date", "profiles", "Nascimento da mãe", ValueCivilDate, true, true, true, true, "{root}.mother_birth_date"),
+		field("profile.health_plan", "profiles", "Plano de saúde", ValueText, true, true, true, true, "{root}.health_plan"),
+		field("profile.blood_donor", "profiles", "Doador de sangue", ValueBoolean, true, true, true, true, "{root}.blood_donor"),
+		field("profile.organ_donor", "profiles", "Doador de órgãos", ValueBoolean, true, true, true, true, "{root}.organ_donor"),
+		field("profile.sector", "profiles", "Setor", ValueText, true, true, true, true, "{root}.sector"),
+		field("profile.collections", "profiles", "Coleções", ValueLongText, true, true, true, false, "{root}.collections"),
+		field("profile.vehicle_model", "profiles", "Modelo do veículo", ValueText, true, true, true, true, "{root}.vehicle_model"),
+		field("profile.vehicle_color", "profiles", "Cor do veículo", ValueText, true, true, true, true, "{root}.vehicle_color"),
+		field("profile.vehicle_plate", "profiles", "Placa", ValueIdentifier, true, true, true, true, "{root}.vehicle_plate"),
+		field("profile.vehicle_year", "profiles", "Ano do veículo", ValueInteger, true, true, true, true, "{root}.vehicle_year"),
 		field("profile.updated_at", "profiles", "Atualizado em", ValueTimestamp, false, true, true, true, "{root}.updated_at"),
 
 		field("document.id", "documents", "ID", ValueIdentifier, false, true, true, true, "{root}.id"),
 		field("document.type", "documents", "Tipo", ValueText, false, true, true, true, "{type}.label"),
-		field("document.identifier", "documents", "Identificador", ValueIdentifier, false, true, true, true, "{root}.identifier_value"),
+		field("document.identifier", "documents", "Identificador", ValueIdentifier, false, true, true, true, "{presence}.identifier_value"),
 		field("document.date", "documents", "Data", ValueCivilDate, true, true, true, true, "{root}.document_date"),
+		field("document.valid_until", "documents", "Validade", ValueCivilDate, true, true, true, true, "{root}.valid_until"),
 		field("document.notes", "documents", "Observações", ValueLongText, true, true, true, false, "{root}.notes"),
-		field("document.record_state", "documents", "Estado", ValueEnum, false, true, true, true, "{root}.record_state"),
-		field("document.owner_profile_id", "documents", "ID da pessoa proprietária", ValueIdentifier, false, true, true, true, "{root}.owner_profile_id"),
+		field("document.medium", "documents", "Meio", ValueEnum, false, true, true, true, "{root}.medium"),
+		field("document.idle_custody", "documents", "Guarda", ValueEnum, true, true, true, true, "{root}.idle_custody"),
+		field("document.owner_profile_id", "documents", "ID da pessoa proprietária", ValueIdentifier, false, true, true, true, "{presence}.profile_id"),
 		field("document.owner_name", "documents", "Pessoa proprietária", ValueText, false, true, true, true, "{owner}.full_name"),
 		field("document.current_holder_id", "documents", "ID da pessoa em uso", ValueIdentifier, true, true, true, true, "{current}.holder_profile_id"),
 		field("document.current_holder_name", "documents", "Pessoa em uso", ValueText, true, true, true, true, "{holder}.full_name"),
@@ -147,7 +183,8 @@ func addStaticFields(catalog *resolvedCatalog) {
 		field("bill.amount", "bills", "Valor", ValueDecimal, true, true, true, true, "{root}.amount"),
 		field("bill.currency", "bills", "Moeda", ValueEnum, true, true, true, true, "{root}.currency"),
 		field("bill.notes", "bills", "Observações", ValueLongText, true, true, true, false, "{root}.notes"),
-		field("bill.record_state", "bills", "Estado", ValueEnum, false, true, true, true, "{root}.record_state"),
+		field("bill.medium", "bills", "Meio", ValueEnum, false, true, true, true, "{root}.medium"),
+		field("bill.idle_custody", "bills", "Guarda", ValueEnum, true, true, true, true, "{root}.idle_custody"),
 		field("bill.owner_profile_id", "bills", "ID da pessoa proprietária", ValueIdentifier, false, true, true, true, "{root}.owner_profile_id"),
 		field("bill.owner_name", "bills", "Pessoa proprietária", ValueText, false, true, true, true, "{owner}.full_name"),
 		field("bill.current_holder_id", "bills", "ID da pessoa em uso", ValueIdentifier, true, true, true, true, "{current}.holder_profile_id"),
@@ -220,10 +257,10 @@ func (catalog *resolvedCatalog) addDynamicField(value DynamicFieldDefinition, en
 
 func addRelations(catalog *resolvedCatalog, entityTypes map[string]DynamicEntityDefinition) {
 	relations := []sqlRelationDefinition{
-		relation("profile.documents", "profiles", "documents", "Documentos da pessoa", CardinalityMany, "{to.root}.owner_profile_id={from.root}.id"),
+		relation("profile.documents", "profiles", "documents", "Documentos da pessoa", CardinalityMany, "{to.presence}.profile_id={from.root}.id"),
 		relation("profile.bills", "profiles", "bills", "Contas da pessoa", CardinalityMany, "{to.root}.owner_profile_id={from.root}.id"),
 		relation("profile.attachments", "profiles", "attachments", "Anexos da pessoa", CardinalityMany, "{to.root}.custom_profile_id={from.root}.id"),
-		relation("document.owner", "documents", "profiles", "Pessoa proprietária", CardinalityOne, "{to.root}.id={from.root}.owner_profile_id"),
+		relation("document.owner", "documents", "profiles", "Pessoa proprietária", CardinalityOne, "{to.root}.id={from.presence}.profile_id"),
 		relation("document.current_holder", "documents", "profiles", "Pessoa em uso", CardinalityOne, "{to.root}.id={from.current}.holder_profile_id"),
 		relation("bill.owner", "bills", "profiles", "Pessoa proprietária", CardinalityOne, "{to.root}.id={from.root}.owner_profile_id"),
 		relation("bill.current_holder", "bills", "profiles", "Pessoa em uso", CardinalityOne, "{to.root}.id={from.current}.holder_profile_id"),
@@ -332,6 +369,30 @@ func removeOperators(values []Operator, excluded ...Operator) []Operator {
 func relation(key, from, to, label string, cardinality RelationCardinality, condition string) sqlRelationDefinition {
 	return sqlRelationDefinition{Public: RelationDefinition{Key: key, FromEntity: from, ToEntity: to, Label: truncateRunes(label, 160), Cardinality: cardinality},
 		JoinCondition: condition, TargetEntityKey: to}
+}
+
+// nameInitialField is the first letter of the given name, with Portuguese
+// accents folded (Ó → O). Gymkhana proofs filter this, not starts_with on the
+// full name.
+func nameInitialField() sqlFieldDefinition {
+	value := field("profile.name_initial", "profiles", "Inicial", ValueText, true, true, true, true,
+		"upper(substring(translate(split_part(btrim({root}.full_name), ' ', 1), "+
+			"'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',"+
+			"'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC') from '[A-Za-z]'))")
+	value.Public.Operators = []Operator{OperatorEqual, OperatorNotEqual, OperatorIn, OperatorIsNull, OperatorNotNull}
+	value.Public.Source = "profile.full_name"
+	return value
+}
+
+// houseNumberField is the integer street number. The first run of 1–6 digits
+// in address_number: 632 stays 632, 3/3 becomes 3, s/n is empty. It replaces
+// the text Número on the grid; ranges use this field.
+func houseNumberField() sqlFieldDefinition {
+	value := field("profile.address_house_number", "profiles", "Número da casa", ValueInteger, true, true, true, true,
+		"NULLIF(substring({root}.address_number from '[0-9]{1,6}'), '')::bigint")
+	value.Public.Source = "profile.address_number"
+	value.Public.Replaces = true
+	return value
 }
 
 func operatorsForKind(kind ValueKind) []Operator {

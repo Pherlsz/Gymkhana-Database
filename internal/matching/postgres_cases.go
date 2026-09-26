@@ -19,14 +19,26 @@ const caseDetailColumns = `matching_case.id, matching_case.left_profile_id, matc
        matching_case.version, matching_case.created_at, matching_case.updated_at,
        evidence.evidence_kind, evidence.strength, evidence.contribution,
        left_profile.id IS NOT NULL,
-       COALESCE(left_profile.full_name,''), COALESCE(left_profile.social_name,''), COALESCE(left_profile.cpf,''),
+       COALESCE(left_profile.full_name,''), COALESCE(left_profile.social_name,''), COALESCE((
+         SELECT presence.identifier_value FROM document_presences presence
+         JOIN document_types document_type ON document_type.id = presence.document_type_id
+         WHERE presence.profile_id = left_profile.id AND document_type.technical_key = 'cpf'
+           AND presence.claim = 'informed_number'
+         LIMIT 1
+       ),''),
        COALESCE(left_profile.email,''), COALESCE(left_profile.mobile_phone,''), COALESCE(left_profile.landline_phone,''),
        COALESCE(left_profile.address_street,''), COALESCE(left_profile.address_number,''),
        COALESCE(left_profile.address_complement,''), COALESCE(left_profile.address_neighborhood,''),
        COALESCE(left_profile.address_city,''), COALESCE(left_profile.address_state,''), COALESCE(left_profile.address_postal_code,''),
        COALESCE(left_profile.notes,''), COALESCE(left_profile.version,0), left_profile.updated_at,
        right_profile.id IS NOT NULL,
-       COALESCE(right_profile.full_name,''), COALESCE(right_profile.social_name,''), COALESCE(right_profile.cpf,''),
+       COALESCE(right_profile.full_name,''), COALESCE(right_profile.social_name,''), COALESCE((
+         SELECT presence.identifier_value FROM document_presences presence
+         JOIN document_types document_type ON document_type.id = presence.document_type_id
+         WHERE presence.profile_id = right_profile.id AND document_type.technical_key = 'cpf'
+           AND presence.claim = 'informed_number'
+         LIMIT 1
+       ),''),
        COALESCE(right_profile.email,''), COALESCE(right_profile.mobile_phone,''), COALESCE(right_profile.landline_phone,''),
        COALESCE(right_profile.address_street,''), COALESCE(right_profile.address_number,''),
        COALESCE(right_profile.address_complement,''), COALESCE(right_profile.address_neighborhood,''),

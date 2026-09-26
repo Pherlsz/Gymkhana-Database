@@ -1,0 +1,1396 @@
+.tables-page {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.tables-page__workspace {
+  position: relative;
+  display: grid;
+  flex: 1 1 0%;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.85rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.tables-page__workspace > .spreadsheet-table-card {
+  grid-area: 1 / 1;
+  justify-self: stretch;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+}
+
+.tables-page__workspace > .tables-inspector-sheet {
+  grid-area: 1 / 1;
+  z-index: 2;
+}
+
+/* Keep in sync with SHEET_INSPECTOR_MAX_WIDTH_PX (drawer below this width). */
+@media (min-width: 840px) {
+  .tables-page__workspace:has(> .profile-panel),
+  .tables-page__workspace:has(> .table-record-editor) {
+    grid-template-columns: minmax(0, 1fr) minmax(24rem, min(36%, 32rem));
+  }
+
+  .tables-page__workspace > .spreadsheet-table-card {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  .tables-page__workspace > .profile-panel,
+  .tables-page__workspace > .table-record-editor {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    max-width: none;
+    height: 0;
+    min-height: 100%;
+    max-height: 100%;
+    flex: none;
+  }
+}
+
+.tables-page > .page-header,
+.tables-toolbar,
+.tables-page > .assistant-banner,
+.tables-page > .ant-alert,
+.tables-page > .ant-typography {
+  flex: none;
+}
+
+.tables-page .page-header__title.ant-typography {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.tables-page .page-header__description.ant-typography {
+  margin: 0.25rem 0 0;
+  color: var(--md-on-surface-variant);
+  max-width: 42rem;
+}
+
+/*
+ * The bar is one row at every width: the search grows, the two surface triggers
+ * shrink to their icon on narrow screens. Nothing here opens in flow, so the
+ * grid never gets pushed down.
+ */
+.tables-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  container-type: inline-size;
+  container-name: tables-toolbar;
+}
+
+.tables-toolbar__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.tables-toolbar__row > .sheet-search {
+  min-width: 0;
+  min-height: 2.5rem;
+}
+
+.toolbar-surface__trigger.ant-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.5rem;
+  touch-action: manipulation;
+}
+
+.toolbar-surface__trigger.ant-btn.is-active {
+  border-color: var(--brand-accent-solid);
+  background-color: var(--brand-accent-surface);
+  color: var(--brand-accent-text);
+}
+
+.toolbar-surface__trigger.is-ai.ant-btn {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+/* Below `sm` the label would force the bar to wrap, so the icon carries it. */
+.toolbar-surface__label,
+.toolbar-surface__chevron {
+  display: none;
+}
+
+.toolbar-surface__count {
+  display: inline-flex;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--gym-radius-pill);
+  background: color-mix(in oklch, currentColor 16%, transparent);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.toolbar-surface__chevron {
+  transition: transform 150ms ease;
+}
+
+.toolbar-surface__chevron.is-open {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-surface__chevron {
+    transition: none;
+  }
+}
+
+.toolbar-surface__popover {
+  animation-duration: 0s !important;
+  transition: none !important;
+  max-width: calc(100vw - 1rem);
+}
+
+.toolbar-surface__popover .ant-popover-inner {
+  padding: 0;
+  box-shadow: var(--shadow-overlay);
+  background-color: var(--md-surface, #1e1e1e) !important;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-lg, 12px);
+  overflow: hidden;
+  max-width: calc(100vw - 1rem);
+}
+
+.toolbar-surface__body {
+  display: flex;
+  width: min(29rem, calc(100vw - 1.5rem));
+  max-width: calc(100vw - 1.5rem);
+  max-height: min(72vh, 36rem);
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.toolbar-surface__body:focus {
+  outline: none;
+}
+
+/* In the bottom sheet the body fills the drawer instead of sizing itself. */
+.toolbar-surface__drawer .toolbar-surface__body {
+  width: 100%;
+  max-height: none;
+  height: 100%;
+}
+
+.toolbar-surface__drawer .ant-drawer-body {
+  display: flex;
+  padding: 0;
+  min-height: 0;
+}
+
+.column-picker {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 0.5rem;
+  min-height: 0;
+  max-height: min(70vh, 36rem);
+  overflow: hidden;
+  padding: 0.65rem 0.75rem;
+}
+
+.sheet-search {
+  flex: none;
+}
+
+.column-picker__groups {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.15rem 0.25rem;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gym-scrollbar-thumb) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.column-picker__item,
+.column-picker__item * {
+  transition: none !important;
+}
+
+.column-picker__footer {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--md-outline-variant);
+}
+
+/* Column picker: grouped, counted, and scannable at ~57 columns. */
+.column-picker__count {
+  flex: none;
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.column-picker__groups {
+  gap: 0.85rem;
+}
+
+.column-picker__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.column-picker__group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0 0.15rem;
+  color: var(--md-on-surface-variant);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.column-picker__group-title span {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.column-picker__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+  gap: 0.35rem 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.column-picker__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--gym-radius-md);
+  background: var(--md-surface, #1e1e1e);
+  cursor: pointer;
+  user-select: none;
+}
+
+.column-picker__item:hover {
+  background: var(--md-state-hover);
+  border-color: var(--md-outline);
+}
+
+.column-picker__item.is-selected {
+  background: var(--brand-accent-surface);
+  border-color: var(--brand-accent-border);
+}
+
+.column-picker__item.is-selected:hover {
+  background: color-mix(in oklch, var(--brand-accent-surface) 150%, transparent);
+  border-color: var(--brand-accent-solid);
+}
+
+.column-picker__item.is-locked {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.column-picker__item:focus-within {
+  outline: 2px solid var(--brand-accent-solid);
+  outline-offset: -2px;
+}
+
+.column-picker__item .ant-checkbox-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  cursor: inherit;
+}
+
+.column-picker__item .ant-checkbox-inner {
+  border-radius: 4px !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 1.5px solid var(--md-outline) !important;
+  background-color: transparent !important;
+}
+
+.column-picker__item .ant-checkbox-wrapper:hover .ant-checkbox-inner,
+.column-picker__item:hover .ant-checkbox-inner {
+  border-color: var(--brand-accent-solid) !important;
+}
+
+.column-picker__item .ant-checkbox-checked .ant-checkbox-inner {
+  background-color: var(--brand-accent-solid) !important;
+  border-color: var(--brand-accent-solid) !important;
+}
+
+.column-picker__item .ant-checkbox-checked .ant-checkbox-inner::after {
+  border-color: var(--brand-accent-on-solid) !important;
+  border-width: 2px !important;
+}
+
+.column-picker__item .ant-checkbox-disabled .ant-checkbox-inner {
+  background-color: var(--md-state-hover) !important;
+  border-color: var(--md-outline-variant) !important;
+}
+
+.column-picker__item .ant-checkbox-disabled.ant-checkbox-checked .ant-checkbox-inner {
+  background-color: var(--brand-accent-surface) !important;
+  border-color: var(--brand-accent-border) !important;
+}
+
+.column-picker__item .ant-checkbox-disabled.ant-checkbox-checked .ant-checkbox-inner::after {
+  border-color: var(--brand-accent-text) !important;
+}
+
+.column-picker__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.column-picker__locked {
+  margin-inline-start: 0.3rem;
+  color: var(--md-on-surface-variant);
+  vertical-align: -0.15em;
+}
+
+/* Chips name their field, so a screen reader hears more than a bare value. */
+.tables-toolbar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tables-toolbar__chip.ant-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  border-color: var(--md-outline);
+  background: var(--md-state-selected);
+  color: var(--md-on-surface);
+}
+
+.tables-toolbar__chip-field {
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.tables-toolbar__chip-value {
+  overflow: hidden;
+  max-width: 12rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tables-toolbar__chip .ant-tag-close-icon {
+  color: currentColor;
+  opacity: 0.72;
+}
+
+.tables-toolbar__clear.ant-btn {
+  height: auto;
+  min-height: 1.75rem;
+  padding-inline: 0.4rem;
+  color: var(--md-on-surface) !important;
+  font-size: 0.8125rem;
+}
+
+.tables-toolbar__clear.ant-btn:hover {
+  color: var(--brand-accent-text) !important;
+}
+
+@media (min-width: 600px) {
+  .tables-toolbar__row {
+    gap: 0.5rem;
+  }
+}
+
+@container tables-toolbar (min-width: 40rem) {
+  .toolbar-surface__label,
+  .toolbar-surface__chevron {
+    display: inline-flex;
+  }
+}
+
+.spreadsheet-table-card.ant-card {
+  display: grid;
+  width: 100%;
+  grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.spreadsheet-table-card .ant-card-body {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.spreadsheet-table-card__sheet {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.spreadsheet-table.ant-table-wrapper,
+.spreadsheet-table.ant-table-wrapper > .ant-spin,
+.spreadsheet-table .ant-spin-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.spreadsheet-table.ant-table-wrapper > .ant-spin {
+  position: relative;
+}
+
+.spreadsheet-table .ant-table,
+.spreadsheet-table .ant-table-container {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.spreadsheet-table .ant-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.spreadsheet-table .ant-table-container {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+}
+
+.spreadsheet-table.ant-table-wrapper {
+  --rc-virtual-list-scrollbar-bg: var(--gym-scrollbar-thumb);
+  /* Keep in sync with SHEET_ROW_HEIGHT_PX — virtual listItemHeight. */
+  --spreadsheet-row-height: 44px;
+}
+
+.spreadsheet-table .ant-table-header {
+  flex: none;
+  overflow: hidden !important;
+}
+
+.spreadsheet-table .ant-table-body {
+  flex: 1 1 0%;
+  min-height: 0 !important;
+  overscroll-behavior: contain;
+  contain: layout paint style;
+}
+
+.spreadsheet-table .ant-table-tbody-virtual {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-height: 0;
+  overscroll-behavior: contain;
+  contain: layout paint style;
+}
+
+.spreadsheet-table .ant-table-tbody-virtual-holder {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+
+.spreadsheet-table .ant-table-tbody-virtual-holder-inner {
+  will-change: transform;
+}
+
+.spreadsheet-table .ant-table-tbody-virtual-holder-inner > .ant-table-row {
+  align-items: stretch;
+  box-sizing: border-box;
+  height: var(--spreadsheet-row-height);
+  max-height: var(--spreadsheet-row-height);
+  min-height: var(--spreadsheet-row-height);
+}
+
+.spreadsheet-table.ant-table-wrapper
+  .ant-table.ant-table-small
+  .ant-table-tbody-virtual
+  .ant-table-cell {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  padding-block: 0;
+  padding-inline: 0.55rem;
+}
+
+.spreadsheet-table.ant-table-virtual .ant-table-body {
+  overflow: hidden !important;
+}
+
+.spreadsheet-table:not(.ant-table-virtual) .ant-table-body {
+  overflow: auto !important;
+  scrollbar-color: var(--gym-scrollbar-thumb) var(--md-surface-container);
+}
+
+.spreadsheet-table .ant-table-tbody-virtual-scrollbar {
+  visibility: visible !important;
+  z-index: 3;
+}
+
+/*
+ * The only surviving color `!important`. Ant paints the virtual scrollbar thumb
+ * with an inline `background`, so a stylesheet declaration cannot win without
+ * it, and leaving it unthemed ships a scrollbar that belongs to no palette.
+ */
+.spreadsheet-table .ant-table-tbody-virtual-scrollbar-thumb {
+  background-color: var(--gym-scrollbar-thumb) !important;
+}
+
+.spreadsheet-table .ant-table-tbody-virtual-scrollbar-thumb:hover,
+.spreadsheet-table .ant-table-tbody-virtual-scrollbar-thumb-moving {
+  background-color: var(--gym-scrollbar-thumb-hover) !important;
+}
+
+.spreadsheet-table .ant-table-tbody-virtual-scrollbar-horizontal {
+  height: var(--gym-scrollbar-size);
+}
+
+.spreadsheet-table .ant-table-tbody-virtual-scrollbar-vertical {
+  width: var(--gym-scrollbar-size);
+}
+
+.spreadsheet-table .ant-table-sticky-scroll {
+  flex: none;
+}
+
+.spreadsheet-table-card__sheet[aria-busy="true"] .ant-table-placeholder {
+  display: none;
+}
+
+.spreadsheet-table-card__sheet[aria-busy="true"] .ant-table-body {
+  min-height: 100%;
+}
+
+.spreadsheet-table .ant-spin-spinning > .ant-spin-container::after {
+  opacity: 0.78;
+  background: var(--md-surface);
+}
+
+.spreadsheet-table .ant-spin-section {
+  color: var(--md-on-surface);
+}
+
+.spreadsheet-table .ant-spin-description {
+  color: var(--md-on-surface);
+  text-shadow: none;
+  font-size: 0.875rem;
+}
+
+.tables-inspector-sheet.ant-drawer {
+  position: absolute;
+  inset: auto 0 0;
+  height: auto;
+  pointer-events: none;
+}
+
+.tables-inspector-sheet .ant-drawer-content-wrapper {
+  pointer-events: auto;
+  /* Keep in sync with SHEET_INSPECTOR_SHEET_SIZE in sheetDefaults.ts */
+  height: min(60dvh, 36rem) !important;
+  max-height: 65dvh;
+  box-shadow: var(--shadow-overlay);
+}
+
+.tables-inspector-sheet .ant-drawer-content,
+.tables-inspector-sheet .ant-drawer-body {
+  height: 100%;
+  overflow: hidden;
+}
+
+.tables-inspector-sheet .profile-panel,
+.tables-inspector-sheet .table-record-editor {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  background: var(--gym-color-canvas);
+}
+
+.spreadsheet-table.ant-table-wrapper:focus-within {
+  outline: none;
+}
+
+.spreadsheet-table table {
+  font-variant-numeric: tabular-nums;
+}
+
+.spreadsheet-table .ant-table-header .ant-table-cell,
+.spreadsheet-table .ant-table-thead .ant-table-cell,
+.spreadsheet-table .ant-table-thead .ant-table-cell.ant-table-column-sort,
+.spreadsheet-table .ant-table-thead .ant-table-cell:hover {
+  background: var(--md-surface-container);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+  padding: 0.4rem 0.55rem;
+}
+
+.spreadsheet-table .ant-table-tbody .ant-table-cell {
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  padding: 0.28rem 0.55rem;
+  font-size: 0.8125rem;
+}
+
+/* Single hairline divider (virtual table drops Ant's vertical borders). */
+.spreadsheet-table .ant-table-thead .ant-table-cell:not(.spreadsheet-table__actions),
+.spreadsheet-table .ant-table-tbody .ant-table-cell:not(.spreadsheet-table__actions) {
+  box-shadow: inset -1px 0 0 var(--md-outline-variant);
+}
+
+/* Ant paints its own 1px ::before splitter on header cells — stacks on our hairline. */
+.spreadsheet-table .ant-table-thead .ant-table-cell::before {
+  display: none;
+}
+
+.spreadsheet-table
+  .ant-table-tbody
+  .ant-table-cell:not(.spreadsheet-table__badges):not(.spreadsheet-table__actions) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spreadsheet-table .ant-table-tbody .ant-table-row:hover > .ant-table-cell {
+  background: var(--md-state-hover);
+}
+
+.spreadsheet-table .ant-table-tbody .spreadsheet-table__row--active > .ant-table-cell,
+.spreadsheet-table .ant-table-tbody .ant-table-row-selected > .ant-table-cell,
+.spreadsheet-table .ant-table-tbody .ant-table-row[aria-selected="true"] > .ant-table-cell {
+  background: var(--md-state-selected);
+  color: var(--md-on-surface);
+}
+
+.spreadsheet-table .ant-table-tbody .spreadsheet-table__row--active > .ant-table-cell:first-child,
+.spreadsheet-table .ant-table-tbody .ant-table-row-selected > .ant-table-cell:first-child,
+.spreadsheet-table
+  .ant-table-tbody
+  .ant-table-row[aria-selected="true"]
+  > .ant-table-cell:first-child {
+  box-shadow:
+    inset 2px 0 0 var(--md-primary-text),
+    inset -1px 0 0 var(--md-outline-variant);
+}
+
+.spreadsheet-table .ant-table-cell.spreadsheet-table__actions,
+.spreadsheet-table.ant-table-wrapper
+  .ant-table-tbody-virtual
+  .ant-table-cell.spreadsheet-table__actions,
+.spreadsheet-table .ant-table-header .ant-table-cell.spreadsheet-table__actions {
+  justify-content: center;
+  overflow: visible;
+  padding: 0;
+  text-align: center;
+}
+
+.spreadsheet-table__row-actions-trigger.ant-btn {
+  flex: none;
+  height: 1.75rem;
+  padding: 0;
+  width: 1.75rem;
+}
+
+.spreadsheet-table__row-actions-menu.ant-dropdown {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.spreadsheet-table-card--empty .ant-card-body {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.spreadsheet-table__empty {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  padding: 1.5rem 0.75rem;
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+}
+
+.spreadsheet-table__empty .ant-empty-description {
+  color: var(--md-on-surface);
+}
+
+.spreadsheet-table__identity {
+  font-weight: 600;
+}
+
+.spreadsheet-table__numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.spreadsheet-table .ant-table-cell.spreadsheet-table__badges {
+  overflow: hidden;
+  white-space: normal;
+  vertical-align: middle;
+}
+
+.document-badges {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.2rem;
+  max-width: 100%;
+  overflow: hidden;
+  align-items: center;
+}
+
+.document-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  max-width: 100%;
+  height: 1.15rem;
+  padding: 0 0.28rem;
+  border: 1px solid var(--md-outline);
+  border-radius: 999px;
+  background: var(--md-surface-container);
+  color: var(--md-on-surface);
+  font-size: 0.65rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.document-badge--indication {
+  border-style: dashed;
+  background: transparent;
+}
+
+.document-badge__acronym {
+  color: var(--md-on-surface);
+}
+
+.document-badge__mark,
+.document-badge__owner {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.document-badge__mark svg,
+.document-badge__owner svg {
+  display: block;
+}
+
+.document-badge__mark--number {
+  color: var(--md-on-surface-variant);
+  font-weight: 700;
+}
+
+.document-badge__mark--physical {
+  color: var(--mark-physical);
+}
+
+.document-badge__mark--digital {
+  color: var(--mark-digital);
+}
+
+.document-badge__owner {
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.spreadsheet-table__footer {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--md-outline-variant);
+  background: var(--md-surface);
+}
+
+.spreadsheet-table__pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.spreadsheet-table__range {
+  font-size: 0.8125rem;
+  color: var(--md-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Mobile-first tail. Compact defaults hold below `sm`, where touch targets stay
+ * at 2.75rem and the pager sheds everything but prev/current/next; the
+ * `min-width` blocks then relax them upward.
+ */
+.tables-page {
+  gap: 0.5rem;
+}
+
+.tables-page .page-header__title.ant-typography {
+  font-size: 1.25rem;
+}
+
+.tables-page .page-header__description.ant-typography {
+  display: none;
+}
+
+.toolbar-surface__body .ant-input-affix-wrapper,
+.toolbar-surface__body .ant-input:not(.ant-select-input) {
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+
+.toolbar-surface__body .ant-input-affix-wrapper .ant-input {
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+/*
+ * Ant Select 6 uses `align-items: flex-start` and, once a value is chosen,
+ * `.ant-select-content-has-value { display: block }`. Extra min-height then
+ * leaves the label hugging the top of the field.
+ */
+.toolbar-surface__body .ant-select {
+  --ant-select-height: 2.75rem;
+  align-items: center;
+  min-height: 2.75rem;
+  font-size: 1rem;
+}
+
+.toolbar-surface__body .ant-select-single .ant-select-content,
+.toolbar-surface__body
+  .ant-select.ant-select-single
+  .ant-select-content.ant-select-content-has-value,
+.toolbar-surface__body .ant-select-placeholder {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+  line-height: 1.25;
+}
+
+.toolbar-surface__body .ant-select-input,
+.toolbar-surface__body .ant-select-selection-search-input {
+  min-height: 0;
+  height: 100%;
+}
+
+.column-picker__item {
+  min-height: 2.75rem;
+}
+
+.spreadsheet-table__footer {
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.6rem max(0.35rem, env(safe-area-inset-bottom));
+}
+
+.spreadsheet-table__range {
+  flex: none;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.spreadsheet-table__pager {
+  flex: 1;
+  justify-content: flex-end;
+  gap: 0;
+  min-width: 0;
+}
+
+.tables-page .ant-select {
+  align-items: center;
+}
+
+.spreadsheet-table__page-size {
+  display: none;
+}
+
+.spreadsheet-table__pager .ant-pagination-item:not(.ant-pagination-item-active),
+.spreadsheet-table__pager .ant-pagination-jump-next,
+.spreadsheet-table__pager .ant-pagination-jump-prev {
+  display: none;
+}
+
+.spreadsheet-table__pager .ant-pagination-prev,
+.spreadsheet-table__pager .ant-pagination-next,
+.spreadsheet-table__pager .ant-pagination-item-active {
+  min-width: 2.75rem;
+  height: 2.75rem;
+  margin: 0;
+  line-height: 2.75rem;
+}
+
+.tables-inspector-sheet.ant-drawer {
+  position: fixed;
+  inset: 3.5rem 0 0;
+  z-index: var(--gym-z-inspector);
+  width: 100%;
+  height: calc(100dvh - 3.5rem);
+}
+
+.tables-inspector-sheet .ant-drawer-content-wrapper {
+  height: 100% !important;
+  max-height: none;
+}
+
+.tables-inspector-sheet .ant-drawer-body {
+  overscroll-behavior: contain;
+}
+
+.tables-inspector-sheet .profile-panel__header {
+  padding: 0.85rem 1rem 0.75rem;
+}
+
+.tables-inspector-sheet .profile-panel__body {
+  padding: 0.9rem 1rem;
+}
+
+.tables-inspector-sheet .profile-panel__footer {
+  padding: 0.65rem 1rem max(0.65rem, env(safe-area-inset-bottom));
+}
+
+.tables-inspector-sheet .profile-panel__header .ant-btn,
+.tables-inspector-sheet .profile-panel__footer .ant-btn,
+.tables-inspector-sheet .profile-panel__record-link.ant-btn {
+  min-height: 2.75rem;
+}
+
+@media (min-width: 600px) {
+  .tables-page {
+    gap: 0.75rem;
+  }
+
+  .tables-page .page-header__title.ant-typography {
+    font-size: 1.5rem;
+  }
+
+  .tables-page .page-header__description.ant-typography {
+    display: block;
+  }
+
+  .toolbar-surface__body .ant-input-affix-wrapper,
+  .toolbar-surface__body .ant-input:not(.ant-select-input) {
+    min-height: 2rem;
+    font-size: 0.875rem;
+  }
+
+  .toolbar-surface__body .ant-input-affix-wrapper .ant-input {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .toolbar-surface__body .ant-select {
+    --ant-select-height: 2rem;
+    min-height: 2rem;
+    font-size: 0.875rem;
+  }
+
+  .column-picker__item {
+    min-height: 2.25rem;
+  }
+
+  .spreadsheet-table__footer {
+    flex-wrap: wrap;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .spreadsheet-table__range {
+    font-size: 0.8125rem;
+  }
+
+  .spreadsheet-table__pager {
+    flex: 0 1 auto;
+    gap: 0.75rem;
+  }
+
+  .spreadsheet-table__page-size {
+    display: block;
+    min-width: 10.5rem;
+  }
+
+  .spreadsheet-table__pager .ant-pagination-item:not(.ant-pagination-item-active),
+  .spreadsheet-table__pager .ant-pagination-jump-next,
+  .spreadsheet-table__pager .ant-pagination-jump-prev {
+    display: inline-block;
+  }
+
+  .spreadsheet-table__pager .ant-pagination-prev,
+  .spreadsheet-table__pager .ant-pagination-next,
+  .spreadsheet-table__pager .ant-pagination-item-active {
+    min-width: 2rem;
+    height: 2rem;
+    line-height: 2rem;
+  }
+}
+
+/*
+ * The document and bill row cards. They borrow the person panel's chrome so the
+ * three cards read as one family, and differ only in what they show.
+ */
+.record-panel__grid {
+  margin: 0;
+}
+
+.record-panel__owner {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  text-align: start;
+}
+
+.record-panel__owner-label {
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.record-panel__owner strong {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Local-scope chips carry a compact badge; the full hint is the tooltip. */
+.tables-toolbar__chip-local {
+  margin-inline-start: 0.3rem;
+  padding: 0 0.3rem;
+  border-radius: var(--gym-radius-sm, 4px);
+  background: var(--md-state-selected);
+  color: var(--md-on-surface-variant);
+  font-size: 0.6875rem;
+  cursor: help;
+}
+
+.tables-toolbar__chip.is-local.ant-tag {
+  border-style: dashed;
+}
+
+.tables-inspector-sheet .table-record-editor,
+.tables-page__workspace > .table-record-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.tables-page__workspace > .table-record-editor {
+  overflow: hidden;
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-md, 12px);
+  background: var(--md-surface-low);
+}
+
+.tables-inspector-sheet .table-record-editor > .profile-panel,
+.tables-page__workspace > .table-record-editor > .profile-panel {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.spreadsheet-table__head {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.spreadsheet-table__head-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Resize hit strip on the cell divider — keep clear of the funnel control. */
+.spreadsheet-table .ant-table-thead .ant-table-cell:not(.spreadsheet-table__actions) {
+  position: relative;
+}
+
+.spreadsheet-table .ant-table-thead .ant-table-cell:not(.spreadsheet-table__actions)::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: 12px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+/* One accent edge while dragging — replaces the hairline on header and body. */
+.spreadsheet-table .ant-table-thead .ant-table-cell.is-resizing,
+.spreadsheet-table .ant-table-tbody .ant-table-cell.is-resizing {
+  box-shadow: inset -2px 0 0 var(--brand-accent-solid, #e8b84a);
+}
+
+body.spreadsheet-col-resizing,
+body.spreadsheet-col-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+/* Sorter / filter hover only when the pointer is on that control — not the whole th. */
+.spreadsheet-table .ant-table-thead .ant-table-column-sorters:hover .ant-table-column-sorter,
+.spreadsheet-table .ant-table-thead th:hover .ant-table-column-sorter {
+  color: inherit;
+}
+
+.spreadsheet-table .ant-table-thead .ant-table-column-sorter:hover {
+  color: var(--md-on-surface);
+}
+
+.column-funnel__anchor {
+  display: inline-flex;
+  flex: none;
+  margin-left: auto;
+  margin-right: 0.85rem;
+}
+
+.column-funnel__trigger {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--gym-radius-sm, 4px);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+  opacity: 0.45;
+}
+
+.column-funnel__trigger:hover,
+.column-funnel__trigger.is-active,
+.column-funnel__trigger[aria-expanded="true"] {
+  opacity: 1;
+  background: var(--md-state-hover);
+  color: var(--md-on-surface);
+}
+
+.column-funnel__overlay {
+  animation-duration: 0s !important;
+  transition: none !important;
+}
+
+.column-funnel__overlay .ant-popover-container {
+  padding: 0;
+  overflow: visible;
+  border: 1px solid var(--md-outline);
+  border-radius: 8px;
+  background: var(--md-surface-elevated, var(--md-surface-container));
+  box-shadow: var(--shadow-overlay);
+}
+
+.column-funnel__overlay .ant-popover-content {
+  padding: 0;
+}
+
+.column-funnel {
+  display: grid;
+  gap: 0.75rem;
+  width: 20.5rem;
+  max-width: calc(100vw - 1.25rem);
+  padding: 0.9rem 0.8rem 0.75rem;
+}
+
+.column-funnel__row {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.column-funnel__field {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.column-funnel__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.column-funnel__hint-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md-on-surface-variant);
+  cursor: help;
+  opacity: 0.7;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+
+.column-funnel__hint-trigger:hover {
+  opacity: 1;
+  color: var(--md-primary);
+}
+
+.column-funnel__option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.column-funnel__option-name {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.775rem;
+}
+
+.column-funnel__field .ant-select,
+.column-funnel__field .ant-input {
+  width: 100%;
+}
+
+.column-funnel__range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.55rem;
+}
+
+.column-funnel__fx {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--md-outline-variant);
+}
+
+.column-funnel__formula.ant-input {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.8125rem;
+}
+
+.column-funnel__ghost.ant-btn {
+  justify-self: start;
+  min-height: 1.35rem;
+  height: auto;
+  padding: 0;
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.column-funnel__ghost.ant-btn:hover {
+  color: var(--md-on-surface);
+}
+
+.column-funnel__error {
+  margin: 0;
+  color: var(--md-error);
+  font-size: 0.7rem;
+}
+
+.column-funnel__hint {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.column-funnel__spacer {
+  min-height: 2.35rem;
+}

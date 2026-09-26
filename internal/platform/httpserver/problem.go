@@ -67,6 +67,12 @@ type Problem struct {
 	Code        ErrorCode
 	Message     string
 	FieldErrors []FieldProblem
+	Candidates  []OwnerCandidate
+}
+
+type OwnerCandidate struct {
+	ID       string `json:"id"`
+	FullName string `json:"full_name"`
 }
 
 type errorBody struct {
@@ -84,6 +90,7 @@ type errorResponse struct {
 	Error       errorBody        `json:"error"`
 	RequestID   string           `json:"request_id,omitempty"`
 	FieldErrors []fieldErrorBody `json:"field_errors,omitempty"`
+	Candidates  []OwnerCandidate `json:"candidates,omitempty"`
 }
 
 func DecodeJSON(w http.ResponseWriter, r *http.Request, destination any) *Problem {
@@ -122,6 +129,9 @@ func writeProblem(w http.ResponseWriter, r *http.Request, problem Problem) {
 		for _, field := range problem.FieldErrors {
 			response.FieldErrors = append(response.FieldErrors, fieldErrorBody(field))
 		}
+	}
+	if len(problem.Candidates) > 0 {
+		response.Candidates = problem.Candidates
 	}
 	writeJSON(w, problem.Status, response)
 }

@@ -20,6 +20,8 @@ func (state *advancedCompileState) compileSelect(plan QueryPlan, includeLimit bo
 		}
 	}
 	state.arguments = baseState.arguments
+	joins, aliasByEntity := baseState.projectionJoins(plan.RootEntity, prefix, append(append([]string{}, plan.Projections...), plan.GroupBy...), plan.Filter)
+	state.arguments = baseState.arguments
 	for index, pattern := range plan.Patterns {
 		compiled, err := state.compilePattern(pattern, prefix)
 		if err != nil {
@@ -37,7 +39,7 @@ func (state *advancedCompileState) compileSelect(plan QueryPlan, includeLimit bo
 	groupLabels := make([]string, 0, len(plan.GroupBy))
 	for position, key := range plan.GroupBy {
 		field := state.catalog.Fields[key]
-		expression := expandSQL(field.Expression, prefix)
+		expression := expandSQL(field.Expression, fieldPrefix(aliasByEntity, plan.RootEntity, prefix, field.Public.Entity))
 		groupExpressions = append(groupExpressions, expression)
 		groupLabels = append(groupLabels, fmt.Sprintf("coalesce((%s)::text, '<null>')", expression))
 		selects = append(selects, fmt.Sprintf("(%s)::text AS value_%d", expression, position))
@@ -45,7 +47,7 @@ func (state *advancedCompileState) compileSelect(plan QueryPlan, includeLimit bo
 	}
 	for position, key := range plan.Projections {
 		field := state.catalog.Fields[key]
-		expression := expandSQL(field.Expression, prefix)
+		expression := expandSQL(field.Expression, fieldPrefix(aliasByEntity, plan.RootEntity, prefix, field.Public.Entity))
 		selects = append(selects, fmt.Sprintf("(%s)::text AS value_%d", expression, position))
 		columns = append(columns, ResultColumn{Position: position, FieldKey: key, Label: field.Public.Label, Kind: field.Public.Kind, Lineage: []ResultLineageRef{{Entity: plan.RootEntity, Field: key}}})
 	}
@@ -76,6 +78,9 @@ func (state *advancedCompileState) compileSelect(plan QueryPlan, includeLimit bo
 	}
 	selects = append([]string{entityID + " AS entity_id", entityLabel + " AS entity_label", entityUpdated + " AS entity_updated_at"}, selects...)
 	query := "SELECT " + strings.Join(selects, ",\n       ") + "\nFROM " + expandSQL(root.FromTemplate, prefix)
+	if len(joins) > 0 {
+		query += "\n" + strings.Join(joins, "\n")
+	}
 	if len(where) > 0 {
 		query += "\nWHERE " + strings.Join(where, " AND ")
 	}
@@ -188,15 +193,16 @@ func (state *advancedCompileState) compileHaving(node AggregateFilterNode, expre
 func (state *advancedCompileState) compileAdvancedOrder(plan QueryPlan, prefix string, aggregates map[string]string) []string {
 	order := make([]string, 0, len(plan.Sort))
 	for _, value := range plan.Sort {
-		expression := aggregates[value.Field]
-		if expression == "" {
-			expression = expandSQL(state.catalog.Fields[value.Field].Expression, prefix)
-		}
 		direction := "ASC"
 		if value.Direction == SortDescending {
 			direction = "DESC"
 		}
-		order = append(order, expression+" "+direction+" NULLS LAST")
+		if expression := aggregates[value.Field]; expression != "" {
+			order = append(order, expression+" "+direction+" NULLS LAST")
+			continue
+		}
+		field := state.catalog.Fields[value.Field]
+		order = append(order, orderExpression(expandSQL(field.Expression, prefix), field.Public.Kind, direction))
 	}
 	return order
 }
@@ -279,6 +285,61 @@ func (state *advancedCompileState) compileCombination(value CombinationSpec, max
 		limit = value.MaximumCombinations
 	}
 	limitPosition := state.bind(limit)
-	query := "WITH " + strings.Join(ctes, ",\n") + "\nSELECT concat_ws(E'\\x1f', " + strings.Join(idParts, ", ") + ") AS entity_id,\n       concat_ws(' + ', " + strings.Join(labelParts, ", ") + ") AS entity_label,\n       greatest(" + strings.Join(updatedParts, ", ") + ") AS entity_updated_at,\n       " + strings.Join(selects, ",\n       ") + "\nFROM " + strings.Join(joins, " CROSS JOIN ") + where + "\nORDER BY entity_id ASC\nLIMIT " + fmt.Sprintf("$%d::integer", limitPosition)
+	from := strings.Join(joins, " CROSS JOIN ") + where
+	if len(value.Aggregates) > 0 {
+		expressions := map[string]string{}
+		selects = selects[:0]
+		columns = nil
+		for _, aggregate := range value.Aggregates {
+			expression, kind := combinationAggregate(value, aggregate)
+			expressions[aggregate.Key] = expression
+			position := len(columns)
+			selects = append(selects, fmt.Sprintf("(%s)::text AS value_%d", expression, position))
+			columns = append(columns, ResultColumn{Position: position, FieldKey: aggregate.Field, AggregateKey: aggregate.Key, Label: aggregate.Key, Kind: kind})
+		}
+		having := ""
+		if value.Having != nil {
+			compiled := state.compileHaving(*value.Having, expressions)
+			if compiled != "" {
+				having = "\nHAVING " + compiled
+			}
+		}
+		query := "WITH " + strings.Join(ctes, ",\n") + "\nSELECT 'aggregate' AS entity_id,\n       'Combinação' AS entity_label,\n       now() AS entity_updated_at,\n       " + strings.Join(selects, ",\n       ") + "\nFROM " + from + having + "\nLIMIT " + fmt.Sprintf("$%d::integer", limitPosition)
+		return query, columns, "aggregate", product, nil
+	}
+	query := "WITH " + strings.Join(ctes, ",\n") + "\nSELECT concat_ws(E'\\x1f', " + strings.Join(idParts, ", ") + ") AS entity_id,\n       concat_ws(' + ', " + strings.Join(labelParts, ", ") + ") AS entity_label,\n       greatest(" + strings.Join(updatedParts, ", ") + ") AS entity_updated_at,\n       " + strings.Join(selects, ",\n       ") + "\nFROM " + from + "\nORDER BY entity_id ASC\nLIMIT " + fmt.Sprintf("$%d::integer", limitPosition)
 	return query, columns, "combination", product, nil
+}
+
+func combinationAggregate(spec CombinationSpec, aggregate Aggregate) (string, ValueKind) {
+	if aggregate.Function == AggregateCount && aggregate.Field == "" {
+		return "count(*)", ValueInteger
+	}
+	field := aggregate.Field
+	key := ""
+	if strings.HasPrefix(field, "*:") {
+		field = strings.TrimPrefix(field, "*:")
+	} else if cut, name, ok := strings.Cut(field, ":"); ok {
+		key, field = cut, name
+	}
+	parts := []string{}
+	for index, input := range spec.Inputs {
+		if input.Plan == nil || (key != "" && input.Key != key) {
+			continue
+		}
+		for position, projection := range input.Plan.Projections {
+			if projection == field {
+				parts = append(parts, fmt.Sprintf("(c%d.value_%d)::numeric", index, position))
+			}
+		}
+	}
+	body := "0"
+	if len(parts) > 0 {
+		body = strings.Join(parts, " + ")
+	}
+	function := map[AggregateFunction]string{AggregateSum: "sum", AggregateAverage: "avg", AggregateMinimum: "min", AggregateMaximum: "max", AggregateCount: "count"}[aggregate.Function]
+	if function == "" {
+		function = "sum"
+	}
+	return function + "(" + body + ")", ValueDecimal
 }

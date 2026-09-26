@@ -98,28 +98,38 @@ func registerAuthRoutes(
 	// local/test environment. Cookie transport settings are deliberately not
 	// used as an environment proxy.
 	if development {
-		mux.HandleFunc("POST /api/auth/dev-login", func(w http.ResponseWriter, r *http.Request) {
+		completeDevelopmentLogin := func(w http.ResponseWriter, r *http.Request) bool {
 			if service == nil {
 				writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "Authentication is not configured"})
-				return
+				return false
 			}
 			developmentService, ok := service.(developmentAuthenticationService)
 			if !ok {
 				writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeAuthUnavailable, Message: "Development authentication is unavailable"})
-				return
+				return false
 			}
 			result, err := developmentService.DevelopmentLogin(r.Context(), requestIDFromContext(r.Context()))
 			if err != nil {
 				if errors.Is(err, auth.ErrAccessDenied) {
 					writeProblem(w, r, Problem{Status: http.StatusForbidden, Code: ErrorCodeForbidden, Message: "Development account is not allowed"})
-					return
+					return false
 				}
 				logger.Error("complete development authentication", "request_id", requestIDFromContext(r.Context()), "error", err)
 				writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Development authentication failed"})
-				return
+				return false
 			}
 			setSessionCookie(w, result.SessionValue, result.ExpiresAt, false)
-			w.WriteHeader(http.StatusNoContent)
+			return true
+		}
+		mux.HandleFunc("POST /api/auth/dev-login", func(w http.ResponseWriter, r *http.Request) {
+			if completeDevelopmentLogin(w, r) {
+				w.WriteHeader(http.StatusNoContent)
+			}
+		})
+		mux.HandleFunc("GET /api/auth/dev-login", func(w http.ResponseWriter, r *http.Request) {
+			if completeDevelopmentLogin(w, r) {
+				http.Redirect(w, r, "/", http.StatusFound)
+			}
 		})
 	}
 

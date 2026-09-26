@@ -71,7 +71,7 @@ func (store *fakeServiceStore) Get(context.Context, Identifier) (Document, error
 	if store.createdDocument.ID.IsZero() {
 		id, _ := NewIdentifier()
 		definition, _ := store.GetType(context.Background(), Identifier{})
-		store.createdDocument = Document{ID: id, Type: definition, Status: StatusAvailable, Version: 1}
+		store.createdDocument = Document{ID: id, Type: definition, Values: Values{Medium: MediumPhysical}, Status: StatusAvailable, Version: 1}
 	}
 	return store.createdDocument, nil
 }
@@ -107,6 +107,12 @@ func (store *fakeServiceStore) AssignCurrentUse(_ context.Context, _ Identifier,
 func (store *fakeServiceStore) ReturnCurrentUse(context.Context, Identifier) error { return store.err }
 func (store *fakeServiceStore) GetCurrentUse(context.Context, Identifier) (*CurrentUse, error) {
 	return store.currentUseValue, store.err
+}
+func (store *fakeServiceStore) UpsertPresence(_ context.Context, owner profile.Identifier, typeID Identifier, claim Claim, identifier string) (Presence, error) {
+	if store.err != nil {
+		return Presence{}, store.err
+	}
+	return Presence{ProfileID: owner, TypeID: typeID, Claim: claim, Identifier: identifier, Version: 1}, nil
 }
 func (store *fakeServiceStore) RecordAuditEvent(_ context.Context, event AuditEvent) error {
 	store.audits = append(store.audits, event)
@@ -179,5 +185,16 @@ func TestServiceAuditsAssignAndReturnCurrentUse(t *testing.T) {
 	}
 	if got := store.audits[len(store.audits)-1]; got.EventType != AuditEventUseReturned || got.Outcome != auth.AuditOutcomeSuccess || got.HolderProfileID == nil {
 		t.Fatalf("last audit = %#v", got)
+	}
+}
+
+func TestServiceRejectsCurrentUseOnDigital(t *testing.T) {
+	store := &fakeServiceStore{}
+	service, _ := NewService(store, ServiceOptions{})
+	holder, _ := profile.NewIdentifier()
+	docID, _ := NewIdentifier()
+	store.createdDocument = Document{ID: docID, Values: Values{Medium: MediumDigital}, Version: 1}
+	if _, err := service.AssignCurrentUse(context.Background(), documentActor(auth.RoleExternal), docID, holder, "req-digital"); !errors.Is(err, ErrCurrentUseUnsupported) {
+		t.Fatalf("error = %v", err)
 	}
 }

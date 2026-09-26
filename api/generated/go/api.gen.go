@@ -22,24 +22,18 @@ const (
 	SessionCookieScopes sessionCookieContextKey = "sessionCookie.Scopes"
 )
 
-// Defines values for BillRecordState.
+// Defines values for BillMedium.
 const (
-	BillRecordStateARCHIVED BillRecordState = "ARCHIVED"
-	BillRecordStateCURRENT  BillRecordState = "CURRENT"
-	BillRecordStateEXPIRED  BillRecordState = "EXPIRED"
-	BillRecordStateREPLACED BillRecordState = "REPLACED"
+	BillMediumDIGITAL  BillMedium = "DIGITAL"
+	BillMediumPHYSICAL BillMedium = "PHYSICAL"
 )
 
-// Valid indicates whether the value is a known member of the BillRecordState enum.
-func (e BillRecordState) Valid() bool {
+// Valid indicates whether the value is a known member of the BillMedium enum.
+func (e BillMedium) Valid() bool {
 	switch e {
-	case BillRecordStateARCHIVED:
+	case BillMediumDIGITAL:
 		return true
-	case BillRecordStateCURRENT:
-		return true
-	case BillRecordStateEXPIRED:
-		return true
-	case BillRecordStateREPLACED:
+	case BillMediumPHYSICAL:
 		return true
 	default:
 		return false
@@ -247,24 +241,72 @@ func (e DeleteCustomDataRequestConfirmation) Valid() bool {
 	}
 }
 
-// Defines values for DocumentRecordState.
+// Defines values for DocumentBadgeKind.
 const (
-	DocumentRecordStateARCHIVED DocumentRecordState = "ARCHIVED"
-	DocumentRecordStateCURRENT  DocumentRecordState = "CURRENT"
-	DocumentRecordStateEXPIRED  DocumentRecordState = "EXPIRED"
-	DocumentRecordStateREPLACED DocumentRecordState = "REPLACED"
+	DocumentBadgeKindDigital                  DocumentBadgeKind = "digital"
+	DocumentBadgeKindIndication               DocumentBadgeKind = "indication"
+	DocumentBadgeKindInformedNumber           DocumentBadgeKind = "informed_number"
+	DocumentBadgeKindPhysical                 DocumentBadgeKind = "physical"
+	DocumentBadgeKindPhysicalDigital          DocumentBadgeKind = "physical_digital"
+	DocumentBadgeKindPhysicalWithOwner        DocumentBadgeKind = "physical_with_owner"
+	DocumentBadgeKindPhysicalWithOwnerDigital DocumentBadgeKind = "physical_with_owner_digital"
 )
 
-// Valid indicates whether the value is a known member of the DocumentRecordState enum.
-func (e DocumentRecordState) Valid() bool {
+// Valid indicates whether the value is a known member of the DocumentBadgeKind enum.
+func (e DocumentBadgeKind) Valid() bool {
 	switch e {
-	case DocumentRecordStateARCHIVED:
+	case DocumentBadgeKindDigital:
 		return true
-	case DocumentRecordStateCURRENT:
+	case DocumentBadgeKindIndication:
 		return true
-	case DocumentRecordStateEXPIRED:
+	case DocumentBadgeKindInformedNumber:
 		return true
-	case DocumentRecordStateREPLACED:
+	case DocumentBadgeKindPhysical:
+		return true
+	case DocumentBadgeKindPhysicalDigital:
+		return true
+	case DocumentBadgeKindPhysicalWithOwner:
+		return true
+	case DocumentBadgeKindPhysicalWithOwnerDigital:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentMedium.
+const (
+	DocumentMediumDIGITAL  DocumentMedium = "DIGITAL"
+	DocumentMediumPHYSICAL DocumentMedium = "PHYSICAL"
+)
+
+// Valid indicates whether the value is a known member of the DocumentMedium enum.
+func (e DocumentMedium) Valid() bool {
+	switch e {
+	case DocumentMediumDIGITAL:
+		return true
+	case DocumentMediumPHYSICAL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentPresenceClaim.
+const (
+	DocumentPresenceClaimAbsence        DocumentPresenceClaim = "absence"
+	DocumentPresenceClaimIndication     DocumentPresenceClaim = "indication"
+	DocumentPresenceClaimInformedNumber DocumentPresenceClaim = "informed_number"
+)
+
+// Valid indicates whether the value is a known member of the DocumentPresenceClaim enum.
+func (e DocumentPresenceClaim) Valid() bool {
+	switch e {
+	case DocumentPresenceClaimAbsence:
+		return true
+	case DocumentPresenceClaimIndication:
+		return true
+	case DocumentPresenceClaimInformedNumber:
 		return true
 	default:
 		return false
@@ -379,20 +421,63 @@ func (e HealthResponseStatus) Valid() bool {
 	}
 }
 
+// Defines values for IdleCustody.
+const (
+	ORGANIZATION IdleCustody = "ORGANIZATION"
+	OWNER        IdleCustody = "OWNER"
+)
+
+// Valid indicates whether the value is a known member of the IdleCustody enum.
+func (e IdleCustody) Valid() bool {
+	switch e {
+	case ORGANIZATION:
+		return true
+	case OWNER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ModelProvider.
+const (
+	Google ModelProvider = "google"
+)
+
+// Valid indicates whether the value is a known member of the ModelProvider enum.
+func (e ModelProvider) Valid() bool {
+	switch e {
+	case Google:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProfileSortField.
 const (
-	ProfileSortFieldAddressCity ProfileSortField = "address_city"
-	ProfileSortFieldCpf         ProfileSortField = "cpf"
-	ProfileSortFieldCreatedAt   ProfileSortField = "created_at"
-	ProfileSortFieldEmail       ProfileSortField = "email"
-	ProfileSortFieldFullName    ProfileSortField = "full_name"
-	ProfileSortFieldUpdatedAt   ProfileSortField = "updated_at"
+	ProfileSortFieldAddressCity         ProfileSortField = "address_city"
+	ProfileSortFieldAddressNeighborhood ProfileSortField = "address_neighborhood"
+	ProfileSortFieldAddressStreet       ProfileSortField = "address_street"
+	ProfileSortFieldBirthDate           ProfileSortField = "birth_date"
+	ProfileSortFieldCpf                 ProfileSortField = "cpf"
+	ProfileSortFieldCreatedAt           ProfileSortField = "created_at"
+	ProfileSortFieldEmail               ProfileSortField = "email"
+	ProfileSortFieldFullName            ProfileSortField = "full_name"
+	ProfileSortFieldMobilePhone         ProfileSortField = "mobile_phone"
+	ProfileSortFieldUpdatedAt           ProfileSortField = "updated_at"
 )
 
 // Valid indicates whether the value is a known member of the ProfileSortField enum.
 func (e ProfileSortField) Valid() bool {
 	switch e {
 	case ProfileSortFieldAddressCity:
+		return true
+	case ProfileSortFieldAddressNeighborhood:
+		return true
+	case ProfileSortFieldAddressStreet:
+		return true
+	case ProfileSortFieldBirthDate:
 		return true
 	case ProfileSortFieldCpf:
 		return true
@@ -402,7 +487,27 @@ func (e ProfileSortField) Valid() bool {
 		return true
 	case ProfileSortFieldFullName:
 		return true
+	case ProfileSortFieldMobilePhone:
+		return true
 	case ProfileSortFieldUpdatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProvisionUserRequestRole.
+const (
+	ProvisionUserRequestRoleADMIN    ProvisionUserRequestRole = "ADMIN"
+	ProvisionUserRequestRoleEXTERNAL ProvisionUserRequestRole = "EXTERNAL"
+)
+
+// Valid indicates whether the value is a known member of the ProvisionUserRequestRole enum.
+func (e ProvisionUserRequestRole) Valid() bool {
+	switch e {
+	case ProvisionUserRequestRoleADMIN:
+		return true
+	case ProvisionUserRequestRoleEXTERNAL:
 		return true
 	default:
 		return false
@@ -429,19 +534,19 @@ func (e SortOrder) Valid() bool {
 
 // Defines values for UserRole.
 const (
-	ADMIN      UserRole = "ADMIN"
-	EXTERNAL   UserRole = "EXTERNAL"
-	SUPERADMIN UserRole = "SUPERADMIN"
+	UserRoleADMIN      UserRole = "ADMIN"
+	UserRoleEXTERNAL   UserRole = "EXTERNAL"
+	UserRoleSUPERADMIN UserRole = "SUPERADMIN"
 )
 
 // Valid indicates whether the value is a known member of the UserRole enum.
 func (e UserRole) Valid() bool {
 	switch e {
-	case ADMIN:
+	case UserRoleADMIN:
 		return true
-	case EXTERNAL:
+	case UserRoleEXTERNAL:
 		return true
-	case SUPERADMIN:
+	case UserRoleSUPERADMIN:
 		return true
 	default:
 		return false
@@ -535,20 +640,27 @@ type AuthUser struct {
 
 // Bill defines model for Bill.
 type Bill struct {
-	Amount            string             `json:"amount"`
-	BillTypeId        openapi_types.UUID `json:"bill_type_id"`
-	Competence        string             `json:"competence"`
-	CreatedAt         time.Time          `json:"created_at"`
-	Currency          string             `json:"currency"`
-	CurrentUse        BillCurrentUse     `json:"current_use"`
-	Id                openapi_types.UUID `json:"id"`
+	Amount     string             `json:"amount"`
+	BillTypeId openapi_types.UUID `json:"bill_type_id"`
+	Competence string             `json:"competence"`
+	CreatedAt  time.Time          `json:"created_at"`
+	Currency   string             `json:"currency"`
+	CurrentUse BillCurrentUse     `json:"current_use"`
+
+	// CustomValues Custom field technical_key to display value for this bill on the current page.
+	CustomValues *map[string]string `json:"custom_values,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody       *IdleCustody       `json:"idle_custody,omitempty"`
+	Medium            BillMedium         `json:"medium"`
 	Notes             string             `json:"notes"`
+	OwnerFullName     string             `json:"owner_full_name"`
 	OwnerProfileId    openapi_types.UUID `json:"owner_profile_id"`
 	PrintedAddress    string             `json:"printed_address"`
 	PrintedHolderName string             `json:"printed_holder_name"`
-	RecordState       BillRecordState    `json:"record_state"`
 	ReferenceValue    string             `json:"reference_value"`
-	Status            BillStatus         `json:"status"`
+	Status            *BillStatus        `json:"status,omitempty"`
 	Type              BillType           `json:"type"`
 	UpdatedAt         time.Time          `json:"updated_at"`
 	Version           int64              `json:"version"`
@@ -557,8 +669,12 @@ type Bill struct {
 // BillCurrentUse defines model for BillCurrentUse.
 type BillCurrentUse struct {
 	AssignedAt      time.Time          `json:"assigned_at"`
+	HolderFullName  *string            `json:"holder_full_name,omitempty"`
 	HolderProfileId openapi_types.UUID `json:"holder_profile_id"`
 }
+
+// BillMedium defines model for BillMedium.
+type BillMedium string
 
 // BillPageMeta defines model for BillPageMeta.
 type BillPageMeta struct {
@@ -575,9 +691,6 @@ type BillPageResponse struct {
 	Page  BillPageMeta `json:"page"`
 }
 
-// BillRecordState defines model for BillRecordState.
-type BillRecordState string
-
 // BillSortField defines model for BillSortField.
 type BillSortField string
 
@@ -586,14 +699,16 @@ type BillStatus string
 
 // BillType defines model for BillType.
 type BillType struct {
-	Active             bool               `json:"active"`
-	CreatedAt          time.Time          `json:"created_at"`
-	Id                 openapi_types.UUID `json:"id"`
-	Label              string             `json:"label"`
-	SupportsCurrentUse bool               `json:"supports_current_use"`
-	TechnicalKey       string             `json:"technical_key"`
-	UpdatedAt          time.Time          `json:"updated_at"`
-	Version            int64              `json:"version"`
+	Active bool `json:"active"`
+
+	// Count Number of exemplars of this type currently in possession
+	Count        *int64             `json:"count,omitempty"`
+	CreatedAt    time.Time          `json:"created_at"`
+	Id           openapi_types.UUID `json:"id"`
+	Label        string             `json:"label"`
+	TechnicalKey string             `json:"technical_key"`
+	UpdatedAt    time.Time          `json:"updated_at"`
+	Version      int64              `json:"version"`
 }
 
 // BillTypePageResponse defines model for BillTypePageResponse.
@@ -613,24 +728,31 @@ type BillTypeSortField string
 
 // BillTypeValuesRequest defines model for BillTypeValuesRequest.
 type BillTypeValuesRequest struct {
-	Active             bool   `json:"active"`
-	Label              string `json:"label"`
-	SupportsCurrentUse bool   `json:"supports_current_use"`
-	TechnicalKey       string `json:"technical_key"`
+	Active       bool   `json:"active"`
+	Label        string `json:"label"`
+	TechnicalKey string `json:"technical_key"`
 }
 
 // BillValuesRequest defines model for BillValuesRequest.
 type BillValuesRequest struct {
-	Amount            string             `json:"amount"`
-	BillTypeId        openapi_types.UUID `json:"bill_type_id"`
-	Competence        string             `json:"competence"`
-	Currency          string             `json:"currency"`
-	Notes             string             `json:"notes"`
-	OwnerProfileId    openapi_types.UUID `json:"owner_profile_id"`
-	PrintedAddress    string             `json:"printed_address"`
-	PrintedHolderName string             `json:"printed_holder_name"`
-	RecordState       BillRecordState    `json:"record_state"`
-	ReferenceValue    string             `json:"reference_value"`
+	Amount     string             `json:"amount"`
+	BillTypeId openapi_types.UUID `json:"bill_type_id"`
+	Competence string             `json:"competence"`
+	Currency   string             `json:"currency"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody *IdleCustody `json:"idle_custody,omitempty"`
+	Medium      BillMedium   `json:"medium"`
+	Notes       string       `json:"notes"`
+
+	// OwnerName Owner full name used to look up or create a Profile when owner_profile_id is omitted.
+	OwnerName *string `json:"owner_name,omitempty"`
+
+	// OwnerProfileId Optional when owner_name is provided. Required when more than one Profile matches the name.
+	OwnerProfileId    *openapi_types.UUID `json:"owner_profile_id,omitempty"`
+	PrintedAddress    string              `json:"printed_address"`
+	PrintedHolderName string              `json:"printed_holder_name"`
+	ReferenceValue    string              `json:"reference_value"`
 }
 
 // CreateCustomEntityRequest defines model for CreateCustomEntityRequest.
@@ -847,28 +969,48 @@ type DeleteProfileRequest struct {
 	Version      int64  `json:"version"`
 }
 
+// DistinctCitiesResponse defines model for DistinctCitiesResponse.
+type DistinctCitiesResponse struct {
+	Values []string `json:"values"`
+}
+
 // Document defines model for Document.
 type Document struct {
-	CreatedAt       time.Time           `json:"created_at"`
-	CurrentUse      DocumentCurrentUse  `json:"current_use"`
-	DocumentDate    string              `json:"document_date"`
-	DocumentTypeId  openapi_types.UUID  `json:"document_type_id"`
-	Id              openapi_types.UUID  `json:"id"`
-	IdentifierValue string              `json:"identifier_value"`
-	Notes           string              `json:"notes"`
-	OwnerProfileId  openapi_types.UUID  `json:"owner_profile_id"`
-	RecordState     DocumentRecordState `json:"record_state"`
-	Status          DocumentStatus      `json:"status"`
-	Type            DocumentType        `json:"type"`
-	UpdatedAt       time.Time           `json:"updated_at"`
-	Version         int64               `json:"version"`
+	CreatedAt  time.Time          `json:"created_at"`
+	CurrentUse DocumentCurrentUse `json:"current_use"`
+
+	// CustomValues Custom field technical_key to display value for this document on the current page.
+	CustomValues    *map[string]string `json:"custom_values,omitempty"`
+	DocumentDate    string             `json:"document_date"`
+	DocumentTypeId  openapi_types.UUID `json:"document_type_id"`
+	Id              openapi_types.UUID `json:"id"`
+	IdentifierValue string             `json:"identifier_value"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody    *IdleCustody       `json:"idle_custody,omitempty"`
+	Medium         DocumentMedium     `json:"medium"`
+	Notes          string             `json:"notes"`
+	OwnerFullName  string             `json:"owner_full_name"`
+	OwnerProfileId openapi_types.UUID `json:"owner_profile_id"`
+	Status         *DocumentStatus    `json:"status,omitempty"`
+	Type           DocumentType       `json:"type"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+	ValidUntil     *string            `json:"valid_until,omitempty"`
+	Version        int64              `json:"version"`
 }
+
+// DocumentBadgeKind Positive people-listing badge kind for one document type. Absence and unspecified emit no badge.
+type DocumentBadgeKind string
 
 // DocumentCurrentUse defines model for DocumentCurrentUse.
 type DocumentCurrentUse struct {
 	AssignedAt      time.Time          `json:"assigned_at"`
+	HolderFullName  *string            `json:"holder_full_name,omitempty"`
 	HolderProfileId openapi_types.UUID `json:"holder_profile_id"`
 }
+
+// DocumentMedium defines model for DocumentMedium.
+type DocumentMedium string
 
 // DocumentPageMeta defines model for DocumentPageMeta.
 type DocumentPageMeta struct {
@@ -885,8 +1027,19 @@ type DocumentPageResponse struct {
 	Page      DocumentPageMeta `json:"page"`
 }
 
-// DocumentRecordState defines model for DocumentRecordState.
-type DocumentRecordState string
+// DocumentPresence defines model for DocumentPresence.
+type DocumentPresence struct {
+	// Claim Persisted presence claim for a document type on a person. Absence is never invented.
+	Claim           DocumentPresenceClaim `json:"claim"`
+	DocumentTypeId  openapi_types.UUID    `json:"document_type_id"`
+	Id              openapi_types.UUID    `json:"id"`
+	IdentifierValue *string               `json:"identifier_value,omitempty"`
+	ProfileId       openapi_types.UUID    `json:"profile_id"`
+	Version         int64                 `json:"version"`
+}
+
+// DocumentPresenceClaim Persisted presence claim for a document type on a person. Absence is never invented.
+type DocumentPresenceClaim string
 
 // DocumentSortField defines model for DocumentSortField.
 type DocumentSortField string
@@ -896,7 +1049,10 @@ type DocumentStatus string
 
 // DocumentType defines model for DocumentType.
 type DocumentType struct {
-	Active           bool                     `json:"active"`
+	Active bool `json:"active"`
+
+	// Count Number of exemplars of this type currently in possession
+	Count            *int64                   `json:"count,omitempty"`
 	CreatedAt        time.Time                `json:"created_at"`
 	DateRequired     bool                     `json:"date_required"`
 	Id               openapi_types.UUID       `json:"id"`
@@ -941,17 +1097,23 @@ type DocumentUniquenessPolicy string
 
 // DocumentValuesRequest defines model for DocumentValuesRequest.
 type DocumentValuesRequest struct {
-	DocumentDate    string              `json:"document_date"`
-	DocumentTypeId  openapi_types.UUID  `json:"document_type_id"`
-	IdentifierValue string              `json:"identifier_value"`
-	Notes           string              `json:"notes"`
-	OwnerProfileId  openapi_types.UUID  `json:"owner_profile_id"`
-	RecordState     DocumentRecordState `json:"record_state"`
+	DocumentDate    string             `json:"document_date"`
+	DocumentTypeId  openapi_types.UUID `json:"document_type_id"`
+	IdentifierValue string             `json:"identifier_value"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody    *IdleCustody       `json:"idle_custody,omitempty"`
+	Medium         DocumentMedium     `json:"medium"`
+	Notes          string             `json:"notes"`
+	OwnerProfileId openapi_types.UUID `json:"owner_profile_id"`
+	ValidUntil     *string            `json:"valid_until,omitempty"`
 }
 
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
-	Error struct {
+	// Candidates Present when creating a bill and owner_name matches more than one Profile.
+	Candidates *[]OwnerCandidate `json:"candidates,omitempty"`
+	Error      struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 	} `json:"error"`
@@ -975,20 +1137,83 @@ type HealthResponse struct {
 // HealthResponseStatus defines model for HealthResponse.Status.
 type HealthResponseStatus string
 
+// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+type IdleCustody string
+
+// ModelKeyStatus defines model for ModelKeyStatus.
+type ModelKeyStatus struct {
+	Configured bool          `json:"configured"`
+	Model      *string       `json:"model,omitempty"`
+	Provider   ModelProvider `json:"provider"`
+	UpdatedAt  *time.Time    `json:"updated_at,omitempty"`
+}
+
+// ModelProvider defines model for ModelProvider.
+type ModelProvider string
+
+// OwnerCandidate defines model for OwnerCandidate.
+type OwnerCandidate struct {
+	FullName string             `json:"full_name"`
+	Id       openapi_types.UUID `json:"id"`
+}
+
 // Profile defines model for Profile.
 type Profile struct {
-	Address       ProfileAddress     `json:"address"`
-	Cpf           string             `json:"cpf"`
-	CreatedAt     time.Time          `json:"created_at"`
-	Email         string             `json:"email"`
-	FullName      string             `json:"full_name"`
-	Id            openapi_types.UUID `json:"id"`
-	LandlinePhone string             `json:"landline_phone"`
-	MobilePhone   string             `json:"mobile_phone"`
-	Notes         string             `json:"notes"`
-	SocialName    string             `json:"social_name"`
-	UpdatedAt     time.Time          `json:"updated_at"`
-	Version       int64              `json:"version"`
+	Address        ProfileAddress      `json:"address"`
+	BirthCity      *string             `json:"birth_city,omitempty"`
+	BirthCountry   *string             `json:"birth_country,omitempty"`
+	BirthDate      *openapi_types.Date `json:"birth_date,omitempty"`
+	BloodDonor     *bool               `json:"blood_donor,omitempty"`
+	BloodType      *string             `json:"blood_type,omitempty"`
+	CardBank       *string             `json:"card_bank,omitempty"`
+	CardBrand      *string             `json:"card_brand,omitempty"`
+	ClubMembership *string             `json:"club_membership,omitempty"`
+	Collections    *string             `json:"collections,omitempty"`
+	Cpf            string              `json:"cpf"`
+	CreatedAt      time.Time           `json:"created_at"`
+
+	// CustomValues Custom field technical_key to display value for this person on the current page.
+	CustomValues *map[string]string `json:"custom_values,omitempty"`
+
+	// DocumentBadges Positive document-type badges for the current people-listing page. Loaded with WHERE profile_id = ANY($ids); absence and unspecified are omitted.
+	DocumentBadges *[]ProfileDocumentBadge `json:"document_badges,omitempty"`
+
+	// DocumentIdentifiers Latest informed identifier_value per document type technical_key for this person, including cpf.
+	DocumentIdentifiers *map[string]string `json:"document_identifiers,omitempty"`
+
+	// DocumentPresences Sparse persisted claims for this person, including absence. Unspecified types are omitted.
+	DocumentPresences  *[]ProfileDocumentPresence `json:"document_presences,omitempty"`
+	Email              string                     `json:"email"`
+	FatherBirthDate    *openapi_types.Date        `json:"father_birth_date,omitempty"`
+	FatherName         *string                    `json:"father_name,omitempty"`
+	FullName           string                     `json:"full_name"`
+	Gender             *string                    `json:"gender,omitempty"`
+	HealthPlan         *string                    `json:"health_plan,omitempty"`
+	Id                 openapi_types.UUID         `json:"id"`
+	LandlinePhone      string                     `json:"landline_phone"`
+	MaritalStatus      *string                    `json:"marital_status,omitempty"`
+	MembershipType     *string                    `json:"membership_type,omitempty"`
+	MobilePhone        string                     `json:"mobile_phone"`
+	MotherBirthDate    *openapi_types.Date        `json:"mother_birth_date,omitempty"`
+	MotherName         *string                    `json:"mother_name,omitempty"`
+	Nationality        *string                    `json:"nationality,omitempty"`
+	Notes              string                     `json:"notes"`
+	OrganDonor         *bool                      `json:"organ_donor,omitempty"`
+	ParentsWeddingDate *openapi_types.Date        `json:"parents_wedding_date,omitempty"`
+	Pet                *string                    `json:"pet,omitempty"`
+	PlaceOfOrigin      *string                    `json:"place_of_origin,omitempty"`
+	Sector             *string                    `json:"sector,omitempty"`
+	SocialName         string                     `json:"social_name"`
+	SupermarketClub    *string                    `json:"supermarket_club,omitempty"`
+	Team               *string                    `json:"team,omitempty"`
+	TravelCountries    *string                    `json:"travel_countries,omitempty"`
+	UpdatedAt          time.Time                  `json:"updated_at"`
+	VehicleColor       *string                    `json:"vehicle_color,omitempty"`
+	VehicleModel       *string                    `json:"vehicle_model,omitempty"`
+	VehiclePlate       *string                    `json:"vehicle_plate,omitempty"`
+	VehicleYear        *int                       `json:"vehicle_year,omitempty"`
+	Version            int64                      `json:"version"`
+	WeddingDate        *openapi_types.Date        `json:"wedding_date,omitempty"`
 }
 
 // ProfileAddress defines model for ProfileAddress.
@@ -1000,6 +1225,43 @@ type ProfileAddress struct {
 	PostalCode   string `json:"postal_code"`
 	State        string `json:"state"`
 	Street       string `json:"street"`
+}
+
+// ProfileDocumentBadge JSON contract for people-listing document badges per type. Frontend renders chips later; this payload is the source of truth.
+type ProfileDocumentBadge struct {
+	// Badge Positive people-listing badge kind for one document type. Absence and unspecified emit no badge.
+	Badge DocumentBadgeKind `json:"badge"`
+
+	// Claim Persisted presence claim for a document type on a person. Absence is never invented.
+	Claim          DocumentPresenceClaim `json:"claim"`
+	DocumentTypeId openapi_types.UUID    `json:"document_type_id"`
+	HasDigital     bool                  `json:"has_digital"`
+	HasPhysical    bool                  `json:"has_physical"`
+
+	// IdentifierValue Present only when claim is informed_number.
+	IdentifierValue *string `json:"identifier_value,omitempty"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody *IdleCustody `json:"idle_custody,omitempty"`
+
+	// InHands Physical exemplar with ORGANIZATION idle custody or a current use.
+	InHands bool `json:"in_hands"`
+
+	// Label Type label for display; the grid cell uses the type acronym, not this state name.
+	Label        string `json:"label"`
+	TechnicalKey string `json:"technical_key"`
+}
+
+// ProfileDocumentPresence Persisted presence claim for one document type on a person. Absence is included; unspecified types are omitted.
+type ProfileDocumentPresence struct {
+	// Claim Persisted presence claim for a document type on a person. Absence is never invented.
+	Claim           DocumentPresenceClaim `json:"claim"`
+	DocumentTypeId  openapi_types.UUID    `json:"document_type_id"`
+	HasDigital      bool                  `json:"has_digital"`
+	HasPhysical     bool                  `json:"has_physical"`
+	IdentifierValue *string               `json:"identifier_value,omitempty"`
+	Label           string                `json:"label"`
+	TechnicalKey    string                `json:"technical_key"`
 }
 
 // ProfilePageMeta defines model for ProfilePageMeta.
@@ -1022,15 +1284,57 @@ type ProfileSortField string
 
 // ProfileValuesRequest defines model for ProfileValuesRequest.
 type ProfileValuesRequest struct {
-	Address       ProfileAddress `json:"address"`
-	Cpf           string         `json:"cpf"`
-	Email         string         `json:"email"`
-	FullName      string         `json:"full_name"`
-	LandlinePhone string         `json:"landline_phone"`
-	MobilePhone   string         `json:"mobile_phone"`
-	Notes         string         `json:"notes"`
-	SocialName    string         `json:"social_name"`
+	Address            ProfileAddress      `json:"address"`
+	BirthCity          *string             `json:"birth_city,omitempty"`
+	BirthCountry       *string             `json:"birth_country,omitempty"`
+	BirthDate          *openapi_types.Date `json:"birth_date,omitempty"`
+	BloodDonor         *bool               `json:"blood_donor,omitempty"`
+	BloodType          *string             `json:"blood_type,omitempty"`
+	CardBank           *string             `json:"card_bank,omitempty"`
+	CardBrand          *string             `json:"card_brand,omitempty"`
+	ClubMembership     *string             `json:"club_membership,omitempty"`
+	Collections        *string             `json:"collections,omitempty"`
+	Cpf                string              `json:"cpf"`
+	Email              string              `json:"email"`
+	FatherBirthDate    *openapi_types.Date `json:"father_birth_date,omitempty"`
+	FatherName         *string             `json:"father_name,omitempty"`
+	FullName           string              `json:"full_name"`
+	Gender             *string             `json:"gender,omitempty"`
+	HealthPlan         *string             `json:"health_plan,omitempty"`
+	LandlinePhone      string              `json:"landline_phone"`
+	MaritalStatus      *string             `json:"marital_status,omitempty"`
+	MembershipType     *string             `json:"membership_type,omitempty"`
+	MobilePhone        string              `json:"mobile_phone"`
+	MotherBirthDate    *openapi_types.Date `json:"mother_birth_date,omitempty"`
+	MotherName         *string             `json:"mother_name,omitempty"`
+	Nationality        *string             `json:"nationality,omitempty"`
+	Notes              string              `json:"notes"`
+	OrganDonor         *bool               `json:"organ_donor,omitempty"`
+	ParentsWeddingDate *openapi_types.Date `json:"parents_wedding_date,omitempty"`
+	Pet                *string             `json:"pet,omitempty"`
+	PlaceOfOrigin      *string             `json:"place_of_origin,omitempty"`
+	Sector             *string             `json:"sector,omitempty"`
+	SocialName         string              `json:"social_name"`
+	SupermarketClub    *string             `json:"supermarket_club,omitempty"`
+	Team               *string             `json:"team,omitempty"`
+	TravelCountries    *string             `json:"travel_countries,omitempty"`
+	VehicleColor       *string             `json:"vehicle_color,omitempty"`
+	VehicleModel       *string             `json:"vehicle_model,omitempty"`
+	VehiclePlate       *string             `json:"vehicle_plate,omitempty"`
+	VehicleYear        *int                `json:"vehicle_year,omitempty"`
+	WeddingDate        *openapi_types.Date `json:"wedding_date,omitempty"`
 }
+
+// ProvisionUserRequest defines model for ProvisionUserRequest.
+type ProvisionUserRequest struct {
+	Capabilities *[]string                `json:"capabilities,omitempty"`
+	DisplayName  string                   `json:"display_name"`
+	Email        string                   `json:"email"`
+	Role         ProvisionUserRequestRole `json:"role"`
+}
+
+// ProvisionUserRequestRole defines model for ProvisionUserRequest.Role.
+type ProvisionUserRequestRole string
 
 // ReplaceCustomValuesRequest defines model for ReplaceCustomValuesRequest.
 type ReplaceCustomValuesRequest struct {
@@ -1038,31 +1342,41 @@ type ReplaceCustomValuesRequest struct {
 	Version int64              `json:"version"`
 }
 
+// SetModelKeyRequest defines model for SetModelKeyRequest.
+type SetModelKeyRequest struct {
+	Model string `json:"model"`
+
+	// Secret Provider API key. Write-only; never returned.
+	Secret string `json:"secret"`
+}
+
 // SortOrder defines model for SortOrder.
 type SortOrder string
 
 // UpdateBillRequest defines model for UpdateBillRequest.
 type UpdateBillRequest struct {
-	Amount            string             `json:"amount"`
-	BillTypeId        openapi_types.UUID `json:"bill_type_id"`
-	Competence        string             `json:"competence"`
-	Currency          string             `json:"currency"`
+	Amount     string             `json:"amount"`
+	BillTypeId openapi_types.UUID `json:"bill_type_id"`
+	Competence string             `json:"competence"`
+	Currency   string             `json:"currency"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody       *IdleCustody       `json:"idle_custody,omitempty"`
+	Medium            BillMedium         `json:"medium"`
 	Notes             string             `json:"notes"`
 	OwnerProfileId    openapi_types.UUID `json:"owner_profile_id"`
 	PrintedAddress    string             `json:"printed_address"`
 	PrintedHolderName string             `json:"printed_holder_name"`
-	RecordState       BillRecordState    `json:"record_state"`
 	ReferenceValue    string             `json:"reference_value"`
 	Version           int64              `json:"version"`
 }
 
 // UpdateBillTypeRequest defines model for UpdateBillTypeRequest.
 type UpdateBillTypeRequest struct {
-	Active             bool   `json:"active"`
-	Label              string `json:"label"`
-	SupportsCurrentUse bool   `json:"supports_current_use"`
-	TechnicalKey       string `json:"technical_key"`
-	Version            int64  `json:"version"`
+	Active       bool   `json:"active"`
+	Label        string `json:"label"`
+	TechnicalKey string `json:"technical_key"`
+	Version      int64  `json:"version"`
 }
 
 // UpdateCustomEntityRequest defines model for UpdateCustomEntityRequest.
@@ -1108,13 +1422,17 @@ type UpdateCustomOptionRequest struct {
 
 // UpdateDocumentRequest defines model for UpdateDocumentRequest.
 type UpdateDocumentRequest struct {
-	DocumentDate    string              `json:"document_date"`
-	DocumentTypeId  openapi_types.UUID  `json:"document_type_id"`
-	IdentifierValue string              `json:"identifier_value"`
-	Notes           string              `json:"notes"`
-	OwnerProfileId  openapi_types.UUID  `json:"owner_profile_id"`
-	RecordState     DocumentRecordState `json:"record_state"`
-	Version         int64               `json:"version"`
+	DocumentDate    string             `json:"document_date"`
+	DocumentTypeId  openapi_types.UUID `json:"document_type_id"`
+	IdentifierValue string             `json:"identifier_value"`
+
+	// IdleCustody Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+	IdleCustody    *IdleCustody       `json:"idle_custody,omitempty"`
+	Medium         DocumentMedium     `json:"medium"`
+	Notes          string             `json:"notes"`
+	OwnerProfileId openapi_types.UUID `json:"owner_profile_id"`
+	ValidUntil     *string            `json:"valid_until,omitempty"`
+	Version        int64              `json:"version"`
 }
 
 // UpdateDocumentTypeRequest defines model for UpdateDocumentTypeRequest.
@@ -1130,22 +1448,66 @@ type UpdateDocumentTypeRequest struct {
 
 // UpdateProfileRequest defines model for UpdateProfileRequest.
 type UpdateProfileRequest struct {
-	Address       ProfileAddress `json:"address"`
-	Cpf           string         `json:"cpf"`
-	Email         string         `json:"email"`
-	FullName      string         `json:"full_name"`
-	LandlinePhone string         `json:"landline_phone"`
-	MobilePhone   string         `json:"mobile_phone"`
-	Notes         string         `json:"notes"`
-	SocialName    string         `json:"social_name"`
-	Version       int64          `json:"version"`
+	Address            ProfileAddress      `json:"address"`
+	BirthCity          *string             `json:"birth_city,omitempty"`
+	BirthCountry       *string             `json:"birth_country,omitempty"`
+	BirthDate          *openapi_types.Date `json:"birth_date,omitempty"`
+	BloodDonor         *bool               `json:"blood_donor,omitempty"`
+	BloodType          *string             `json:"blood_type,omitempty"`
+	CardBank           *string             `json:"card_bank,omitempty"`
+	CardBrand          *string             `json:"card_brand,omitempty"`
+	ClubMembership     *string             `json:"club_membership,omitempty"`
+	Collections        *string             `json:"collections,omitempty"`
+	Cpf                string              `json:"cpf"`
+	Email              string              `json:"email"`
+	FatherBirthDate    *openapi_types.Date `json:"father_birth_date,omitempty"`
+	FatherName         *string             `json:"father_name,omitempty"`
+	FullName           string              `json:"full_name"`
+	Gender             *string             `json:"gender,omitempty"`
+	HealthPlan         *string             `json:"health_plan,omitempty"`
+	LandlinePhone      string              `json:"landline_phone"`
+	MaritalStatus      *string             `json:"marital_status,omitempty"`
+	MembershipType     *string             `json:"membership_type,omitempty"`
+	MobilePhone        string              `json:"mobile_phone"`
+	MotherBirthDate    *openapi_types.Date `json:"mother_birth_date,omitempty"`
+	MotherName         *string             `json:"mother_name,omitempty"`
+	Nationality        *string             `json:"nationality,omitempty"`
+	Notes              string              `json:"notes"`
+	OrganDonor         *bool               `json:"organ_donor,omitempty"`
+	ParentsWeddingDate *openapi_types.Date `json:"parents_wedding_date,omitempty"`
+	Pet                *string             `json:"pet,omitempty"`
+	PlaceOfOrigin      *string             `json:"place_of_origin,omitempty"`
+	Sector             *string             `json:"sector,omitempty"`
+	SocialName         string              `json:"social_name"`
+	SupermarketClub    *string             `json:"supermarket_club,omitempty"`
+	Team               *string             `json:"team,omitempty"`
+	TravelCountries    *string             `json:"travel_countries,omitempty"`
+	VehicleColor       *string             `json:"vehicle_color,omitempty"`
+	VehicleModel       *string             `json:"vehicle_model,omitempty"`
+	VehiclePlate       *string             `json:"vehicle_plate,omitempty"`
+	VehicleYear        *int                `json:"vehicle_year,omitempty"`
+	Version            int64               `json:"version"`
+	WeddingDate        *openapi_types.Date `json:"wedding_date,omitempty"`
 }
 
 // UpdateUserAccessRequest defines model for UpdateUserAccessRequest.
 type UpdateUserAccessRequest struct {
-	Active  bool     `json:"active"`
-	Role    UserRole `json:"role"`
-	Version int64    `json:"version"`
+	Active      bool     `json:"active"`
+	DisplayName *string  `json:"display_name,omitempty"`
+	Email       *string  `json:"email,omitempty"`
+	Role        UserRole `json:"role"`
+	Version     int64    `json:"version"`
+}
+
+// UpsertDocumentPresenceRequest defines model for UpsertDocumentPresenceRequest.
+type UpsertDocumentPresenceRequest struct {
+	// Claim Persisted presence claim for a document type on a person. Absence is never invented.
+	Claim          DocumentPresenceClaim `json:"claim"`
+	DocumentTypeId openapi_types.UUID    `json:"document_type_id"`
+
+	// IdentifierValue Required when claim is informed_number; forbidden for absence and indication.
+	IdentifierValue *string            `json:"identifier_value,omitempty"`
+	ProfileId       openapi_types.UUID `json:"profile_id"`
 }
 
 // UserRole defines model for UserRole.
@@ -1196,15 +1558,18 @@ type ListBillTypesParams struct {
 
 // ListBillsParams defines parameters for ListBills.
 type ListBillsParams struct {
-	Limit           *int32              `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset          *int32              `form:"offset,omitempty" json:"offset,omitempty"`
-	Sort            *BillSortField      `form:"sort,omitempty" json:"sort,omitempty"`
-	Order           *SortOrder          `form:"order,omitempty" json:"order,omitempty"`
-	OwnerProfileId  *openapi_types.UUID `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
-	BillTypeId      *openapi_types.UUID `form:"bill_type_id,omitempty" json:"bill_type_id,omitempty"`
+	Limit          *int32              `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset         *int32              `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort           *BillSortField      `form:"sort,omitempty" json:"sort,omitempty"`
+	Order          *SortOrder          `form:"order,omitempty" json:"order,omitempty"`
+	OwnerProfileId *openapi_types.UUID `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
+	BillTypeId     *openapi_types.UUID `form:"bill_type_id,omitempty" json:"bill_type_id,omitempty"`
+
+	// Q Search query language applied as a row recorte of bills.
+	Q               *string             `form:"q,omitempty" json:"q,omitempty"`
 	Reference       *string             `form:"reference,omitempty" json:"reference,omitempty"`
 	Competence      *string             `form:"competence,omitempty" json:"competence,omitempty"`
-	RecordState     *BillRecordState    `form:"record_state,omitempty" json:"record_state,omitempty"`
+	Medium          *BillMedium         `form:"medium,omitempty" json:"medium,omitempty"`
 	Status          *BillStatus         `form:"status,omitempty" json:"status,omitempty"`
 	HolderProfileId *openapi_types.UUID `form:"holder_profile_id,omitempty" json:"holder_profile_id,omitempty"`
 }
@@ -1257,29 +1622,44 @@ type ListDocumentTypesParams struct {
 
 // ListDocumentsParams defines parameters for ListDocuments.
 type ListDocumentsParams struct {
-	Limit           *int32               `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset          *int32               `form:"offset,omitempty" json:"offset,omitempty"`
-	Sort            *DocumentSortField   `form:"sort,omitempty" json:"sort,omitempty"`
-	Order           *SortOrder           `form:"order,omitempty" json:"order,omitempty"`
-	OwnerProfileId  *openapi_types.UUID  `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
-	DocumentTypeId  *openapi_types.UUID  `form:"document_type_id,omitempty" json:"document_type_id,omitempty"`
-	Identifier      *string              `form:"identifier,omitempty" json:"identifier,omitempty"`
-	RecordState     *DocumentRecordState `form:"record_state,omitempty" json:"record_state,omitempty"`
-	Status          *DocumentStatus      `form:"status,omitempty" json:"status,omitempty"`
-	HolderProfileId *openapi_types.UUID  `form:"holder_profile_id,omitempty" json:"holder_profile_id,omitempty"`
+	Limit          *int32              `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset         *int32              `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort           *DocumentSortField  `form:"sort,omitempty" json:"sort,omitempty"`
+	Order          *SortOrder          `form:"order,omitempty" json:"order,omitempty"`
+	OwnerProfileId *openapi_types.UUID `form:"owner_profile_id,omitempty" json:"owner_profile_id,omitempty"`
+	DocumentTypeId *openapi_types.UUID `form:"document_type_id,omitempty" json:"document_type_id,omitempty"`
+
+	// Q Search query language applied as a row recorte of documents.
+	Q               *string             `form:"q,omitempty" json:"q,omitempty"`
+	Identifier      *string             `form:"identifier,omitempty" json:"identifier,omitempty"`
+	Medium          *DocumentMedium     `form:"medium,omitempty" json:"medium,omitempty"`
+	Status          *DocumentStatus     `form:"status,omitempty" json:"status,omitempty"`
+	HolderProfileId *openapi_types.UUID `form:"holder_profile_id,omitempty" json:"holder_profile_id,omitempty"`
 }
 
 // ListProfilesParams defines parameters for ListProfiles.
 type ListProfilesParams struct {
-	Limit    *int32            `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset   *int32            `form:"offset,omitempty" json:"offset,omitempty"`
-	Sort     *ProfileSortField `form:"sort,omitempty" json:"sort,omitempty"`
-	Order    *SortOrder        `form:"order,omitempty" json:"order,omitempty"`
-	FullName *string           `form:"full_name,omitempty" json:"full_name,omitempty"`
-	Cpf      *string           `form:"cpf,omitempty" json:"cpf,omitempty"`
-	Email    *string           `form:"email,omitempty" json:"email,omitempty"`
-	City     *string           `form:"city,omitempty" json:"city,omitempty"`
-	State    *string           `form:"state,omitempty" json:"state,omitempty"`
+	Limit  *int32            `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int32            `form:"offset,omitempty" json:"offset,omitempty"`
+	Sort   *ProfileSortField `form:"sort,omitempty" json:"sort,omitempty"`
+	Order  *SortOrder        `form:"order,omitempty" json:"order,omitempty"`
+
+	// Q Search query language applied as a row recorte of this module.
+	Q        *string `form:"q,omitempty" json:"q,omitempty"`
+	FullName *string `form:"full_name,omitempty" json:"full_name,omitempty"`
+	Cpf      *string `form:"cpf,omitempty" json:"cpf,omitempty"`
+	Email    *string `form:"email,omitempty" json:"email,omitempty"`
+	City     *string `form:"city,omitempty" json:"city,omitempty"`
+	State    *string `form:"state,omitempty" json:"state,omitempty"`
+}
+
+// ListDistinctCitiesParams defines parameters for ListDistinctCities.
+type ListDistinctCitiesParams struct {
+	FullName *string `form:"full_name,omitempty" json:"full_name,omitempty"`
+	Cpf      *string `form:"cpf,omitempty" json:"cpf,omitempty"`
+	Email    *string `form:"email,omitempty" json:"email,omitempty"`
+	State    *string `form:"state,omitempty" json:"state,omitempty"`
+	Limit    *int32  `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // CompleteGitHubLoginParams defines parameters for CompleteGitHubLogin.
@@ -1287,6 +1667,12 @@ type CompleteGitHubLoginParams struct {
 	Code  string `form:"code" json:"code"`
 	State string `form:"state" json:"state"`
 }
+
+// SetModelKeyJSONRequestBody defines body for SetModelKey for application/json ContentType.
+type SetModelKeyJSONRequestBody = SetModelKeyRequest
+
+// ProvisionApplicationUserJSONRequestBody defines body for ProvisionApplicationUser for application/json ContentType.
+type ProvisionApplicationUserJSONRequestBody = ProvisionUserRequest
 
 // UpdateApplicationUserAccessJSONRequestBody defines body for UpdateApplicationUserAccess for application/json ContentType.
 type UpdateApplicationUserAccessJSONRequestBody = UpdateUserAccessRequest
@@ -1351,6 +1737,9 @@ type UpdateCustomOptionJSONRequestBody = UpdateCustomOptionRequest
 // ReplaceCustomValuesJSONRequestBody defines body for ReplaceCustomValues for application/json ContentType.
 type ReplaceCustomValuesJSONRequestBody = ReplaceCustomValuesRequest
 
+// UpsertDocumentPresenceJSONRequestBody defines body for UpsertDocumentPresence for application/json ContentType.
+type UpsertDocumentPresenceJSONRequestBody = UpsertDocumentPresenceRequest
+
 // CreateDocumentTypeJSONRequestBody defines body for CreateDocumentType for application/json ContentType.
 type CreateDocumentTypeJSONRequestBody = DocumentTypeValuesRequest
 
@@ -1383,9 +1772,24 @@ type UpdateProfileJSONRequestBody = UpdateProfileRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Remove the shared Assistente model key
+	// (DELETE /api/admin/model-keys/{provider})
+	ClearModelKey(w http.ResponseWriter, r *http.Request, provider ModelProvider)
+	// Shared Assistente model key status (never the secret)
+	// (GET /api/admin/model-keys/{provider})
+	GetModelKeyStatus(w http.ResponseWriter, r *http.Request, provider ModelProvider)
+	// Store or rotate the shared Assistente model key
+	// (PUT /api/admin/model-keys/{provider})
+	SetModelKey(w http.ResponseWriter, r *http.Request, provider ModelProvider)
 	// List application users for administration
 	// (GET /api/admin/users)
 	ListApplicationUsers(w http.ResponseWriter, r *http.Request, params ListApplicationUsersParams)
+	// Create an application user with role and capabilities
+	// (POST /api/admin/users)
+	ProvisionApplicationUser(w http.ResponseWriter, r *http.Request)
+	// Delete an application user
+	// (DELETE /api/admin/users/{user_id})
+	DeleteApplicationUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
 	// Update application role and active status
 	// (PATCH /api/admin/users/{user_id}/access)
 	UpdateApplicationUserAccess(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
@@ -1497,6 +1901,9 @@ type ServerInterface interface {
 	// Replace custom values using optimistic concurrency
 	// (PUT /api/v1/custom-values/{target_kind}/{target_id})
 	ReplaceCustomValues(w http.ResponseWriter, r *http.Request, targetKind string, targetId openapi_types.UUID)
+	// Declare absence, indication, or an informed number for a person and document type
+	// (PUT /api/v1/document-presences)
+	UpsertDocumentPresence(w http.ResponseWriter, r *http.Request)
 	// List administrable document types
 	// (GET /api/v1/document-types)
 	ListDocumentTypes(w http.ResponseWriter, r *http.Request, params ListDocumentTypesParams)
@@ -1542,6 +1949,9 @@ type ServerInterface interface {
 	// Create a physical-person profile
 	// (POST /api/v1/profiles)
 	CreateProfile(w http.ResponseWriter, r *http.Request)
+	// List distinct cities across profiles matching the given filters
+	// (GET /api/v1/profiles/cities)
+	ListDistinctCities(w http.ResponseWriter, r *http.Request, params ListDistinctCitiesParams)
 	// Permanently delete a profile with explicit confirmation
 	// (DELETE /api/v1/profiles/{profile_id})
 	DeleteProfile(w http.ResponseWriter, r *http.Request, profileId openapi_types.UUID)
@@ -1554,10 +1964,10 @@ type ServerInterface interface {
 	// Duplicate a profile into an independent profile for review
 	// (POST /api/v1/profiles/{profile_id}/duplicate)
 	DuplicateProfile(w http.ResponseWriter, r *http.Request, profileId openapi_types.UUID)
-	// Complete GitHub OAuth authentication
+	// Complete Google OAuth authentication
 	// (GET /auth/callback)
 	CompleteGitHubLogin(w http.ResponseWriter, r *http.Request, params CompleteGitHubLoginParams)
-	// Begin GitHub OAuth authentication
+	// Begin Google OAuth authentication
 	// (GET /auth/login)
 	BeginGitHubLogin(w http.ResponseWriter, r *http.Request)
 	// Check whether the API process is alive
@@ -1576,6 +1986,102 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ClearModelKey operation middleware
+func (siw *ServerInterfaceWrapper) ClearModelKey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider ModelProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearModelKey(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetModelKeyStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetModelKeyStatus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider ModelProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetModelKeyStatus(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetModelKey operation middleware
+func (siw *ServerInterfaceWrapper) SetModelKey(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider ModelProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetModelKey(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListApplicationUsers operation middleware
 func (siw *ServerInterfaceWrapper) ListApplicationUsers(w http.ResponseWriter, r *http.Request) {
@@ -1620,6 +2126,58 @@ func (siw *ServerInterfaceWrapper) ListApplicationUsers(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListApplicationUsers(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProvisionApplicationUser operation middleware
+func (siw *ServerInterfaceWrapper) ProvisionApplicationUser(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProvisionApplicationUser(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteApplicationUser operation middleware
+func (siw *ServerInterfaceWrapper) DeleteApplicationUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "user_id" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "user_id", r.PathValue("user_id"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteApplicationUser(w, r, userId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2014,6 +2572,19 @@ func (siw *ServerInterfaceWrapper) ListBills(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "reference" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "reference", r.URL.Query(), &params.Reference, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -2040,15 +2611,15 @@ func (siw *ServerInterfaceWrapper) ListBills(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// ------------- Optional query parameter "record_state" -------------
+	// ------------- Optional query parameter "medium" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_state", r.URL.Query(), &params.RecordState, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "medium", r.URL.Query(), &params.Medium, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_state"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "medium"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_state", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "medium", Err: err})
 		}
 		return
 	}
@@ -3190,6 +3761,26 @@ func (siw *ServerInterfaceWrapper) ReplaceCustomValues(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// UpsertDocumentPresence operation middleware
+func (siw *ServerInterfaceWrapper) UpsertDocumentPresence(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpsertDocumentPresence(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDocumentTypes operation middleware
 func (siw *ServerInterfaceWrapper) ListDocumentTypes(w http.ResponseWriter, r *http.Request) {
 
@@ -3503,6 +4094,19 @@ func (siw *ServerInterfaceWrapper) ListDocuments(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "identifier" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "identifier", r.URL.Query(), &params.Identifier, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -3516,15 +4120,15 @@ func (siw *ServerInterfaceWrapper) ListDocuments(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// ------------- Optional query parameter "record_state" -------------
+	// ------------- Optional query parameter "medium" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_state", r.URL.Query(), &params.RecordState, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "medium", r.URL.Query(), &params.Medium, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_state"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "medium"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_state", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "medium", Err: err})
 		}
 		return
 	}
@@ -3845,6 +4449,19 @@ func (siw *ServerInterfaceWrapper) ListProfiles(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "full_name" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "full_name", r.URL.Query(), &params.FullName, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -3932,6 +4549,97 @@ func (siw *ServerInterfaceWrapper) CreateProfile(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDistinctCities operation middleware
+func (siw *ServerInterfaceWrapper) ListDistinctCities(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDistinctCitiesParams
+
+	// ------------- Optional query parameter "full_name" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "full_name", r.URL.Query(), &params.FullName, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "full_name"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "full_name", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cpf" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cpf", r.URL.Query(), &params.Cpf, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cpf"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cpf", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "email" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "email", r.URL.Query(), &params.Email, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "email"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "email", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDistinctCities(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4277,7 +4985,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/admin/model-keys/{provider}", wrapper.ClearModelKey)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/admin/model-keys/{provider}", wrapper.GetModelKeyStatus)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/admin/model-keys/{provider}", wrapper.SetModelKey)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/admin/users", wrapper.ListApplicationUsers)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/admin/users", wrapper.ProvisionApplicationUser)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/admin/users/{user_id}", wrapper.DeleteApplicationUser)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/admin/users/{user_id}/access", wrapper.UpdateApplicationUserAccess)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/auth/session", wrapper.GetAuthSession)
@@ -4315,6 +5028,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/custom-fields/{field_id}/options/{option_id}", wrapper.UpdateCustomOption)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/custom-values/{target_kind}/{target_id}", wrapper.GetCustomValues)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/custom-values/{target_kind}/{target_id}", wrapper.ReplaceCustomValues)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/document-presences", wrapper.UpsertDocumentPresence)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/document-types", wrapper.ListDocumentTypes)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/document-types", wrapper.CreateDocumentType)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/document-types/{document_type_id}", wrapper.DeleteDocumentType)
@@ -4330,6 +5044,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/documents/{document_id}/duplicate", wrapper.DuplicateDocument)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/profiles", wrapper.ListProfiles)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/profiles", wrapper.CreateProfile)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/profiles/cities", wrapper.ListDistinctCities)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/profiles/{profile_id}", wrapper.DeleteProfile)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/profiles/{profile_id}", wrapper.GetProfile)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/v1/profiles/{profile_id}", wrapper.UpdateProfile)
@@ -4357,6 +5072,249 @@ type ServiceUnavailableJSONResponse ErrorResponse
 type UnauthorizedJSONResponse ErrorResponse
 
 type ValidationErrorJSONResponse ErrorResponse
+
+type ClearModelKeyRequestObject struct {
+	Provider ModelProvider `json:"provider"`
+}
+
+type ClearModelKeyResponseObject interface {
+	VisitClearModelKeyResponse(w http.ResponseWriter) error
+}
+
+type ClearModelKey204Response struct {
+}
+
+func (response ClearModelKey204Response) VisitClearModelKeyResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ClearModelKey401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ClearModelKey401JSONResponse) VisitClearModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClearModelKey403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ClearModelKey403JSONResponse) VisitClearModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClearModelKey404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ClearModelKey404JSONResponse) VisitClearModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ClearModelKey503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response ClearModelKey503JSONResponse) VisitClearModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModelKeyStatusRequestObject struct {
+	Provider ModelProvider `json:"provider"`
+}
+
+type GetModelKeyStatusResponseObject interface {
+	VisitGetModelKeyStatusResponse(w http.ResponseWriter) error
+}
+
+type GetModelKeyStatus200JSONResponse ModelKeyStatus
+
+func (response GetModelKeyStatus200JSONResponse) VisitGetModelKeyStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModelKeyStatus401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetModelKeyStatus401JSONResponse) VisitGetModelKeyStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModelKeyStatus403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetModelKeyStatus403JSONResponse) VisitGetModelKeyStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModelKeyStatus404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetModelKeyStatus404JSONResponse) VisitGetModelKeyStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModelKeyStatus503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response GetModelKeyStatus503JSONResponse) VisitGetModelKeyStatusResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKeyRequestObject struct {
+	Provider ModelProvider `json:"provider"`
+	Body     *SetModelKeyJSONRequestBody
+}
+
+type SetModelKeyResponseObject interface {
+	VisitSetModelKeyResponse(w http.ResponseWriter) error
+}
+
+type SetModelKey200JSONResponse ModelKeyStatus
+
+func (response SetModelKey200JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKey400JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response SetModelKey400JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKey401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SetModelKey401JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKey403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SetModelKey403JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKey404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SetModelKey404JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SetModelKey503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response SetModelKey503JSONResponse) VisitSetModelKeyResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
 
 type ListApplicationUsersRequestObject struct {
 	Params ListApplicationUsersParams
@@ -4425,6 +5383,184 @@ func (response ListApplicationUsers403JSONResponse) VisitListApplicationUsersRes
 type ListApplicationUsers503JSONResponse struct{ AuthUnavailableJSONResponse }
 
 func (response ListApplicationUsers503JSONResponse) VisitListApplicationUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUserRequestObject struct {
+	Body *ProvisionApplicationUserJSONRequestBody
+}
+
+type ProvisionApplicationUserResponseObject interface {
+	VisitProvisionApplicationUserResponse(w http.ResponseWriter) error
+}
+
+type ProvisionApplicationUser201JSONResponse AdminUser
+
+func (response ProvisionApplicationUser201JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ProvisionApplicationUser400JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ProvisionApplicationUser401JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ProvisionApplicationUser403JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUser409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ProvisionApplicationUser409JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUser503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response ProvisionApplicationUser503JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplicationUserRequestObject struct {
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+type DeleteApplicationUserResponseObject interface {
+	VisitDeleteApplicationUserResponse(w http.ResponseWriter) error
+}
+
+type DeleteApplicationUser204Response struct {
+}
+
+func (response DeleteApplicationUser204Response) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteApplicationUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteApplicationUser401JSONResponse) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplicationUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteApplicationUser403JSONResponse) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplicationUser404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteApplicationUser404JSONResponse) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplicationUser409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteApplicationUser409JSONResponse) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplicationUser503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response DeleteApplicationUser503JSONResponse) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -8454,6 +9590,126 @@ func (response ReplaceCustomValues503JSONResponse) VisitReplaceCustomValuesRespo
 	return err
 }
 
+type UpsertDocumentPresenceRequestObject struct {
+	Body *UpsertDocumentPresenceJSONRequestBody
+}
+
+type UpsertDocumentPresenceResponseObject interface {
+	VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error
+}
+
+type UpsertDocumentPresence200JSONResponse DocumentPresence
+
+func (response UpsertDocumentPresence200JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpsertDocumentPresence400JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpsertDocumentPresence401JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpsertDocumentPresence403JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpsertDocumentPresence404JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence409JSONResponse struct{ ConflictJSONResponse }
+
+func (response UpsertDocumentPresence409JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UpsertDocumentPresence422JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpsertDocumentPresence503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response UpsertDocumentPresence503JSONResponse) VisitUpsertDocumentPresenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListDocumentTypesRequestObject struct {
 	Params ListDocumentTypesParams
 }
@@ -9947,6 +11203,84 @@ func (response CreateProfile503JSONResponse) VisitCreateProfileResponse(w http.R
 	return err
 }
 
+type ListDistinctCitiesRequestObject struct {
+	Params ListDistinctCitiesParams
+}
+
+type ListDistinctCitiesResponseObject interface {
+	VisitListDistinctCitiesResponse(w http.ResponseWriter) error
+}
+
+type ListDistinctCities200JSONResponse DistinctCitiesResponse
+
+func (response ListDistinctCities200JSONResponse) VisitListDistinctCitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDistinctCities400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListDistinctCities400JSONResponse) VisitListDistinctCitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDistinctCities401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListDistinctCities401JSONResponse) VisitListDistinctCitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDistinctCities403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListDistinctCities403JSONResponse) VisitListDistinctCitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDistinctCities503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response ListDistinctCities503JSONResponse) VisitListDistinctCitiesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteProfileRequestObject struct {
 	ProfileId openapi_types.UUID `json:"profile_id"`
 	Body      *DeleteProfileJSONRequestBody
@@ -10512,9 +11846,24 @@ func (response GetReadyHealth503JSONResponse) VisitGetReadyHealthResponse(w http
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Remove the shared Assistente model key
+	// (DELETE /api/admin/model-keys/{provider})
+	ClearModelKey(ctx context.Context, request ClearModelKeyRequestObject) (ClearModelKeyResponseObject, error)
+	// Shared Assistente model key status (never the secret)
+	// (GET /api/admin/model-keys/{provider})
+	GetModelKeyStatus(ctx context.Context, request GetModelKeyStatusRequestObject) (GetModelKeyStatusResponseObject, error)
+	// Store or rotate the shared Assistente model key
+	// (PUT /api/admin/model-keys/{provider})
+	SetModelKey(ctx context.Context, request SetModelKeyRequestObject) (SetModelKeyResponseObject, error)
 	// List application users for administration
 	// (GET /api/admin/users)
 	ListApplicationUsers(ctx context.Context, request ListApplicationUsersRequestObject) (ListApplicationUsersResponseObject, error)
+	// Create an application user with role and capabilities
+	// (POST /api/admin/users)
+	ProvisionApplicationUser(ctx context.Context, request ProvisionApplicationUserRequestObject) (ProvisionApplicationUserResponseObject, error)
+	// Delete an application user
+	// (DELETE /api/admin/users/{user_id})
+	DeleteApplicationUser(ctx context.Context, request DeleteApplicationUserRequestObject) (DeleteApplicationUserResponseObject, error)
 	// Update application role and active status
 	// (PATCH /api/admin/users/{user_id}/access)
 	UpdateApplicationUserAccess(ctx context.Context, request UpdateApplicationUserAccessRequestObject) (UpdateApplicationUserAccessResponseObject, error)
@@ -10626,6 +11975,9 @@ type StrictServerInterface interface {
 	// Replace custom values using optimistic concurrency
 	// (PUT /api/v1/custom-values/{target_kind}/{target_id})
 	ReplaceCustomValues(ctx context.Context, request ReplaceCustomValuesRequestObject) (ReplaceCustomValuesResponseObject, error)
+	// Declare absence, indication, or an informed number for a person and document type
+	// (PUT /api/v1/document-presences)
+	UpsertDocumentPresence(ctx context.Context, request UpsertDocumentPresenceRequestObject) (UpsertDocumentPresenceResponseObject, error)
 	// List administrable document types
 	// (GET /api/v1/document-types)
 	ListDocumentTypes(ctx context.Context, request ListDocumentTypesRequestObject) (ListDocumentTypesResponseObject, error)
@@ -10671,6 +12023,9 @@ type StrictServerInterface interface {
 	// Create a physical-person profile
 	// (POST /api/v1/profiles)
 	CreateProfile(ctx context.Context, request CreateProfileRequestObject) (CreateProfileResponseObject, error)
+	// List distinct cities across profiles matching the given filters
+	// (GET /api/v1/profiles/cities)
+	ListDistinctCities(ctx context.Context, request ListDistinctCitiesRequestObject) (ListDistinctCitiesResponseObject, error)
 	// Permanently delete a profile with explicit confirmation
 	// (DELETE /api/v1/profiles/{profile_id})
 	DeleteProfile(ctx context.Context, request DeleteProfileRequestObject) (DeleteProfileResponseObject, error)
@@ -10683,10 +12038,10 @@ type StrictServerInterface interface {
 	// Duplicate a profile into an independent profile for review
 	// (POST /api/v1/profiles/{profile_id}/duplicate)
 	DuplicateProfile(ctx context.Context, request DuplicateProfileRequestObject) (DuplicateProfileResponseObject, error)
-	// Complete GitHub OAuth authentication
+	// Complete Google OAuth authentication
 	// (GET /auth/callback)
 	CompleteGitHubLogin(ctx context.Context, request CompleteGitHubLoginRequestObject) (CompleteGitHubLoginResponseObject, error)
-	// Begin GitHub OAuth authentication
+	// Begin Google OAuth authentication
 	// (GET /auth/login)
 	BeginGitHubLogin(ctx context.Context, request BeginGitHubLoginRequestObject) (BeginGitHubLoginResponseObject, error)
 	// Check whether the API process is alive
@@ -10726,6 +12081,91 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
+// ClearModelKey operation middleware
+func (sh *strictHandler) ClearModelKey(w http.ResponseWriter, r *http.Request, provider ModelProvider) {
+	var request ClearModelKeyRequestObject
+
+	request.Provider = provider
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ClearModelKey(ctx, request.(ClearModelKeyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ClearModelKey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ClearModelKeyResponseObject); ok {
+		if err := validResponse.VisitClearModelKeyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetModelKeyStatus operation middleware
+func (sh *strictHandler) GetModelKeyStatus(w http.ResponseWriter, r *http.Request, provider ModelProvider) {
+	var request GetModelKeyStatusRequestObject
+
+	request.Provider = provider
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetModelKeyStatus(ctx, request.(GetModelKeyStatusRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetModelKeyStatus")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetModelKeyStatusResponseObject); ok {
+		if err := validResponse.VisitGetModelKeyStatusResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SetModelKey operation middleware
+func (sh *strictHandler) SetModelKey(w http.ResponseWriter, r *http.Request, provider ModelProvider) {
+	var request SetModelKeyRequestObject
+
+	request.Provider = provider
+
+	var body SetModelKeyJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SetModelKey(ctx, request.(SetModelKeyRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SetModelKey")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SetModelKeyResponseObject); ok {
+		if err := validResponse.VisitSetModelKeyResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListApplicationUsers operation middleware
 func (sh *strictHandler) ListApplicationUsers(w http.ResponseWriter, r *http.Request, params ListApplicationUsersParams) {
 	var request ListApplicationUsersRequestObject
@@ -10745,6 +12185,63 @@ func (sh *strictHandler) ListApplicationUsers(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListApplicationUsersResponseObject); ok {
 		if err := validResponse.VisitListApplicationUsersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ProvisionApplicationUser operation middleware
+func (sh *strictHandler) ProvisionApplicationUser(w http.ResponseWriter, r *http.Request) {
+	var request ProvisionApplicationUserRequestObject
+
+	var body ProvisionApplicationUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ProvisionApplicationUser(ctx, request.(ProvisionApplicationUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ProvisionApplicationUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ProvisionApplicationUserResponseObject); ok {
+		if err := validResponse.VisitProvisionApplicationUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteApplicationUser operation middleware
+func (sh *strictHandler) DeleteApplicationUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request DeleteApplicationUserRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteApplicationUser(ctx, request.(DeleteApplicationUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteApplicationUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteApplicationUserResponseObject); ok {
+		if err := validResponse.VisitDeleteApplicationUserResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -11851,6 +13348,37 @@ func (sh *strictHandler) ReplaceCustomValues(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// UpsertDocumentPresence operation middleware
+func (sh *strictHandler) UpsertDocumentPresence(w http.ResponseWriter, r *http.Request) {
+	var request UpsertDocumentPresenceRequestObject
+
+	var body UpsertDocumentPresenceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpsertDocumentPresence(ctx, request.(UpsertDocumentPresenceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpsertDocumentPresence")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpsertDocumentPresenceResponseObject); ok {
+		if err := validResponse.VisitUpsertDocumentPresenceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListDocumentTypes operation middleware
 func (sh *strictHandler) ListDocumentTypes(w http.ResponseWriter, r *http.Request, params ListDocumentTypesParams) {
 	var request ListDocumentTypesRequestObject
@@ -12284,6 +13812,32 @@ func (sh *strictHandler) CreateProfile(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateProfileResponseObject); ok {
 		if err := validResponse.VisitCreateProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListDistinctCities operation middleware
+func (sh *strictHandler) ListDistinctCities(w http.ResponseWriter, r *http.Request, params ListDistinctCitiesParams) {
+	var request ListDistinctCitiesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDistinctCities(ctx, request.(ListDistinctCitiesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDistinctCities")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDistinctCitiesResponseObject); ok {
+		if err := validResponse.VisitListDistinctCitiesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

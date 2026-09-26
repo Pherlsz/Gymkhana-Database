@@ -26,7 +26,7 @@ var (
 	ErrTechnicalKeyImmutable = errors.New("bill type technical key is immutable")
 	ErrTechnicalKeyConflict  = errors.New("bill type technical key already exists")
 	ErrReferenceNotFound     = errors.New("bill profile reference not found")
-	ErrCurrentUseUnsupported = errors.New("bill type does not support current use")
+	ErrCurrentUseUnsupported = errors.New("bill medium does not support current use")
 	ErrCurrentUseExists      = errors.New("bill has current use")
 	ErrCurrentUseNotFound    = errors.New("bill current use not found")
 )
@@ -70,9 +70,11 @@ type Filters struct {
 	TypeID          *Identifier
 	Reference       string
 	Competence      string
-	RecordState     RecordState
+	Medium          Medium
 	Status          Status
 	HolderProfileID *profile.Identifier
+	RestrictIDs     bool
+	IDFilter        []Identifier
 }
 
 type ListOptions struct {
@@ -83,30 +85,12 @@ type ListOptions struct {
 	Filters   Filters
 }
 
-type Store interface {
-	CreateType(context.Context, Identifier, TypeValues) (TypeDefinition, error)
-	GetType(context.Context, Identifier) (TypeDefinition, error)
-	CountTypes(context.Context, TypeFilters) (int64, error)
-	ListTypes(context.Context, TypeListOptions) ([]TypeDefinition, error)
-	UpdateType(context.Context, Identifier, int64, TypeValues) (TypeDefinition, error)
-	DeleteType(context.Context, Identifier, int64) error
-	Create(context.Context, Identifier, Values) (Bill, error)
-	Get(context.Context, Identifier) (Bill, error)
-	Count(context.Context, Filters) (int64, error)
-	List(context.Context, ListOptions) ([]Bill, error)
-	Update(context.Context, Identifier, int64, Values) (Bill, error)
-	Duplicate(context.Context, Identifier, Identifier) (Bill, error)
-	Delete(context.Context, Identifier, int64) error
-	AssignCurrentUse(context.Context, Identifier, profile.Identifier) (CurrentUse, error)
-	ReturnCurrentUse(context.Context, Identifier) error
-	GetCurrentUse(context.Context, Identifier) (*CurrentUse, error)
-}
-
 type billQueries interface {
 	CreateBillType(context.Context, dbgen.CreateBillTypeParams) (dbgen.BillType, error)
 	GetBillTypeByID(context.Context, pgtype.UUID) (dbgen.BillType, error)
 	CountBillTypes(context.Context, dbgen.CountBillTypesParams) (int64, error)
 	ListBillTypes(context.Context, dbgen.ListBillTypesParams) ([]dbgen.BillType, error)
+	CountBillsByType(context.Context) ([]dbgen.CountBillsByTypeRow, error)
 	BillTypeHasBills(context.Context, pgtype.UUID) (bool, error)
 	UpdateBillType(context.Context, dbgen.UpdateBillTypeParams) (dbgen.BillType, error)
 	DeleteBillType(context.Context, dbgen.DeleteBillTypeParams) (pgtype.UUID, error)
@@ -137,7 +121,7 @@ func (store *PostgresStore) CreateType(ctx context.Context, id Identifier, value
 	}
 	value, err := store.queries.CreateBillType(ctx, dbgen.CreateBillTypeParams{
 		ID: databaseUUID(id), TechnicalKey: normalized.TechnicalKey, Label: normalized.Label,
-		Active: normalized.Active, SupportsCurrentUse: normalized.SupportsCurrentUse,
+		Active: normalized.Active,
 	})
 	if err != nil {
 		return TypeDefinition{}, mapTypePersistenceError("create bill type", err)
@@ -175,12 +159,25 @@ func (store *PostgresStore) ListTypes(ctx context.Context, options TypeListOptio
 	if err != nil {
 		return nil, fmt.Errorf("list bill types: %w", err)
 	}
+	counts, err := store.queries.CountBillsByType(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("count bills by type: %w", err)
+	}
+	countByType := make(map[Identifier]int64, len(counts))
+	for _, row := range counts {
+		id, idErr := identifierFromDatabase(row.BillTypeID, "bill type")
+		if idErr != nil {
+			return nil, idErr
+		}
+		countByType[id] = row.BillCount
+	}
 	result := make([]TypeDefinition, 0, len(values))
 	for _, value := range values {
 		mapped, mapErr := typeFromDatabase(value)
 		if mapErr != nil {
 			return nil, mapErr
 		}
+		mapped.ExemplarCount = countByType[mapped.ID]
 		result = append(result, mapped)
 	}
 	return result, nil
@@ -201,17 +198,8 @@ func (store *PostgresStore) UpdateType(ctx context.Context, id Identifier, versi
 	if normalized.TechnicalKey != existing.Values.TechnicalKey {
 		return TypeDefinition{}, ErrTechnicalKeyImmutable
 	}
-	if normalized.SupportsCurrentUse != existing.Values.SupportsCurrentUse {
-		hasBills, checkErr := store.queries.BillTypeHasBills(ctx, databaseUUID(id))
-		if checkErr != nil {
-			return TypeDefinition{}, fmt.Errorf("check bill type usage: %w", checkErr)
-		}
-		if hasBills {
-			return TypeDefinition{}, ErrTypeInUse
-		}
-	}
 	value, err := store.queries.UpdateBillType(ctx, dbgen.UpdateBillTypeParams{
-		Label: normalized.Label, Active: normalized.Active, SupportsCurrentUse: normalized.SupportsCurrentUse,
+		Label: normalized.Label, Active: normalized.Active,
 		ID: databaseUUID(id), Version: version,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -260,14 +248,14 @@ func (store *PostgresStore) Create(ctx context.Context, id Identifier, values Va
 	if err != nil {
 		return Bill{}, err
 	}
-	value, err := store.queries.CreateBill(ctx, params)
+	_, err = store.queries.CreateBill(ctx, params)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Bill{}, ErrTypeInactive
 	}
 	if err != nil {
 		return Bill{}, mapBillPersistenceError("create bill", err)
 	}
-	return billFromDatabase(value, definition)
+	return store.Get(ctx, id)
 }
 
 func (store *PostgresStore) Get(ctx context.Context, id Identifier) (Bill, error) {
@@ -284,9 +272,11 @@ func (store *PostgresStore) Get(ctx context.Context, id Identifier) (Bill, error
 func (store *PostgresStore) Count(ctx context.Context, filters Filters) (int64, error) {
 	count, err := store.queries.CountBills(ctx, dbgen.CountBillsParams{
 		OwnerProfileIDFilter: optionalProfileUUID(filters.OwnerProfileID), BillTypeIDFilter: optionalDatabaseUUID(filters.TypeID),
-		ReferenceFilter: normalize.SearchText(filters.Reference), CompetenceFilter: strings.TrimSpace(filters.Competence),
-		RecordStateFilter: string(filters.RecordState), StatusFilter: string(filters.Status),
+		ReferenceFilter: normalizeFilterPattern(filters.Reference, normalize.SearchText), CompetenceFilter: strings.TrimSpace(filters.Competence),
+		MediumFilter: string(filters.Medium), StatusFilter: string(filters.Status),
 		HolderProfileIDFilter: optionalProfileUUID(filters.HolderProfileID),
+		RestrictIds:           filters.RestrictIDs,
+		IDFilter:              billUUIDList(filters.IDFilter),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("count bills: %w", err)
@@ -297,9 +287,11 @@ func (store *PostgresStore) Count(ctx context.Context, filters Filters) (int64, 
 func (store *PostgresStore) List(ctx context.Context, options ListOptions) ([]Bill, error) {
 	values, err := store.queries.ListBills(ctx, dbgen.ListBillsParams{
 		OwnerProfileIDFilter: optionalProfileUUID(options.Filters.OwnerProfileID), BillTypeIDFilter: optionalDatabaseUUID(options.Filters.TypeID),
-		ReferenceFilter: normalize.SearchText(options.Filters.Reference), CompetenceFilter: strings.TrimSpace(options.Filters.Competence),
-		RecordStateFilter: string(options.Filters.RecordState), StatusFilter: string(options.Filters.Status),
+		ReferenceFilter: normalizeFilterPattern(options.Filters.Reference, normalize.SearchText), CompetenceFilter: strings.TrimSpace(options.Filters.Competence),
+		MediumFilter: string(options.Filters.Medium), StatusFilter: string(options.Filters.Status),
 		HolderProfileIDFilter: optionalProfileUUID(options.Filters.HolderProfileID),
+		RestrictIds:           options.Filters.RestrictIDs,
+		IDFilter:              billUUIDList(options.Filters.IDFilter),
 		SortField:             string(options.SortField), SortOrder: string(options.SortOrder), PageOffset: options.Offset, PageLimit: options.Limit,
 	})
 	if err != nil {
@@ -335,11 +327,11 @@ func (store *PostgresStore) Update(ctx context.Context, id Identifier, version i
 	if err != nil {
 		return Bill{}, err
 	}
-	value, err := store.queries.UpdateBill(ctx, dbgen.UpdateBillParams{
+	_, err = store.queries.UpdateBill(ctx, dbgen.UpdateBillParams{
 		OwnerProfileID: created.OwnerProfileID, PrintedHolderName: created.PrintedHolderName,
 		PrintedAddress: created.PrintedAddress, ReferenceValue: created.ReferenceValue,
 		Competence: created.Competence, Amount: created.Amount, Currency: created.Currency,
-		Notes: created.Notes, RecordState: created.RecordState, ID: created.ID, Version: version,
+		Notes: created.Notes, Medium: created.Medium, IdleCustody: created.IdleCustody, ID: created.ID, Version: version,
 		BillTypeID: created.BillTypeID,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -348,7 +340,7 @@ func (store *PostgresStore) Update(ctx context.Context, id Identifier, version i
 	if err != nil {
 		return Bill{}, mapBillPersistenceError("update bill", err)
 	}
-	return billFromDatabase(value, definition)
+	return store.Get(ctx, id)
 }
 
 func (store *PostgresStore) Duplicate(ctx context.Context, newID, sourceID Identifier) (Bill, error) {
@@ -384,7 +376,7 @@ func (store *PostgresStore) AssignCurrentUse(ctx context.Context, id Identifier,
 	if err != nil {
 		return CurrentUse{}, err
 	}
-	if !bill.Type.Values.SupportsCurrentUse {
+	if !bill.Values.Medium.SupportsCurrentUse() {
 		return CurrentUse{}, ErrCurrentUseUnsupported
 	}
 	value, err := store.queries.AssignBillCurrentUse(ctx, dbgen.AssignBillCurrentUseParams{
@@ -396,7 +388,7 @@ func (store *PostgresStore) AssignCurrentUse(ctx context.Context, id Identifier,
 	if err != nil {
 		return CurrentUse{}, mapBillPersistenceError("assign bill current use", err)
 	}
-	return currentUseFromDatabase(value.HolderProfileID, value.AssignedAt)
+	return currentUseFromDatabase(value.HolderProfileID, nil, value.AssignedAt)
 }
 
 func (store *PostgresStore) ReturnCurrentUse(ctx context.Context, id Identifier) error {
@@ -418,7 +410,7 @@ func (store *PostgresStore) GetCurrentUse(ctx context.Context, id Identifier) (*
 	if err != nil {
 		return nil, fmt.Errorf("get bill current use: %w", err)
 	}
-	currentUse, err := currentUseFromDatabase(value.HolderProfileID, value.AssignedAt)
+	currentUse, err := currentUseFromDatabase(value.HolderProfileID, nil, value.AssignedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -457,7 +449,7 @@ func createDatabaseParams(id Identifier, values Values) (dbgen.CreateBillParams,
 		PrintedHolderName: optionalString(values.PrintedHolderName), PrintedAddress: optionalString(values.PrintedAddress),
 		ReferenceValue: optionalString(values.Reference), Competence: optionalString(values.Competence),
 		Amount: amount, Currency: optionalString(values.Currency), Notes: optionalString(values.Notes),
-		RecordState: string(values.RecordState), BillTypeID: databaseUUID(values.TypeID),
+		Medium: string(values.Medium), IdleCustody: optionalString(string(values.IdleCustody)), BillTypeID: databaseUUID(values.TypeID),
 	}, nil
 }
 
@@ -476,7 +468,6 @@ func typeFromDatabase(value dbgen.BillType) (TypeDefinition, error) {
 	}
 	normalized, err := NormalizeType(TypeValues{
 		TechnicalKey: value.TechnicalKey, Label: value.Label, Active: value.Active,
-		SupportsCurrentUse: value.SupportsCurrentUse,
 	})
 	if err != nil {
 		return TypeDefinition{}, fmt.Errorf("map bill type from database: %w", err)
@@ -505,46 +496,45 @@ func billFromDatabase(value dbgen.Bill, definition TypeDefinition) (Bill, error)
 	if err != nil {
 		return Bill{}, fmt.Errorf("map bill amount from database: %w", err)
 	}
-	normalized, err := Normalize(Values{
+	normalized, err := NormalizeStored(Values{
 		OwnerProfileID: ownerID, TypeID: definition.ID, PrintedHolderName: stringValue(value.PrintedHolderName),
 		PrintedAddress: stringValue(value.PrintedAddress), Reference: stringValue(value.ReferenceValue),
 		Competence: stringValue(value.Competence), Amount: amount, Currency: stringValue(value.Currency),
-		Notes: stringValue(value.Notes), RecordState: RecordState(value.RecordState),
+		Notes: stringValue(value.Notes), Medium: Medium(value.Medium), IdleCustody: IdleCustody(stringValue(value.IdleCustody)),
 	}, definition)
 	if err != nil {
 		return Bill{}, fmt.Errorf("map bill from database: %w", err)
 	}
-	return Bill{ID: id, Values: normalized, Type: definition, Status: StatusAvailable, Version: value.Version, CreatedAt: createdAt, UpdatedAt: updatedAt}, nil
+	return Bill{ID: id, Values: normalized, Type: definition, Status: OperationalStatus(normalized.Medium, false, normalized.IdleCustody), Version: value.Version, CreatedAt: createdAt, UpdatedAt: updatedAt}, nil
 }
 
 func billFromGetRow(value dbgen.GetBillByIDRow) (Bill, error) {
-	return billFromJoinedRow(value.ID, value.OwnerProfileID, value.BillTypeID, value.PrintedHolderName,
+	return billFromJoinedRow(value.ID, value.OwnerProfileID, value.OwnerFullName, value.BillTypeID, value.PrintedHolderName,
 		value.PrintedAddress, value.ReferenceValue, value.Competence, value.Amount, value.Currency,
-		value.Notes, value.RecordState, value.Version, value.CreatedAt, value.UpdatedAt,
-		value.TypeTechnicalKey, value.TypeLabel, value.TypeActive, value.TypeSupportsCurrentUse,
+		value.Notes, value.Medium, value.IdleCustody, value.Version, value.CreatedAt, value.UpdatedAt,
+		value.TypeTechnicalKey, value.TypeLabel, value.TypeActive,
 		value.TypeVersion, value.TypeCreatedAt, value.TypeUpdatedAt,
-		value.CurrentHolderProfileID, value.CurrentAssignedAt)
+		value.CurrentHolderProfileID, value.CurrentHolderFullName, value.CurrentAssignedAt)
 }
 
 func billFromListRow(value dbgen.ListBillsRow) (Bill, error) {
-	return billFromJoinedRow(value.ID, value.OwnerProfileID, value.BillTypeID, value.PrintedHolderName,
+	return billFromJoinedRow(value.ID, value.OwnerProfileID, value.OwnerFullName, value.BillTypeID, value.PrintedHolderName,
 		value.PrintedAddress, value.ReferenceValue, value.Competence, value.Amount, value.Currency,
-		value.Notes, value.RecordState, value.Version, value.CreatedAt, value.UpdatedAt,
-		value.TypeTechnicalKey, value.TypeLabel, value.TypeActive, value.TypeSupportsCurrentUse,
+		value.Notes, value.Medium, value.IdleCustody, value.Version, value.CreatedAt, value.UpdatedAt,
+		value.TypeTechnicalKey, value.TypeLabel, value.TypeActive,
 		value.TypeVersion, value.TypeCreatedAt, value.TypeUpdatedAt,
-		value.CurrentHolderProfileID, value.CurrentAssignedAt)
+		value.CurrentHolderProfileID, value.CurrentHolderFullName, value.CurrentAssignedAt)
 }
 
-func billFromJoinedRow(idValue, ownerValue, typeValue pgtype.UUID, printedHolderName, printedAddress,
+func billFromJoinedRow(idValue, ownerValue pgtype.UUID, ownerFullName string, typeValue pgtype.UUID, printedHolderName, printedAddress,
 	referenceValue, competence *string, amount pgtype.Numeric, currency, notes *string,
-	state string, version int64, createdValue, updatedValue pgtype.Timestamptz,
-	typeTechnicalKey, typeLabel string, typeActive, supportsCurrentUse bool, typeVersion int64,
-	typeCreatedValue, typeUpdatedValue pgtype.Timestamptz, holderValue pgtype.UUID, assignedValue pgtype.Timestamptz,
+	medium string, idleCustody *string, version int64, createdValue, updatedValue pgtype.Timestamptz,
+	typeTechnicalKey, typeLabel string, typeActive bool, typeVersion int64,
+	typeCreatedValue, typeUpdatedValue pgtype.Timestamptz, holderValue pgtype.UUID, holderFullName *string, assignedValue pgtype.Timestamptz,
 ) (Bill, error) {
 	definition, err := typeFromDatabase(dbgen.BillType{
 		ID: typeValue, TechnicalKey: typeTechnicalKey, Label: typeLabel, Active: typeActive,
-		SupportsCurrentUse: supportsCurrentUse, Version: typeVersion,
-		CreatedAt: typeCreatedValue, UpdatedAt: typeUpdatedValue,
+		Version: typeVersion, CreatedAt: typeCreatedValue, UpdatedAt: typeUpdatedValue,
 	})
 	if err != nil {
 		return Bill{}, err
@@ -552,24 +542,25 @@ func billFromJoinedRow(idValue, ownerValue, typeValue pgtype.UUID, printedHolder
 	bill, err := billFromDatabase(dbgen.Bill{
 		ID: idValue, OwnerProfileID: ownerValue, BillTypeID: typeValue,
 		PrintedHolderName: printedHolderName, PrintedAddress: printedAddress, ReferenceValue: referenceValue,
-		Competence: competence, Amount: amount, Currency: currency, Notes: notes, RecordState: state,
-		Version: version, CreatedAt: createdValue, UpdatedAt: updatedValue,
+		Competence: competence, Amount: amount, Currency: currency, Notes: notes, Medium: medium,
+		IdleCustody: idleCustody, Version: version, CreatedAt: createdValue, UpdatedAt: updatedValue,
 	}, definition)
 	if err != nil {
 		return Bill{}, err
 	}
+	bill.OwnerFullName = ownerFullName
 	if holderValue.Valid {
-		currentUse, currentErr := currentUseFromDatabase(holderValue, assignedValue)
+		currentUse, currentErr := currentUseFromDatabase(holderValue, holderFullName, assignedValue)
 		if currentErr != nil {
 			return Bill{}, currentErr
 		}
 		bill.CurrentUse = &currentUse
-		bill.Status = StatusInUse
+		bill.Status = OperationalStatus(bill.Values.Medium, true, bill.Values.IdleCustody)
 	}
 	return bill, nil
 }
 
-func currentUseFromDatabase(holder pgtype.UUID, assignedAt pgtype.Timestamptz) (CurrentUse, error) {
+func currentUseFromDatabase(holder pgtype.UUID, holderFullName *string, assignedAt pgtype.Timestamptz) (CurrentUse, error) {
 	holderID, err := profileIdentifierFromDatabase(holder, "bill current holder")
 	if err != nil {
 		return CurrentUse{}, err
@@ -578,7 +569,7 @@ func currentUseFromDatabase(holder pgtype.UUID, assignedAt pgtype.Timestamptz) (
 	if err != nil {
 		return CurrentUse{}, err
 	}
-	return CurrentUse{HolderProfileID: holderID, AssignedAt: assigned}, nil
+	return CurrentUse{HolderProfileID: holderID, HolderFullName: stringValue(holderFullName), AssignedAt: assigned}, nil
 }
 
 func mapTypePersistenceError(operation string, err error) error {
@@ -607,6 +598,14 @@ func mapBillPersistenceError(operation string, err error) error {
 
 func databaseUUID(identifier Identifier) pgtype.UUID {
 	return pgtype.UUID{Bytes: identifier, Valid: true}
+}
+
+func billUUIDList(ids []Identifier) []pgtype.UUID {
+	out := make([]pgtype.UUID, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, databaseUUID(id))
+	}
+	return out
 }
 
 func optionalDatabaseUUID(identifier *Identifier) pgtype.UUID {

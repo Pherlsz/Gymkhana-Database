@@ -4,15 +4,18 @@
   "private": true,
   "description": "Private workspace for the Gymkhana Database application.",
   "scripts": {
+    "build": "pnpm build:web",
     "dev:web": "pnpm --filter @pherlsz/gymkhana-database-web dev",
     "build:web": "pnpm --filter @pherlsz/gymkhana-database-web build",
+    "deploy:web:staging": "pnpm build:web && wrangler deploy",
     "typecheck:web": "pnpm --filter @pherlsz/gymkhana-database-web typecheck",
     "lint:web": "oxlint -c oxlint.json apps",
-    "format": "oxfmt apps scripts .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml --write",
-    "format:check": "oxfmt apps scripts .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml --check",
+    "format": "oxfmt apps scripts .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml wrangler.jsonc --write",
+    "format:check": "oxfmt apps scripts .github package.json tsconfig.base.json vitest.config.ts vitest.setup.ts oxlint.json pnpm-workspace.yaml wrangler.jsonc --check",
     "test:web": "vitest run",
-    "generate:openapi:ts": "openapi-typescript api/openapi.yaml -o apps/web/src/generated/api.ts && openapi-typescript api/attachments.openapi.yaml -o apps/web/src/generated/attachments-api.ts && openapi-typescript api/search.openapi.yaml -o apps/web/src/generated/search-api.ts && openapi-typescript api/operations.openapi.yaml -o apps/web/src/generated/operations-api.ts && openapi-typescript api/google-forms.openapi.yaml -o apps/web/src/generated/google-forms-api.ts && openapi-typescript api/query.openapi.yaml -o apps/web/src/generated/query-api.ts && openapi-typescript api/matching.openapi.yaml -o apps/web/src/generated/matching-api.ts && openapi-typescript api/chat.openapi.yaml -o apps/web/src/generated/chat-api.ts && openapi-typescript api/ocr.openapi.yaml -o apps/web/src/generated/ocr-api.ts && openapi-typescript api/tasks.openapi.yaml -o apps/web/src/generated/tasks-api.ts",
-    "check:web": "pnpm typecheck:web && pnpm lint:web && pnpm format:check && pnpm test:web && pnpm build:web"
+    "generate:openapi:ts": "openapi-typescript api/openapi.yaml -o apps/web/src/generated/api.ts && openapi-typescript api/search.openapi.yaml -o apps/web/src/generated/search-api.ts && openapi-typescript api/operations.openapi.yaml -o apps/web/src/generated/operations-api.ts && openapi-typescript api/google-forms.openapi.yaml -o apps/web/src/generated/google-forms-api.ts && openapi-typescript api/query.openapi.yaml -o apps/web/src/generated/query-api.ts && openapi-typescript api/matching.openapi.yaml -o apps/web/src/generated/matching-api.ts && openapi-typescript api/chat.openapi.yaml -o apps/web/src/generated/chat-api.ts && openapi-typescript api/ocr.openapi.yaml -o apps/web/src/generated/ocr-api.ts",
+    "bundle:check": "node scripts/check-bundle.mjs",
+    "check:web": "pnpm typecheck:web && pnpm lint:web && pnpm format:check && pnpm test:web && pnpm bundle:check"
   },
   "devDependencies": {
     "@testing-library/dom": "10.4.1",
@@ -30,7 +33,8 @@
     "react-dom": "19.2.7",
     "typescript": "6.0.3",
     "vite": "8.1.4",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11",
+    "wrangler": "^4.137.0"
   },
   "engines": {
     "node": ">=24.0.0",

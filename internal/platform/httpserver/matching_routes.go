@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Pherlsz/Gymkhana-Core/normalize"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/matching"
+	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
 )
 
 type matchingService interface {
@@ -283,7 +283,7 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 		}
 		response := matchingCasePageResponse{Cases: make([]matchingCaseResponse, 0, len(page.Cases)), Total: page.Total, Limit: page.Limit, Offset: page.Offset}
 		for _, value := range page.Cases {
-			response.Cases = append(response.Cases, matchingCaseFromDomain(value, false))
+			response.Cases = append(response.Cases, matchingCaseFromDomain(value, false, actor.User.Role.CanWriteProfiles()))
 		}
 		writeJSON(w, http.StatusOK, response)
 	}))
@@ -298,7 +298,7 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 			writeMatchingError(w, r, logger, "read Matching case", err)
 			return
 		}
-		writeJSON(w, http.StatusOK, matchingCaseFromDomain(value, true))
+		writeJSON(w, http.StatusOK, matchingCaseFromDomain(value, true, actor.User.Role.CanWriteProfiles()))
 	}))
 
 	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/dismiss", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
@@ -316,7 +316,7 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 			writeMatchingError(w, r, logger, "dismiss Matching case", err)
 			return
 		}
-		writeJSON(w, http.StatusOK, matchingCaseFromDomain(value, true))
+		writeJSON(w, http.StatusOK, matchingCaseFromDomain(value, true, actor.User.Role.CanWriteProfiles()))
 	}))
 
 	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/merge-preview", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
@@ -339,7 +339,7 @@ func registerMatchingCaseRoutes(mux *http.ServeMux, logger *slog.Logger, authent
 			writeMatchingError(w, r, logger, "preview Profile merge", err)
 			return
 		}
-		writeJSON(w, http.StatusOK, matchingPreviewFromDomain(value))
+		writeJSON(w, http.StatusOK, matchingPreviewFromDomain(value, actor.User.Role.CanWriteProfiles()))
 	}))
 
 	mux.HandleFunc("POST /api/v1/matching/cases/{case_id}/merge", requireCapability(auth.CapMatching, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
@@ -502,7 +502,7 @@ func matchingAnalysisFromDomain(value matching.Analysis) matchingAnalysisRespons
 	}
 }
 
-func matchingCaseFromDomain(value matching.Case, detailed bool) matchingCaseResponse {
+func matchingCaseFromDomain(value matching.Case, detailed, reveal bool) matchingCaseResponse {
 	response := matchingCaseResponse{
 		ID: value.ID.String(), LeftProfileID: value.LeftProfileID.String(), RightProfileID: value.RightProfileID.String(),
 		LeftProfileVersion: value.LeftProfileVersion, RightProfileVersion: value.RightProfileVersion,
@@ -516,11 +516,11 @@ func matchingCaseFromDomain(value matching.Case, detailed bool) matchingCaseResp
 		})
 	}
 	if value.Left != nil {
-		converted := matchingProfileFromDomain(*value.Left, detailed)
+		converted := matchingProfileFromDomain(*value.Left, detailed, reveal)
 		response.Left = &converted
 	}
 	if value.Right != nil {
-		converted := matchingProfileFromDomain(*value.Right, detailed)
+		converted := matchingProfileFromDomain(*value.Right, detailed, reveal)
 		response.Right = &converted
 	}
 	if value.MergedSurvivorID != nil {
@@ -532,9 +532,9 @@ func matchingCaseFromDomain(value matching.Case, detailed bool) matchingCaseResp
 	return response
 }
 
-func matchingProfileFromDomain(value matching.ProfileSnapshot, detailed bool) matchingProfileResponse {
+func matchingProfileFromDomain(value matching.ProfileSnapshot, detailed, reveal bool) matchingProfileResponse {
 	response := matchingProfileResponse{
-		ID: value.ID.String(), FullName: value.FullName, SocialName: value.SocialName, CPF: normalize.MaskCPF(value.CPF),
+		ID: value.ID.String(), FullName: value.FullName, SocialName: value.SocialName, CPF: profile.DisplayCPF(value.CPF, reveal),
 		Email: value.Email, MobilePhone: value.MobilePhone, LandlinePhone: value.LandlinePhone,
 		AddressCity: value.AddressCity, AddressState: value.AddressState, Version: value.Version, UpdatedAt: value.UpdatedAt,
 	}
@@ -546,9 +546,9 @@ func matchingProfileFromDomain(value matching.ProfileSnapshot, detailed bool) ma
 	return response
 }
 
-func matchingPreviewFromDomain(value matching.MergePreview) matchingMergePreviewResponse {
+func matchingPreviewFromDomain(value matching.MergePreview, reveal bool) matchingMergePreviewResponse {
 	response := matchingMergePreviewResponse{
-		CaseID: value.CaseID.String(), Survivor: matchingProfileFromDomain(value.Survivor, true), Source: matchingProfileFromDomain(value.Source, true),
+		CaseID: value.CaseID.String(), Survivor: matchingProfileFromDomain(value.Survivor, true, reveal), Source: matchingProfileFromDomain(value.Source, true, reveal),
 		Fields: make([]matchingMergeFieldResponse, 0, len(value.Fields)), Dependencies: matchingDependencyCounts(value.Dependencies),
 		Conflicts: matchingDependencyConflicts(value.Conflicts), UnresolvedFieldCount: value.UnresolvedFieldCount,
 		PreviewFingerprint: hex.EncodeToString(value.PreviewFingerprint[:]), Confirmation: value.Confirmation, GeneratedAt: value.GeneratedAt,

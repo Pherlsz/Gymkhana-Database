@@ -9,6 +9,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
+	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
 )
 
 type documentService interface {
@@ -25,6 +26,7 @@ type documentService interface {
 	Delete(context.Context, auth.Session, document.Identifier, int64, string, string) error
 	AssignCurrentUse(context.Context, auth.Session, document.Identifier, profile.Identifier, string) (document.CurrentUse, error)
 	ReturnCurrentUse(context.Context, auth.Session, document.Identifier, string) error
+	UpsertPresence(context.Context, auth.Session, profile.Identifier, document.Identifier, document.Claim, string, string) (document.Presence, error)
 }
 
 type documentTypeValuesRequest struct {
@@ -51,8 +53,10 @@ type documentValuesRequest struct {
 	DocumentTypeID string               `json:"document_type_id"`
 	Identifier     string               `json:"identifier_value"`
 	DocumentDate   string               `json:"document_date"`
+	ValidUntil     string               `json:"valid_until"`
 	Notes          string               `json:"notes"`
-	RecordState    document.RecordState `json:"record_state"`
+	Medium         document.Medium      `json:"medium"`
+	IdleCustody    document.IdleCustody `json:"idle_custody"`
 }
 
 type updateDocumentRequest struct {
@@ -60,8 +64,10 @@ type updateDocumentRequest struct {
 	DocumentTypeID string               `json:"document_type_id"`
 	Identifier     string               `json:"identifier_value"`
 	DocumentDate   string               `json:"document_date"`
+	ValidUntil     string               `json:"valid_until"`
 	Notes          string               `json:"notes"`
-	RecordState    document.RecordState `json:"record_state"`
+	Medium         document.Medium      `json:"medium"`
+	IdleCustody    document.IdleCustody `json:"idle_custody"`
 	Version        int64                `json:"version"`
 }
 
@@ -74,6 +80,22 @@ type assignDocumentCurrentUseRequest struct {
 	HolderProfileID string `json:"holder_profile_id"`
 }
 
+type upsertDocumentPresenceRequest struct {
+	ProfileID       string         `json:"profile_id"`
+	DocumentTypeID  string         `json:"document_type_id"`
+	Claim           document.Claim `json:"claim"`
+	IdentifierValue string         `json:"identifier_value"`
+}
+
+type documentPresenceResponse struct {
+	ID              string         `json:"id"`
+	ProfileID       string         `json:"profile_id"`
+	DocumentTypeID  string         `json:"document_type_id"`
+	Claim           document.Claim `json:"claim"`
+	IdentifierValue string         `json:"identifier_value,omitempty"`
+	Version         int64          `json:"version"`
+}
+
 type documentTypeResponse struct {
 	ID               string                    `json:"id"`
 	TechnicalKey     string                    `json:"technical_key"`
@@ -82,6 +104,7 @@ type documentTypeResponse struct {
 	UniquenessPolicy document.UniquenessPolicy `json:"uniqueness_policy"`
 	ValidationRegex  string                    `json:"validation_regex"`
 	DateRequired     bool                      `json:"date_required"`
+	Count            int64                     `json:"count"`
 	Version          int64                     `json:"version"`
 	CreatedAt        time.Time                 `json:"created_at"`
 	UpdatedAt        time.Time                 `json:"updated_at"`
@@ -89,20 +112,25 @@ type documentTypeResponse struct {
 
 type documentCurrentUseResponse struct {
 	HolderProfileID string    `json:"holder_profile_id"`
+	HolderFullName  string    `json:"holder_full_name,omitempty"`
 	AssignedAt      time.Time `json:"assigned_at"`
 }
 
 type documentResponse struct {
 	ID             string                      `json:"id"`
 	OwnerProfileID string                      `json:"owner_profile_id"`
+	OwnerFullName  string                      `json:"owner_full_name"`
 	DocumentTypeID string                      `json:"document_type_id"`
 	Identifier     string                      `json:"identifier_value"`
 	DocumentDate   string                      `json:"document_date"`
+	ValidUntil     string                      `json:"valid_until"`
 	Notes          string                      `json:"notes"`
-	RecordState    document.RecordState        `json:"record_state"`
-	Status         document.Status             `json:"status"`
+	Medium         document.Medium             `json:"medium"`
+	IdleCustody    document.IdleCustody        `json:"idle_custody,omitempty"`
+	Status         document.Status             `json:"status,omitempty"`
 	Type           documentTypeResponse        `json:"type"`
 	CurrentUse     *documentCurrentUseResponse `json:"current_use"`
+	CustomValues   map[string]string           `json:"custom_values"`
 	Version        int64                       `json:"version"`
 	CreatedAt      time.Time                   `json:"created_at"`
 	UpdatedAt      time.Time                   `json:"updated_at"`
@@ -126,7 +154,7 @@ type documentPageResponse struct {
 	Page      documentPageMeta   `json:"page"`
 }
 
-func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service documentService) {
+func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service documentService, search searchService, pool listEnrichmentQuerier) {
 	mux.HandleFunc("GET /api/v1/document-types", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := documentActor(w, r, authentication, service)
 		if !ok {
@@ -250,6 +278,13 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			writeProblem(w, r, *problem)
 			return
 		}
+		restrict, ids, searchProblem := applySearchQ(r, actor, search, searchdomain.ModuleDocuments)
+		if searchProblem != nil {
+			writeProblem(w, r, *searchProblem)
+			return
+		}
+		options.Filters.RestrictIDs = restrict
+		options.Filters.IDFilter = documentIDsFromSearch(ids)
 		page, err := service.List(r.Context(), actor, options)
 		if err != nil {
 			writeDocumentError(w, r, logger, "list documents", err)
@@ -259,6 +294,7 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 		for _, value := range page.Documents {
 			response.Documents = append(response.Documents, documentFromDomain(value))
 		}
+		enrichDocumentList(r.Context(), pool, logger, response.Documents)
 		writeJSON(w, http.StatusOK, response)
 	}))
 
@@ -414,5 +450,36 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	mux.HandleFunc("PUT /api/v1/document-presences", requireCapability(auth.CapDataTables, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
+		actor, ok := documentActor(w, r, authentication, service)
+		if !ok {
+			return
+		}
+		var request upsertDocumentPresenceRequest
+		if problem := DecodeJSON(w, r, &request); problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		owner, problem := parseProfileIdentifier(request.ProfileID)
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		typeID, problem := parseDocumentIdentifier(request.DocumentTypeID, "O identificador do tipo de documento é inválido")
+		if problem != nil {
+			writeProblem(w, r, *problem)
+			return
+		}
+		presence, err := service.UpsertPresence(r.Context(), actor, owner, typeID, request.Claim, request.IdentifierValue, requestIDFromContext(r.Context()))
+		if err != nil {
+			writeDocumentError(w, r, logger, "upsert document presence", err)
+			return
+		}
+		writeJSON(w, http.StatusOK, documentPresenceResponse{
+			ID: presence.ID.String(), ProfileID: presence.ProfileID.String(), DocumentTypeID: presence.TypeID.String(),
+			Claim: presence.Claim, IdentifierValue: presence.Identifier, Version: presence.Version,
+		})
 	}))
 }

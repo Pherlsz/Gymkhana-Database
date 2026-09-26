@@ -83,7 +83,10 @@ func registerCustomDataValueRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 			writeCustomError(w, r, logger, "list custom entities", err)
 			return
 		}
-		response := customEntityPageResponse{Page: customPageMeta{Total: page.Total, Limit: page.Limit, Offset: page.Offset}}
+		response := customEntityPageResponse{
+			Entities: make([]customEntityResponse, 0, len(page.Entities)),
+			Page:     customPageMeta{Total: page.Total, Limit: page.Limit, Offset: page.Offset},
+		}
 		for _, value := range page.Entities {
 			response.Entities = append(response.Entities, customEntityFromDomain(value))
 		}

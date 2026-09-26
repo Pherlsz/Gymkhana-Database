@@ -152,6 +152,36 @@ func TestTrustedPreflightReturnsCredentialedPolicy(t *testing.T) {
 	}
 }
 
+func TestLoopbackApplicationOriginTrustsLocalViteHosts(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	handler := New(logger, nil, Options{ApplicationURL: "http://localhost:5173"})
+
+	allowed := []string{"http://localhost:5173", "http://127.0.0.1:5173", "http://[::1]:5173"}
+	for _, origin := range allowed {
+		request := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+		request.Header.Set("Origin", origin)
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code == http.StatusForbidden {
+			t.Fatalf("origin %s rejected with 403", origin)
+		}
+		if response.Header().Get("Access-Control-Allow-Origin") != origin {
+			t.Fatalf("allow origin for %s = %q", origin, response.Header().Get("Access-Control-Allow-Origin"))
+		}
+	}
+
+	denied := []string{"http://localhost:5174", "http://127.0.0.1:8080", "https://localhost:5173", "http://evil.example:5173"}
+	for _, origin := range denied {
+		request := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+		request.Header.Set("Origin", origin)
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusForbidden {
+			t.Fatalf("origin %s status = %d, want 403", origin, response.Code)
+		}
+	}
+}
+
 func TestSafeMethodReceivesCorsOnlyForTrustedOrigin(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	handler := New(logger, nil, Options{ApplicationURL: "https://app.example"})

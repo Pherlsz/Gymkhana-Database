@@ -25,32 +25,36 @@ func billActor(w http.ResponseWriter, r *http.Request, authentication authentica
 }
 
 func (request billTypeValuesRequest) domainValues() bill.TypeValues {
-	return bill.TypeValues{TechnicalKey: request.TechnicalKey, Label: request.Label, Active: request.Active, SupportsCurrentUse: request.SupportsCurrentUse}
+	return bill.TypeValues{TechnicalKey: request.TechnicalKey, Label: request.Label, Active: request.Active}
 }
 func (request updateBillTypeRequest) domainValues() bill.TypeValues {
-	return billTypeValuesRequest{TechnicalKey: request.TechnicalKey, Label: request.Label, Active: request.Active, SupportsCurrentUse: request.SupportsCurrentUse}.domainValues()
+	return billTypeValuesRequest{TechnicalKey: request.TechnicalKey, Label: request.Label, Active: request.Active}.domainValues()
 }
 func (request billValuesRequest) domainValues() (bill.Values, *Problem) {
-	owner, err := profile.ParseIdentifier(request.OwnerProfileID)
-	if err != nil {
-		return bill.Values{}, &Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "O identificador da pessoa proprietária é inválido"}
+	var owner profile.Identifier
+	if request.OwnerProfileID != "" {
+		parsed, err := profile.ParseIdentifier(request.OwnerProfileID)
+		if err != nil {
+			return bill.Values{}, &Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "O identificador da pessoa proprietária é inválido"}
+		}
+		owner = parsed
 	}
 	typeID, err := bill.ParseIdentifier(request.BillTypeID)
 	if err != nil {
 		return bill.Values{}, &Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "O identificador do tipo de conta/comprovante é inválido"}
 	}
-	return bill.Values{OwnerProfileID: owner, TypeID: typeID, PrintedHolderName: request.PrintedHolderName, PrintedAddress: request.PrintedAddress, Reference: request.Reference, Competence: request.Competence, Amount: request.Amount, Currency: request.Currency, Notes: request.Notes, RecordState: request.RecordState}, nil
+	return bill.Values{OwnerProfileID: owner, OwnerName: request.OwnerName, TypeID: typeID, PrintedHolderName: request.PrintedHolderName, PrintedAddress: request.PrintedAddress, Reference: request.Reference, Competence: request.Competence, Amount: request.Amount, Currency: request.Currency, Notes: request.Notes, Medium: request.Medium, IdleCustody: request.IdleCustody}, nil
 }
 func (request updateBillRequest) domainValues() (bill.Values, *Problem) {
-	return billValuesRequest{OwnerProfileID: request.OwnerProfileID, BillTypeID: request.BillTypeID, PrintedHolderName: request.PrintedHolderName, PrintedAddress: request.PrintedAddress, Reference: request.Reference, Competence: request.Competence, Amount: request.Amount, Currency: request.Currency, Notes: request.Notes, RecordState: request.RecordState}.domainValues()
+	return billValuesRequest{OwnerProfileID: request.OwnerProfileID, BillTypeID: request.BillTypeID, PrintedHolderName: request.PrintedHolderName, PrintedAddress: request.PrintedAddress, Reference: request.Reference, Competence: request.Competence, Amount: request.Amount, Currency: request.Currency, Notes: request.Notes, Medium: request.Medium, IdleCustody: request.IdleCustody}.domainValues()
 }
 func billTypeFromDomain(value bill.TypeDefinition) billTypeResponse {
-	return billTypeResponse{ID: value.ID.String(), TechnicalKey: value.Values.TechnicalKey, Label: value.Values.Label, Active: value.Values.Active, SupportsCurrentUse: value.Values.SupportsCurrentUse, Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
+	return billTypeResponse{ID: value.ID.String(), TechnicalKey: value.Values.TechnicalKey, Label: value.Values.Label, Active: value.Values.Active, Count: value.ExemplarCount, Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
 }
 func billFromDomain(value bill.Bill) billResponse {
-	response := billResponse{ID: value.ID.String(), OwnerProfileID: value.Values.OwnerProfileID.String(), BillTypeID: value.Values.TypeID.String(), PrintedHolderName: value.Values.PrintedHolderName, PrintedAddress: value.Values.PrintedAddress, Reference: value.Values.Reference, Competence: value.Values.Competence, Amount: value.Values.Amount, Currency: value.Values.Currency, Notes: value.Values.Notes, RecordState: value.Values.RecordState, Status: value.Status, Type: billTypeFromDomain(value.Type), Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
+	response := billResponse{ID: value.ID.String(), OwnerProfileID: value.Values.OwnerProfileID.String(), OwnerFullName: value.OwnerFullName, BillTypeID: value.Values.TypeID.String(), PrintedHolderName: value.Values.PrintedHolderName, PrintedAddress: value.Values.PrintedAddress, Reference: value.Values.Reference, Competence: value.Values.Competence, Amount: value.Values.Amount, Currency: value.Values.Currency, Notes: value.Values.Notes, Medium: value.Values.Medium, IdleCustody: value.Values.IdleCustody, Status: value.Status, Type: billTypeFromDomain(value.Type), CustomValues: map[string]string{}, Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
 	if value.CurrentUse != nil {
-		response.CurrentUse = &billCurrentUseResponse{HolderProfileID: value.CurrentUse.HolderProfileID.String(), AssignedAt: value.CurrentUse.AssignedAt}
+		response.CurrentUse = &billCurrentUseResponse{HolderProfileID: value.CurrentUse.HolderProfileID.String(), HolderFullName: value.CurrentUse.HolderFullName, AssignedAt: value.CurrentUse.AssignedAt}
 	}
 	return response
 }
@@ -95,7 +99,7 @@ func billListOptionsFromRequest(r *http.Request) (bill.ListOptions, *Problem) {
 	if problem != nil {
 		return bill.ListOptions{}, problem
 	}
-	return bill.ListOptions{Limit: limit, Offset: offset, SortField: bill.SortField(r.URL.Query().Get("sort")), SortOrder: bill.SortOrder(r.URL.Query().Get("order")), Filters: bill.Filters{OwnerProfileID: owner, TypeID: typeID, Reference: r.URL.Query().Get("reference"), Competence: r.URL.Query().Get("competence"), RecordState: bill.RecordState(r.URL.Query().Get("record_state")), Status: bill.Status(r.URL.Query().Get("status")), HolderProfileID: holder}}, nil
+	return bill.ListOptions{Limit: limit, Offset: offset, SortField: bill.SortField(r.URL.Query().Get("sort")), SortOrder: bill.SortOrder(r.URL.Query().Get("order")), Filters: bill.Filters{OwnerProfileID: owner, TypeID: typeID, Reference: r.URL.Query().Get("reference"), Competence: r.URL.Query().Get("competence"), Medium: bill.Medium(r.URL.Query().Get("medium")), Status: bill.Status(r.URL.Query().Get("status")), HolderProfileID: holder}}, nil
 }
 
 func optionalBillIdentifier(value string) (*bill.Identifier, *Problem) {
@@ -139,10 +143,19 @@ func writeBillError(w http.ResponseWriter, r *http.Request, logger *slog.Logger,
 	case errors.Is(err, bill.ErrTypeInactive):
 		writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "O tipo de conta/comprovante está inativo"})
 	case errors.Is(err, bill.ErrCurrentUseUnsupported):
-		writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "Este tipo de conta/comprovante não permite uso atual"})
+		writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "Somente exemplar físico permite uso atual"})
 	case errors.Is(err, bill.ErrCurrentUseExists):
 		writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "Devolva o registro antes de excluí-lo"})
 	default:
+		var ambiguous *bill.AmbiguousOwnerError
+		if errors.As(err, &ambiguous) {
+			candidates := make([]OwnerCandidate, 0, len(ambiguous.Candidates))
+			for _, candidate := range ambiguous.Candidates {
+				candidates = append(candidates, OwnerCandidate{ID: candidate.ID.String(), FullName: candidate.FullName})
+			}
+			writeProblem(w, r, Problem{Status: http.StatusConflict, Code: ErrorCodeConflict, Message: "Há mais de uma pessoa com esse nome. Escolha o dono.", FieldErrors: []FieldProblem{{Field: "owner_name", Code: "ambiguous", Message: "Há mais de uma pessoa com esse nome"}}, Candidates: candidates})
+			return
+		}
 		logger.Error(operation, "request_id", requestIDFromContext(r.Context()), "error", err)
 		writeProblem(w, r, Problem{Status: http.StatusInternalServerError, Code: ErrorCodeInternal, Message: "Não foi possível concluir a operação"})
 	}

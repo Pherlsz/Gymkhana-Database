@@ -140,7 +140,7 @@ func TestPostgresGoogleFormsOAuthPaginationDriftStagingAndOwnership(t *testing.T
 		t.Fatalf("CompleteOAuth(wrong session) error = %v", err)
 	}
 	connection, returnPath, err := service.CompleteOAuth(ctx, actor, state, "valid-code", "oauth-complete")
-	if err != nil || returnPath != "/google-forms?tab=sources" || connection.State != ConnectionActive {
+	if err != nil || returnPath != "/cadastro?mode=forms&tab=sources" || connection.State != ConnectionActive {
 		t.Fatalf("CompleteOAuth() = %#v, %q, %v", connection, returnPath, err)
 	}
 	if _, _, err := service.CompleteOAuth(ctx, actor, state, "replay-code", "oauth-replay"); !errors.Is(err, ErrOAuthState) {

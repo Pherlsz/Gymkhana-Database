@@ -16,10 +16,11 @@ import (
 )
 
 const (
-	defaultRunRateLimit = 30
-	defaultUsageLimit   = 200_000
+	defaultRunRateLimit = 10_000
+	// A sequence task resends the catalog on every model round. 200k died mid-task.
+	defaultUsageLimit   = 100_000_000
 	defaultCleanupBatch = 100
-	defaultRunTimeout   = 45 * time.Second
+	defaultRunTimeout   = 5 * time.Minute
 	staleRunGrace       = 5 * time.Second
 )
 
@@ -35,6 +36,9 @@ type ServiceOptions struct {
 	UsageLimit     int64
 	CleanupBatch   int
 	OnAuditFailure AuditFailureHandler
+	// Ready reports whether a model can answer right now (shared key present).
+	// Nil means always ready.
+	Ready func(context.Context) bool
 }
 
 type Service struct {
@@ -46,6 +50,7 @@ type Service struct {
 	usageLimit     int64
 	cleanupBatch   int
 	onAuditFailure AuditFailureHandler
+	ready          func(context.Context) bool
 }
 
 func NewService(store Store, options ServiceOptions) (*Service, error) {
@@ -76,12 +81,13 @@ func NewService(store Store, options ServiceOptions) (*Service, error) {
 	return &Service{
 		store: store, now: options.Now, retention: options.Retention, runTimeout: options.RunTimeout,
 		rateLimit: options.RateLimit, usageLimit: options.UsageLimit, cleanupBatch: options.CleanupBatch, onAuditFailure: options.OnAuditFailure,
+		ready: options.Ready,
 	}, nil
 }
 
-func (service *Service) Capability() Capability {
+func (service *Service) Capability(ctx context.Context) Capability {
 	capability := DefaultCapability()
-	capability.Enabled = true
+	capability.Enabled = service.ready == nil || service.ready(ctx)
 	capability.MaximumUsage = service.usageLimit
 	capability.MaximumDuration = service.runTimeout
 	return capability

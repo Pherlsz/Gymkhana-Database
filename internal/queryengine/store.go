@@ -68,6 +68,8 @@ type Store interface {
 	CatalogDefinitions(context.Context) (CatalogDefinitions, error)
 	CreateExecution(context.Context, ExecutionInput, time.Time, int) (Execution, bool, error)
 	ExecuteReadOnly(context.Context, CompiledPlan, time.Duration) ([]RawResultRow, error)
+	CountReadOnly(context.Context, string, []any, time.Duration) (int64, error)
+	ScanTexts(context.Context, string, []any, int, int, time.Duration) ([][]string, error)
 	CompleteExecution(context.Context, Identifier, []ResultColumn, []ResultRow, time.Time) (Execution, error)
 	FailExecution(context.Context, Identifier, string, ExecutionState, time.Time) error
 	GetExecution(context.Context, Identifier, auth.Identifier) (Execution, error)

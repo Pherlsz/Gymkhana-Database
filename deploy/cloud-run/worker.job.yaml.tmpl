@@ -38,11 +38,11 @@ spec:
                   value: "true"
                 - name: AUTH_APPLICATION_URL
                   value: __APPLICATION_URL__
-                - name: AUTH_ALLOWED_GITHUB_LOGINS
-                  value: __ALLOWED_GITHUB_LOGINS__
-                - name: AUTH_SUPERADMIN_GITHUB_LOGIN
-                  value: __SUPERADMIN_GITHUB_LOGIN__
-                - name: GITHUB_OAUTH_REDIRECT_URL
+                - name: AUTH_ALLOWED_EMAILS
+                  value: __ALLOWED_EMAILS__
+                - name: AUTH_SUPERADMIN_EMAIL
+                  value: __SUPERADMIN_EMAIL__
+                - name: GOOGLE_OAUTH_REDIRECT_URL
                   value: __API_BASE_URL__/auth/callback
                 - name: R2_ENABLED
                   value: "true"
@@ -55,16 +55,16 @@ spec:
                     secretKeyRef:
                       name: __DATABASE_URL_SECRET__
                       key: __DATABASE_URL_SECRET_VERSION__
-                - name: GITHUB_OAUTH_CLIENT_ID
+                - name: GOOGLE_OAUTH_CLIENT_ID
                   valueFrom:
                     secretKeyRef:
-                      name: __GITHUB_OAUTH_CLIENT_ID_SECRET__
-                      key: __GITHUB_OAUTH_CLIENT_ID_SECRET_VERSION__
-                - name: GITHUB_OAUTH_CLIENT_SECRET
+                      name: __GOOGLE_OAUTH_CLIENT_ID_SECRET__
+                      key: __GOOGLE_OAUTH_CLIENT_ID_SECRET_VERSION__
+                - name: GOOGLE_OAUTH_CLIENT_SECRET
                   valueFrom:
                     secretKeyRef:
-                      name: __GITHUB_OAUTH_CLIENT_SECRET_SECRET__
-                      key: __GITHUB_OAUTH_CLIENT_SECRET_SECRET_VERSION__
+                      name: __GOOGLE_OAUTH_CLIENT_SECRET_SECRET__
+                      key: __GOOGLE_OAUTH_CLIENT_SECRET_SECRET_VERSION__
                 - name: R2_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:

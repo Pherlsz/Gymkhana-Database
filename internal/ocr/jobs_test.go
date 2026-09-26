@@ -50,10 +50,10 @@ func TestExtractionWorkerCancelsAmbiguousProviderFailure(t *testing.T) {
 
 func TestExtractionWorkerHonorsConcurrentCancellationWithoutRetry(t *testing.T) {
 	fixture := newOCRServiceFixture(t, NewDeterministicFakeExtractor())
-	fixture.service.extractor = extractorFunc(func(_ context.Context, _ ExtractionRequest) (ExtractionResponse, error) {
+	fixture.service.extractor = extractorFunc(func(_ context.Context, _ ExtractionInput) (ExtractionOutput, error) {
 		now := fixture.service.now().UTC()
 		fixture.store.job.CancelRequestedAt = &now
-		return ExtractionResponse{Usage: 1}, nil
+		return ExtractionOutput{Usage: 1}, nil
 	})
 	job, err := fixture.service.StartJob(context.Background(), fixture.actor, fixture.source.value.ID, "ocr-worker-cancel-0001", nil, "start")
 	if err != nil {

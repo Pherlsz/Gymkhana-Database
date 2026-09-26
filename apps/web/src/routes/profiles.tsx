@@ -1,7 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ProfilesPage, normalizeProfileSearch } from "../ProfilesPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { normalizeProfileSearch } from "../ProfilePanel";
+import { tableFromSection } from "../lib/tables/tableRoutes";
 
 export const Route = createFileRoute("/profiles")({
   validateSearch: normalizeProfileSearch,
-  component: ProfilesPage,
+  beforeLoad: ({ search }) => {
+    const { section, ...rest } = search;
+    throw redirect({
+      params: { table: tableFromSection(section) },
+      search: rest,
+      to: "/tables/$table",
+    });
+  },
 });

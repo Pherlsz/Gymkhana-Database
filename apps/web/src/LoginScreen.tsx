@@ -1,7 +1,7 @@
+import { Button } from "antd";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useI18n } from "./i18n";
-import { requestNoContent } from "./lib/api/client";
-import { ThemeProvider, ThemeToggle } from "./theme";
+import { apiURL } from "./lib/api/client";
 import "./login.css";
 
 type LoginAction = "google" | "development" | null;
@@ -28,39 +28,6 @@ const LOGIN_ORBS = [
     opDark: 0.09,
     delay: "2s",
     dur: "11s",
-  },
-  {
-    w: 160,
-    h: 160,
-    top: "75%",
-    left: "8%",
-    blur: 50,
-    opLight: 0.28,
-    opDark: 0.07,
-    delay: "1s",
-    dur: "13s",
-  },
-  {
-    w: 100,
-    h: 100,
-    top: "18%",
-    left: "80%",
-    blur: 40,
-    opLight: 0.22,
-    opDark: 0.06,
-    delay: "3.5s",
-    dur: "8s",
-  },
-  {
-    w: 60,
-    h: 60,
-    top: "42%",
-    left: "5%",
-    blur: 24,
-    opLight: 0.18,
-    opDark: 0.05,
-    delay: "0.5s",
-    dur: "15s",
   },
 ] as const;
 
@@ -111,17 +78,12 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
 }
 
 export function LoginScreen({ onLogin }: { onLogin: () => void }) {
-  return (
-    <ThemeProvider>
-      <LoginScreenContent onLogin={onLogin} />
-    </ThemeProvider>
-  );
+  return <LoginScreenContent onLogin={onLogin} />;
 }
 
 function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
   const { messages } = useI18n();
   const copy = messages.auth.login;
-  const themeCopy = messages.theme;
   const [loading, setLoading] = useState<LoginAction>(null);
   const [error, setError] = useState("");
 
@@ -142,12 +104,11 @@ function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
     }
   };
 
-  const handleDevelopmentSignIn = async () => {
+  const handleDevelopmentSignIn = () => {
     setLoading("development");
     setError("");
     try {
-      await requestNoContent("/api/auth/dev-login", { method: "POST" });
-      window.location.reload();
+      window.location.assign(apiURL("/api/auth/dev-login"));
     } catch {
       setError(copy.developmentStartError);
       setLoading(null);
@@ -190,15 +151,6 @@ function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
 
       <div className="login-vignette" aria-hidden />
 
-      <header className="login-page__theme">
-        <ThemeToggle
-          activateLight={themeCopy.activateLight}
-          activateDark={themeCopy.activateDark}
-          lightLabel={themeCopy.light}
-          darkLabel={themeCopy.dark}
-        />
-      </header>
-
       <main className="login-main">
         <h1 className="visually-hidden">{copy.title}</h1>
         <div className="login-stack">
@@ -218,35 +170,27 @@ function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
 
               <div className="login-card-divider" aria-hidden />
 
-              <button
+              <Button
                 className="login-google-btn"
-                type="button"
                 disabled={loading !== null}
+                icon={loading !== "google" ? <GoogleIcon /> : undefined}
+                loading={loading === "google"}
                 onClick={handleGoogleSignIn}
+                size="large"
               >
-                {loading === "google" ? (
-                  <span className="login-button__spinner" aria-label="Entrando" />
-                ) : (
-                  <>
-                    <GoogleIcon />
-                    <span>{copy.googleButton}</span>
-                  </>
-                )}
-              </button>
+                {copy.googleButton}
+              </Button>
 
               {import.meta.env.DEV ? (
-                <button
+                <Button
                   className="login-google-btn login-google-btn--dev"
-                  type="button"
                   disabled={loading !== null}
-                  onClick={() => void handleDevelopmentSignIn()}
+                  loading={loading === "development"}
+                  onClick={handleDevelopmentSignIn}
+                  size="large"
                 >
-                  {loading === "development" ? (
-                    <span className="login-button__spinner" aria-label="Entrando" />
-                  ) : (
-                    copy.developmentButton
-                  )}
-                </button>
+                  {copy.developmentButton}
+                </Button>
               ) : null}
             </div>
           </section>

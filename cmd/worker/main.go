@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,6 +18,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
 	"github.com/Pherlsz/Gymkhana-Database/internal/googleforms"
 	"github.com/Pherlsz/Gymkhana-Database/internal/matching"
+	"github.com/Pherlsz/Gymkhana-Database/internal/modelprovider"
 	"github.com/Pherlsz/Gymkhana-Database/internal/ocr"
 	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 	"github.com/Pherlsz/Gymkhana-Database/internal/platform/logging"
@@ -143,7 +145,8 @@ func run() error {
 		Stopped() <-chan struct{}
 	}
 	if cfg.OCR.Enabled {
-		profileService, err := profile.NewService(profile.NewPostgresStore(pool), profile.ServiceOptions{})
+		profileStore := profile.NewPostgresStore(pool)
+		profileService, err := profile.NewService(profileStore, profile.ServiceOptions{})
 		if err != nil {
 			return fmt.Errorf("configure OCR Profile target: %w", err)
 		}
@@ -151,7 +154,7 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("configure OCR Document target: %w", err)
 		}
-		billService, err := bill.NewService(bill.NewPostgresStore(pool), bill.ServiceOptions{})
+		billService, err := bill.NewService(bill.NewPostgresStore(pool), bill.ServiceOptions{Owners: profileStore})
 		if err != nil {
 			return fmt.Errorf("configure OCR Bill target: %w", err)
 		}
@@ -163,16 +166,35 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("configure OCR targets: %w", err)
 		}
+		var modelKeys *modelprovider.KeyService
+		if config.OCRProviders[cfg.OCR.Provider] {
+			modelKeys, err = modelprovider.NewSealedKeyService(pool, cfg.AIChat.KeyVersion, cfg.AIChat.KeyEncryptionKeys, time.Now)
+			if err != nil {
+				return fmt.Errorf("configure OCR model key service: %w", err)
+			}
+		}
 		var extractor ocr.Extractor
+		var ocrReady func(context.Context) bool
 		switch cfg.OCR.Provider {
 		case "fake":
 			extractor = ocr.NewDeterministicFakeExtractor()
+		case modelprovider.ProviderGoogle:
+			if modelKeys == nil {
+				return errors.New("OCR google provider requires the shared model key service")
+			}
+			extractor, err = modelprovider.NewGoogleOCRExtractor(&http.Client{Timeout: cfg.OCR.Timeout}, modelKeys, cfg.OCR.Model)
+			if err != nil {
+				return fmt.Errorf("configure OCR Gemini extractor: %w", err)
+			}
+			keys := modelKeys
+			ocrReady = func(ctx context.Context) bool { return keys.Configured(ctx, modelprovider.ProviderGoogle) }
 		default:
 			return errors.New("OCR production provider adapter is not configured")
 		}
 		ocrRuntime, runtimeClient, runtimeErr := ocr.NewRuntime(pool, attachmentCleanup, targets, extractor, ocr.ServiceOptions{
 			Timeout: cfg.OCR.Timeout, MaximumRate: cfg.OCR.MaximumRequests,
 			MaximumProviderUsage: cfg.OCR.MaximumProviderUsage, MaximumSourceBytes: cfg.OCR.MaximumSourceBytes,
+			Ready: ocrReady,
 			OnAuditFailure: func(_ context.Context, event ocr.AuditEvent, auditErr error) {
 				logger.Error("OCR audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome,
 					"error_code", event.ErrorCode, "request_id", event.RequestID, "error_type", fmt.Sprintf("%T", auditErr))

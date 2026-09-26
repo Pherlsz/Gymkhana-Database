@@ -64,7 +64,7 @@
   color: var(--gym-color-text-muted);
 }
 
-@media (max-width: 56rem) {
+@media (max-width: 768px) {
   .google-forms-heading {
     align-items: stretch;
     flex-direction: column;

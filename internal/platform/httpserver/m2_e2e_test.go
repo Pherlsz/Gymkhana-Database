@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -188,6 +189,17 @@ func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
 	handler := New(authTestLogger(), nil, Options{Auth: service, ApplicationURL: "https://app.example"})
 
 	ownerCookie := m2Login(t, handler)
+	memberID, err := auth.NewIdentifier()
+	if err != nil {
+		t.Fatalf("NewIdentifier() error = %v", err)
+	}
+	if _, err := store.CreateUser(context.Background(), auth.CreateUserParams{
+		ID:       memberID,
+		Identity: auth.GoogleIdentity{Subject: "2", Email: "member", DisplayName: "Member"},
+		Role:     auth.RoleExternal,
+	}); err != nil {
+		t.Fatalf("CreateUser(member) error = %v", err)
+	}
 	provider.identity = auth.GoogleIdentity{Subject: "2", Email: "member", DisplayName: "Member"}
 	memberCookie := m2Login(t, handler)
 
@@ -212,7 +224,7 @@ func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
 		t.Fatalf("member = %#v", member)
 	}
 
-	updateBody := `{"role":"ADMIN","active":true,"version":1}`
+	updateBody := `{"role":"ADMIN","active":true,"version":` + strconv.FormatInt(member.Version, 10) + `}`
 	updateRequest := httptest.NewRequest(http.MethodPatch, "/api/admin/users/"+member.ID+"/access", strings.NewReader(updateBody))
 	updateRequest.Header.Set("Content-Type", "application/json")
 	updateRequest.Header.Set("Origin", "https://app.example")

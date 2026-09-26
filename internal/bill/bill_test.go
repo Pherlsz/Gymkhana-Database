@@ -9,15 +9,14 @@ import (
 
 func TestNormalizeTypeCanonicalizesConfiguration(t *testing.T) {
 	values, err := NormalizeType(TypeValues{
-		TechnicalKey:       "  ENERGY_BILL ",
-		Label:              "  Conta   de Energia ",
-		Active:             true,
-		SupportsCurrentUse: true,
+		TechnicalKey: "  ENERGY_BILL ",
+		Label:        "  Conta   de Energia ",
+		Active:       true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if values.TechnicalKey != "energy_bill" || values.Label != "Conta de Energia" || !values.SupportsCurrentUse {
+	if values.TechnicalKey != "energy_bill" || values.Label != "Conta de Energia" || !values.Active {
 		t.Fatalf("normalized type = %#v", values)
 	}
 }
@@ -36,6 +35,7 @@ func TestNormalizeBillPreservesPrintedDataAndCanonicalizesCivilMoney(t *testing.
 		Amount:            "000123.4",
 		Currency:          "brl",
 		Notes:             "  impresso no documento  ",
+		Medium:            MediumPhysical,
 	}, definition)
 	if err != nil {
 		t.Fatal(err)
@@ -46,8 +46,8 @@ func TestNormalizeBillPreservesPrintedDataAndCanonicalizesCivilMoney(t *testing.
 	if values.Reference != "000A-99" || values.Competence != "2026-07" || values.Amount != "123.40" || values.Currency != "BRL" {
 		t.Fatalf("canonical values = %#v", values)
 	}
-	if values.RecordState != RecordCurrent {
-		t.Fatalf("record state = %q", values.RecordState)
+	if values.Medium != MediumPhysical {
+		t.Fatalf("medium = %q", values.Medium)
 	}
 }
 
@@ -61,7 +61,7 @@ func TestNormalizeBillRequiresPairedValidMoneyAndCivilCompetence(t *testing.T) {
 		Competence:     "2026-13",
 		Amount:         "12.345",
 		Currency:       "real",
-		RecordState:    "INVALID",
+		Medium:         "INVALID",
 	}, definition)
 	var validation *ValidationError
 	if !errors.As(err, &validation) {
@@ -70,18 +70,35 @@ func TestNormalizeBillRequiresPairedValidMoneyAndCivilCompetence(t *testing.T) {
 	assertBillFieldCode(t, validation, "competence", "invalid_format")
 	assertBillFieldCode(t, validation, "amount", "invalid_format")
 	assertBillFieldCode(t, validation, "currency", "invalid_format")
-	assertBillFieldCode(t, validation, "record_state", "invalid_value")
+	assertBillFieldCode(t, validation, "medium", "invalid_value")
 }
 
 func TestNormalizeBillRejectsCurrencyWithoutAmount(t *testing.T) {
 	owner, _ := profile.NewIdentifier()
 	typeID, _ := NewIdentifier()
-	_, err := Normalize(Values{OwnerProfileID: owner, TypeID: typeID, Currency: "BRL"}, TypeDefinition{ID: typeID})
+	_, err := Normalize(Values{OwnerProfileID: owner, TypeID: typeID, Currency: "BRL", Medium: MediumPhysical}, TypeDefinition{ID: typeID})
 	var validation *ValidationError
 	if !errors.As(err, &validation) {
 		t.Fatalf("error = %v", err)
 	}
 	assertBillFieldCode(t, validation, "currency", "unexpected")
+}
+
+func TestNormalizeRequiresMedium(t *testing.T) {
+	owner, _ := profile.NewIdentifier()
+	typeID, _ := NewIdentifier()
+	definition := TypeDefinition{ID: typeID}
+	_, err := NormalizeStored(Values{OwnerProfileID: owner, TypeID: typeID}, definition)
+	var validation *ValidationError
+	if !errors.As(err, &validation) {
+		t.Fatalf("error = %v", err)
+	}
+	assertBillFieldCode(t, validation, "medium", "invalid_value")
+	_, err = Normalize(Values{OwnerProfileID: owner, TypeID: typeID}, definition)
+	if !errors.As(err, &validation) {
+		t.Fatalf("error = %v", err)
+	}
+	assertBillFieldCode(t, validation, "medium", "invalid_value")
 }
 
 func TestCanonicalAmountRejectsNegativeAndOversizedValues(t *testing.T) {

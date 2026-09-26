@@ -16,6 +16,7 @@ const (
 	MaximumEventsPage       = 200
 	MaximumToolCalls        = 8
 	MaximumToolRows         = 100
+	MaximumResultPage       = 500
 	MaximumToolResultBytes  = 256 * 1024
 	MaximumToolFields       = 20
 	MinimumIdempotencySize  = 8

@@ -86,6 +86,12 @@ func (service *fakeDocumentService) ReturnCurrentUse(context.Context, auth.Sessi
 	service.returned = true
 	return service.err
 }
+func (service *fakeDocumentService) UpsertPresence(_ context.Context, _ auth.Session, owner profile.Identifier, typeID document.Identifier, claim document.Claim, identifier, _ string) (document.Presence, error) {
+	if service.err != nil {
+		return document.Presence{}, service.err
+	}
+	return document.Presence{ProfileID: owner, TypeID: typeID, Claim: claim, Identifier: identifier, Version: 1}, nil
+}
 
 func documentHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeDocumentService, document.Identifier, document.Identifier, profile.Identifier, http.Handler) {
 	t.Helper()
@@ -100,7 +106,7 @@ func documentHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeDocumen
 	}}}}
 	typeValue := document.TypeDefinition{ID: typeID, Values: document.TypeValues{TechnicalKey: "rg", Label: "RG", Active: true, UniquenessPolicy: document.UniquenessPerProfile}, Version: 1, CreatedAt: now, UpdatedAt: now}
 	currentUse := document.CurrentUse{HolderProfileID: holderID, AssignedAt: now}
-	documentValue := document.Document{ID: documentID, Values: document.Values{OwnerProfileID: ownerID, TypeID: typeID, Identifier: "00AB-009", DocumentDate: "2026-07-15", RecordState: document.RecordCurrent}, Type: typeValue, Status: document.StatusInUse, CurrentUse: &currentUse, Version: 1, CreatedAt: now, UpdatedAt: now}
+	documentValue := document.Document{ID: documentID, Values: document.Values{OwnerProfileID: ownerID, TypeID: typeID, Identifier: "00AB-009", DocumentDate: "2026-07-15", Medium: document.MediumPhysical}, OwnerFullName: "Ana da Silva", Type: typeValue, Status: document.StatusInUse, CurrentUse: &currentUse, Version: 1, CreatedAt: now, UpdatedAt: now}
 	service := &fakeDocumentService{
 		typeValue:     typeValue,
 		documentValue: documentValue,
@@ -114,15 +120,19 @@ func documentHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeDocumen
 func TestDocumentRoutesListCreateAndCurrentUse(t *testing.T) {
 	_, service, documentID, typeID, ownerID, handler := documentHTTPFixture(t)
 
-	listRequest := httptest.NewRequest(http.MethodGet, "/api/v1/documents?limit=250&offset=10&sort=updated_at&order=desc&owner_profile_id="+ownerID.String()+"&document_type_id="+typeID.String()+"&identifier=00AB&status=IN_USE", nil)
+	listRequest := httptest.NewRequest(http.MethodGet, "/api/v1/documents?limit=250&offset=10&sort=updated_at&order=desc&owner_profile_id="+ownerID.String()+"&document_type_id="+typeID.String()+"&identifier=00AB&medium=PHYSICAL&status=IN_USE", nil)
 	listRequest.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
 	listResponse := httptest.NewRecorder()
 	handler.ServeHTTP(listResponse, listRequest)
-	if listResponse.Code != http.StatusOK || service.documentList.Limit != 250 || service.documentList.Offset != 10 || service.documentList.SortField != document.SortUpdatedAt || service.documentList.Filters.Identifier != "00AB" {
+	if listResponse.Code != http.StatusOK || service.documentList.Limit != 250 || service.documentList.Offset != 10 || service.documentList.SortField != document.SortUpdatedAt || service.documentList.Filters.Identifier != "00AB" || service.documentList.Filters.Medium != document.MediumPhysical {
 		t.Fatalf("list status = %d, options = %#v, body = %s", listResponse.Code, service.documentList, listResponse.Body.String())
 	}
+	var listed documentPageResponse
+	if err := json.Unmarshal(listResponse.Body.Bytes(), &listed); err != nil || len(listed.Documents) != 1 || listed.Documents[0].CustomValues == nil || listed.Documents[0].OwnerFullName != "Ana da Silva" {
+		t.Fatalf("list body should embed custom_values and owner_full_name: err=%v body=%s", err, listResponse.Body.String())
+	}
 
-	createBody := `{"owner_profile_id":"` + ownerID.String() + `","document_type_id":"` + typeID.String() + `","identifier_value":"00AB-009","document_date":"2026-07-15","notes":"","record_state":"CURRENT"}`
+	createBody := `{"owner_profile_id":"` + ownerID.String() + `","document_type_id":"` + typeID.String() + `","identifier_value":"00AB-009","document_date":"2026-07-15","notes":"","medium":"PHYSICAL"}`
 	createRequest := httptest.NewRequest(http.MethodPost, "/api/v1/documents", strings.NewReader(createBody))
 	createRequest.Header.Set("Content-Type", "application/json")
 	createRequest.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
@@ -192,7 +202,7 @@ func TestDocumentRoutesRequireAuthenticationAndMapErrors(t *testing.T) {
 
 	authentication.sessionErr = nil
 	service.err = &document.ValidationError{Fields: []document.FieldError{{Field: "identifier_value", Code: "required"}}}
-	request := httptest.NewRequest(http.MethodPost, "/api/v1/documents", strings.NewReader(`{"owner_profile_id":"invalid","document_type_id":"invalid","identifier_value":"","document_date":"","notes":"","record_state":"CURRENT"}`))
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/documents", strings.NewReader(`{"owner_profile_id":"invalid","document_type_id":"invalid","identifier_value":"","document_date":"","notes":"","medium":"PHYSICAL"}`))
 	request.Header.Set("Content-Type", "application/json")
 	request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
 	response = httptest.NewRecorder()

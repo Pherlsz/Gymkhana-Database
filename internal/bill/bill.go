@@ -60,17 +60,30 @@ func (identifier Identifier) IsZero() bool {
 	return identifier == Identifier{}
 }
 
-type RecordState string
+type Medium string
 
 const (
-	RecordCurrent  RecordState = "CURRENT"
-	RecordReplaced RecordState = "REPLACED"
-	RecordExpired  RecordState = "EXPIRED"
-	RecordArchived RecordState = "ARCHIVED"
+	MediumPhysical Medium = "PHYSICAL"
+	MediumDigital  Medium = "DIGITAL"
 )
 
-func (state RecordState) Valid() bool {
-	return state == RecordCurrent || state == RecordReplaced || state == RecordExpired || state == RecordArchived
+func (medium Medium) Valid() bool {
+	return medium == MediumPhysical || medium == MediumDigital
+}
+
+func (medium Medium) SupportsCurrentUse() bool {
+	return medium == MediumPhysical
+}
+
+type IdleCustody string
+
+const (
+	IdleCustodyOrganization IdleCustody = "ORGANIZATION"
+	IdleCustodyOwner        IdleCustody = "OWNER"
+)
+
+func (custody IdleCustody) Valid() bool {
+	return custody == IdleCustodyOrganization || custody == IdleCustodyOwner
 }
 
 type Status string
@@ -80,23 +93,37 @@ const (
 	StatusInUse     Status = "IN_USE"
 )
 
+func OperationalStatus(medium Medium, inUse bool, idleCustody IdleCustody) Status {
+	if !medium.SupportsCurrentUse() {
+		return ""
+	}
+	if inUse {
+		return StatusInUse
+	}
+	if idleCustody == IdleCustodyOwner {
+		return ""
+	}
+	return StatusAvailable
+}
+
 type TypeValues struct {
-	TechnicalKey       string
-	Label              string
-	Active             bool
-	SupportsCurrentUse bool
+	TechnicalKey string
+	Label        string
+	Active       bool
 }
 
 type TypeDefinition struct {
-	ID        Identifier
-	Values    TypeValues
-	Version   int64
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID            Identifier
+	Values        TypeValues
+	ExemplarCount int64
+	Version       int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type Values struct {
 	OwnerProfileID    profile.Identifier
+	OwnerName         string
 	TypeID            Identifier
 	PrintedHolderName string
 	PrintedAddress    string
@@ -105,23 +132,26 @@ type Values struct {
 	Amount            string
 	Currency          string
 	Notes             string
-	RecordState       RecordState
+	Medium            Medium
+	IdleCustody       IdleCustody
 }
 
 type CurrentUse struct {
 	HolderProfileID profile.Identifier
+	HolderFullName  string
 	AssignedAt      time.Time
 }
 
 type Bill struct {
-	ID         Identifier
-	Values     Values
-	Type       TypeDefinition
-	Status     Status
-	CurrentUse *CurrentUse
-	Version    int64
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID            Identifier
+	Values        Values
+	OwnerFullName string
+	Type          TypeDefinition
+	Status        Status
+	CurrentUse    *CurrentUse
+	Version       int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type FieldError struct {
@@ -139,10 +169,9 @@ func (err *ValidationError) Error() string {
 
 func NormalizeType(values TypeValues) (TypeValues, error) {
 	normalized := TypeValues{
-		TechnicalKey:       strings.ToLower(strings.TrimSpace(values.TechnicalKey)),
-		Label:              normalize.DisplayText(values.Label),
-		Active:             values.Active,
-		SupportsCurrentUse: values.SupportsCurrentUse,
+		TechnicalKey: strings.ToLower(strings.TrimSpace(values.TechnicalKey)),
+		Label:        normalize.DisplayText(values.Label),
+		Active:       values.Active,
 	}
 	validation := &ValidationError{}
 	if normalized.TechnicalKey == "" {
@@ -158,8 +187,17 @@ func NormalizeType(values TypeValues) (TypeValues, error) {
 }
 
 func Normalize(values Values, definition TypeDefinition) (Values, error) {
+	return normalizeValues(values, definition, true)
+}
+
+func NormalizeStored(values Values, definition TypeDefinition) (Values, error) {
+	return normalizeValues(values, definition, false)
+}
+
+func normalizeValues(values Values, definition TypeDefinition, requireOwner bool) (Values, error) {
 	normalized := Values{
 		OwnerProfileID:    values.OwnerProfileID,
+		OwnerName:         normalize.DisplayText(values.OwnerName),
 		TypeID:            values.TypeID,
 		PrintedHolderName: normalize.DisplayText(values.PrintedHolderName),
 		PrintedAddress:    normalize.DisplayText(values.PrintedAddress),
@@ -168,13 +206,11 @@ func Normalize(values Values, definition TypeDefinition) (Values, error) {
 		Amount:            strings.TrimSpace(values.Amount),
 		Currency:          strings.ToUpper(strings.TrimSpace(values.Currency)),
 		Notes:             strings.TrimSpace(strings.ToValidUTF8(values.Notes, "")),
-		RecordState:       values.RecordState,
-	}
-	if normalized.RecordState == "" {
-		normalized.RecordState = RecordCurrent
+		Medium:            values.Medium,
+		IdleCustody:       values.IdleCustody,
 	}
 	validation := &ValidationError{}
-	if normalized.OwnerProfileID == (profile.Identifier{}) {
+	if requireOwner && normalized.OwnerProfileID == (profile.Identifier{}) {
 		validation.add("owner_profile_id", "required")
 	}
 	if normalized.TypeID.IsZero() || normalized.TypeID != definition.ID {
@@ -204,8 +240,16 @@ func Normalize(values Values, definition TypeDefinition) (Values, error) {
 	if normalized.Notes != "" && utf8.RuneCountInString(normalized.Notes) > MaxNotesLength {
 		validation.add("notes", "too_long")
 	}
-	if !normalized.RecordState.Valid() {
-		validation.add("record_state", "invalid_value")
+	if !normalized.Medium.Valid() {
+		validation.add("medium", "invalid_value")
+	} else if normalized.Medium == MediumPhysical {
+		if normalized.IdleCustody == "" {
+			normalized.IdleCustody = IdleCustodyOrganization
+		} else if !normalized.IdleCustody.Valid() {
+			validation.add("idle_custody", "invalid_value")
+		}
+	} else if normalized.IdleCustody != "" {
+		validation.add("idle_custody", "unexpected")
 	}
 	if len(validation.Fields) > 0 {
 		return Values{}, validation

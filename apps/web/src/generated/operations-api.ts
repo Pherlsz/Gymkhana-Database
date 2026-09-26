@@ -48,7 +48,7 @@ export interface paths {
     get: operations["getOperationImport"];
     put?: never;
     post?: never;
-    delete?: never;
+    delete: operations["deleteOperationImport"];
     options?: never;
     head?: never;
     patch?: never;
@@ -753,6 +753,31 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  deleteOperationImport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        import_id: components["parameters"]["ImportID"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Terminal import removed from recent history */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
       503: components["responses"]["ServiceUnavailable"];
     };
   };

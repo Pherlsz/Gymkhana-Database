@@ -128,6 +128,45 @@ func (e ChatRunState) Valid() bool {
 	}
 }
 
+// Defines values for ChatTableRecorteOrder.
+const (
+	Asc  ChatTableRecorteOrder = "asc"
+	Desc ChatTableRecorteOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the ChatTableRecorteOrder enum.
+func (e ChatTableRecorteOrder) Valid() bool {
+	switch e {
+	case Asc:
+		return true
+	case Desc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChatTableRecorteTable.
+const (
+	ChatTableRecorteTableBills     ChatTableRecorteTable = "bills"
+	ChatTableRecorteTableDocuments ChatTableRecorteTable = "documents"
+	ChatTableRecorteTablePeople    ChatTableRecorteTable = "people"
+)
+
+// Valid indicates whether the value is a known member of the ChatTableRecorteTable enum.
+func (e ChatTableRecorteTable) Valid() bool {
+	switch e {
+	case ChatTableRecorteTableBills:
+		return true
+	case ChatTableRecorteTableDocuments:
+		return true
+	case ChatTableRecorteTablePeople:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ErrorResponseErrorCode.
 const (
 	ErrorResponseErrorCodeBadRequest            ErrorResponseErrorCode = "bad_request"
@@ -238,25 +277,25 @@ func (e QueryValueKind) Valid() bool {
 
 // Defines values for SearchEvidenceModule.
 const (
-	Attachments SearchEvidenceModule = "attachments"
-	Bills       SearchEvidenceModule = "bills"
-	CustomData  SearchEvidenceModule = "custom_data"
-	Documents   SearchEvidenceModule = "documents"
-	Profiles    SearchEvidenceModule = "profiles"
+	SearchEvidenceModuleAttachments SearchEvidenceModule = "attachments"
+	SearchEvidenceModuleBills       SearchEvidenceModule = "bills"
+	SearchEvidenceModuleCustomData  SearchEvidenceModule = "custom_data"
+	SearchEvidenceModuleDocuments   SearchEvidenceModule = "documents"
+	SearchEvidenceModuleProfiles    SearchEvidenceModule = "profiles"
 )
 
 // Valid indicates whether the value is a known member of the SearchEvidenceModule enum.
 func (e SearchEvidenceModule) Valid() bool {
 	switch e {
-	case Attachments:
+	case SearchEvidenceModuleAttachments:
 		return true
-	case Bills:
+	case SearchEvidenceModuleBills:
 		return true
-	case CustomData:
+	case SearchEvidenceModuleCustomData:
 		return true
-	case Documents:
+	case SearchEvidenceModuleDocuments:
 		return true
-	case Profiles:
+	case SearchEvidenceModuleProfiles:
 		return true
 	default:
 		return false
@@ -324,6 +363,26 @@ type ChatReferenceResult_Data struct {
 	union json.RawMessage
 }
 
+// ChatResultGrid defines model for ChatResultGrid.
+type ChatResultGrid struct {
+	Columns []struct {
+		Key   string `json:"key"`
+		Label string `json:"label"`
+	} `json:"columns"`
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+	Rows   []struct {
+		Cells       map[string]string `json:"cells"`
+		EntityId    string            `json:"entity_id"`
+		EntityKind  string            `json:"entity_kind"`
+		EntityLabel string            `json:"entity_label"`
+		Id          string            `json:"id"`
+	} `json:"rows"`
+	Summary   *string `json:"summary,omitempty"`
+	Total     int     `json:"total"`
+	Truncated *bool   `json:"truncated,omitempty"`
+}
+
 // ChatResultReference defines model for ChatResultReference.
 type ChatResultReference struct {
 	ColumnCount      int                     `json:"column_count"`
@@ -369,6 +428,21 @@ type ChatRunCreation struct {
 
 // ChatRunState defines model for ChatRunState.
 type ChatRunState string
+
+// ChatTableRecorte defines model for ChatTableRecorte.
+type ChatTableRecorte struct {
+	Columns []string               `json:"columns"`
+	Filters map[string]string      `json:"filters"`
+	Order   *ChatTableRecorteOrder `json:"order,omitempty"`
+	Sort    *string                `json:"sort,omitempty"`
+	Table   ChatTableRecorteTable  `json:"table"`
+}
+
+// ChatTableRecorteOrder defines model for ChatTableRecorte.Order.
+type ChatTableRecorteOrder string
+
+// ChatTableRecorteTable defines model for ChatTableRecorte.Table.
+type ChatTableRecorteTable string
 
 // ChatThread defines model for ChatThread.
 type ChatThread struct {
@@ -563,6 +637,12 @@ type GetChatResultReferenceParams struct {
 	Offset *ResultOffset `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// GetChatResultPageParams defines parameters for GetChatResultPage.
+type GetChatResultPageParams struct {
+	Limit  *int          `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *ResultOffset `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // StreamChatRunEventsParams defines parameters for StreamChatRunEvents.
 type StreamChatRunEventsParams struct {
 	After       *int64 `form:"after,omitempty" json:"after,omitempty"`
@@ -751,6 +831,15 @@ type ServerInterface interface {
 	// Reauthorize and reopen one typed result reference
 	// (GET /api/v1/chat/result-references/{reference_id})
 	GetChatResultReference(w http.ResponseWriter, r *http.Request, referenceId ReferenceID, params GetChatResultReferenceParams)
+	// Reauthorize and page one assistant result into the open grid
+	// (GET /api/v1/chat/result-references/{reference_id}/page)
+	GetChatResultPage(w http.ResponseWriter, r *http.Request, referenceId ReferenceID, params GetChatResultPageParams)
+	// Compile one query reference into the open table
+	// (GET /api/v1/chat/result-references/{reference_id}/recorte)
+	GetChatTableRecorte(w http.ResponseWriter, r *http.Request, referenceId ReferenceID)
+	// Download the on-grid recorte as XLSX
+	// (GET /api/v1/chat/result-references/{reference_id}/xlsx)
+	ExportChatResultXlsx(w http.ResponseWriter, r *http.Request, referenceId ReferenceID)
 	// Inspect one owner-scoped run without provider payloads
 	// (GET /api/v1/chat/runs/{run_id})
 	GetChatRun(w http.ResponseWriter, r *http.Request, runId RunID)
@@ -867,6 +956,131 @@ func (siw *ServerInterfaceWrapper) GetChatResultReference(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetChatResultReference(w, r, referenceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetChatResultPage operation middleware
+func (siw *ServerInterfaceWrapper) GetChatResultPage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "reference_id" -------------
+	var referenceId ReferenceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reference_id", r.PathValue("reference_id"), &referenceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reference_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetChatResultPageParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetChatResultPage(w, r, referenceId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetChatTableRecorte operation middleware
+func (siw *ServerInterfaceWrapper) GetChatTableRecorte(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "reference_id" -------------
+	var referenceId ReferenceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reference_id", r.PathValue("reference_id"), &referenceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reference_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetChatTableRecorte(w, r, referenceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportChatResultXlsx operation middleware
+func (siw *ServerInterfaceWrapper) ExportChatResultXlsx(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "reference_id" -------------
+	var referenceId ReferenceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "reference_id", r.PathValue("reference_id"), &referenceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reference_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportChatResultXlsx(w, r, referenceId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1424,6 +1638,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/chat/capability", wrapper.GetChatCapability)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/chat/result-references/{reference_id}", wrapper.GetChatResultReference)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/chat/result-references/{reference_id}/page", wrapper.GetChatResultPage)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/chat/result-references/{reference_id}/recorte", wrapper.GetChatTableRecorte)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/chat/result-references/{reference_id}/xlsx", wrapper.ExportChatResultXlsx)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/chat/runs/{run_id}", wrapper.GetChatRun)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/chat/runs/{run_id}/cancel", wrapper.CancelChatRun)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/chat/runs/{run_id}/events", wrapper.StreamChatRunEvents)
@@ -1616,6 +1833,339 @@ func (response GetChatResultReference502JSONResponse) VisitGetChatResultReferenc
 type GetChatResultReference503JSONResponse struct{ UnavailableJSONResponse }
 
 func (response GetChatResultReference503JSONResponse) VisitGetChatResultReferenceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatResultPageRequestObject struct {
+	ReferenceId ReferenceID `json:"reference_id"`
+	Params      GetChatResultPageParams
+}
+
+type GetChatResultPageResponseObject interface {
+	VisitGetChatResultPageResponse(w http.ResponseWriter) error
+}
+
+type GetChatResultPage200JSONResponse ChatResultGrid
+
+func (response GetChatResultPage200JSONResponse) VisitGetChatResultPageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatResultPage400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetChatResultPage400JSONResponse) VisitGetChatResultPageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatResultPage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetChatResultPage401JSONResponse) VisitGetChatResultPageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatResultPage403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetChatResultPage403JSONResponse) VisitGetChatResultPageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatResultPage404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetChatResultPage404JSONResponse) VisitGetChatResultPageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatResultPage410JSONResponse struct{ StaleContextJSONResponse }
+
+func (response GetChatResultPage410JSONResponse) VisitGetChatResultPageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(410)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatResultPage503JSONResponse struct{ UnavailableJSONResponse }
+
+func (response GetChatResultPage503JSONResponse) VisitGetChatResultPageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatTableRecorteRequestObject struct {
+	ReferenceId ReferenceID `json:"reference_id"`
+}
+
+type GetChatTableRecorteResponseObject interface {
+	VisitGetChatTableRecorteResponse(w http.ResponseWriter) error
+}
+
+type GetChatTableRecorte200JSONResponse ChatTableRecorte
+
+func (response GetChatTableRecorte200JSONResponse) VisitGetChatTableRecorteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatTableRecorte400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetChatTableRecorte400JSONResponse) VisitGetChatTableRecorteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatTableRecorte401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetChatTableRecorte401JSONResponse) VisitGetChatTableRecorteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatTableRecorte403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetChatTableRecorte403JSONResponse) VisitGetChatTableRecorteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatTableRecorte404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetChatTableRecorte404JSONResponse) VisitGetChatTableRecorteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatTableRecorte410JSONResponse struct{ StaleContextJSONResponse }
+
+func (response GetChatTableRecorte410JSONResponse) VisitGetChatTableRecorteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(410)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetChatTableRecorte503JSONResponse struct{ UnavailableJSONResponse }
+
+func (response GetChatTableRecorte503JSONResponse) VisitGetChatTableRecorteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportChatResultXlsxRequestObject struct {
+	ReferenceId ReferenceID `json:"reference_id"`
+}
+
+type ExportChatResultXlsxResponseObject interface {
+	VisitExportChatResultXlsxResponse(w http.ResponseWriter) error
+}
+
+type ExportChatResultXlsx200ResponseHeaders struct {
+	ContentDisposition *string
+}
+
+type ExportChatResultXlsx200ApplicationvndOpenxmlformatsOfficedocumentSpreadsheetmlSheetResponse struct {
+	Body          io.Reader
+	Headers       ExportChatResultXlsx200ResponseHeaders
+	ContentLength int64
+}
+
+func (response ExportChatResultXlsx200ApplicationvndOpenxmlformatsOfficedocumentSpreadsheetmlSheetResponse) VisitExportChatResultXlsxResponse(w http.ResponseWriter) error {
+
+	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	if response.Headers.ContentDisposition != nil {
+		w.Header().Set("Content-Disposition", fmt.Sprint(*response.Headers.ContentDisposition))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type ExportChatResultXlsx400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ExportChatResultXlsx400JSONResponse) VisitExportChatResultXlsxResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportChatResultXlsx401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ExportChatResultXlsx401JSONResponse) VisitExportChatResultXlsxResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportChatResultXlsx403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ExportChatResultXlsx403JSONResponse) VisitExportChatResultXlsxResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportChatResultXlsx404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ExportChatResultXlsx404JSONResponse) VisitExportChatResultXlsxResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportChatResultXlsx410JSONResponse struct{ StaleContextJSONResponse }
+
+func (response ExportChatResultXlsx410JSONResponse) VisitExportChatResultXlsxResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(410)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ExportChatResultXlsx503JSONResponse struct{ UnavailableJSONResponse }
+
+func (response ExportChatResultXlsx503JSONResponse) VisitExportChatResultXlsxResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -2787,6 +3337,15 @@ type StrictServerInterface interface {
 	// Reauthorize and reopen one typed result reference
 	// (GET /api/v1/chat/result-references/{reference_id})
 	GetChatResultReference(ctx context.Context, request GetChatResultReferenceRequestObject) (GetChatResultReferenceResponseObject, error)
+	// Reauthorize and page one assistant result into the open grid
+	// (GET /api/v1/chat/result-references/{reference_id}/page)
+	GetChatResultPage(ctx context.Context, request GetChatResultPageRequestObject) (GetChatResultPageResponseObject, error)
+	// Compile one query reference into the open table
+	// (GET /api/v1/chat/result-references/{reference_id}/recorte)
+	GetChatTableRecorte(ctx context.Context, request GetChatTableRecorteRequestObject) (GetChatTableRecorteResponseObject, error)
+	// Download the on-grid recorte as XLSX
+	// (GET /api/v1/chat/result-references/{reference_id}/xlsx)
+	ExportChatResultXlsx(ctx context.Context, request ExportChatResultXlsxRequestObject) (ExportChatResultXlsxResponseObject, error)
 	// Inspect one owner-scoped run without provider payloads
 	// (GET /api/v1/chat/runs/{run_id})
 	GetChatRun(ctx context.Context, request GetChatRunRequestObject) (GetChatRunResponseObject, error)
@@ -2895,6 +3454,85 @@ func (sh *strictHandler) GetChatResultReference(w http.ResponseWriter, r *http.R
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetChatResultReferenceResponseObject); ok {
 		if err := validResponse.VisitGetChatResultReferenceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetChatResultPage operation middleware
+func (sh *strictHandler) GetChatResultPage(w http.ResponseWriter, r *http.Request, referenceId ReferenceID, params GetChatResultPageParams) {
+	var request GetChatResultPageRequestObject
+
+	request.ReferenceId = referenceId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetChatResultPage(ctx, request.(GetChatResultPageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetChatResultPage")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetChatResultPageResponseObject); ok {
+		if err := validResponse.VisitGetChatResultPageResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetChatTableRecorte operation middleware
+func (sh *strictHandler) GetChatTableRecorte(w http.ResponseWriter, r *http.Request, referenceId ReferenceID) {
+	var request GetChatTableRecorteRequestObject
+
+	request.ReferenceId = referenceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetChatTableRecorte(ctx, request.(GetChatTableRecorteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetChatTableRecorte")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetChatTableRecorteResponseObject); ok {
+		if err := validResponse.VisitGetChatTableRecorteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ExportChatResultXlsx operation middleware
+func (sh *strictHandler) ExportChatResultXlsx(w http.ResponseWriter, r *http.Request, referenceId ReferenceID) {
+	var request ExportChatResultXlsxRequestObject
+
+	request.ReferenceId = referenceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ExportChatResultXlsx(ctx, request.(ExportChatResultXlsxRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ExportChatResultXlsx")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ExportChatResultXlsxResponseObject); ok {
+		if err := validResponse.VisitExportChatResultXlsxResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

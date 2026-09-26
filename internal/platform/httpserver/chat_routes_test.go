@@ -40,7 +40,9 @@ type fakeChatHTTPService struct {
 	err            error
 }
 
-func (service *fakeChatHTTPService) Capability() chatdomain.Capability { return service.capability }
+func (service *fakeChatHTTPService) Capability(context.Context) chatdomain.Capability {
+	return service.capability
+}
 
 func (service *fakeChatHTTPService) CreateThread(_ context.Context, actor auth.Session, title, requestID string) (chatdomain.Thread, error) {
 	service.actor, service.title, service.requestID = actor, title, requestID
@@ -126,6 +128,23 @@ func (reader *fakeChatResultReader) ReadResult(_ context.Context, actor auth.Ses
 	return reader.output, reader.err
 }
 
+func (reader *fakeChatResultReader) ReadPage(context.Context, auth.Session, chatdomain.Identifier, int, int, string) (chatdomain.ResultGrid, error) {
+	return chatdomain.ResultGrid{}, reader.err
+}
+
+func (reader *fakeChatResultReader) ExportRecorte(_ context.Context, actor auth.Session, reference chatdomain.Identifier, _ string) (chatdomain.RecorteWorkbook, error) {
+	reader.actor, reader.reference = actor, reference
+	if reader.err != nil {
+		return chatdomain.RecorteWorkbook{}, reader.err
+	}
+	return chatdomain.RecorteWorkbook{
+		Filename: "recorte-test.xlsx",
+		Sheet:    "Recorte",
+		Headers:  []string{"nome"},
+		Rows:     [][]string{{"Ana"}, {"Bia"}},
+	}, nil
+}
+
 type fakeChatLauncher struct {
 	started   chatdomain.Identifier
 	cancelled chatdomain.Identifier
@@ -200,6 +219,28 @@ func TestChatRoutesExposeProtectedStrictLifecycleAndTypedReferences(t *testing.T
 		strings.Contains(response.Body.String(), "logical_request") {
 		t.Fatalf("reference response = %d %s, reader=%#v", response.Code, response.Body.String(), reader)
 	}
+	service.reference.Kind = chatdomain.ResultReferenceQuery
+	service.reference.LogicalRequest = []byte(`{"plan":{"version":"v1","root_entity":"profiles","projections":["profile.father_name"],"filter":{"kind":"predicate","field":"profile.full_name","operator":"contains","values":["Pedro"]}}}`)
+	response = serveChatRequest(handler, http.MethodGet, "/api/v1/chat/result-references/"+referenceID.String()+"/recorte", "", "")
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"full_name":"Pedro"`) ||
+		!strings.Contains(response.Body.String(), `"father_name"`) || strings.Contains(response.Body.String(), "profile.") ||
+		strings.Contains(response.Body.String(), "SELECT") {
+		t.Fatalf("recorte response = %d %s", response.Code, response.Body.String())
+	}
+	service.reference.LogicalRequest = []byte(`{"plan":{"version":"v1","root_entity":"profiles","projections":["profile.full_name"],"filter":{"kind":"relation","relation":"profile.bills"}}}`)
+	response = serveChatRequest(handler, http.MethodGet, "/api/v1/chat/result-references/"+referenceID.String()+"/recorte", "", "")
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("unfit recorte = %d %s", response.Code, response.Body.String())
+	}
+
+	response = serveChatRequest(handler, http.MethodGet, "/api/v1/chat/result-references/"+referenceID.String()+"/xlsx", "", "")
+	if response.Code != http.StatusOK || reader.reference != referenceID ||
+		response.Header().Get("Content-Type") != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+		!strings.Contains(response.Header().Get("Content-Disposition"), "recorte-test.xlsx") ||
+		!bytes.HasPrefix(response.Body.Bytes(), []byte("PK")) {
+		t.Fatalf("recorte xlsx = %d %s headers=%v", response.Code, response.Body.String(), response.Header())
+	}
+
 	response = serveChatRequest(handler, http.MethodDelete, "/api/v1/chat/threads/"+threadID.String(), "", "")
 	if response.Code != http.StatusNoContent || !service.deleted {
 		t.Fatalf("delete response = %d %s", response.Code, response.Body.String())
@@ -215,7 +256,7 @@ func TestChatCapabilityAndDisabledRoutesAreExplicit(t *testing.T) {
 	handler := New(authTestLogger(), nil, Options{Auth: authentication})
 	response := serveChatRequest(handler, http.MethodGet, "/api/v1/chat/capability", "", "")
 	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"enabled":false`) ||
-		!strings.Contains(response.Body.String(), `"maximum_usage":200000`) || !strings.Contains(response.Body.String(), `"maximum_duration_seconds":45`) {
+		!strings.Contains(response.Body.String(), `"maximum_usage":100000000`) || !strings.Contains(response.Body.String(), `"maximum_duration_seconds":300`) {
 		t.Fatalf("disabled capability = %d %s", response.Code, response.Body.String())
 	}
 	response = serveChatRequest(handler, http.MethodGet, "/api/v1/chat/threads", "", "")

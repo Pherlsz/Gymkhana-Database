@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ type operationsService interface {
 	SaveDecisions(context.Context, auth.Session, operations.Identifier, int64, []operations.DecisionInput, string) (operations.Import, error)
 	Execute(context.Context, auth.Session, operations.Identifier, int64, string) (operations.Import, error)
 	CancelImport(context.Context, auth.Session, operations.Identifier, int64, string) (operations.Import, error)
+	DeleteImport(context.Context, auth.Session, operations.Identifier, string) error
 	CreateExport(context.Context, auth.Session, operations.Module, string, string) (operations.Export, error)
 	GetExport(context.Context, auth.Session, operations.Identifier) (operations.Export, error)
 	ListExports(context.Context, auth.Session, operations.ListOptions) (operations.ExportPage, error)
@@ -454,6 +456,18 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 		writeOperationImportResult(w, r, logger, "cancel operation import", value, err)
 	}))
 
+	mux.HandleFunc("DELETE /api/v1/operations/imports/{import_id}", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
+		actor, id, ok := operationImportActor(w, r, authentication, service)
+		if !ok {
+			return
+		}
+		if err := service.DeleteImport(r.Context(), actor, id, requestIDFromContext(r.Context())); err != nil {
+			writeOperationsError(w, r, logger, "delete operation import", err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
 	registerOperationExportRoutes(mux, logger, authentication, checker, service)
 }
 
@@ -546,8 +560,16 @@ func registerOperationExportRoutes(mux *http.ServeMux, logger *slog.Logger, auth
 	}))
 }
 
-func operationsActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service operationsService) (auth.Session, bool) {
+func operationsUnavailable(service operationsService) bool {
 	if service == nil {
+		return true
+	}
+	value := reflect.ValueOf(service)
+	return value.Kind() == reflect.Pointer && value.IsNil()
+}
+
+func operationsActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service operationsService) (auth.Session, bool) {
+	if operationsUnavailable(service) {
 		writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "Operações estão indisponíveis"})
 		return auth.Session{}, false
 	}

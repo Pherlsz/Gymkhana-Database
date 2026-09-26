@@ -6,12 +6,14 @@ import (
 )
 
 const (
-	MaxTerms             = 5
+	MaxTerms             = 16
 	MaxTermLength        = 128
-	MaxFields            = 40
+	MaxQueryLength       = 512
+	MaxFields            = 50
 	MaxPageSize          = 100
 	MaxOffset            = 10_000
 	MaxResultCardinality = 50_000
+	MaxSuggest           = 50
 )
 
 var (
@@ -74,8 +76,11 @@ type ModuleDefinition struct {
 type FieldDefinition struct {
 	Key    string
 	Module Module
-	Label  string
-	Kind   string
+	// Group is the UI bucket (pessoa/documento/conta). Custom fields keep
+	// Module=custom_data for search authorization but Group follows the owner.
+	Group Module
+	Label string
+	Kind  string
 }
 
 type CatalogLimits struct {
@@ -88,12 +93,14 @@ type CatalogLimits struct {
 }
 
 type Catalog struct {
-	Modules []ModuleDefinition
-	Fields  []FieldDefinition
-	Limits  CatalogLimits
+	Modules   []ModuleDefinition
+	Fields    []FieldDefinition
+	Operators []QueryToken
+	Limits    CatalogLimits
 }
 
 type Query struct {
+	Q       string
 	Terms   []string
 	Modules []Module
 	Fields  []string
@@ -103,9 +110,21 @@ type Query struct {
 	Order   SortOrder
 }
 
+type TermSpec struct {
+	Term      string   `json:"term"`
+	Pattern   string   `json:"pattern"`
+	Patterns  []string `json:"patterns,omitempty"`
+	FieldKeys []string `json:"field_keys"`
+	Exclude   bool     `json:"exclude"`
+	Compare   string   `json:"compare"`
+	Value     string   `json:"value"`
+	Value2    string   `json:"value2"`
+}
+
 type Plan struct {
 	Terms            []string
-	LiteralPatterns  []string
+	Includes         []TermSpec
+	Excludes         []TermSpec
 	Modules          []Module
 	Fields           []string
 	Limit            int32
@@ -114,6 +133,18 @@ type Plan struct {
 	Order            SortOrder
 	StatementTimeout time.Duration
 	CandidateLimit   int64
+}
+
+type SuggestQuery struct {
+	Field string
+	Q     string
+	Limit int32
+	Grain Module
+}
+
+type SuggestHit struct {
+	Value string
+	Label string
 }
 
 type Result struct {
@@ -141,8 +172,9 @@ type Page struct {
 }
 
 type FieldError struct {
-	Field string
-	Code  string
+	Field  string
+	Code   string
+	Detail string
 }
 
 type ValidationError struct {

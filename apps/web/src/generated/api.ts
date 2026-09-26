@@ -45,7 +45,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Begin GitHub OAuth authentication */
+    /** Begin Google OAuth authentication */
     get: operations["beginGitHubLogin"];
     put?: never;
     post?: never;
@@ -62,7 +62,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Complete GitHub OAuth authentication */
+    /** Complete Google OAuth authentication */
     get: operations["completeGitHubLogin"];
     put?: never;
     post?: never;
@@ -116,8 +116,26 @@ export interface paths {
     /** List application users for administration */
     get: operations["listApplicationUsers"];
     put?: never;
-    post?: never;
+    /** Create an application user with role and capabilities */
+    post: operations["provisionApplicationUser"];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete an application user */
+    delete: operations["deleteApplicationUser"];
     options?: never;
     head?: never;
     patch?: never;
@@ -140,6 +158,27 @@ export interface paths {
     patch: operations["updateApplicationUserAccess"];
     trace?: never;
   };
+  "/api/admin/model-keys/{provider}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
+    };
+    /** Shared Assistente model key status (never the secret) */
+    get: operations["getModelKeyStatus"];
+    /** Store or rotate the shared Assistente model key */
+    put: operations["setModelKey"];
+    post?: never;
+    /** Remove the shared Assistente model key */
+    delete: operations["clearModelKey"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/profiles": {
     parameters: {
       query?: never;
@@ -152,6 +191,23 @@ export interface paths {
     put?: never;
     /** Create a physical-person profile */
     post: operations["createProfile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/profiles/cities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List distinct cities across profiles matching the given filters */
+    get: operations["listDistinctCities"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -230,6 +286,23 @@ export interface paths {
     post?: never;
     /** Permanently delete an unused document type */
     delete: operations["deleteDocumentType"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/document-presences": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Declare absence, indication, or an informed number for a person and document type */
+    put: operations["upsertDocumentPresence"];
+    post?: never;
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -644,12 +717,51 @@ export interface components {
       active: boolean;
       /** Format: int64 */
       version: number;
+      display_name?: string;
+      email?: string;
+    };
+    ProvisionUserRequest: {
+      email: string;
+      display_name: string;
+      /** @enum {string} */
+      role: "EXTERNAL" | "ADMIN";
+      capabilities?: string[];
+    };
+    /** @enum {string} */
+    ModelProvider: "google";
+    ModelKeyStatus: {
+      provider: components["schemas"]["ModelProvider"];
+      configured: boolean;
+      model?: string;
+      /** Format: date-time */
+      updated_at?: string;
+    };
+    SetModelKeyRequest: {
+      /**
+       * Format: password
+       * @description Provider API key. Write-only; never returned.
+       */
+      secret: string;
+      model: string;
+    };
+    DistinctCitiesResponse: {
+      values: string[];
     };
     /**
      * @default full_name
      * @enum {string}
      */
-    ProfileSortField: "full_name" | "cpf" | "email" | "address_city" | "created_at" | "updated_at";
+    ProfileSortField:
+      | "full_name"
+      | "cpf"
+      | "email"
+      | "address_city"
+      | "address_street"
+      | "address_neighborhood"
+      | "mobile_phone"
+      | "birth_date"
+      | "created_at"
+      | "updated_at";
     /**
      * @default asc
      * @enum {string}
@@ -673,6 +785,42 @@ export interface components {
       landline_phone: string;
       address: components["schemas"]["ProfileAddress"];
       notes: string;
+      /** Format: date */
+      birth_date?: string;
+      gender?: string;
+      blood_type?: string;
+      nationality?: string;
+      birth_city?: string;
+      marital_status?: string;
+      /** Format: date */
+      wedding_date?: string;
+      father_name?: string;
+      /** Format: date */
+      father_birth_date?: string;
+      mother_name?: string;
+      /** Format: date */
+      mother_birth_date?: string;
+      health_plan?: string;
+      blood_donor?: boolean;
+      organ_donor?: boolean;
+      team?: string;
+      sector?: string;
+      collections?: string;
+      vehicle_model?: string;
+      vehicle_color?: string;
+      vehicle_plate?: string;
+      vehicle_year?: number;
+      club_membership?: string;
+      membership_type?: string;
+      place_of_origin?: string;
+      birth_country?: string;
+      /** Format: date */
+      parents_wedding_date?: string;
+      supermarket_club?: string;
+      pet?: string;
+      travel_countries?: string;
+      card_brand?: string;
+      card_bank?: string;
     };
     UpdateProfileRequest: {
       full_name: string;
@@ -683,6 +831,42 @@ export interface components {
       landline_phone: string;
       address: components["schemas"]["ProfileAddress"];
       notes: string;
+      /** Format: date */
+      birth_date?: string;
+      gender?: string;
+      blood_type?: string;
+      nationality?: string;
+      birth_city?: string;
+      marital_status?: string;
+      /** Format: date */
+      wedding_date?: string;
+      father_name?: string;
+      /** Format: date */
+      father_birth_date?: string;
+      mother_name?: string;
+      /** Format: date */
+      mother_birth_date?: string;
+      health_plan?: string;
+      blood_donor?: boolean;
+      organ_donor?: boolean;
+      team?: string;
+      sector?: string;
+      collections?: string;
+      vehicle_model?: string;
+      vehicle_color?: string;
+      vehicle_plate?: string;
+      vehicle_year?: number;
+      club_membership?: string;
+      membership_type?: string;
+      place_of_origin?: string;
+      birth_country?: string;
+      /** Format: date */
+      parents_wedding_date?: string;
+      supermarket_club?: string;
+      pet?: string;
+      travel_countries?: string;
+      card_brand?: string;
+      card_bank?: string;
       /** Format: int64 */
       version: number;
     };
@@ -703,12 +887,60 @@ export interface components {
       landline_phone: string;
       address: components["schemas"]["ProfileAddress"];
       notes: string;
+      /** Format: date */
+      birth_date?: string;
+      gender?: string;
+      blood_type?: string;
+      nationality?: string;
+      birth_city?: string;
+      marital_status?: string;
+      /** Format: date */
+      wedding_date?: string;
+      father_name?: string;
+      /** Format: date */
+      father_birth_date?: string;
+      mother_name?: string;
+      /** Format: date */
+      mother_birth_date?: string;
+      health_plan?: string;
+      blood_donor?: boolean;
+      organ_donor?: boolean;
+      team?: string;
+      sector?: string;
+      collections?: string;
+      vehicle_model?: string;
+      vehicle_color?: string;
+      vehicle_plate?: string;
+      vehicle_year?: number;
+      club_membership?: string;
+      membership_type?: string;
+      place_of_origin?: string;
+      birth_country?: string;
+      /** Format: date */
+      parents_wedding_date?: string;
+      supermarket_club?: string;
+      pet?: string;
+      travel_countries?: string;
+      card_brand?: string;
+      card_bank?: string;
       /** Format: int64 */
       version: number;
       /** Format: date-time */
       created_at: string;
       /** Format: date-time */
       updated_at: string;
+      /** @description Custom field technical_key to display value for this person on the current page. */
+      custom_values?: {
+        [key: string]: string;
+      };
+      /** @description Latest informed identifier_value per document type technical_key for this person, including cpf. */
+      document_identifiers?: {
+        [key: string]: string;
+      };
+      /** @description Positive document-type badges for the current people-listing page. Loaded with WHERE profile_id = ANY($ids); absence and unspecified are omitted. */
+      document_badges?: components["schemas"]["ProfileDocumentBadge"][];
+      /** @description Sparse persisted claims for this person, including absence. Unspecified types are omitted. */
+      document_presences?: components["schemas"]["ProfileDocumentPresence"][];
     };
     ProfilePageMeta: {
       /** Format: int64 */
@@ -736,11 +968,13 @@ export interface components {
       };
       request_id?: string;
       field_errors?: components["schemas"]["FieldError"][];
+      /** @description Present when creating a bill and owner_name matches more than one Profile. */
+      candidates?: components["schemas"]["OwnerCandidate"][];
     };
     /** @enum {string} */
     DocumentUniquenessPolicy: "NONE" | "PER_PROFILE" | "GLOBAL_BY_TYPE";
     /** @enum {string} */
-    DocumentRecordState: "CURRENT" | "REPLACED" | "EXPIRED" | "ARCHIVED";
+    DocumentMedium: "PHYSICAL" | "DIGITAL";
     /** @enum {string} */
     DocumentStatus: "AVAILABLE" | "IN_USE";
     /**
@@ -797,6 +1031,11 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       updated_at: string;
+      /**
+       * Format: int64
+       * @description Number of exemplars of this type currently in possession
+       */
+      count?: number;
     };
     DocumentValuesRequest: {
       /** Format: uuid */
@@ -806,7 +1045,9 @@ export interface components {
       identifier_value: string;
       document_date: string;
       notes: string;
-      record_state: components["schemas"]["DocumentRecordState"];
+      medium: components["schemas"]["DocumentMedium"];
+      idle_custody?: components["schemas"]["IdleCustody"];
+      valid_until?: string;
     };
     UpdateDocumentRequest: {
       /** Format: uuid */
@@ -816,9 +1057,11 @@ export interface components {
       identifier_value: string;
       document_date: string;
       notes: string;
-      record_state: components["schemas"]["DocumentRecordState"];
+      medium: components["schemas"]["DocumentMedium"];
       /** Format: int64 */
       version: number;
+      idle_custody?: components["schemas"]["IdleCustody"];
+      valid_until?: string;
     };
     AssignDocumentCurrentUseRequest: {
       /** Format: uuid */
@@ -827,6 +1070,7 @@ export interface components {
     DocumentCurrentUse: {
       /** Format: uuid */
       holder_profile_id: string;
+      holder_full_name?: string;
       /** Format: date-time */
       assigned_at: string;
     };
@@ -835,13 +1079,14 @@ export interface components {
       id: string;
       /** Format: uuid */
       owner_profile_id: string;
+      owner_full_name: string;
       /** Format: uuid */
       document_type_id: string;
       identifier_value: string;
       document_date: string;
       notes: string;
-      record_state: components["schemas"]["DocumentRecordState"];
-      status: components["schemas"]["DocumentStatus"];
+      medium: components["schemas"]["DocumentMedium"];
+      status?: components["schemas"]["DocumentStatus"];
       type: components["schemas"]["DocumentType"];
       current_use: components["schemas"]["DocumentCurrentUse"];
       /** Format: int64 */
@@ -850,6 +1095,12 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       updated_at: string;
+      /** @description Custom field technical_key to display value for this document on the current page. */
+      custom_values?: {
+        [key: string]: string;
+      };
+      idle_custody?: components["schemas"]["IdleCustody"];
+      valid_until?: string;
     };
     DocumentTypePageMeta: {
       /** Format: int64 */
@@ -896,20 +1147,18 @@ export interface components {
       | "created_at"
       | "updated_at";
     /** @enum {string} */
-    BillRecordState: "CURRENT" | "REPLACED" | "EXPIRED" | "ARCHIVED";
+    BillMedium: "PHYSICAL" | "DIGITAL";
     /** @enum {string} */
     BillStatus: "AVAILABLE" | "IN_USE";
     BillTypeValuesRequest: {
       technical_key: string;
       label: string;
       active: boolean;
-      supports_current_use: boolean;
     };
     UpdateBillTypeRequest: {
       technical_key: string;
       label: string;
       active: boolean;
-      supports_current_use: boolean;
       /** Format: int64 */
       version: number;
     };
@@ -919,17 +1168,24 @@ export interface components {
       technical_key: string;
       label: string;
       active: boolean;
-      supports_current_use: boolean;
       /** Format: int64 */
       version: number;
       /** Format: date-time */
       created_at: string;
       /** Format: date-time */
       updated_at: string;
+      /**
+       * Format: int64
+       * @description Number of exemplars of this type currently in possession
+       */
+      count?: number;
     };
     BillValuesRequest: {
-      /** Format: uuid */
-      owner_profile_id: string;
+      /**
+       * Format: uuid
+       * @description Optional when owner_name is provided. Required when more than one Profile matches the name.
+       */
+      owner_profile_id?: string;
       /** Format: uuid */
       bill_type_id: string;
       printed_holder_name: string;
@@ -939,7 +1195,10 @@ export interface components {
       amount: string;
       currency: string;
       notes: string;
-      record_state: components["schemas"]["BillRecordState"];
+      medium: components["schemas"]["BillMedium"];
+      idle_custody?: components["schemas"]["IdleCustody"];
+      /** @description Owner full name used to look up or create a Profile when owner_profile_id is omitted. */
+      owner_name?: string;
     };
     UpdateBillRequest: {
       /** Format: uuid */
@@ -953,9 +1212,10 @@ export interface components {
       amount: string;
       currency: string;
       notes: string;
-      record_state: components["schemas"]["BillRecordState"];
+      medium: components["schemas"]["BillMedium"];
       /** Format: int64 */
       version: number;
+      idle_custody?: components["schemas"]["IdleCustody"];
     };
     DeleteBillResourceRequest: {
       /** Format: int64 */
@@ -970,6 +1230,7 @@ export interface components {
     BillCurrentUse: {
       /** Format: uuid */
       holder_profile_id: string;
+      holder_full_name?: string;
       /** Format: date-time */
       assigned_at: string;
     };
@@ -978,6 +1239,7 @@ export interface components {
       id: string;
       /** Format: uuid */
       owner_profile_id: string;
+      owner_full_name: string;
       /** Format: uuid */
       bill_type_id: string;
       printed_holder_name: string;
@@ -987,8 +1249,8 @@ export interface components {
       amount: string;
       currency: string;
       notes: string;
-      record_state: components["schemas"]["BillRecordState"];
-      status: components["schemas"]["BillStatus"];
+      medium: components["schemas"]["BillMedium"];
+      status?: components["schemas"]["BillStatus"];
       type: components["schemas"]["BillType"];
       current_use: components["schemas"]["BillCurrentUse"];
       /** Format: int64 */
@@ -997,6 +1259,11 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       updated_at: string;
+      /** @description Custom field technical_key to display value for this bill on the current page. */
+      custom_values?: {
+        [key: string]: string;
+      };
+      idle_custody?: components["schemas"]["IdleCustody"];
     };
     BillPageMeta: {
       /** Format: int64 */
@@ -1282,6 +1549,82 @@ export interface components {
       /** @enum {string} */
       confirmation: "Confirmar";
     };
+    /**
+     * @description Physical idle custody. ORGANIZATION means in-hands inventory when not loaned; OWNER means registered with the owner, not in the drawer.
+     * @enum {string}
+     */
+    IdleCustody: "ORGANIZATION" | "OWNER";
+    /**
+     * @description Persisted presence claim for a document type on a person. Absence is never invented.
+     * @enum {string}
+     */
+    DocumentPresenceClaim: "absence" | "indication" | "informed_number";
+    UpsertDocumentPresenceRequest: {
+      /** Format: uuid */
+      profile_id: string;
+      /** Format: uuid */
+      document_type_id: string;
+      claim: components["schemas"]["DocumentPresenceClaim"];
+      /** @description Required when claim is informed_number; forbidden for absence and indication. */
+      identifier_value?: string;
+    };
+    DocumentPresence: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      profile_id: string;
+      /** Format: uuid */
+      document_type_id: string;
+      claim: components["schemas"]["DocumentPresenceClaim"];
+      identifier_value?: string;
+      /** Format: int64 */
+      version: number;
+    };
+    /**
+     * @description Positive people-listing badge kind for one document type. Absence and unspecified emit no badge.
+     * @enum {string}
+     */
+    DocumentBadgeKind:
+      | "indication"
+      | "informed_number"
+      | "physical"
+      | "physical_with_owner"
+      | "digital"
+      | "physical_digital"
+      | "physical_with_owner_digital";
+    /** @description JSON contract for people-listing document badges per type. Frontend renders chips later; this payload is the source of truth. */
+    ProfileDocumentBadge: {
+      /** Format: uuid */
+      document_type_id: string;
+      technical_key: string;
+      /** @description Type label for display; the grid cell uses the type acronym, not this state name. */
+      label: string;
+      claim: components["schemas"]["DocumentPresenceClaim"];
+      badge: components["schemas"]["DocumentBadgeKind"];
+      /** @description Present only when claim is informed_number. */
+      identifier_value?: string;
+      has_physical: boolean;
+      has_digital: boolean;
+      idle_custody?: components["schemas"]["IdleCustody"];
+      /** @description Physical exemplar with ORGANIZATION idle custody or a current use. */
+      in_hands: boolean;
+    };
+    /** @description Persisted presence claim for one document type on a person. Absence is included; unspecified types are omitted. */
+    ProfileDocumentPresence: {
+      /** Format: uuid */
+      document_type_id: string;
+      technical_key: string;
+      label: string;
+      claim: components["schemas"]["DocumentPresenceClaim"];
+      identifier_value?: string;
+      has_physical: boolean;
+      has_digital: boolean;
+    };
+    OwnerCandidate: {
+      /** Format: uuid */
+      id: string;
+      full_name: string;
+    };
   };
   responses: {
     /** @description Request is invalid */
@@ -1422,7 +1765,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Redirect to GitHub authorization */
+      /** @description Redirect to Google authorization */
       302: {
         headers: {
           [name: string]: unknown;
@@ -1453,7 +1796,7 @@ export interface operations {
       };
       400: components["responses"]["BadRequest"];
       403: components["responses"]["Forbidden"];
-      /** @description GitHub authentication failed */
+      /** @description Google authentication failed */
       502: {
         headers: {
           [name: string]: unknown;
@@ -1533,6 +1876,60 @@ export interface operations {
       503: components["responses"]["AuthUnavailable"];
     };
   };
+  provisionApplicationUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProvisionUserRequest"];
+      };
+    };
+    responses: {
+      /** @description Created application user */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminUser"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  deleteApplicationUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description User deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
   updateApplicationUserAccess: {
     parameters: {
       query?: never;
@@ -1565,6 +1962,87 @@ export interface operations {
       503: components["responses"]["AuthUnavailable"];
     };
   };
+  getModelKeyStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Model key status */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModelKeyStatus"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  setModelKey: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetModelKeyRequest"];
+      };
+    };
+    responses: {
+      /** @description Model key status after the update */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ModelKeyStatus"];
+        };
+      };
+      400: components["responses"]["ValidationError"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  clearModelKey: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: components["schemas"]["ModelProvider"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Model key removed or already absent */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
   listProfiles: {
     parameters: {
       query?: {
@@ -1572,6 +2050,8 @@ export interface operations {
         offset?: number;
         sort?: components["schemas"]["ProfileSortField"];
         order?: components["schemas"]["SortOrder"];
+        /** @description Search query language applied as a row recorte of this module. */
+        q?: string;
         full_name?: string;
         cpf?: string;
         email?: string;
@@ -1625,6 +2105,36 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
+  listDistinctCities: {
+    parameters: {
+      query?: {
+        full_name?: string;
+        cpf?: string;
+        email?: string;
+        state?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Distinct city names */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DistinctCitiesResponse"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["ServiceUnavailable"];
     };
   };
@@ -1896,6 +2406,37 @@ export interface operations {
       503: components["responses"]["ServiceUnavailable"];
     };
   };
+  upsertDocumentPresence: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpsertDocumentPresenceRequest"];
+      };
+    };
+    responses: {
+      /** @description Persisted presence */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentPresence"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationError"];
+      503: components["responses"]["ServiceUnavailable"];
+    };
+  };
   listDocuments: {
     parameters: {
       query?: {
@@ -1905,8 +2446,10 @@ export interface operations {
         order?: components["schemas"]["SortOrder"];
         owner_profile_id?: string;
         document_type_id?: string;
+        /** @description Search query language applied as a row recorte of documents. */
+        q?: string;
         identifier?: string;
-        record_state?: components["schemas"]["DocumentRecordState"];
+        medium?: components["schemas"]["DocumentMedium"];
         status?: components["schemas"]["DocumentStatus"];
         holder_profile_id?: string;
       };
@@ -2298,9 +2841,11 @@ export interface operations {
         order?: components["schemas"]["SortOrder"];
         owner_profile_id?: string;
         bill_type_id?: string;
+        /** @description Search query language applied as a row recorte of bills. */
+        q?: string;
         reference?: string;
         competence?: string;
-        record_state?: components["schemas"]["BillRecordState"];
+        medium?: components["schemas"]["BillMedium"];
         status?: components["schemas"]["BillStatus"];
         holder_profile_id?: string;
       };

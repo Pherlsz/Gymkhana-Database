@@ -9,11 +9,11 @@ import {
 } from "antd";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useMemo, type ReactNode } from "react";
+import { InlineStatus } from "./components/InlineStatus";
+import { useI18n } from "./i18n";
 
 type GridColumn<TData> = ColumnDef<TData, any>;
 
-// Structural view of the ColumnDef fields this adapter reads; avoids fighting
-// TanStack's discriminated union narrowing.
 type LooseColumn<TData> = {
   id?: string;
   accessorKey?: string;
@@ -59,6 +59,8 @@ export function DataGrid<TData>({
       }
     | undefined;
 }) {
+  const { messages, t } = useI18n();
+  const grid = messages.tables.grid;
   const surfaceClassName = ["data-grid", className].filter(Boolean).join(" ");
   const shellClassName = ["data-grid__table-shell", tableWrapClassName].filter(Boolean).join(" ");
   const cardsClasses = ["data-grid__cards", cardsClassName].filter(Boolean).join(" ");
@@ -86,9 +88,6 @@ export function DataGrid<TData>({
         const cell = typeof column.cell === "function" ? column.cell : undefined;
         const hasValue =
           typeof column.accessorFn === "function" || typeof column.accessorKey === "string";
-        // ponytail: sort only — the list pages already own URL-backed filters
-        // (ProfileFilters, search terms, module/state selects); adding antd
-        // column filters would duplicate them with uncontrolled state.
         return {
           key: id,
           title: header,
@@ -106,20 +105,20 @@ export function DataGrid<TData>({
             : {}),
         };
       }),
-    [columns, data],
+    [columns],
   );
 
   const pagination: TablePaginationConfig | false =
     data.length > 10 ? { defaultPageSize: 10, showSizeChanger: true } : false;
 
   return (
-    <Card aria-busy={loading} className={surfaceClassName} style={{ padding: "1rem" }}>
+    <Card aria-busy={loading} className={surfaceClassName}>
       {loading ? (
-        <p className="data-grid__status" role="status">
-          {loadingLabel}
-        </p>
+        <InlineStatus className="data-grid__status" kind="loading" label={loadingLabel} />
       ) : null}
-      {!loading && data.length === 0 ? <p className="data-grid__status">{emptyLabel}</p> : null}
+      {!loading && data.length === 0 ? (
+        <InlineStatus className="data-grid__status" kind="empty" label={emptyLabel} />
+      ) : null}
       {!loading && data.length > 0 ? (
         <>
           <div className={shellClassName}>
@@ -137,12 +136,10 @@ export function DataGrid<TData>({
                       onChange: (keys) =>
                         selection.onChange(new Set(keys.map((key) => String(key)))),
                       columnTitle: (
-                        <span className="visually-hidden">
-                          Selecionar todas as linhas de {caption}
-                        </span>
+                        <span className="visually-hidden">{t(grid.selectAll, { caption })}</span>
                       ),
                       getCheckboxProps: (row: TData) => ({
-                        "aria-label": `Selecionar ${selection.rowLabel(row)}`,
+                        "aria-label": t(grid.selectRow, { label: selection.rowLabel(row) }),
                       }),
                     },
                   }
@@ -165,7 +162,10 @@ export function DataGrid<TData>({
                     {selection ? (
                       <div className="data-grid__card-selection">
                         <Checkbox
-                          aria-label={`Selecionar ${selection.rowLabel(row)} no cartão`}
+                          aria-label={grid.selectRowCard.replace(
+                            "{label}",
+                            selection.rowLabel(row),
+                          )}
                           checked={selection.selectedIds.has(id)}
                           onChange={(event) => {
                             const next = new Set(selection.selectedIds);
@@ -196,9 +196,12 @@ function renderText(value: unknown): string {
   return "";
 }
 
+function rankValue(value: unknown): number {
+  return value === null || value === undefined ? 1 : 0;
+}
+
 function compareValues(a: unknown, b: unknown): number {
-  const rank = (value: unknown) => (value === null || value === undefined ? 1 : 0);
-  const order = rank(a) - rank(b);
+  const order = rankValue(a) - rankValue(b);
   if (order !== 0) return order;
   if (typeof a === "number" && typeof b === "number") return a - b;
   if (typeof a === "boolean" && typeof b === "boolean") return Number(a) - Number(b);
@@ -218,16 +221,16 @@ export function DataGridPagination({
   label: string;
   onPage: (page: number) => void;
 }) {
+  const { messages, t } = useI18n();
+  const grid = messages.tables.grid;
   return (
     <Flex align="center" className="data-grid__pagination">
       <Button disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        Anterior
+        {grid.previousPage}
       </Button>
-      <span aria-live="polite">
-        Página {page} de {totalPages} · {total} {label}
-      </span>
+      <span aria-live="polite">{t(grid.pageStatus, { page, totalPages, total, label })}</span>
       <Button disabled={page >= totalPages} onClick={() => onPage(page + 1)}>
-        Próxima
+        {grid.nextPage}
       </Button>
     </Flex>
   );

@@ -111,6 +111,9 @@ func TestCompilerBuildsParameterizedNestedPlanWithoutMutatingInput(t *testing.T)
 		!strings.Contains(compiled.SQL, "LIMIT $3::integer") || strings.Contains(compiled.SQL, "OR true") {
 		t.Fatalf("compiled SQL is not safely parameterized:\n%s", compiled.SQL)
 	}
+	if !strings.Contains(compiled.SQL, "q0.full_name COLLATE gymkhana_pt_br DESC NULLS LAST") {
+		t.Fatalf("compiled SQL does not use Portuguese name collation:\n%s", compiled.SQL)
+	}
 	if got := compiled.Arguments[0]; got != "%ana\\%' or true --%" {
 		t.Fatalf("literal argument = %#v", got)
 	}
@@ -120,6 +123,66 @@ func TestCompilerBuildsParameterizedNestedPlanWithoutMutatingInput(t *testing.T)
 	if normalized.Version != PlanVersionV1 || normalized.Filter.Children[0].Values[0] != "Ana%' OR true --" ||
 		compiled.EntityKind != "profile" || len(compiled.Columns) != 2 || compiled.Cost <= 0 {
 		t.Fatalf("normalized/compiled plan = %#v / %#v", normalized, compiled)
+	}
+}
+
+func TestMatchCountCoversTheFilterWithoutARowLimit(t *testing.T) {
+	store := newFakeQueryStore()
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
+	if err != nil {
+		t.Fatalf("loadCatalog() error = %v", err)
+	}
+	plan := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "profiles",
+		Projections: []string{"profile.full_name"}, MaximumRows: 25,
+		Filter: &FilterNode{Kind: FilterPredicate, Field: "profile.full_name", Operator: OperatorContains, Values: []string{"Pedro%' OR true"}},
+	}
+	query, arguments, err := compileMatchCount(plan, catalog)
+	if err != nil || strings.Contains(query, "LIMIT") || strings.Contains(query, "OR true") || !strings.Contains(query, "count(*)::bigint") {
+		t.Fatalf("compileMatchCount() = %q args=%v error=%v", query, arguments, err)
+	}
+	if len(arguments) != 1 || arguments[0] != "%pedro\\%' or true%" {
+		t.Fatalf("count arguments = %#v", arguments)
+	}
+}
+
+func TestFieldScanKeepsTheFilterBoundAndCapsTheRead(t *testing.T) {
+	store := newFakeQueryStore()
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
+	if err != nil {
+		t.Fatalf("loadCatalog() error = %v", err)
+	}
+	plan := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "bills",
+		Projections: []string{"bill.printed_holder_name", "bill.printed_address"}, MaximumRows: 10,
+		Filter: &FilterNode{Kind: FilterPredicate, Field: "bill.medium", Operator: OperatorEqual, Values: []string{"PHYSICAL'; DROP TABLE bills"}},
+	}
+	query, arguments, err := compileFieldScan(plan, catalog, MaximumSequenceScan)
+	if err != nil || !strings.HasPrefix(query, "SELECT ") || strings.Contains(query, ";") || strings.Contains(query, "DROP TABLE") {
+		t.Fatalf("compileFieldScan() = %q error=%v", query, err)
+	}
+	if len(arguments) != 2 || arguments[0] != "PHYSICAL'; DROP TABLE bills" || arguments[1] != MaximumSequenceScan {
+		t.Fatalf("scan arguments = %#v", arguments)
+	}
+	if _, _, err := compileFieldScan(plan, catalog, MaximumSequenceScan+1); !errors.Is(err, ErrInvalidPlan) {
+		t.Fatalf("compileFieldScan(over cap) error = %v", err)
+	}
+}
+
+func TestStampAdvancedPlanFillsNestedCatalogVersion(t *testing.T) {
+	version := strings.Repeat("ab", 32)
+	plan := QueryPlan{Set: &SetExpression{Operator: SetIntersection, Inputs: []SetExpression{
+		{Plan: &QueryPlan{RootEntity: "profiles", Projections: []string{"profile.full_name"}}},
+		{Plan: &QueryPlan{RootEntity: "bills", Projections: []string{"bill.printed_holder_name"}}},
+	}}}
+	stampAdvancedPlan(&plan, version)
+	if plan.Version != PlanVersionV2 || plan.CatalogVersion != version || plan.MaximumRows != MaximumPageSize {
+		t.Fatalf("outer plan = %#v", plan)
+	}
+	for _, input := range plan.Set.Inputs {
+		if input.Plan == nil || input.Plan.Version != PlanVersionV2 || input.Plan.CatalogVersion != version || input.Plan.MaximumRows != MaximumPageSize {
+			t.Fatalf("nested plan = %#v", input.Plan)
+		}
 	}
 }
 
@@ -193,4 +256,310 @@ func FuzzCompilePlanFailsClosed(f *testing.F) {
 			t.Fatalf("compiler emitted unsafe SQL: %s", compiled.SQL)
 		}
 	})
+}
+
+func TestCompileFieldCompareAndRelatedProjection(t *testing.T) {
+	store := newFakeQueryStore()
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
+	if err != nil {
+		t.Fatalf("loadCatalog() error = %v", err)
+	}
+	compared := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "documents",
+		Projections: []string{"document.identifier"}, MaximumRows: 10,
+		Filter: &FilterNode{Kind: FilterPredicate, Field: "document.current_holder_name", OtherField: "document.owner_name", Operator: OperatorNotEqual},
+	}
+	compiled, _, err := compilePlan(compared, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	if !strings.Contains(compiled.SQL, "<>") || !strings.Contains(compiled.SQL, "lower(") || len(compiled.Arguments) != 1 {
+		t.Fatalf("compare SQL = %s args=%#v", compiled.SQL, compiled.Arguments)
+	}
+	joined := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "profiles",
+		Projections: []string{"profile.full_name", "bill.amount"}, MaximumRows: 10,
+		Filter: &FilterNode{Kind: FilterRelation, Relation: "profile.bills", Children: []FilterNode{
+			{Kind: FilterPredicate, Field: "bill.type", Operator: OperatorEqual, Values: []string{"water"}},
+		}},
+	}
+	compiled, _, err = compilePlan(joined, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("join: %v", err)
+	}
+	if !strings.Contains(compiled.SQL, "JOIN") || !strings.Contains(compiled.SQL, "amount") || strings.Contains(compiled.SQL, "water") {
+		t.Fatalf("join SQL = %s", compiled.SQL)
+	}
+}
+
+func TestCatalogExposesFoldedInitialAndIntegerHouseNumber(t *testing.T) {
+	store := newFakeQueryStore()
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
+	if err != nil {
+		t.Fatalf("loadCatalog() error = %v", err)
+	}
+	initial := catalog.Fields["profile.name_initial"].Public
+	if initial.Label != "Inicial" || initial.Kind != ValueText || !initial.Filterable ||
+		!containsOperator(initial.Operators, OperatorIn) || containsOperator(initial.Operators, OperatorStartsWith) ||
+		containsOperator(initial.Operators, OperatorBetween) {
+		t.Fatalf("name initial = %#v", initial)
+	}
+	if !strings.Contains(catalog.Fields["profile.name_initial"].Expression, "translate(") ||
+		!strings.Contains(catalog.Fields["profile.name_initial"].Expression, "split_part(") ||
+		initial.Source != "profile.full_name" || initial.Replaces {
+		t.Fatalf("name initial = %#v expr=%s", initial, catalog.Fields["profile.name_initial"].Expression)
+	}
+	house := catalog.Fields["profile.address_house_number"].Public
+	if house.Label != "Número da casa" || house.Kind != ValueInteger || !house.Filterable ||
+		!containsOperator(house.Operators, OperatorBetween) || !containsOperator(house.Operators, OperatorGreaterEq) ||
+		house.Source != "profile.address_number" || !house.Replaces {
+		t.Fatalf("house number = %#v", house)
+	}
+	number := catalog.Fields["profile.address_number"].Public
+	if containsOperator(number.Operators, OperatorBetween) || containsOperator(number.Operators, OperatorGreaterEq) {
+		t.Fatalf("text number unexpectedly comparable: %#v", number)
+	}
+}
+
+func TestCompilerLetterRangeQueryUsesIntegerHouseNumber(t *testing.T) {
+	store := newFakeQueryStore()
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
+	if err != nil {
+		t.Fatalf("loadCatalog() error = %v", err)
+	}
+	plan := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "profiles",
+		Projections: []string{"profile.full_name", "profile.address_street", "profile.address_number"}, MaximumRows: 100,
+		Filter: &FilterNode{Kind: FilterGroup, Conjunction: ConjunctionAnd, Children: []FilterNode{
+			{Kind: FilterPredicate, Field: "profile.address_street", Operator: OperatorNotNull},
+			{Kind: FilterGroup, Conjunction: ConjunctionOr, Children: []FilterNode{
+				{Kind: FilterGroup, Conjunction: ConjunctionAnd, Children: []FilterNode{
+					{Kind: FilterPredicate, Field: "profile.name_initial", Operator: OperatorEqual, Values: []string{"O"}},
+					{Kind: FilterPredicate, Field: "profile.address_house_number", Operator: OperatorBetween, Values: []string{"298", "363"}},
+				}},
+				{Kind: FilterGroup, Conjunction: ConjunctionAnd, Children: []FilterNode{
+					{Kind: FilterPredicate, Field: "profile.name_initial", Operator: OperatorEqual, Values: []string{"W"}},
+					{Kind: FilterPredicate, Field: "profile.address_house_number", Operator: OperatorBetween, Values: []string{"852", "1346"}},
+				}},
+				{Kind: FilterGroup, Conjunction: ConjunctionAnd, Children: []FilterNode{
+					{Kind: FilterPredicate, Field: "profile.name_initial", Operator: OperatorEqual, Values: []string{"Z"}},
+					{Kind: FilterPredicate, Field: "profile.address_house_number", Operator: OperatorGreaterEq, Values: []string{"1984"}},
+				}},
+			}},
+		}},
+	}
+	compiled, _, err := compilePlan(plan, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("compilePlan() error = %v", err)
+	}
+	if !strings.Contains(compiled.SQL, "BETWEEN") || !strings.Contains(compiled.SQL, "::bigint") ||
+		!strings.Contains(compiled.SQL, "substring(q0.address_number") ||
+		!strings.Contains(compiled.SQL, "translate(split_part") ||
+		!strings.Contains(compiled.SQL, "COLLATE gymkhana_pt_br ASC") {
+		t.Fatalf("letter-range SQL = %s", compiled.SQL)
+	}
+	accented := plan
+	accented.Filter = &FilterNode{Kind: FilterPredicate, Field: "profile.name_initial", Operator: OperatorEqual, Values: []string{"Ó"}}
+	compiled, normalized, err := compilePlan(accented, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("accented initial: %v", err)
+	}
+	if normalized.Filter == nil || len(normalized.Filter.Values) != 1 || normalized.Filter.Values[0] != "O" {
+		t.Fatalf("folded initial = %#v", normalized.Filter)
+	}
+	_ = compiled
+	unsupported := plan
+	unsupported.Filter = &FilterNode{Kind: FilterPredicate, Field: "profile.address_number", Operator: OperatorBetween, Values: []string{"298", "363"}}
+	if _, _, err := compilePlan(unsupported, catalog, defaultMaximumCost); validationCode(err, "filter.operator") != "unsupported" {
+		t.Fatalf("text number between error = %#v", err)
+	}
+}
+
+func TestShapeScanFoldsRepeatedInitialLikeExecute(t *testing.T) {
+	store := newFakeQueryStore()
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
+	if err != nil {
+		t.Fatalf("loadCatalog() error = %v", err)
+	}
+	plan := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "profiles",
+		Projections: []string{"profile.full_name", "profile.address_street", "profile.address_house_number"}, MaximumRows: 100,
+		Filter: &FilterNode{Kind: FilterGroup, Conjunction: ConjunctionOr, Children: []FilterNode{
+			{Kind: FilterGroup, Conjunction: ConjunctionAnd, Children: []FilterNode{
+				{Kind: FilterPredicate, Field: "profile.name_initial", Operator: OperatorEqual, Values: []string{"OO"}},
+				{Kind: FilterPredicate, Field: "profile.address_house_number", Operator: OperatorBetween, Values: []string{"298", "363"}},
+			}},
+			{Kind: FilterGroup, Conjunction: ConjunctionAnd, Children: []FilterNode{
+				{Kind: FilterPredicate, Field: "profile.name_initial", Operator: OperatorEqual, Values: []string{"WW"}},
+				{Kind: FilterPredicate, Field: "profile.address_house_number", Operator: OperatorBetween, Values: []string{"852", "1346"}},
+			}},
+			{Kind: FilterGroup, Conjunction: ConjunctionAnd, Children: []FilterNode{
+				{Kind: FilterPredicate, Field: "profile.name_initial", Operator: OperatorEqual, Values: []string{"ZZ"}},
+				{Kind: FilterPredicate, Field: "profile.address_house_number", Operator: OperatorGreaterEq, Values: []string{"1984"}},
+			}},
+		}},
+	}
+	_, arguments, _, _, err := compileShapeScan(plan, catalog, 50)
+	if err != nil {
+		t.Fatalf("compileShapeScan() error = %v", err)
+	}
+	seen := map[string]bool{}
+	for _, argument := range arguments {
+		text, ok := argument.(string)
+		if !ok {
+			continue
+		}
+		seen[text] = true
+	}
+	if !seen["O"] || !seen["W"] || !seen["Z"] || seen["OO"] || seen["WW"] || seen["ZZ"] {
+		t.Fatalf("shape scan initials = %#v", arguments)
+	}
+}
+
+func TestFilterNodeUnmarshalJSONFlexibilityAndKindInference(t *testing.T) {
+	// 1. Group missing "kind" but with conjunction and children
+	jsonGroup := []byte(`{
+		"conjunction": "AND",
+		"children": [
+			{"field": "profile.address_street", "operator": "not_null"},
+			{"field": "profile.address_number", "operator": "not_null"}
+		]
+	}`)
+	var groupNode FilterNode
+	if err := json.Unmarshal(jsonGroup, &groupNode); err != nil {
+		t.Fatalf("Unmarshal group error = %v", err)
+	}
+	if groupNode.Kind != FilterGroup {
+		t.Fatalf("groupNode.Kind = %q, want %q", groupNode.Kind, FilterGroup)
+	}
+	if len(groupNode.Children) != 2 {
+		t.Fatalf("groupNode.Children len = %d, want 2", len(groupNode.Children))
+	}
+	if groupNode.Children[0].Kind != FilterPredicate || groupNode.Children[1].Kind != FilterPredicate {
+		t.Fatalf("child kinds = %q, %q; want predicates", groupNode.Children[0].Kind, groupNode.Children[1].Kind)
+	}
+
+	// 2. Predicate with integer numbers in values
+	jsonNumbers := []byte(`{
+		"field": "profile.address_house_number",
+		"operator": "between",
+		"values": [1756, 5566]
+	}`)
+	var numberNode FilterNode
+	if err := json.Unmarshal(jsonNumbers, &numberNode); err != nil {
+		t.Fatalf("Unmarshal numbers error = %v", err)
+	}
+	if numberNode.Kind != FilterPredicate {
+		t.Fatalf("numberNode.Kind = %q, want %q", numberNode.Kind, FilterPredicate)
+	}
+	if len(numberNode.Values) != 2 || numberNode.Values[0] != "1756" || numberNode.Values[1] != "5566" {
+		t.Fatalf("numberNode.Values = %#v, want ['1756', '5566']", numberNode.Values)
+	}
+
+	// 3. Predicate with values passed in "children" array (in operator)
+	jsonChildrenAsValues := []byte(`{
+		"kind": "predicate",
+		"field": "profile.address_city",
+		"operator": "in",
+		"children": ["Porto Alegre", "Canoas"]
+	}`)
+	var childrenValuesNode FilterNode
+	if err := json.Unmarshal(jsonChildrenAsValues, &childrenValuesNode); err != nil {
+		t.Fatalf("Unmarshal children-as-values error = %v", err)
+	}
+	if childrenValuesNode.Kind != FilterPredicate {
+		t.Fatalf("childrenValuesNode.Kind = %q, want %q", childrenValuesNode.Kind, FilterPredicate)
+	}
+	if len(childrenValuesNode.Values) != 2 || childrenValuesNode.Values[0] != "Porto Alegre" || childrenValuesNode.Values[1] != "Canoas" {
+		t.Fatalf("childrenValuesNode.Values = %#v, want ['Porto Alegre', 'Canoas']", childrenValuesNode.Values)
+	}
+	if len(childrenValuesNode.Children) != 0 {
+		t.Fatalf("childrenValuesNode.Children should be empty, got len=%d", len(childrenValuesNode.Children))
+	}
+}
+
+func TestCompileUserQueryComplexFilterTree(t *testing.T) {
+	store := newFakeQueryStore()
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
+	if err != nil {
+		t.Fatalf("loadCatalog() error = %v", err)
+	}
+
+	// This JSON simulates the exact plan produced by Gemini for the user's prompt:
+	// - Name initial in B, F, G
+	// - Address not null
+	// - Not in 24 cities
+	// - House numbers in specific ranges per initial (numbers passed as raw integers, kind omitted in nested groups)
+	rawPlanJSON := []byte(`{
+		"version": "v1",
+		"catalog_version": "` + catalog.Public.Version + `",
+		"root_entity": "profiles",
+		"projections": ["profile.full_name", "profile.address_city", "profile.address_number"],
+		"maximum_rows": 100,
+		"filter": {
+			"conjunction": "AND",
+			"children": [
+				{
+					"field": "profile.address_street",
+					"operator": "not_null"
+				},
+				{
+					"kind": "not",
+					"children": [
+						{
+							"field": "profile.address_city",
+							"operator": "in",
+							"values": ["Charqueadas", "Gravataí", "Novo Hamburgo", "Campo Bom", "Três Coroas", "Taquara", "São Leopoldo", "Muitos Capões", "Vacaria", "Arroio dos Ratos", "Estância Velha", "Ipê", "Pelotas", "Capão da Canoa", "Imbé", "Blumenau", "Parobé", "Palmares do Sul", "canoas", "São Jerônimo", "Porto Alegre", "sapucaia", "roca salles"]
+						}
+					]
+				},
+				{
+					"conjunction": "OR",
+					"children": [
+						{
+							"conjunction": "AND",
+							"children": [
+								{"field": "profile.name_initial", "operator": "eq", "values": ["B"]},
+								{"field": "profile.address_house_number", "operator": "between", "values": [1756, 5566]}
+							]
+						},
+						{
+							"conjunction": "AND",
+							"children": [
+								{"field": "profile.name_initial", "operator": "eq", "values": ["F"]},
+								{"field": "profile.address_house_number", "operator": "between", "values": [1047, 1605]}
+							]
+						},
+						{
+							"conjunction": "AND",
+							"children": [
+								{"field": "profile.name_initial", "operator": "eq", "values": ["G"]},
+								{"field": "profile.address_house_number", "operator": "between", "values": [878, 1250]}
+							]
+						}
+					]
+				}
+			]
+		}
+	}`)
+
+	var plan QueryPlan
+	if err := json.Unmarshal(rawPlanJSON, &plan); err != nil {
+		t.Fatalf("json.Unmarshal(rawPlanJSON) error = %v", err)
+	}
+
+	compiled, _, err := compilePlan(plan, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("compilePlan() error = %v", err)
+	}
+
+	if compiled.SQL == "" {
+		t.Fatal("compiled SQL is empty")
+	}
+	if !strings.Contains(compiled.SQL, "BETWEEN") {
+		t.Errorf("compiled SQL missing BETWEEN: %s", compiled.SQL)
+	}
+	if !strings.Contains(compiled.SQL, "NOT (") {
+		t.Errorf("compiled SQL missing NOT (: %s", compiled.SQL)
+	}
 }

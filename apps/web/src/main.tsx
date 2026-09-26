@@ -4,15 +4,8 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { getAntdLocale, I18nProvider, resolveAppLocale } from "./i18n";
 import "./styles.css";
-import "./attachments.css";
-import "./search.css";
-import "./operations.css";
-import "./google-forms.css";
-import "./query.css";
-import "./task.css";
-import "./matching.css";
-import "./chat.css";
-import "./ocr.css";
+import "./shell.css";
+import "./components/components.css";
 
 const root = document.getElementById("root");
 
@@ -26,16 +19,7 @@ document.documentElement.lang = locale;
 createRoot(root).render(
   <StrictMode>
     <I18nProvider locale={locale}>
-      <ConfigProvider
-        locale={getAntdLocale(locale)}
-        theme={{
-          token: {
-            colorPrimary: "#7c3aed",
-            borderRadius: 8,
-            fontSize: 14,
-          },
-        }}
-      >
+      <ConfigProvider locale={getAntdLocale(locale)}>
         <App />
       </ConfigProvider>
     </I18nProvider>

@@ -60,6 +60,22 @@ type AIChatConfig struct {
 	Provider  string
 	Model     string
 	Retention time.Duration
+	// The shared Administração model key is sealed with the same versioned
+	// AES-256-GCM material as Google Forms tokens (GOOGLE_FORMS_TOKEN_*).
+	KeyEncryptionKeys map[uint16][32]byte
+	KeyVersion        uint16
+}
+
+// AIChatProviders lists the model providers with a production adapter.
+var AIChatProviders = map[string]bool{"google": true}
+
+// OCRProviders lists extractors that use the shared Administração model key.
+var OCRProviders = map[string]bool{"google": true}
+
+// UsesSharedModelKey reports whether Assistente or OCR needs ai_model_keys.
+func (cfg Config) UsesSharedModelKey() bool {
+	return cfg.AIChat.Enabled && AIChatProviders[cfg.AIChat.Provider] ||
+		cfg.OCR.Enabled && OCRProviders[cfg.OCR.Provider]
 }
 
 type OCRConfig struct {
@@ -86,49 +102,49 @@ type Config struct {
 }
 
 func Load() (Config, error) {
-	environment := Environment(strings.ToLower(valueOrDefault("APP_ENV", string(EnvironmentLocal))))
-	shutdownTimeout, err := time.ParseDuration(valueOrDefault("SHUTDOWN_TIMEOUT", "10s"))
+	LoadDotenv()
+	environment := parseEnvironment()
+	shutdownTimeout, err := envDuration("SHUTDOWN_TIMEOUT", "10s")
 	if err != nil {
-		return Config{}, fmt.Errorf("parse SHUTDOWN_TIMEOUT: %w", err)
+		return Config{}, err
 	}
-
-	maxBodyBytes, err := strconv.ParseInt(valueOrDefault("HTTP_MAX_BODY_BYTES", strconv.FormatInt(defaultHTTPMaxBodyBytes, 10)), 10, 64)
+	maxBodyBytes, err := envInt64("HTTP_MAX_BODY_BYTES", defaultHTTPMaxBodyBytes)
 	if err != nil {
-		return Config{}, fmt.Errorf("parse HTTP_MAX_BODY_BYTES: %w", err)
+		return Config{}, err
 	}
 
 	authEnabledDefault := environment == EnvironmentStaging || environment == EnvironmentProduction
-	authEnabled, err := strconv.ParseBool(valueOrDefault("AUTH_ENABLED", strconv.FormatBool(authEnabledDefault)))
+	authEnabled, err := envBool("AUTH_ENABLED", authEnabledDefault)
 	if err != nil {
-		return Config{}, fmt.Errorf("parse AUTH_ENABLED: %w", err)
+		return Config{}, err
 	}
-	googleFormsEnabled, err := strconv.ParseBool(valueOrDefault("GOOGLE_FORMS_ENABLED", "false"))
+	googleFormsEnabled, err := envBool("GOOGLE_FORMS_ENABLED", false)
 	if err != nil {
-		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_ENABLED: %w", err)
+		return Config{}, err
 	}
-	googleFormsKeyVersion, err := strconv.ParseUint(valueOrDefault("GOOGLE_FORMS_TOKEN_KEY_VERSION", "1"), 10, 16)
+	googleFormsKeyVersion, err := envUint16("GOOGLE_FORMS_TOKEN_KEY_VERSION", 1)
 	if err != nil {
-		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_TOKEN_KEY_VERSION: %w", err)
+		return Config{}, err
 	}
-	googleFormsSyncInterval, err := time.ParseDuration(valueOrDefault("GOOGLE_FORMS_SYNC_INTERVAL", "15m"))
+	googleFormsSyncInterval, err := envDuration("GOOGLE_FORMS_SYNC_INTERVAL", "15m")
 	if err != nil {
-		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_SYNC_INTERVAL: %w", err)
+		return Config{}, err
 	}
-	googleFormsPageSize, err := strconv.Atoi(valueOrDefault("GOOGLE_FORMS_RESPONSE_PAGE_SIZE", "100"))
+	googleFormsPageSize, err := envInt("GOOGLE_FORMS_RESPONSE_PAGE_SIZE", 100)
 	if err != nil {
-		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_RESPONSE_PAGE_SIZE: %w", err)
+		return Config{}, err
 	}
 	googleFormsKey, err := decodeEncryptionKey(strings.TrimSpace(os.Getenv("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY")))
 	if err != nil {
 		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY: %w", err)
 	}
-	googleFormsKeys, err := decodeEncryptionKeys(strings.TrimSpace(os.Getenv("GOOGLE_FORMS_TOKEN_DECRYPTION_KEYS")), uint16(googleFormsKeyVersion), googleFormsKey)
+	googleFormsKeys, err := decodeEncryptionKeys(strings.TrimSpace(os.Getenv("GOOGLE_FORMS_TOKEN_DECRYPTION_KEYS")), googleFormsKeyVersion, googleFormsKey)
 	if err != nil {
 		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_TOKEN_DECRYPTION_KEYS: %w", err)
 	}
-	aiChatEnabled, err := strconv.ParseBool(valueOrDefault("AI_CHAT_ENABLED", "false"))
+	aiChatEnabled, err := envBool("AI_CHAT_ENABLED", false)
 	if err != nil {
-		return Config{}, fmt.Errorf("parse AI_CHAT_ENABLED: %w", err)
+		return Config{}, err
 	}
 	var aiChatRetention time.Duration
 	if value := strings.TrimSpace(os.Getenv("AI_CHAT_RETENTION")); value != "" {
@@ -137,25 +153,25 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("parse AI_CHAT_RETENTION: %w", err)
 		}
 	}
-	ocrEnabled, err := strconv.ParseBool(valueOrDefault("OCR_ENABLED", "false"))
+	ocrEnabled, err := envBool("OCR_ENABLED", false)
 	if err != nil {
-		return Config{}, fmt.Errorf("parse OCR_ENABLED: %w", err)
+		return Config{}, err
 	}
-	ocrTimeout, err := time.ParseDuration(valueOrDefault("OCR_TIMEOUT", "90s"))
+	ocrTimeout, err := envDuration("OCR_TIMEOUT", "90s")
 	if err != nil {
-		return Config{}, fmt.Errorf("parse OCR_TIMEOUT: %w", err)
+		return Config{}, err
 	}
-	ocrMaximumRequests, err := strconv.Atoi(valueOrDefault("OCR_MAX_REQUESTS_PER_HOUR", "10"))
+	ocrMaximumRequests, err := envInt("OCR_MAX_REQUESTS_PER_HOUR", 10)
 	if err != nil {
-		return Config{}, fmt.Errorf("parse OCR_MAX_REQUESTS_PER_HOUR: %w", err)
+		return Config{}, err
 	}
-	ocrMaximumProviderUsage, err := strconv.ParseInt(valueOrDefault("OCR_MAX_PROVIDER_USAGE_PER_HOUR", "500000"), 10, 64)
+	ocrMaximumProviderUsage, err := envInt64("OCR_MAX_PROVIDER_USAGE_PER_HOUR", 500000)
 	if err != nil {
-		return Config{}, fmt.Errorf("parse OCR_MAX_PROVIDER_USAGE_PER_HOUR: %w", err)
+		return Config{}, err
 	}
-	ocrMaximumSourceBytes, err := strconv.ParseInt(valueOrDefault("OCR_MAX_SOURCE_BYTES", "20971520"), 10, 64)
+	ocrMaximumSourceBytes, err := envInt64("OCR_MAX_SOURCE_BYTES", 20971520)
 	if err != nil {
-		return Config{}, fmt.Errorf("parse OCR_MAX_SOURCE_BYTES: %w", err)
+		return Config{}, err
 	}
 
 	cfg := Config{
@@ -182,13 +198,14 @@ func Load() (Config, error) {
 			RedirectURL:         strings.TrimSpace(os.Getenv("GOOGLE_FORMS_OAUTH_REDIRECT_URL")),
 			TokenEncryptionKey:  googleFormsKey,
 			TokenEncryptionKeys: googleFormsKeys,
-			TokenKeyVersion:     uint16(googleFormsKeyVersion),
+			TokenKeyVersion:     googleFormsKeyVersion,
 			SyncInterval:        googleFormsSyncInterval,
 			ResponsePageSize:    googleFormsPageSize,
 		},
 		AIChat: AIChatConfig{
 			Enabled: aiChatEnabled, Provider: strings.ToLower(strings.TrimSpace(os.Getenv("AI_CHAT_PROVIDER"))),
 			Model: strings.TrimSpace(os.Getenv("AI_CHAT_MODEL")), Retention: aiChatRetention,
+			KeyEncryptionKeys: googleFormsKeys, KeyVersion: googleFormsKeyVersion,
 		},
 		OCR: OCRConfig{
 			Enabled: ocrEnabled, Provider: strings.ToLower(strings.TrimSpace(os.Getenv("OCR_PROVIDER"))),
@@ -329,8 +346,17 @@ func (cfg Config) validate() error {
 		if cfg.AIChat.Retention < time.Hour || cfg.AIChat.Retention > 365*24*time.Hour {
 			return errors.New("AI_CHAT_RETENTION must be between 1h and 8760h")
 		}
-		if cfg.Environment != EnvironmentTest || cfg.AIChat.Provider != "fake" {
-			return errors.New("AI Chat has no production provider adapter; keep AI_CHAT_ENABLED=false until the owner selects and configures one")
+		switch {
+		case cfg.AIChat.Provider == "fake":
+			if cfg.Environment != EnvironmentTest {
+				return errors.New("AI_CHAT_PROVIDER=fake is accepted only with APP_ENV=test")
+			}
+		case AIChatProviders[cfg.AIChat.Provider]:
+			if cfg.AIChat.KeyEncryptionKeys[cfg.AIChat.KeyVersion] == ([32]byte{}) {
+				return errors.New("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY is required to seal the shared model key when AI Chat is enabled")
+			}
+		default:
+			return fmt.Errorf("unsupported AI_CHAT_PROVIDER %q", cfg.AIChat.Provider)
 		}
 	}
 	if cfg.OCR.Enabled {
@@ -340,8 +366,17 @@ func (cfg Config) validate() error {
 		if len(cfg.OCR.Model) > 120 {
 			return errors.New("OCR_MODEL cannot exceed 120 characters")
 		}
-		if cfg.Environment != EnvironmentTest || cfg.OCR.Provider != "fake" {
-			return errors.New("OCR has no production provider adapter; keep OCR_ENABLED=false until the owner selects and configures one")
+		switch {
+		case cfg.OCR.Provider == "fake":
+			if cfg.Environment != EnvironmentTest {
+				return errors.New("OCR_PROVIDER=fake is accepted only with APP_ENV=test")
+			}
+		case OCRProviders[cfg.OCR.Provider]:
+			if cfg.AIChat.KeyEncryptionKeys[cfg.AIChat.KeyVersion] == ([32]byte{}) {
+				return errors.New("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY is required to seal the shared model key when OCR is enabled")
+			}
+		default:
+			return fmt.Errorf("unsupported OCR_PROVIDER %q", cfg.OCR.Provider)
 		}
 	}
 	if !cfg.GoogleForms.Enabled {
@@ -426,12 +461,62 @@ func validHTTPURL(value *url.URL) bool {
 	return value.Scheme == "http" || value.Scheme == "https"
 }
 
+func parseEnvironment() Environment {
+	raw := strings.ToLower(valueOrDefault("APP_ENV", string(EnvironmentLocal)))
+	switch raw {
+	case "development", "dev":
+		return EnvironmentLocal
+	default:
+		return Environment(raw)
+	}
+}
+
 func valueOrDefault(key, fallback string) string {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
 		return fallback
 	}
 	return value
+}
+
+func envBool(key string, fallback bool) (bool, error) {
+	v, err := strconv.ParseBool(valueOrDefault(key, strconv.FormatBool(fallback)))
+	if err != nil {
+		return false, fmt.Errorf("parse %s: %w", key, err)
+	}
+	return v, nil
+}
+
+func envDuration(key, fallback string) (time.Duration, error) {
+	v, err := time.ParseDuration(valueOrDefault(key, fallback))
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+	return v, nil
+}
+
+func envInt(key string, fallback int) (int, error) {
+	v, err := strconv.Atoi(valueOrDefault(key, strconv.Itoa(fallback)))
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+	return v, nil
+}
+
+func envInt64(key string, fallback int64) (int64, error) {
+	v, err := strconv.ParseInt(valueOrDefault(key, strconv.FormatInt(fallback, 10)), 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+	return v, nil
+}
+
+func envUint16(key string, fallback uint16) (uint16, error) {
+	v, err := strconv.ParseUint(valueOrDefault(key, strconv.FormatUint(uint64(fallback), 10)), 10, 16)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+	return uint16(v), nil
 }
 
 func commaSeparatedValues(value string) []string {

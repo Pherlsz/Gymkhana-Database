@@ -11,22 +11,88 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clearCPFPresenceNumber = `-- name: ClearCPFPresenceNumber :exec
+UPDATE document_presences AS presence
+SET claim = 'indication', identifier_value = NULL, version = presence.version + 1, updated_at = now()
+FROM document_types AS document_type
+WHERE document_type.id = presence.document_type_id
+  AND document_type.technical_key = 'cpf'
+  AND presence.profile_id = $1
+  AND presence.claim = 'informed_number'
+  AND NOT EXISTS (SELECT 1 FROM documents WHERE presence_id = presence.id)
+`
+
+func (q *Queries) ClearCPFPresenceNumber(ctx context.Context, profileID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, clearCPFPresenceNumber, profileID)
+	return err
+}
+
 const countProfiles = `-- name: CountProfiles :one
 SELECT count(*)
 FROM profiles
-WHERE ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
-  AND ($2::text = '' OR coalesce(cpf, '') LIKE '%' || $2::text || '%')
-  AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%')
-  AND ($4::text = '' OR lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%')
+WHERE (
+    $1::text = '' OR
+    CASE
+      WHEN $1::text LIKE '^%' THEN
+        lower(full_name) LIKE lower(substring($1::text FROM 2)) || '%'
+      WHEN $1::text LIKE '=%' THEN
+        lower(full_name) = lower(substring($1::text FROM 2))
+      ELSE
+        lower(full_name) LIKE '%' || lower($1::text) || '%'
+    END
+  )
+  AND ($2::text = '' OR EXISTS (
+    SELECT 1
+    FROM document_presences AS presence
+    JOIN document_types AS document_type ON document_type.id = presence.document_type_id
+    WHERE presence.profile_id = profiles.id
+      AND document_type.technical_key = 'cpf'
+      AND presence.claim = 'informed_number'
+      AND (
+        CASE
+          WHEN $2::text LIKE '^%' THEN
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring($2::text FROM 2) || '%'
+          WHEN $2::text LIKE '=%' THEN
+            coalesce(presence.identifier_digits, presence.identifier_value, '') = substring($2::text FROM 2)
+          ELSE
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%'
+        END
+      )
+  ))
+  AND (
+    $3::text = '' OR
+    CASE
+      WHEN $3::text LIKE '^%' THEN
+        lower(coalesce(email, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+      WHEN $3::text LIKE '=%' THEN
+        lower(coalesce(email, '')) = lower(substring($3::text FROM 2))
+      ELSE
+        lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%'
+    END
+  )
+  AND (
+    $4::text = '' OR
+    CASE
+      WHEN $4::text LIKE '^%' THEN
+        lower(coalesce(address_city, '')) LIKE lower(substring($4::text FROM 2)) || '%'
+      WHEN $4::text LIKE '=%' THEN
+        lower(coalesce(address_city, '')) = lower(substring($4::text FROM 2))
+      ELSE
+        lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%'
+    END
+  )
   AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
+  AND (NOT $6::bool OR id = ANY($7::uuid[]))
 `
 
 type CountProfilesParams struct {
-	FullNameFilter string `json:"full_name_filter"`
-	CpfFilter      string `json:"cpf_filter"`
-	EmailFilter    string `json:"email_filter"`
-	CityFilter     string `json:"city_filter"`
-	StateFilter    string `json:"state_filter"`
+	FullNameFilter string        `json:"full_name_filter"`
+	CpfFilter      string        `json:"cpf_filter"`
+	EmailFilter    string        `json:"email_filter"`
+	CityFilter     string        `json:"city_filter"`
+	StateFilter    string        `json:"state_filter"`
+	RestrictIds    bool          `json:"restrict_ids"`
+	IDFilter       []pgtype.UUID `json:"id_filter"`
 }
 
 func (q *Queries) CountProfiles(ctx context.Context, arg CountProfilesParams) (int64, error) {
@@ -36,6 +102,8 @@ func (q *Queries) CountProfiles(ctx context.Context, arg CountProfilesParams) (i
 		arg.EmailFilter,
 		arg.CityFilter,
 		arg.StateFilter,
+		arg.RestrictIds,
+		arg.IDFilter,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -44,23 +112,36 @@ func (q *Queries) CountProfiles(ctx context.Context, arg CountProfilesParams) (i
 
 const createProfile = `-- name: CreateProfile :one
 INSERT INTO profiles (
-  id, full_name, social_name, cpf, email, mobile_phone, landline_phone,
+  id, full_name, social_name, email, mobile_phone, landline_phone,
   address_street, address_number, address_complement, address_neighborhood,
-  address_city, address_state, address_postal_code, notes
+  address_city, address_state, address_postal_code, notes,
+  birth_date, gender, blood_type, nationality, birth_city, marital_status, wedding_date,
+  father_name, father_birth_date, mother_name, mother_birth_date, health_plan, blood_donor, organ_donor,
+  team, sector, collections, vehicle_model, vehicle_color, vehicle_plate, vehicle_year, club_membership,
+  membership_type, place_of_origin, birth_country, parents_wedding_date, supermarket_club, pet,
+  travel_countries, card_brand, card_bank
 ) VALUES (
-  $1, $2, $3, $4, $5,
-  $6, $7, $8,
-  $9, $10, $11,
-  $12, $13, $14, $15
+  $1, $2, $3, $4,
+  $5, $6, $7,
+  $8, $9, $10,
+  $11, $12, $13, $14,
+  $15, $16, $17, $18,
+  $19, $20, $21,
+  $22, $23, $24, $25,
+  $26, $27, $28,
+  $29, $30, $31, $32,
+  $33, $34, $35, $36,
+  $37, $38, $39,
+  $40, $41, $42,
+  $43, $44, $45
 )
-RETURNING id, full_name, social_name, cpf, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, version, created_at, updated_at
+RETURNING id, full_name, social_name, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, birth_date, gender, blood_type, nationality, birth_city, marital_status, wedding_date, father_name, father_birth_date, mother_name, mother_birth_date, health_plan, blood_donor, organ_donor, team, sector, collections, vehicle_model, vehicle_color, vehicle_plate, vehicle_year, club_membership, membership_type, place_of_origin, birth_country, parents_wedding_date, supermarket_club, pet, travel_countries, card_brand, card_bank, version, created_at, updated_at
 `
 
 type CreateProfileParams struct {
 	ID                  pgtype.UUID `json:"id"`
 	FullName            string      `json:"full_name"`
 	SocialName          *string     `json:"social_name"`
-	Cpf                 *string     `json:"cpf"`
 	Email               *string     `json:"email"`
 	MobilePhone         *string     `json:"mobile_phone"`
 	LandlinePhone       *string     `json:"landline_phone"`
@@ -72,6 +153,37 @@ type CreateProfileParams struct {
 	AddressState        *string     `json:"address_state"`
 	AddressPostalCode   *string     `json:"address_postal_code"`
 	Notes               *string     `json:"notes"`
+	BirthDate           pgtype.Date `json:"birth_date"`
+	Gender              *string     `json:"gender"`
+	BloodType           *string     `json:"blood_type"`
+	Nationality         *string     `json:"nationality"`
+	BirthCity           *string     `json:"birth_city"`
+	MaritalStatus       *string     `json:"marital_status"`
+	WeddingDate         pgtype.Date `json:"wedding_date"`
+	FatherName          *string     `json:"father_name"`
+	FatherBirthDate     pgtype.Date `json:"father_birth_date"`
+	MotherName          *string     `json:"mother_name"`
+	MotherBirthDate     pgtype.Date `json:"mother_birth_date"`
+	HealthPlan          *string     `json:"health_plan"`
+	BloodDonor          *bool       `json:"blood_donor"`
+	OrganDonor          *bool       `json:"organ_donor"`
+	Team                *string     `json:"team"`
+	Sector              *string     `json:"sector"`
+	Collections         *string     `json:"collections"`
+	VehicleModel        *string     `json:"vehicle_model"`
+	VehicleColor        *string     `json:"vehicle_color"`
+	VehiclePlate        *string     `json:"vehicle_plate"`
+	VehicleYear         *int32      `json:"vehicle_year"`
+	ClubMembership      *string     `json:"club_membership"`
+	MembershipType      *string     `json:"membership_type"`
+	PlaceOfOrigin       *string     `json:"place_of_origin"`
+	BirthCountry        *string     `json:"birth_country"`
+	ParentsWeddingDate  pgtype.Date `json:"parents_wedding_date"`
+	SupermarketClub     *string     `json:"supermarket_club"`
+	Pet                 *string     `json:"pet"`
+	TravelCountries     *string     `json:"travel_countries"`
+	CardBrand           *string     `json:"card_brand"`
+	CardBank            *string     `json:"card_bank"`
 }
 
 func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (Profile, error) {
@@ -79,7 +191,6 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (P
 		arg.ID,
 		arg.FullName,
 		arg.SocialName,
-		arg.Cpf,
 		arg.Email,
 		arg.MobilePhone,
 		arg.LandlinePhone,
@@ -91,13 +202,43 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (P
 		arg.AddressState,
 		arg.AddressPostalCode,
 		arg.Notes,
+		arg.BirthDate,
+		arg.Gender,
+		arg.BloodType,
+		arg.Nationality,
+		arg.BirthCity,
+		arg.MaritalStatus,
+		arg.WeddingDate,
+		arg.FatherName,
+		arg.FatherBirthDate,
+		arg.MotherName,
+		arg.MotherBirthDate,
+		arg.HealthPlan,
+		arg.BloodDonor,
+		arg.OrganDonor,
+		arg.Team,
+		arg.Sector,
+		arg.Collections,
+		arg.VehicleModel,
+		arg.VehicleColor,
+		arg.VehiclePlate,
+		arg.VehicleYear,
+		arg.ClubMembership,
+		arg.MembershipType,
+		arg.PlaceOfOrigin,
+		arg.BirthCountry,
+		arg.ParentsWeddingDate,
+		arg.SupermarketClub,
+		arg.Pet,
+		arg.TravelCountries,
+		arg.CardBrand,
+		arg.CardBank,
 	)
 	var i Profile
 	err := row.Scan(
 		&i.ID,
 		&i.FullName,
 		&i.SocialName,
-		&i.Cpf,
 		&i.Email,
 		&i.MobilePhone,
 		&i.LandlinePhone,
@@ -109,6 +250,37 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (P
 		&i.AddressState,
 		&i.AddressPostalCode,
 		&i.Notes,
+		&i.BirthDate,
+		&i.Gender,
+		&i.BloodType,
+		&i.Nationality,
+		&i.BirthCity,
+		&i.MaritalStatus,
+		&i.WeddingDate,
+		&i.FatherName,
+		&i.FatherBirthDate,
+		&i.MotherName,
+		&i.MotherBirthDate,
+		&i.HealthPlan,
+		&i.BloodDonor,
+		&i.OrganDonor,
+		&i.Team,
+		&i.Sector,
+		&i.Collections,
+		&i.VehicleModel,
+		&i.VehicleColor,
+		&i.VehiclePlate,
+		&i.VehicleYear,
+		&i.ClubMembership,
+		&i.MembershipType,
+		&i.PlaceOfOrigin,
+		&i.BirthCountry,
+		&i.ParentsWeddingDate,
+		&i.SupermarketClub,
+		&i.Pet,
+		&i.TravelCountries,
+		&i.CardBrand,
+		&i.CardBank,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -134,17 +306,27 @@ func (q *Queries) DeleteProfile(ctx context.Context, arg DeleteProfileParams) (p
 
 const duplicateProfile = `-- name: DuplicateProfile :one
 INSERT INTO profiles (
-  id, full_name, social_name, cpf, email, mobile_phone, landline_phone,
+  id, full_name, social_name, email, mobile_phone, landline_phone,
   address_street, address_number, address_complement, address_neighborhood,
-  address_city, address_state, address_postal_code, notes
+  address_city, address_state, address_postal_code, notes,
+  birth_date, gender, blood_type, nationality, birth_city, marital_status, wedding_date,
+  father_name, father_birth_date, mother_name, mother_birth_date, health_plan, blood_donor, organ_donor,
+  team, sector, collections, vehicle_model, vehicle_color, vehicle_plate, vehicle_year, club_membership,
+  membership_type, place_of_origin, birth_country, parents_wedding_date, supermarket_club, pet,
+  travel_countries, card_brand, card_bank
 )
-SELECT $1, source.full_name, source.social_name, source.cpf, source.email,
+SELECT $1, source.full_name, source.social_name, source.email,
   source.mobile_phone, source.landline_phone, source.address_street, source.address_number,
   source.address_complement, source.address_neighborhood, source.address_city, source.address_state,
-  source.address_postal_code, source.notes
+  source.address_postal_code, source.notes,
+  source.birth_date, source.gender, source.blood_type, source.nationality, source.birth_city, source.marital_status, source.wedding_date,
+  source.father_name, source.father_birth_date, source.mother_name, source.mother_birth_date, source.health_plan, source.blood_donor, source.organ_donor,
+  source.team, source.sector, source.collections, source.vehicle_model, source.vehicle_color, source.vehicle_plate, source.vehicle_year, source.club_membership,
+  source.membership_type, source.place_of_origin, source.birth_country, source.parents_wedding_date,
+  source.supermarket_club, source.pet, source.travel_countries, source.card_brand, source.card_bank
 FROM profiles AS source
 WHERE source.id = $2
-RETURNING id, full_name, social_name, cpf, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, version, created_at, updated_at
+RETURNING id, full_name, social_name, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, birth_date, gender, blood_type, nationality, birth_city, marital_status, wedding_date, father_name, father_birth_date, mother_name, mother_birth_date, health_plan, blood_donor, organ_donor, team, sector, collections, vehicle_model, vehicle_color, vehicle_plate, vehicle_year, club_membership, membership_type, place_of_origin, birth_country, parents_wedding_date, supermarket_club, pet, travel_countries, card_brand, card_bank, version, created_at, updated_at
 `
 
 type DuplicateProfileParams struct {
@@ -159,7 +341,6 @@ func (q *Queries) DuplicateProfile(ctx context.Context, arg DuplicateProfilePara
 		&i.ID,
 		&i.FullName,
 		&i.SocialName,
-		&i.Cpf,
 		&i.Email,
 		&i.MobilePhone,
 		&i.LandlinePhone,
@@ -171,6 +352,59 @@ func (q *Queries) DuplicateProfile(ctx context.Context, arg DuplicateProfilePara
 		&i.AddressState,
 		&i.AddressPostalCode,
 		&i.Notes,
+		&i.BirthDate,
+		&i.Gender,
+		&i.BloodType,
+		&i.Nationality,
+		&i.BirthCity,
+		&i.MaritalStatus,
+		&i.WeddingDate,
+		&i.FatherName,
+		&i.FatherBirthDate,
+		&i.MotherName,
+		&i.MotherBirthDate,
+		&i.HealthPlan,
+		&i.BloodDonor,
+		&i.OrganDonor,
+		&i.Team,
+		&i.Sector,
+		&i.Collections,
+		&i.VehicleModel,
+		&i.VehicleColor,
+		&i.VehiclePlate,
+		&i.VehicleYear,
+		&i.ClubMembership,
+		&i.MembershipType,
+		&i.PlaceOfOrigin,
+		&i.BirthCountry,
+		&i.ParentsWeddingDate,
+		&i.SupermarketClub,
+		&i.Pet,
+		&i.TravelCountries,
+		&i.CardBrand,
+		&i.CardBank,
+		&i.Version,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getDocumentTypeByTechnicalKey = `-- name: GetDocumentTypeByTechnicalKey :one
+SELECT id, technical_key, label, active, uniqueness_policy, validation_regex, date_required, version, created_at, updated_at FROM document_types WHERE technical_key = $1
+`
+
+func (q *Queries) GetDocumentTypeByTechnicalKey(ctx context.Context, technicalKey string) (DocumentType, error) {
+	row := q.db.QueryRow(ctx, getDocumentTypeByTechnicalKey, technicalKey)
+	var i DocumentType
+	err := row.Scan(
+		&i.ID,
+		&i.TechnicalKey,
+		&i.Label,
+		&i.Active,
+		&i.UniquenessPolicy,
+		&i.ValidationRegex,
+		&i.DateRequired,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -179,7 +413,7 @@ func (q *Queries) DuplicateProfile(ctx context.Context, arg DuplicateProfilePara
 }
 
 const getProfileByID = `-- name: GetProfileByID :one
-SELECT id, full_name, social_name, cpf, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, version, created_at, updated_at FROM profiles WHERE id = $1
+SELECT id, full_name, social_name, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, birth_date, gender, blood_type, nationality, birth_city, marital_status, wedding_date, father_name, father_birth_date, mother_name, mother_birth_date, health_plan, blood_donor, organ_donor, team, sector, collections, vehicle_model, vehicle_color, vehicle_plate, vehicle_year, club_membership, membership_type, place_of_origin, birth_country, parents_wedding_date, supermarket_club, pet, travel_countries, card_brand, card_bank, version, created_at, updated_at FROM profiles WHERE id = $1
 `
 
 func (q *Queries) GetProfileByID(ctx context.Context, id pgtype.UUID) (Profile, error) {
@@ -189,7 +423,6 @@ func (q *Queries) GetProfileByID(ctx context.Context, id pgtype.UUID) (Profile, 
 		&i.ID,
 		&i.FullName,
 		&i.SocialName,
-		&i.Cpf,
 		&i.Email,
 		&i.MobilePhone,
 		&i.LandlinePhone,
@@ -201,6 +434,37 @@ func (q *Queries) GetProfileByID(ctx context.Context, id pgtype.UUID) (Profile, 
 		&i.AddressState,
 		&i.AddressPostalCode,
 		&i.Notes,
+		&i.BirthDate,
+		&i.Gender,
+		&i.BloodType,
+		&i.Nationality,
+		&i.BirthCity,
+		&i.MaritalStatus,
+		&i.WeddingDate,
+		&i.FatherName,
+		&i.FatherBirthDate,
+		&i.MotherName,
+		&i.MotherBirthDate,
+		&i.HealthPlan,
+		&i.BloodDonor,
+		&i.OrganDonor,
+		&i.Team,
+		&i.Sector,
+		&i.Collections,
+		&i.VehicleModel,
+		&i.VehicleColor,
+		&i.VehiclePlate,
+		&i.VehicleYear,
+		&i.ClubMembership,
+		&i.MembershipType,
+		&i.PlaceOfOrigin,
+		&i.BirthCountry,
+		&i.ParentsWeddingDate,
+		&i.SupermarketClub,
+		&i.Pet,
+		&i.TravelCountries,
+		&i.CardBrand,
+		&i.CardBank,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -208,44 +472,186 @@ func (q *Queries) GetProfileByID(ctx context.Context, id pgtype.UUID) (Profile, 
 	return i, err
 }
 
-const listProfiles = `-- name: ListProfiles :many
-SELECT id, full_name, social_name, cpf, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, version, created_at, updated_at
+const listDistinctCities = `-- name: ListDistinctCities :many
+SELECT address_city
 FROM profiles
-WHERE ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
-  AND ($2::text = '' OR coalesce(cpf, '') LIKE '%' || $2::text || '%')
+WHERE address_city IS NOT NULL
+  AND address_city <> ''
+  AND ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
+  AND ($2::text = '' OR EXISTS (
+    SELECT 1
+    FROM document_presences AS presence
+    JOIN document_types AS document_type ON document_type.id = presence.document_type_id
+    WHERE presence.profile_id = profiles.id
+      AND document_type.technical_key = 'cpf'
+      AND presence.claim = 'informed_number'
+      AND coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%'
+  ))
   AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%')
-  AND ($4::text = '' OR lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%')
-  AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
-ORDER BY
-  CASE WHEN $6::text = 'full_name' AND $7::text = 'asc' THEN lower(full_name) END ASC,
-  CASE WHEN $6::text = 'full_name' AND $7::text = 'desc' THEN lower(full_name) END DESC,
-  CASE WHEN $6::text = 'cpf' AND $7::text = 'asc' THEN cpf END ASC NULLS LAST,
-  CASE WHEN $6::text = 'cpf' AND $7::text = 'desc' THEN cpf END DESC NULLS LAST,
-  CASE WHEN $6::text = 'email' AND $7::text = 'asc' THEN lower(email) END ASC NULLS LAST,
-  CASE WHEN $6::text = 'email' AND $7::text = 'desc' THEN lower(email) END DESC NULLS LAST,
-  CASE WHEN $6::text = 'address_city' AND $7::text = 'asc' THEN lower(address_city) END ASC NULLS LAST,
-  CASE WHEN $6::text = 'address_city' AND $7::text = 'desc' THEN lower(address_city) END DESC NULLS LAST,
-  CASE WHEN $6::text = 'created_at' AND $7::text = 'asc' THEN created_at END ASC,
-  CASE WHEN $6::text = 'created_at' AND $7::text = 'desc' THEN created_at END DESC,
-  CASE WHEN $6::text = 'updated_at' AND $7::text = 'asc' THEN updated_at END ASC,
-  CASE WHEN $6::text = 'updated_at' AND $7::text = 'desc' THEN updated_at END DESC,
-  id ASC
-LIMIT $9
-OFFSET $8
+  AND ($4::text = '' OR coalesce(address_state, '') = $4::text)
+GROUP BY address_city
+ORDER BY address_city COLLATE gymkhana_pt_br
+LIMIT $5
 `
 
-type ListProfilesParams struct {
+type ListDistinctCitiesParams struct {
 	FullNameFilter string `json:"full_name_filter"`
 	CpfFilter      string `json:"cpf_filter"`
 	EmailFilter    string `json:"email_filter"`
-	CityFilter     string `json:"city_filter"`
 	StateFilter    string `json:"state_filter"`
-	SortField      string `json:"sort_field"`
-	SortOrder      string `json:"sort_order"`
-	PageOffset     int32  `json:"page_offset"`
-	PageLimit      int32  `json:"page_limit"`
+	ValueLimit     int32  `json:"value_limit"`
 }
 
+func (q *Queries) ListDistinctCities(ctx context.Context, arg ListDistinctCitiesParams) ([]*string, error) {
+	rows, err := q.db.Query(ctx, listDistinctCities,
+		arg.FullNameFilter,
+		arg.CpfFilter,
+		arg.EmailFilter,
+		arg.StateFilter,
+		arg.ValueLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*string{}
+	for rows.Next() {
+		var address_city *string
+		if err := rows.Scan(&address_city); err != nil {
+			return nil, err
+		}
+		items = append(items, address_city)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProfiles = `-- name: ListProfiles :many
+SELECT profiles.id, profiles.full_name, profiles.social_name, profiles.email, profiles.mobile_phone, profiles.landline_phone, profiles.address_street, profiles.address_number, profiles.address_complement, profiles.address_neighborhood, profiles.address_city, profiles.address_state, profiles.address_postal_code, profiles.notes, profiles.birth_date, profiles.gender, profiles.blood_type, profiles.nationality, profiles.birth_city, profiles.marital_status, profiles.wedding_date, profiles.father_name, profiles.father_birth_date, profiles.mother_name, profiles.mother_birth_date, profiles.health_plan, profiles.blood_donor, profiles.organ_donor, profiles.team, profiles.sector, profiles.collections, profiles.vehicle_model, profiles.vehicle_color, profiles.vehicle_plate, profiles.vehicle_year, profiles.club_membership, profiles.membership_type, profiles.place_of_origin, profiles.birth_country, profiles.parents_wedding_date, profiles.supermarket_club, profiles.pet, profiles.travel_countries, profiles.card_brand, profiles.card_bank, profiles.version, profiles.created_at, profiles.updated_at
+FROM profiles
+LEFT JOIN LATERAL (
+  SELECT presence.identifier_digits AS cpf_digits
+  FROM document_presences AS presence
+  JOIN document_types AS dt ON dt.id = presence.document_type_id
+  WHERE presence.profile_id = profiles.id
+    AND dt.technical_key = 'cpf'
+    AND presence.claim = 'informed_number'
+  LIMIT 1
+) AS cpf_lookup ON true
+WHERE (
+    $1::text = '' OR
+    CASE
+      WHEN $1::text LIKE '^%' THEN
+        lower(full_name) LIKE lower(substring($1::text FROM 2)) || '%'
+      WHEN $1::text LIKE '=%' THEN
+        lower(full_name) = lower(substring($1::text FROM 2))
+      ELSE
+        lower(full_name) LIKE '%' || lower($1::text) || '%'
+    END
+  )
+  AND ($2::text = '' OR EXISTS (
+    SELECT 1
+    FROM document_presences AS presence
+    JOIN document_types AS document_type ON document_type.id = presence.document_type_id
+    WHERE presence.profile_id = profiles.id
+      AND document_type.technical_key = 'cpf'
+      AND presence.claim = 'informed_number'
+      AND (
+        CASE
+          WHEN $2::text LIKE '^%' THEN
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring($2::text FROM 2) || '%'
+          WHEN $2::text LIKE '=%' THEN
+            coalesce(presence.identifier_digits, presence.identifier_value, '') = substring($2::text FROM 2)
+          ELSE
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%'
+        END
+      )
+  ))
+  AND (
+    $3::text = '' OR
+    CASE
+      WHEN $3::text LIKE '^%' THEN
+        lower(coalesce(email, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+      WHEN $3::text LIKE '=%' THEN
+        lower(coalesce(email, '')) = lower(substring($3::text FROM 2))
+      ELSE
+        lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%'
+    END
+  )
+  AND (
+    $4::text = '' OR
+    CASE
+      WHEN $4::text LIKE '^%' THEN
+        lower(coalesce(address_city, '')) LIKE lower(substring($4::text FROM 2)) || '%'
+      WHEN $4::text LIKE '=%' THEN
+        lower(coalesce(address_city, '')) = lower(substring($4::text FROM 2))
+      ELSE
+        lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%'
+    END
+  )
+  AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
+  AND (NOT $6::bool OR id = ANY($7::uuid[]))
+ORDER BY
+  CASE
+    WHEN $1::text <> '' THEN
+      CASE
+        WHEN lower(full_name) = lower($1::text) THEN 0
+        WHEN lower(full_name) LIKE lower($1::text) || ' %' THEN 1
+        WHEN lower(full_name) LIKE lower($1::text) || '%' THEN 2
+        WHEN lower(full_name) LIKE '% ' || lower($1::text) || ' %' THEN 3
+        WHEN lower(full_name) LIKE '% ' || lower($1::text) || '%' THEN 4
+        ELSE 5
+      END
+    ELSE 0
+  END ASC,
+  CASE
+    WHEN $2::text <> '' THEN
+      CASE WHEN cpf_lookup.cpf_digits LIKE $2::text || '%' THEN 0 ELSE 1 END
+    ELSE 0
+  END ASC,
+  (CASE WHEN $8::text = 'full_name' AND $9::text = 'asc' THEN full_name END) COLLATE gymkhana_pt_br ASC,
+  (CASE WHEN $8::text = 'full_name' AND $9::text = 'desc' THEN full_name END) COLLATE gymkhana_pt_br DESC,
+  CASE WHEN $8::text = 'cpf' AND $9::text = 'asc'  THEN cpf_lookup.cpf_digits END ASC NULLS LAST,
+  CASE WHEN $8::text = 'cpf' AND $9::text = 'desc' THEN cpf_lookup.cpf_digits END DESC NULLS LAST,
+  CASE WHEN $8::text = 'email' AND $9::text = 'asc' THEN lower(email) END ASC NULLS LAST,
+  CASE WHEN $8::text = 'email' AND $9::text = 'desc' THEN lower(email) END DESC NULLS LAST,
+  CASE WHEN $8::text = 'address_city' AND $9::text = 'asc' THEN lower(address_city) END ASC NULLS LAST,
+  CASE WHEN $8::text = 'address_city' AND $9::text = 'desc' THEN lower(address_city) END DESC NULLS LAST,
+  CASE WHEN $8::text = 'address_street' AND $9::text = 'asc' THEN lower(coalesce(address_street, '')) END ASC NULLS LAST,
+  CASE WHEN $8::text = 'address_street' AND $9::text = 'desc' THEN lower(coalesce(address_street, '')) END DESC NULLS LAST,
+  CASE WHEN $8::text = 'address_neighborhood' AND $9::text = 'asc' THEN lower(coalesce(address_neighborhood, '')) END ASC NULLS LAST,
+  CASE WHEN $8::text = 'address_neighborhood' AND $9::text = 'desc' THEN lower(coalesce(address_neighborhood, '')) END DESC NULLS LAST,
+  CASE WHEN $8::text = 'mobile_phone' AND $9::text = 'asc' THEN mobile_phone END ASC NULLS LAST,
+  CASE WHEN $8::text = 'mobile_phone' AND $9::text = 'desc' THEN mobile_phone END DESC NULLS LAST,
+  CASE WHEN $8::text = 'birth_date' AND $9::text = 'asc' THEN birth_date END ASC NULLS LAST,
+  CASE WHEN $8::text = 'birth_date' AND $9::text = 'desc' THEN birth_date END DESC NULLS LAST,
+  CASE WHEN $8::text = 'created_at' AND $9::text = 'asc' THEN created_at END ASC,
+  CASE WHEN $8::text = 'created_at' AND $9::text = 'desc' THEN created_at END DESC,
+  CASE WHEN $8::text = 'updated_at' AND $9::text = 'asc' THEN updated_at END ASC,
+  CASE WHEN $8::text = 'updated_at' AND $9::text = 'desc' THEN updated_at END DESC,
+  id ASC
+LIMIT $11
+OFFSET $10
+`
+
+type ListProfilesParams struct {
+	FullNameFilter string        `json:"full_name_filter"`
+	CpfFilter      string        `json:"cpf_filter"`
+	EmailFilter    string        `json:"email_filter"`
+	CityFilter     string        `json:"city_filter"`
+	StateFilter    string        `json:"state_filter"`
+	RestrictIds    bool          `json:"restrict_ids"`
+	IDFilter       []pgtype.UUID `json:"id_filter"`
+	SortField      string        `json:"sort_field"`
+	SortOrder      string        `json:"sort_order"`
+	PageOffset     int32         `json:"page_offset"`
+	PageLimit      int32         `json:"page_limit"`
+}
+
+// cpf_lookup materializa o CPF de cada perfil uma única vez via LEFT JOIN LATERAL,
+// substituindo as 4 subqueries correlacionadas que existiam no ORDER BY (O(4n) → O(n)).
 func (q *Queries) ListProfiles(ctx context.Context, arg ListProfilesParams) ([]Profile, error) {
 	rows, err := q.db.Query(ctx, listProfiles,
 		arg.FullNameFilter,
@@ -253,6 +659,8 @@ func (q *Queries) ListProfiles(ctx context.Context, arg ListProfilesParams) ([]P
 		arg.EmailFilter,
 		arg.CityFilter,
 		arg.StateFilter,
+		arg.RestrictIds,
+		arg.IDFilter,
 		arg.SortField,
 		arg.SortOrder,
 		arg.PageOffset,
@@ -269,7 +677,6 @@ func (q *Queries) ListProfiles(ctx context.Context, arg ListProfilesParams) ([]P
 			&i.ID,
 			&i.FullName,
 			&i.SocialName,
-			&i.Cpf,
 			&i.Email,
 			&i.MobilePhone,
 			&i.LandlinePhone,
@@ -281,6 +688,113 @@ func (q *Queries) ListProfiles(ctx context.Context, arg ListProfilesParams) ([]P
 			&i.AddressState,
 			&i.AddressPostalCode,
 			&i.Notes,
+			&i.BirthDate,
+			&i.Gender,
+			&i.BloodType,
+			&i.Nationality,
+			&i.BirthCity,
+			&i.MaritalStatus,
+			&i.WeddingDate,
+			&i.FatherName,
+			&i.FatherBirthDate,
+			&i.MotherName,
+			&i.MotherBirthDate,
+			&i.HealthPlan,
+			&i.BloodDonor,
+			&i.OrganDonor,
+			&i.Team,
+			&i.Sector,
+			&i.Collections,
+			&i.VehicleModel,
+			&i.VehicleColor,
+			&i.VehiclePlate,
+			&i.VehicleYear,
+			&i.ClubMembership,
+			&i.MembershipType,
+			&i.PlaceOfOrigin,
+			&i.BirthCountry,
+			&i.ParentsWeddingDate,
+			&i.SupermarketClub,
+			&i.Pet,
+			&i.TravelCountries,
+			&i.CardBrand,
+			&i.CardBank,
+			&i.Version,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProfilesByExactFullName = `-- name: ListProfilesByExactFullName :many
+SELECT id, full_name, social_name, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, birth_date, gender, blood_type, nationality, birth_city, marital_status, wedding_date, father_name, father_birth_date, mother_name, mother_birth_date, health_plan, blood_donor, organ_donor, team, sector, collections, vehicle_model, vehicle_color, vehicle_plate, vehicle_year, club_membership, membership_type, place_of_origin, birth_country, parents_wedding_date, supermarket_club, pet, travel_countries, card_brand, card_bank, version, created_at, updated_at
+FROM profiles
+WHERE lower(full_name) = lower(btrim($1))
+ORDER BY id
+`
+
+func (q *Queries) ListProfilesByExactFullName(ctx context.Context, fullName string) ([]Profile, error) {
+	rows, err := q.db.Query(ctx, listProfilesByExactFullName, fullName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Profile{}
+	for rows.Next() {
+		var i Profile
+		if err := rows.Scan(
+			&i.ID,
+			&i.FullName,
+			&i.SocialName,
+			&i.Email,
+			&i.MobilePhone,
+			&i.LandlinePhone,
+			&i.AddressStreet,
+			&i.AddressNumber,
+			&i.AddressComplement,
+			&i.AddressNeighborhood,
+			&i.AddressCity,
+			&i.AddressState,
+			&i.AddressPostalCode,
+			&i.Notes,
+			&i.BirthDate,
+			&i.Gender,
+			&i.BloodType,
+			&i.Nationality,
+			&i.BirthCity,
+			&i.MaritalStatus,
+			&i.WeddingDate,
+			&i.FatherName,
+			&i.FatherBirthDate,
+			&i.MotherName,
+			&i.MotherBirthDate,
+			&i.HealthPlan,
+			&i.BloodDonor,
+			&i.OrganDonor,
+			&i.Team,
+			&i.Sector,
+			&i.Collections,
+			&i.VehicleModel,
+			&i.VehicleColor,
+			&i.VehiclePlate,
+			&i.VehicleYear,
+			&i.ClubMembership,
+			&i.MembershipType,
+			&i.PlaceOfOrigin,
+			&i.BirthCountry,
+			&i.ParentsWeddingDate,
+			&i.SupermarketClub,
+			&i.Pet,
+			&i.TravelCountries,
+			&i.CardBrand,
+			&i.CardBank,
 			&i.Version,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -325,21 +839,34 @@ func (q *Queries) RecordProfileAuditEvent(ctx context.Context, arg RecordProfile
 
 const updateProfile = `-- name: UpdateProfile :one
 UPDATE profiles
-SET full_name = $1, social_name = $2, cpf = $3,
-  email = $4, mobile_phone = $5, landline_phone = $6,
-  address_street = $7, address_number = $8,
-  address_complement = $9, address_neighborhood = $10,
-  address_city = $11, address_state = $12,
-  address_postal_code = $13, notes = $14,
+SET full_name = $1, social_name = $2,
+  email = $3, mobile_phone = $4, landline_phone = $5,
+  address_street = $6, address_number = $7,
+  address_complement = $8, address_neighborhood = $9,
+  address_city = $10, address_state = $11,
+  address_postal_code = $12, notes = $13,
+  birth_date = $14, gender = $15, blood_type = $16,
+  nationality = $17, birth_city = $18,
+  marital_status = $19, wedding_date = $20,
+  father_name = $21, father_birth_date = $22,
+  mother_name = $23, mother_birth_date = $24,
+  health_plan = $25, blood_donor = $26, organ_donor = $27,
+  team = $28, sector = $29, collections = $30,
+  vehicle_model = $31, vehicle_color = $32,
+  vehicle_plate = $33, vehicle_year = $34,
+  club_membership = $35, membership_type = $36,
+  place_of_origin = $37, birth_country = $38,
+  parents_wedding_date = $39, supermarket_club = $40,
+  pet = $41, travel_countries = $42,
+  card_brand = $43, card_bank = $44,
   version = version + 1, updated_at = now()
-WHERE id = $15 AND version = $16
-RETURNING id, full_name, social_name, cpf, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, version, created_at, updated_at
+WHERE id = $45 AND version = $46
+RETURNING id, full_name, social_name, email, mobile_phone, landline_phone, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_postal_code, notes, birth_date, gender, blood_type, nationality, birth_city, marital_status, wedding_date, father_name, father_birth_date, mother_name, mother_birth_date, health_plan, blood_donor, organ_donor, team, sector, collections, vehicle_model, vehicle_color, vehicle_plate, vehicle_year, club_membership, membership_type, place_of_origin, birth_country, parents_wedding_date, supermarket_club, pet, travel_countries, card_brand, card_bank, version, created_at, updated_at
 `
 
 type UpdateProfileParams struct {
 	FullName            string      `json:"full_name"`
 	SocialName          *string     `json:"social_name"`
-	Cpf                 *string     `json:"cpf"`
 	Email               *string     `json:"email"`
 	MobilePhone         *string     `json:"mobile_phone"`
 	LandlinePhone       *string     `json:"landline_phone"`
@@ -351,6 +878,37 @@ type UpdateProfileParams struct {
 	AddressState        *string     `json:"address_state"`
 	AddressPostalCode   *string     `json:"address_postal_code"`
 	Notes               *string     `json:"notes"`
+	BirthDate           pgtype.Date `json:"birth_date"`
+	Gender              *string     `json:"gender"`
+	BloodType           *string     `json:"blood_type"`
+	Nationality         *string     `json:"nationality"`
+	BirthCity           *string     `json:"birth_city"`
+	MaritalStatus       *string     `json:"marital_status"`
+	WeddingDate         pgtype.Date `json:"wedding_date"`
+	FatherName          *string     `json:"father_name"`
+	FatherBirthDate     pgtype.Date `json:"father_birth_date"`
+	MotherName          *string     `json:"mother_name"`
+	MotherBirthDate     pgtype.Date `json:"mother_birth_date"`
+	HealthPlan          *string     `json:"health_plan"`
+	BloodDonor          *bool       `json:"blood_donor"`
+	OrganDonor          *bool       `json:"organ_donor"`
+	Team                *string     `json:"team"`
+	Sector              *string     `json:"sector"`
+	Collections         *string     `json:"collections"`
+	VehicleModel        *string     `json:"vehicle_model"`
+	VehicleColor        *string     `json:"vehicle_color"`
+	VehiclePlate        *string     `json:"vehicle_plate"`
+	VehicleYear         *int32      `json:"vehicle_year"`
+	ClubMembership      *string     `json:"club_membership"`
+	MembershipType      *string     `json:"membership_type"`
+	PlaceOfOrigin       *string     `json:"place_of_origin"`
+	BirthCountry        *string     `json:"birth_country"`
+	ParentsWeddingDate  pgtype.Date `json:"parents_wedding_date"`
+	SupermarketClub     *string     `json:"supermarket_club"`
+	Pet                 *string     `json:"pet"`
+	TravelCountries     *string     `json:"travel_countries"`
+	CardBrand           *string     `json:"card_brand"`
+	CardBank            *string     `json:"card_bank"`
 	ID                  pgtype.UUID `json:"id"`
 	Version             int64       `json:"version"`
 }
@@ -359,7 +917,6 @@ func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (P
 	row := q.db.QueryRow(ctx, updateProfile,
 		arg.FullName,
 		arg.SocialName,
-		arg.Cpf,
 		arg.Email,
 		arg.MobilePhone,
 		arg.LandlinePhone,
@@ -371,6 +928,37 @@ func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (P
 		arg.AddressState,
 		arg.AddressPostalCode,
 		arg.Notes,
+		arg.BirthDate,
+		arg.Gender,
+		arg.BloodType,
+		arg.Nationality,
+		arg.BirthCity,
+		arg.MaritalStatus,
+		arg.WeddingDate,
+		arg.FatherName,
+		arg.FatherBirthDate,
+		arg.MotherName,
+		arg.MotherBirthDate,
+		arg.HealthPlan,
+		arg.BloodDonor,
+		arg.OrganDonor,
+		arg.Team,
+		arg.Sector,
+		arg.Collections,
+		arg.VehicleModel,
+		arg.VehicleColor,
+		arg.VehiclePlate,
+		arg.VehicleYear,
+		arg.ClubMembership,
+		arg.MembershipType,
+		arg.PlaceOfOrigin,
+		arg.BirthCountry,
+		arg.ParentsWeddingDate,
+		arg.SupermarketClub,
+		arg.Pet,
+		arg.TravelCountries,
+		arg.CardBrand,
+		arg.CardBank,
 		arg.ID,
 		arg.Version,
 	)
@@ -379,7 +967,6 @@ func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (P
 		&i.ID,
 		&i.FullName,
 		&i.SocialName,
-		&i.Cpf,
 		&i.Email,
 		&i.MobilePhone,
 		&i.LandlinePhone,
@@ -391,6 +978,78 @@ func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (P
 		&i.AddressState,
 		&i.AddressPostalCode,
 		&i.Notes,
+		&i.BirthDate,
+		&i.Gender,
+		&i.BloodType,
+		&i.Nationality,
+		&i.BirthCity,
+		&i.MaritalStatus,
+		&i.WeddingDate,
+		&i.FatherName,
+		&i.FatherBirthDate,
+		&i.MotherName,
+		&i.MotherBirthDate,
+		&i.HealthPlan,
+		&i.BloodDonor,
+		&i.OrganDonor,
+		&i.Team,
+		&i.Sector,
+		&i.Collections,
+		&i.VehicleModel,
+		&i.VehicleColor,
+		&i.VehiclePlate,
+		&i.VehicleYear,
+		&i.ClubMembership,
+		&i.MembershipType,
+		&i.PlaceOfOrigin,
+		&i.BirthCountry,
+		&i.ParentsWeddingDate,
+		&i.SupermarketClub,
+		&i.Pet,
+		&i.TravelCountries,
+		&i.CardBrand,
+		&i.CardBank,
+		&i.Version,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertCPFPresence = `-- name: UpsertCPFPresence :one
+INSERT INTO document_presences (
+  id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value
+)
+SELECT $1, $2, document_type.id, document_type.uniqueness_policy,
+  'informed_number', $3
+FROM document_types AS document_type
+WHERE document_type.technical_key = 'cpf'
+ON CONFLICT (profile_id, document_type_id) DO UPDATE
+SET claim = 'informed_number',
+  identifier_value = EXCLUDED.identifier_value,
+  uniqueness_policy = EXCLUDED.uniqueness_policy,
+  version = document_presences.version + 1,
+  updated_at = now()
+RETURNING id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value, identifier_digits, version, created_at, updated_at
+`
+
+type UpsertCPFPresenceParams struct {
+	ID              pgtype.UUID `json:"id"`
+	ProfileID       pgtype.UUID `json:"profile_id"`
+	IdentifierValue *string     `json:"identifier_value"`
+}
+
+func (q *Queries) UpsertCPFPresence(ctx context.Context, arg UpsertCPFPresenceParams) (DocumentPresence, error) {
+	row := q.db.QueryRow(ctx, upsertCPFPresence, arg.ID, arg.ProfileID, arg.IdentifierValue)
+	var i DocumentPresence
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileID,
+		&i.DocumentTypeID,
+		&i.UniquenessPolicy,
+		&i.Claim,
+		&i.IdentifierValue,
+		&i.IdentifierDigits,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,

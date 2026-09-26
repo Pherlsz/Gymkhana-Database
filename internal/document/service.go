@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Pherlsz/Gymkhana-Core/normalize"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
@@ -64,10 +65,6 @@ type AuditEvent struct {
 	EventType        AuditEventType
 	Outcome          auth.AuditOutcome
 	RequestID        string
-}
-
-type AuditStore interface {
-	RecordAuditEvent(context.Context, AuditEvent) error
 }
 
 type AuditFailureHandler func(context.Context, AuditEvent, error)
@@ -271,6 +268,10 @@ func (service *Service) AssignCurrentUse(ctx context.Context, actor auth.Session
 		service.recordAudit(ctx, actor.User.ID, &id, nil, nil, &holderProfileID, AuditEventUseAssigned, mutationOutcome(err), requestID)
 		return CurrentUse{}, err
 	}
+	if !documentValue.Values.Medium.SupportsCurrentUse() {
+		service.recordAudit(ctx, actor.User.ID, &id, nil, &documentValue.Type.ID, &holderProfileID, AuditEventUseAssigned, auth.AuditOutcomeDenied, requestID)
+		return CurrentUse{}, ErrCurrentUseUnsupported
+	}
 	currentUse, err := service.store.AssignCurrentUse(ctx, id, holderProfileID)
 	if err != nil {
 		service.recordAudit(ctx, actor.User.ID, &id, nil, &documentValue.Type.ID, &holderProfileID, AuditEventUseAssigned, mutationOutcome(err), requestID)
@@ -307,6 +308,20 @@ func (service *Service) ReturnCurrentUse(ctx context.Context, actor auth.Session
 	return nil
 }
 
+func (service *Service) UpsertPresence(ctx context.Context, actor auth.Session, owner profile.Identifier, typeID Identifier, claim Claim, identifier, requestID string) (Presence, error) {
+	if !actor.User.Active || !actor.User.Role.CanWriteDocuments() {
+		service.recordAudit(ctx, actor.User.ID, nil, nil, &typeID, nil, AuditEventUpdated, auth.AuditOutcomeDenied, requestID)
+		return Presence{}, ErrForbidden
+	}
+	presence, err := service.store.UpsertPresence(ctx, owner, typeID, claim, identifier)
+	if err != nil {
+		service.recordAudit(ctx, actor.User.ID, nil, nil, &typeID, nil, AuditEventUpdated, mutationOutcome(err), requestID)
+		return Presence{}, err
+	}
+	service.recordAudit(ctx, actor.User.ID, nil, nil, &presence.TypeID, nil, AuditEventUpdated, auth.AuditOutcomeSuccess, requestID)
+	return presence, nil
+}
+
 func normalizeTypeListOptions(options TypeListOptions) (TypeListOptions, error) {
 	if options.Limit == 0 {
 		options.Limit = 100
@@ -325,6 +340,20 @@ func normalizeTypeListOptions(options TypeListOptions) (TypeListOptions, error) 
 	}
 	options.Filters.Label = normalize.SearchText(options.Filters.Label)
 	return options, nil
+}
+
+func normalizeFilterPattern(raw string, fn func(string) string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if strings.HasPrefix(raw, "^") {
+		return "^" + fn(raw[1:])
+	}
+	if strings.HasPrefix(raw, "=") {
+		return "=" + fn(raw[1:])
+	}
+	return fn(raw)
 }
 
 func normalizeListOptions(options ListOptions) (ListOptions, error) {
@@ -352,13 +381,13 @@ func normalizeListOptions(options ListOptions) (ListOptions, error) {
 	if options.Filters.HolderProfileID != nil && *options.Filters.HolderProfileID == (profile.Identifier{}) {
 		return ListOptions{}, ErrInvalidListOptions
 	}
-	if options.Filters.RecordState != "" && !options.Filters.RecordState.Valid() {
+	if options.Filters.Medium != "" && !options.Filters.Medium.Valid() {
 		return ListOptions{}, ErrInvalidListOptions
 	}
 	if options.Filters.Status != "" && !options.Filters.Status.Valid() {
 		return ListOptions{}, ErrInvalidListOptions
 	}
-	options.Filters.Identifier = normalize.SearchText(options.Filters.Identifier)
+	options.Filters.Identifier = normalizeFilterPattern(options.Filters.Identifier, normalize.SearchText)
 	return options, nil
 }
 
@@ -396,7 +425,8 @@ func mutationOutcome(err error) auth.AuditOutcome {
 		errors.Is(err, ErrTypeInactive) || errors.Is(err, ErrTypeInUse) ||
 		errors.Is(err, ErrTechnicalKeyImmutable) || errors.Is(err, ErrTechnicalKeyConflict) ||
 		errors.Is(err, ErrUniquenessConflict) || errors.Is(err, ErrReferenceNotFound) ||
-		errors.Is(err, ErrCurrentUseExists) || errors.Is(err, ErrCurrentUseNotFound) {
+		errors.Is(err, ErrCurrentUseExists) || errors.Is(err, ErrCurrentUseNotFound) ||
+		errors.Is(err, ErrCurrentUseUnsupported) || errors.Is(err, ErrDuplicateNotSupported) {
 		return auth.AuditOutcomeDenied
 	}
 	return auth.AuditOutcomeFailure

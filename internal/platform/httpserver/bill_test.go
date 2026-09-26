@@ -98,9 +98,9 @@ func billHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeBillService
 	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
 		ID: actorID, Email: "member", Role: auth.RoleExternal, Active: true,
 	}}}}
-	typeValue := bill.TypeDefinition{ID: typeID, Values: bill.TypeValues{TechnicalKey: "rg", Label: "RG", Active: true, SupportsCurrentUse: true}, Version: 1, CreatedAt: now, UpdatedAt: now}
+	typeValue := bill.TypeDefinition{ID: typeID, Values: bill.TypeValues{TechnicalKey: "rg", Label: "RG", Active: true}, Version: 1, CreatedAt: now, UpdatedAt: now}
 	currentUse := bill.CurrentUse{HolderProfileID: holderID, AssignedAt: now}
-	billValue := bill.Bill{ID: billID, Values: bill.Values{OwnerProfileID: ownerID, TypeID: typeID, PrintedHolderName: "Ana", PrintedAddress: "Rua A, 10", Reference: "UC-009", Competence: "2026-07", Amount: "123.45", Currency: "BRL", RecordState: bill.RecordCurrent}, Type: typeValue, Status: bill.StatusInUse, CurrentUse: &currentUse, Version: 1, CreatedAt: now, UpdatedAt: now}
+	billValue := bill.Bill{ID: billID, Values: bill.Values{OwnerProfileID: ownerID, TypeID: typeID, PrintedHolderName: "Ana", PrintedAddress: "Rua A, 10", Reference: "UC-009", Competence: "2026-07", Amount: "123.45", Currency: "BRL", Medium: bill.MediumPhysical}, OwnerFullName: "Ana da Silva", Type: typeValue, Status: bill.StatusInUse, CurrentUse: &currentUse, Version: 1, CreatedAt: now, UpdatedAt: now}
 	service := &fakeBillService{
 		typeValue:  typeValue,
 		billValue:  billValue,
@@ -114,15 +114,19 @@ func billHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeBillService
 func TestBillRoutesListCreateAndCurrentUse(t *testing.T) {
 	_, service, billID, typeID, ownerID, handler := billHTTPFixture(t)
 
-	listRequest := httptest.NewRequest(http.MethodGet, "/api/v1/bills?limit=250&offset=10&sort=updated_at&order=desc&owner_profile_id="+ownerID.String()+"&bill_type_id="+typeID.String()+"&reference=UC&competence=2026-07&status=IN_USE", nil)
+	listRequest := httptest.NewRequest(http.MethodGet, "/api/v1/bills?limit=250&offset=10&sort=updated_at&order=desc&owner_profile_id="+ownerID.String()+"&bill_type_id="+typeID.String()+"&reference=UC&competence=2026-07&medium=PHYSICAL&status=IN_USE", nil)
 	listRequest.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
 	listResponse := httptest.NewRecorder()
 	handler.ServeHTTP(listResponse, listRequest)
-	if listResponse.Code != http.StatusOK || service.billList.Limit != 250 || service.billList.Offset != 10 || service.billList.SortField != bill.SortUpdatedAt || service.billList.Filters.Reference != "UC" || service.billList.Filters.Competence != "2026-07" {
+	if listResponse.Code != http.StatusOK || service.billList.Limit != 250 || service.billList.Offset != 10 || service.billList.SortField != bill.SortUpdatedAt || service.billList.Filters.Reference != "UC" || service.billList.Filters.Competence != "2026-07" || service.billList.Filters.Medium != bill.MediumPhysical {
 		t.Fatalf("list status = %d, options = %#v, body = %s", listResponse.Code, service.billList, listResponse.Body.String())
 	}
+	var listed billPageResponse
+	if err := json.Unmarshal(listResponse.Body.Bytes(), &listed); err != nil || len(listed.Bills) != 1 || listed.Bills[0].CustomValues == nil || listed.Bills[0].OwnerFullName != "Ana da Silva" {
+		t.Fatalf("list body should embed custom_values and owner_full_name: err=%v body=%s", err, listResponse.Body.String())
+	}
 
-	createBody := `{"owner_profile_id":"` + ownerID.String() + `","bill_type_id":"` + typeID.String() + `","printed_holder_name":"Ana","printed_address":"Rua A, 10","reference_value":"UC-009","competence":"2026-07","amount":"123.45","currency":"BRL","notes":"","record_state":"CURRENT"}`
+	createBody := `{"owner_profile_id":"` + ownerID.String() + `","bill_type_id":"` + typeID.String() + `","printed_holder_name":"Ana","printed_address":"Rua A, 10","reference_value":"UC-009","competence":"2026-07","amount":"123.45","currency":"BRL","notes":"","medium":"PHYSICAL"}`
 	createRequest := httptest.NewRequest(http.MethodPost, "/api/v1/bills", strings.NewReader(createBody))
 	createRequest.Header.Set("Content-Type", "application/json")
 	createRequest.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
@@ -162,12 +166,12 @@ func TestBillTypeRoutesAndPermanentDelete(t *testing.T) {
 		t.Fatalf("list type status = %d, options = %#v, body = %s", listResponse.Code, service.typeList, listResponse.Body.String())
 	}
 
-	createRequest := httptest.NewRequest(http.MethodPost, "/api/v1/bill-types", strings.NewReader(`{"technical_key":"energia","label":"Energia","active":true,"supports_current_use":true}`))
+	createRequest := httptest.NewRequest(http.MethodPost, "/api/v1/bill-types", strings.NewReader(`{"technical_key":"energia","label":"Energia","active":true}`))
 	createRequest.Header.Set("Content-Type", "application/json")
 	createRequest.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
 	createResponse := httptest.NewRecorder()
 	handler.ServeHTTP(createResponse, createRequest)
-	if createResponse.Code != http.StatusCreated || service.typeValues.TechnicalKey != "energia" || !service.typeValues.SupportsCurrentUse {
+	if createResponse.Code != http.StatusCreated || service.typeValues.TechnicalKey != "energia" || !service.typeValues.Active {
 		t.Fatalf("create type status = %d, values = %#v, body = %s", createResponse.Code, service.typeValues, createResponse.Body.String())
 	}
 
@@ -192,7 +196,7 @@ func TestBillRoutesRequireAuthenticationAndMapErrors(t *testing.T) {
 
 	authentication.sessionErr = nil
 	service.err = &bill.ValidationError{Fields: []bill.FieldError{{Field: "amount", Code: "invalid_format"}}}
-	request := httptest.NewRequest(http.MethodPost, "/api/v1/bills", strings.NewReader(`{"owner_profile_id":"invalid","bill_type_id":"invalid","printed_holder_name":"","printed_address":"","reference_value":"","competence":"","amount":"","currency":"","notes":"","record_state":"CURRENT"}`))
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/bills", strings.NewReader(`{"owner_profile_id":"invalid","bill_type_id":"invalid","printed_holder_name":"","printed_address":"","reference_value":"","competence":"","amount":"","currency":"","notes":"","medium":"PHYSICAL"}`))
 	request.Header.Set("Content-Type", "application/json")
 	request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
 	response = httptest.NewRecorder()
@@ -212,7 +216,7 @@ func TestBillRoutesRequireAuthenticationAndMapErrors(t *testing.T) {
 	}
 
 	service.err = &bill.ValidationError{Fields: []bill.FieldError{{Field: "label", Code: "required"}}}
-	request = httptest.NewRequest(http.MethodPost, "/api/v1/bill-types", strings.NewReader(`{"technical_key":"energia","label":"","active":true,"supports_current_use":true}`))
+	request = httptest.NewRequest(http.MethodPost, "/api/v1/bill-types", strings.NewReader(`{"technical_key":"energia","label":"","active":true}`))
 	request.Header.Set("Content-Type", "application/json")
 	request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
 	response = httptest.NewRecorder()

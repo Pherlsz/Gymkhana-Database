@@ -67,14 +67,45 @@ type Address struct {
 }
 
 type Values struct {
-	FullName      string
-	SocialName    string
-	CPF           string
-	Email         string
-	MobilePhone   string
-	LandlinePhone string
-	Address       Address
-	Notes         string
+	FullName        string
+	SocialName      string
+	CPF             string
+	Email           string
+	MobilePhone     string
+	LandlinePhone   string
+	Address         Address
+	Notes           string
+	BirthDate       string
+	Gender          string
+	BloodType       string
+	Nationality     string
+	BirthCity       string
+	MaritalStatus   string
+	WeddingDate     string
+	FatherName      string
+	FatherBirthDate string
+	MotherName      string
+	MotherBirthDate string
+	HealthPlan      string
+	BloodDonor      *bool
+	OrganDonor      *bool
+	Team            string
+	Sector          string
+	Collections     string
+	VehicleModel    string
+	VehicleColor    string
+	VehiclePlate    string
+	VehicleYear     *int32
+	ClubMembership  string
+	MembershipType  string
+	PlaceOfOrigin   string
+	BirthCountry    string
+	ParentsWedding  string
+	SupermarketClub string
+	Pet             string
+	TravelCountries string
+	CardBrand       string
+	CardBank        string
 }
 
 type Profile struct {
@@ -110,7 +141,38 @@ func Normalize(values Values) (Values, error) {
 			City:         normalize.DisplayText(values.Address.City),
 			State:        strings.ToUpper(normalize.DisplayText(values.Address.State)),
 		},
-		Notes: strings.TrimSpace(strings.ToValidUTF8(values.Notes, "")),
+		Notes:           strings.TrimSpace(strings.ToValidUTF8(values.Notes, "")),
+		BirthDate:       strings.TrimSpace(values.BirthDate),
+		Gender:          normalize.DisplayText(values.Gender),
+		BloodType:       normalize.DisplayText(values.BloodType),
+		Nationality:     normalize.DisplayText(values.Nationality),
+		BirthCity:       normalize.DisplayText(values.BirthCity),
+		MaritalStatus:   normalize.DisplayText(values.MaritalStatus),
+		WeddingDate:     strings.TrimSpace(values.WeddingDate),
+		FatherName:      normalize.DisplayText(values.FatherName),
+		FatherBirthDate: strings.TrimSpace(values.FatherBirthDate),
+		MotherName:      normalize.DisplayText(values.MotherName),
+		MotherBirthDate: strings.TrimSpace(values.MotherBirthDate),
+		HealthPlan:      normalize.DisplayText(values.HealthPlan),
+		BloodDonor:      values.BloodDonor,
+		OrganDonor:      values.OrganDonor,
+		Team:            normalize.DisplayText(values.Team),
+		Sector:          normalize.DisplayText(values.Sector),
+		Collections:     normalize.DisplayText(values.Collections),
+		VehicleModel:    normalize.DisplayText(values.VehicleModel),
+		VehicleColor:    normalize.DisplayText(values.VehicleColor),
+		VehiclePlate:    strings.ToUpper(strings.TrimSpace(values.VehiclePlate)),
+		VehicleYear:     values.VehicleYear,
+		ClubMembership:  normalize.DisplayText(values.ClubMembership),
+		MembershipType:  normalize.DisplayText(values.MembershipType),
+		PlaceOfOrigin:   normalize.DisplayText(values.PlaceOfOrigin),
+		BirthCountry:    normalize.DisplayText(values.BirthCountry),
+		ParentsWedding:  strings.TrimSpace(values.ParentsWedding),
+		SupermarketClub: normalize.DisplayText(values.SupermarketClub),
+		Pet:             normalize.DisplayText(values.Pet),
+		TravelCountries: normalize.DisplayText(values.TravelCountries),
+		CardBrand:       normalize.DisplayText(values.CardBrand),
+		CardBank:        normalize.DisplayText(values.CardBank),
 	}
 
 	validation := &ValidationError{}
@@ -177,6 +239,38 @@ func Normalize(values Values) (Values, error) {
 		}
 	}
 
+	validateOptionalText(validation, "gender", normalized.Gender, 80)
+	validateOptionalText(validation, "blood_type", normalized.BloodType, 20)
+	validateOptionalText(validation, "nationality", normalized.Nationality, 80)
+	validateOptionalText(validation, "birth_city", normalized.BirthCity, MaxCityLength)
+	validateOptionalText(validation, "marital_status", normalized.MaritalStatus, 80)
+	validateOptionalText(validation, "father_name", normalized.FatherName, MaxNameLength)
+	validateOptionalText(validation, "mother_name", normalized.MotherName, MaxNameLength)
+	validateOptionalText(validation, "health_plan", normalized.HealthPlan, MaxNameLength)
+	validateOptionalText(validation, "team", normalized.Team, 120)
+	validateOptionalText(validation, "sector", normalized.Sector, 120)
+	validateOptionalText(validation, "collections", normalized.Collections, 500)
+	validateOptionalText(validation, "vehicle_model", normalized.VehicleModel, 120)
+	validateOptionalText(validation, "vehicle_color", normalized.VehicleColor, 80)
+	validateOptionalText(validation, "vehicle_plate", normalized.VehiclePlate, 20)
+	validateOptionalText(validation, "club_membership", normalized.ClubMembership, 80)
+	validateOptionalText(validation, "membership_type", normalized.MembershipType, 80)
+	validateOptionalText(validation, "place_of_origin", normalized.PlaceOfOrigin, MaxCityLength)
+	validateOptionalText(validation, "birth_country", normalized.BirthCountry, 80)
+	validateOptionalText(validation, "supermarket_club", normalized.SupermarketClub, 80)
+	validateOptionalText(validation, "pet", normalized.Pet, 120)
+	validateOptionalText(validation, "travel_countries", normalized.TravelCountries, 500)
+	validateOptionalText(validation, "card_brand", normalized.CardBrand, 120)
+	validateOptionalText(validation, "card_bank", normalized.CardBank, 120)
+	validateOptionalDate(validation, "birth_date", &normalized.BirthDate)
+	validateOptionalDate(validation, "wedding_date", &normalized.WeddingDate)
+	validateOptionalDate(validation, "father_birth_date", &normalized.FatherBirthDate)
+	validateOptionalDate(validation, "mother_birth_date", &normalized.MotherBirthDate)
+	validateOptionalDate(validation, "parents_wedding_date", &normalized.ParentsWedding)
+	if normalized.VehicleYear != nil && (*normalized.VehicleYear < 1886 || *normalized.VehicleYear > 9999) {
+		validation.add("vehicle_year", "invalid_format")
+	}
+
 	if len(validation.Fields) > 0 {
 		return Values{}, validation
 	}
@@ -200,6 +294,15 @@ func validateRequiredText(validation *ValidationError, field, value string, maxi
 func validateOptionalText(validation *ValidationError, field, value string, maximum int) {
 	if value != "" && utf8.RuneCountInString(value) > maximum {
 		validation.add(field, "too_long")
+	}
+}
+
+func validateOptionalDate(validation *ValidationError, field string, value *string) {
+	if value == nil || *value == "" {
+		return
+	}
+	if _, err := time.Parse("2006-01-02", *value); err != nil {
+		validation.add(field, "invalid_format")
 	}
 }
 

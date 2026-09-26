@@ -67,19 +67,31 @@ type AuditEvent struct {
 	RequestID       string
 }
 
-type AuditStore interface {
-	RecordAuditEvent(context.Context, AuditEvent) error
+type AuditFailureHandler func(context.Context, AuditEvent, error)
+
+type OwnerCandidate struct {
+	ID       profile.Identifier
+	FullName string
 }
 
-type AuditFailureHandler func(context.Context, AuditEvent, error)
+type AmbiguousOwnerError struct {
+	Name       string
+	Candidates []OwnerCandidate
+}
+
+func (err *AmbiguousOwnerError) Error() string {
+	return "bill owner name matches multiple profiles"
+}
 
 type ServiceOptions struct {
 	OnAuditFailure AuditFailureHandler
+	Owners         OwnerResolver
 }
 
 type Service struct {
 	store          Store
 	audit          AuditStore
+	owners         OwnerResolver
 	onAuditFailure AuditFailureHandler
 }
 
@@ -91,7 +103,7 @@ func NewService(store Store, options ServiceOptions) (*Service, error) {
 	if !ok {
 		return nil, fmt.Errorf("%w: audit store is unavailable", ErrInvalidServiceSetup)
 	}
-	return &Service{store: store, audit: audit, onAuditFailure: options.OnAuditFailure}, nil
+	return &Service{store: store, audit: audit, owners: options.Owners, onAuditFailure: options.OnAuditFailure}, nil
 }
 
 func (service *Service) ListTypes(ctx context.Context, actor auth.Session, options TypeListOptions) (TypePage, error) {
@@ -204,7 +216,12 @@ func (service *Service) Create(ctx context.Context, actor auth.Session, values V
 		service.recordAudit(ctx, actor.User.ID, &id, nil, &values.TypeID, nil, AuditEventCreated, auth.AuditOutcomeDenied, requestID)
 		return Bill{}, ErrForbidden
 	}
-	created, err := service.store.Create(ctx, id, values)
+	resolved, err := service.resolveOwner(ctx, values)
+	if err != nil {
+		service.recordAudit(ctx, actor.User.ID, &id, nil, &values.TypeID, nil, AuditEventCreated, mutationOutcome(err), requestID)
+		return Bill{}, err
+	}
+	created, err := service.store.Create(ctx, id, resolved)
 	if err != nil {
 		service.recordAudit(ctx, actor.User.ID, &id, nil, &values.TypeID, nil, AuditEventCreated, mutationOutcome(err), requestID)
 		return Bill{}, err
@@ -272,6 +289,10 @@ func (service *Service) AssignCurrentUse(ctx context.Context, actor auth.Session
 		service.recordAudit(ctx, actor.User.ID, &id, nil, nil, &holderProfileID, AuditEventUseAssigned, mutationOutcome(err), requestID)
 		return CurrentUse{}, err
 	}
+	if !billValue.Values.Medium.SupportsCurrentUse() {
+		service.recordAudit(ctx, actor.User.ID, &id, nil, &billValue.Type.ID, &holderProfileID, AuditEventUseAssigned, auth.AuditOutcomeDenied, requestID)
+		return CurrentUse{}, ErrCurrentUseUnsupported
+	}
 	currentUse, err := service.store.AssignCurrentUse(ctx, id, holderProfileID)
 	if err != nil {
 		service.recordAudit(ctx, actor.User.ID, &id, nil, &billValue.Type.ID, &holderProfileID, AuditEventUseAssigned, mutationOutcome(err), requestID)
@@ -328,6 +349,20 @@ func normalizeTypeListOptions(options TypeListOptions) (TypeListOptions, error) 
 	return options, nil
 }
 
+func normalizeFilterPattern(raw string, fn func(string) string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if strings.HasPrefix(raw, "^") {
+		return "^" + fn(raw[1:])
+	}
+	if strings.HasPrefix(raw, "=") {
+		return "=" + fn(raw[1:])
+	}
+	return fn(raw)
+}
+
 func normalizeListOptions(options ListOptions) (ListOptions, error) {
 	if options.Limit == 0 {
 		options.Limit = 100
@@ -353,13 +388,13 @@ func normalizeListOptions(options ListOptions) (ListOptions, error) {
 	if options.Filters.HolderProfileID != nil && *options.Filters.HolderProfileID == (profile.Identifier{}) {
 		return ListOptions{}, ErrInvalidListOptions
 	}
-	if options.Filters.RecordState != "" && !options.Filters.RecordState.Valid() {
+	if options.Filters.Medium != "" && !options.Filters.Medium.Valid() {
 		return ListOptions{}, ErrInvalidListOptions
 	}
 	if options.Filters.Status != "" && !options.Filters.Status.Valid() {
 		return ListOptions{}, ErrInvalidListOptions
 	}
-	options.Filters.Reference = normalize.SearchText(options.Filters.Reference)
+	options.Filters.Reference = normalizeFilterPattern(options.Filters.Reference, normalize.SearchText)
 	options.Filters.Competence = strings.TrimSpace(options.Filters.Competence)
 	if options.Filters.Competence != "" && !competencePattern.MatchString(options.Filters.Competence) {
 		return ListOptions{}, ErrInvalidListOptions
@@ -404,7 +439,55 @@ func mutationOutcome(err error) auth.AuditOutcome {
 		errors.Is(err, ErrCurrentUseExists) || errors.Is(err, ErrCurrentUseNotFound) {
 		return auth.AuditOutcomeDenied
 	}
+	var ambiguous *AmbiguousOwnerError
+	if errors.As(err, &ambiguous) {
+		return auth.AuditOutcomeDenied
+	}
 	return auth.AuditOutcomeFailure
+}
+
+func (service *Service) resolveOwner(ctx context.Context, values Values) (Values, error) {
+	if values.OwnerProfileID != (profile.Identifier{}) {
+		return values, nil
+	}
+	name := strings.TrimSpace(values.OwnerName)
+	if name == "" {
+		name = strings.TrimSpace(values.PrintedHolderName)
+	}
+	if name == "" {
+		return Values{}, &ValidationError{Fields: []FieldError{{Field: "owner_name", Code: "required"}}}
+	}
+	if service.owners == nil {
+		return Values{}, &ValidationError{Fields: []FieldError{{Field: "owner_profile_id", Code: "required"}}}
+	}
+	matches, err := service.owners.ListByExactFullName(ctx, name)
+	if err != nil {
+		return Values{}, err
+	}
+	switch len(matches) {
+	case 0:
+		id, err := profile.NewIdentifier()
+		if err != nil {
+			return Values{}, fmt.Errorf("generate bill owner profile identifier: %w", err)
+		}
+		created, err := service.owners.Create(ctx, id, profile.Values{FullName: name})
+		if err != nil {
+			return Values{}, err
+		}
+		values.OwnerProfileID = created.ID
+		values.OwnerName = name
+		return values, nil
+	case 1:
+		values.OwnerProfileID = matches[0].ID
+		values.OwnerName = name
+		return values, nil
+	default:
+		candidates := make([]OwnerCandidate, 0, len(matches))
+		for _, match := range matches {
+			candidates = append(candidates, OwnerCandidate{ID: match.ID, FullName: match.Values.FullName})
+		}
+		return Values{}, &AmbiguousOwnerError{Name: name, Candidates: candidates}
+	}
 }
 
 func (service *Service) recordAudit(

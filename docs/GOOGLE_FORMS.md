@@ -1,6 +1,6 @@
 # Google Forms Operations Runbook
 
-This runbook covers the owner-scoped Google Forms ingestion path. The feature is disabled by default and uses the existing Operations staging, preview, decision, execution, and report pipeline.
+This runbook covers the owner-scoped Google Forms ingestion path. It lives in Cadastro (`/cadastro?mode=forms`); `/forms` only redirects there. The feature is disabled by default and uses the existing Operations staging, preview, decision, execution, and report pipeline.
 
 ## Provider boundary
 
@@ -51,7 +51,7 @@ Generate a key without writing it to the repository:
 openssl rand -base64 32
 ```
 
-Local example:
+Local values belong in gitignored `.env`. `.env.example` lists the names.
 
 ```dotenv
 GOOGLE_FORMS_ENABLED=true
@@ -80,7 +80,7 @@ Removing a referenced historical key makes that credential undecryptable and req
 ## Smoke test
 
 1. Apply migrations and start both the API and Operations worker.
-2. Sign in as an active ADMIN or SUPERADMIN and open **Google Forms**.
+2. Sign in as an active ADMIN or SUPERADMIN and open **Cadastro** → **Google Forms**.
 3. Connect Google, verify the consent screen contains only the two Forms read scopes, and return to the application.
 4. Register a form by URL, map supported questions to logical Operations fields, and activate the source.
 5. Run **Synchronize now** and wait for a completed sync.

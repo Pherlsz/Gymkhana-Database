@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	coreocr "github.com/Pherlsz/Gymkhana-Core/ocr"
 	"github.com/Pherlsz/Gymkhana-Database/internal/attachment"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 )
@@ -25,6 +26,13 @@ func TestServiceRequiresReviewAndSeparateIdempotentApplication(t *testing.T) {
 	}
 	if err := fixture.service.RunJob(context.Background(), job.ID); err != nil {
 		t.Fatalf("RunJob() error = %v", err)
+	}
+	requests := fixture.extractor.Requests()
+	if len(requests) != 1 || requests[0].Mode != coreocr.ModeSchemaGuided ||
+		len(requests[0].Sources) != 1 || requests[0].Sources[0].ID != fixture.source.value.ID.String() ||
+		requests[0].Sources[0].Modality != coreocr.SourceImage || requests[0].Sources[0].MediaType != "image/png" ||
+		requests[0].MaxCandidates != MaximumSuggestions {
+		t.Fatalf("Core extraction request = %#v", requests)
 	}
 	completed := fixture.store.job
 	if completed.State != JobCompleted || completed.SuggestionCount != 1 || completed.ProviderUsage != 1 {
@@ -75,6 +83,28 @@ func TestServiceRequiresReviewAndSeparateIdempotentApplication(t *testing.T) {
 		if event.EventType == AuditSuggestionReviewed && (event.FieldKey != fixture.targets.field.Key || event.ReviewAction != ReviewAccept) {
 			t.Fatalf("review audit = %#v", event)
 		}
+	}
+}
+
+func TestServiceFailsClosedWhenSharedModelKeyIsMissing(t *testing.T) {
+	fixture := newOCRServiceFixture(t, NewDeterministicFakeExtractor())
+	now := time.Date(2026, time.July, 18, 12, 0, 0, 0, time.UTC)
+	service, err := NewService(fixture.store, fixture.jobs, fixture.source, fixture.targets, fixture.extractor, ServiceOptions{
+		Now: func() time.Time { return now }, Timeout: 30 * time.Second, MaximumRate: 10,
+		MaximumProviderUsage: 1000, MaximumSourceBytes: MaximumSourceBytes, RecoveryBatch: 10,
+		Ready: func(context.Context) bool { return false },
+	})
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	if service.Capability().Enabled {
+		t.Fatal("Capability().Enabled = true, want false when the shared key is absent")
+	}
+	if _, err := service.StartJob(context.Background(), fixture.actor, fixture.source.value.ID, "ocr-job-unready-0001", nil, "start"); !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("StartJob() error = %v, want ErrUnavailable", err)
+	}
+	if fixture.jobs.enqueued != 0 {
+		t.Fatalf("enqueued = %d, want 0", fixture.jobs.enqueued)
 	}
 }
 
@@ -131,9 +161,13 @@ func TestServiceDoesNotAutomaticallyRepeatAmbiguousProviderFailure(t *testing.T)
 }
 
 func TestServiceAccountsProviderUsageBeforeRejectingMalformedOutput(t *testing.T) {
-	extractor := NewFakeExtractor(FakeExtractionStep{Response: ExtractionResponse{
-		Suggestions: []ProviderSuggestion{{FieldKey: "unknown.field", Value: "unsafe", Evidence: Evidence{Page: 1}}},
-		Usage:       17,
+	extractor := NewFakeExtractor(FakeExtractionStep{Output: ExtractionOutput{
+		Result: coreocr.ExtractionResult{
+			Mode:       coreocr.ModeDiscovery,
+			Validation: coreocr.ValidationNotValidated,
+			Review:     coreocr.ReviewUnreviewed,
+		},
+		Usage: 17,
 	}})
 	fixture := newOCRServiceFixture(t, extractor)
 	job, err := fixture.service.StartJob(context.Background(), fixture.actor, fixture.source.value.ID, "ocr-job-malformed-usage-0001", nil, "start")
@@ -150,10 +184,10 @@ func TestServiceAccountsProviderUsageBeforeRejectingMalformedOutput(t *testing.T
 
 func TestServiceAccountsProviderUsageBeforeHonoringConcurrentCancellation(t *testing.T) {
 	fixture := newOCRServiceFixture(t, NewDeterministicFakeExtractor())
-	fixture.service.extractor = extractorFunc(func(_ context.Context, _ ExtractionRequest) (ExtractionResponse, error) {
+	fixture.service.extractor = extractorFunc(func(_ context.Context, _ ExtractionInput) (ExtractionOutput, error) {
 		now := fixture.service.now().UTC()
 		fixture.store.job.CancelRequestedAt = &now
-		return ExtractionResponse{Usage: 23}, nil
+		return ExtractionOutput{Usage: 23}, nil
 	})
 	job, err := fixture.service.StartJob(context.Background(), fixture.actor, fixture.source.value.ID, "ocr-job-cancel-usage-0001", nil, "start")
 	if err != nil {
@@ -180,10 +214,10 @@ func TestServiceRunsBoundedStaleJobRecoveryAndAuditsTheResult(t *testing.T) {
 	}
 }
 
-type extractorFunc func(context.Context, ExtractionRequest) (ExtractionResponse, error)
+type extractorFunc func(context.Context, ExtractionInput) (ExtractionOutput, error)
 
-func (extractor extractorFunc) Extract(ctx context.Context, request ExtractionRequest) (ExtractionResponse, error) {
-	return extractor(ctx, request)
+func (extractor extractorFunc) Extract(ctx context.Context, input ExtractionInput) (ExtractionOutput, error) {
+	return extractor(ctx, input)
 }
 
 type ocrServiceFixture struct {

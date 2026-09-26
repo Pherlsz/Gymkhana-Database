@@ -13,19 +13,21 @@ import (
 
 const assignDocumentCurrentUse = `-- name: AssignDocumentCurrentUse :one
 INSERT INTO document_current_uses (document_id, holder_profile_id)
-VALUES ($1, $2)
+SELECT document.id, $1
+FROM documents AS document
+WHERE document.id = $2 AND document.medium = 'PHYSICAL'
 ON CONFLICT (document_id) DO UPDATE
 SET holder_profile_id = EXCLUDED.holder_profile_id, assigned_at = now()
 RETURNING document_id, holder_profile_id, assigned_at
 `
 
 type AssignDocumentCurrentUseParams struct {
-	DocumentID      pgtype.UUID `json:"document_id"`
 	HolderProfileID pgtype.UUID `json:"holder_profile_id"`
+	DocumentID      pgtype.UUID `json:"document_id"`
 }
 
 func (q *Queries) AssignDocumentCurrentUse(ctx context.Context, arg AssignDocumentCurrentUseParams) (DocumentCurrentUse, error) {
-	row := q.db.QueryRow(ctx, assignDocumentCurrentUse, arg.DocumentID, arg.HolderProfileID)
+	row := q.db.QueryRow(ctx, assignDocumentCurrentUse, arg.HolderProfileID, arg.DocumentID)
 	var i DocumentCurrentUse
 	err := row.Scan(&i.DocumentID, &i.HolderProfileID, &i.AssignedAt)
 	return i, err
@@ -53,24 +55,38 @@ func (q *Queries) CountDocumentTypes(ctx context.Context, arg CountDocumentTypes
 const countDocuments = `-- name: CountDocuments :one
 SELECT count(*)
 FROM documents AS document
+JOIN document_presences AS presence ON presence.id = document.presence_id
 LEFT JOIN document_current_uses AS document_current_use ON document_current_use.document_id = document.id
-WHERE ($1::uuid IS NULL OR document.owner_profile_id = $1::uuid)
-  AND ($2::uuid IS NULL OR document.document_type_id = $2::uuid)
-  AND ($3::text = '' OR lower(document.identifier_value) LIKE '%' || lower($3::text) || '%')
-  AND ($4::text = '' OR document.record_state = $4::text)
+WHERE ($1::uuid IS NULL OR presence.profile_id = $1::uuid)
+  AND ($2::uuid IS NULL OR presence.document_type_id = $2::uuid)
+  AND (
+    $3::text = '' OR
+    CASE
+      WHEN $3::text LIKE '^%' THEN
+        lower(COALESCE(presence.identifier_value, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+      WHEN $3::text LIKE '=%' THEN
+        lower(COALESCE(presence.identifier_value, '')) = lower(substring($3::text FROM 2))
+      ELSE
+        lower(COALESCE(presence.identifier_value, '')) LIKE '%' || lower($3::text) || '%'
+    END
+  )
+  AND ($4::text = '' OR document.medium = $4::text)
   AND ($5::text = '' OR
-    ($5::text = 'IN_USE' AND document_current_use.document_id IS NOT NULL) OR
-    ($5::text = 'AVAILABLE' AND document_current_use.document_id IS NULL))
+    ($5::text = 'IN_USE' AND document.medium = 'PHYSICAL' AND document_current_use.document_id IS NOT NULL) OR
+    ($5::text = 'AVAILABLE' AND document.medium = 'PHYSICAL' AND document.idle_custody = 'ORGANIZATION' AND document_current_use.document_id IS NULL))
   AND ($6::uuid IS NULL OR document_current_use.holder_profile_id = $6::uuid)
+  AND (NOT $7::bool OR document.id = ANY($8::uuid[]))
 `
 
 type CountDocumentsParams struct {
-	OwnerProfileIDFilter  pgtype.UUID `json:"owner_profile_id_filter"`
-	DocumentTypeIDFilter  pgtype.UUID `json:"document_type_id_filter"`
-	IdentifierFilter      string      `json:"identifier_filter"`
-	RecordStateFilter     string      `json:"record_state_filter"`
-	StatusFilter          string      `json:"status_filter"`
-	HolderProfileIDFilter pgtype.UUID `json:"holder_profile_id_filter"`
+	OwnerProfileIDFilter  pgtype.UUID   `json:"owner_profile_id_filter"`
+	DocumentTypeIDFilter  pgtype.UUID   `json:"document_type_id_filter"`
+	IdentifierFilter      string        `json:"identifier_filter"`
+	MediumFilter          string        `json:"medium_filter"`
+	StatusFilter          string        `json:"status_filter"`
+	HolderProfileIDFilter pgtype.UUID   `json:"holder_profile_id_filter"`
+	RestrictIds           bool          `json:"restrict_ids"`
+	IDFilter              []pgtype.UUID `json:"id_filter"`
 }
 
 func (q *Queries) CountDocuments(ctx context.Context, arg CountDocumentsParams) (int64, error) {
@@ -78,10 +94,58 @@ func (q *Queries) CountDocuments(ctx context.Context, arg CountDocumentsParams) 
 		arg.OwnerProfileIDFilter,
 		arg.DocumentTypeIDFilter,
 		arg.IdentifierFilter,
-		arg.RecordStateFilter,
+		arg.MediumFilter,
 		arg.StatusFilter,
 		arg.HolderProfileIDFilter,
+		arg.RestrictIds,
+		arg.IDFilter,
 	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countDocumentsByType = `-- name: CountDocumentsByType :many
+SELECT presence.document_type_id, count(*)::bigint AS document_count
+FROM documents AS document
+JOIN document_presences AS presence ON presence.id = document.presence_id
+LEFT JOIN document_current_uses AS current_use ON current_use.document_id = document.id
+WHERE document.medium = 'PHYSICAL'
+  AND (document.idle_custody = 'ORGANIZATION' OR current_use.document_id IS NOT NULL)
+GROUP BY presence.document_type_id
+`
+
+type CountDocumentsByTypeRow struct {
+	DocumentTypeID pgtype.UUID `json:"document_type_id"`
+	DocumentCount  int64       `json:"document_count"`
+}
+
+func (q *Queries) CountDocumentsByType(ctx context.Context) ([]CountDocumentsByTypeRow, error) {
+	rows, err := q.db.Query(ctx, countDocumentsByType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountDocumentsByTypeRow{}
+	for rows.Next() {
+		var i CountDocumentsByTypeRow
+		if err := rows.Scan(&i.DocumentTypeID, &i.DocumentCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countExemplarsByPresence = `-- name: CountExemplarsByPresence :one
+SELECT count(*) FROM documents WHERE presence_id = $1
+`
+
+func (q *Queries) CountExemplarsByPresence(ctx context.Context, presenceID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countExemplarsByPresence, presenceID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -89,46 +153,43 @@ func (q *Queries) CountDocuments(ctx context.Context, arg CountDocumentsParams) 
 
 const createDocument = `-- name: CreateDocument :one
 INSERT INTO documents (
-  id, owner_profile_id, document_type_id, identifier_value, uniqueness_policy,
-  document_date, notes, record_state
+  id, presence_id, medium, idle_custody, document_date, valid_until, notes
+) VALUES (
+  $1, $2, $3, $4,
+  $5, $6, $7
 )
-SELECT $1, $2, document_type.id, $3,
-  document_type.uniqueness_policy, $4, $5, $6
-FROM document_types AS document_type
-WHERE document_type.id = $7 AND document_type.active
-RETURNING id, owner_profile_id, document_type_id, identifier_value, uniqueness_policy, document_date, notes, record_state, version, created_at, updated_at
+RETURNING id, presence_id, medium, idle_custody, document_date, valid_until, notes, version, created_at, updated_at
 `
 
 type CreateDocumentParams struct {
-	ID              pgtype.UUID `json:"id"`
-	OwnerProfileID  pgtype.UUID `json:"owner_profile_id"`
-	IdentifierValue string      `json:"identifier_value"`
-	DocumentDate    pgtype.Date `json:"document_date"`
-	Notes           *string     `json:"notes"`
-	RecordState     string      `json:"record_state"`
-	DocumentTypeID  pgtype.UUID `json:"document_type_id"`
+	ID           pgtype.UUID `json:"id"`
+	PresenceID   pgtype.UUID `json:"presence_id"`
+	Medium       string      `json:"medium"`
+	IdleCustody  *string     `json:"idle_custody"`
+	DocumentDate pgtype.Date `json:"document_date"`
+	ValidUntil   pgtype.Date `json:"valid_until"`
+	Notes        *string     `json:"notes"`
 }
 
 func (q *Queries) CreateDocument(ctx context.Context, arg CreateDocumentParams) (Document, error) {
 	row := q.db.QueryRow(ctx, createDocument,
 		arg.ID,
-		arg.OwnerProfileID,
-		arg.IdentifierValue,
+		arg.PresenceID,
+		arg.Medium,
+		arg.IdleCustody,
 		arg.DocumentDate,
+		arg.ValidUntil,
 		arg.Notes,
-		arg.RecordState,
-		arg.DocumentTypeID,
 	)
 	var i Document
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerProfileID,
-		&i.DocumentTypeID,
-		&i.IdentifierValue,
-		&i.UniquenessPolicy,
+		&i.PresenceID,
+		&i.Medium,
+		&i.IdleCustody,
 		&i.DocumentDate,
+		&i.ValidUntil,
 		&i.Notes,
-		&i.RecordState,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -198,6 +259,15 @@ func (q *Queries) DeleteDocument(ctx context.Context, arg DeleteDocumentParams) 
 	return id, err
 }
 
+const deleteDocumentCurrentUseForDelete = `-- name: DeleteDocumentCurrentUseForDelete :exec
+DELETE FROM document_current_uses WHERE document_id = $1
+`
+
+func (q *Queries) DeleteDocumentCurrentUseForDelete(ctx context.Context, documentID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteDocumentCurrentUseForDelete, documentID)
+	return err
+}
+
 const deleteDocumentType = `-- name: DeleteDocumentType :one
 DELETE FROM document_types WHERE id = $1 AND version = $2 RETURNING id
 `
@@ -215,7 +285,9 @@ func (q *Queries) DeleteDocumentType(ctx context.Context, arg DeleteDocumentType
 }
 
 const documentTypeHasDocuments = `-- name: DocumentTypeHasDocuments :one
-SELECT EXISTS(SELECT 1 FROM documents WHERE document_type_id = $1)
+SELECT EXISTS(
+  SELECT 1 FROM document_presences WHERE document_type_id = $1
+)
 `
 
 func (q *Queries) DocumentTypeHasDocuments(ctx context.Context, documentTypeID pgtype.UUID) (bool, error) {
@@ -227,14 +299,13 @@ func (q *Queries) DocumentTypeHasDocuments(ctx context.Context, documentTypeID p
 
 const duplicateDocument = `-- name: DuplicateDocument :one
 INSERT INTO documents (
-  id, owner_profile_id, document_type_id, identifier_value, uniqueness_policy,
-  document_date, notes, record_state
+  id, presence_id, medium, idle_custody, document_date, valid_until, notes
 )
-SELECT $1, source.owner_profile_id, source.document_type_id, source.identifier_value,
-  source.uniqueness_policy, source.document_date, source.notes, source.record_state
+SELECT $1, source.presence_id, source.medium, source.idle_custody,
+  source.document_date, source.valid_until, source.notes
 FROM documents AS source
 WHERE source.id = $2
-RETURNING id, owner_profile_id, document_type_id, identifier_value, uniqueness_policy, document_date, notes, record_state, version, created_at, updated_at
+RETURNING id, presence_id, medium, idle_custody, document_date, valid_until, notes, version, created_at, updated_at
 `
 
 type DuplicateDocumentParams struct {
@@ -247,13 +318,12 @@ func (q *Queries) DuplicateDocument(ctx context.Context, arg DuplicateDocumentPa
 	var i Document
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerProfileID,
-		&i.DocumentTypeID,
-		&i.IdentifierValue,
-		&i.UniquenessPolicy,
+		&i.PresenceID,
+		&i.Medium,
+		&i.IdleCustody,
 		&i.DocumentDate,
+		&i.ValidUntil,
 		&i.Notes,
-		&i.RecordState,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -263,7 +333,13 @@ func (q *Queries) DuplicateDocument(ctx context.Context, arg DuplicateDocumentPa
 
 const getDocumentByID = `-- name: GetDocumentByID :one
 SELECT
-  document.id, document.owner_profile_id, document.document_type_id, document.identifier_value, document.uniqueness_policy, document.document_date, document.notes, document.record_state, document.version, document.created_at, document.updated_at,
+  document.id, document.presence_id, document.medium, document.idle_custody, document.document_date, document.valid_until, document.notes, document.version, document.created_at, document.updated_at,
+  presence.profile_id AS owner_profile_id,
+  owner.full_name AS owner_full_name,
+  presence.document_type_id,
+  presence.identifier_value,
+  presence.claim AS presence_claim,
+  presence.uniqueness_policy,
   document_type.technical_key AS type_technical_key,
   document_type.label AS type_label,
   document_type.active AS type_active,
@@ -273,25 +349,34 @@ SELECT
   document_type.created_at AS type_created_at,
   document_type.updated_at AS type_updated_at,
   document_current_use.holder_profile_id AS current_holder_profile_id,
+  holder.full_name AS current_holder_full_name,
   document_current_use.assigned_at AS current_assigned_at
 FROM documents AS document
-JOIN document_types AS document_type ON document_type.id = document.document_type_id
+JOIN document_presences AS presence ON presence.id = document.presence_id
+JOIN profiles AS owner ON owner.id = presence.profile_id
+JOIN document_types AS document_type ON document_type.id = presence.document_type_id
 LEFT JOIN document_current_uses AS document_current_use ON document_current_use.document_id = document.id
+LEFT JOIN profiles AS holder ON holder.id = document_current_use.holder_profile_id
 WHERE document.id = $1
 `
 
 type GetDocumentByIDRow struct {
 	ID                     pgtype.UUID        `json:"id"`
-	OwnerProfileID         pgtype.UUID        `json:"owner_profile_id"`
-	DocumentTypeID         pgtype.UUID        `json:"document_type_id"`
-	IdentifierValue        string             `json:"identifier_value"`
-	UniquenessPolicy       string             `json:"uniqueness_policy"`
+	PresenceID             pgtype.UUID        `json:"presence_id"`
+	Medium                 string             `json:"medium"`
+	IdleCustody            *string            `json:"idle_custody"`
 	DocumentDate           pgtype.Date        `json:"document_date"`
+	ValidUntil             pgtype.Date        `json:"valid_until"`
 	Notes                  *string            `json:"notes"`
-	RecordState            string             `json:"record_state"`
 	Version                int64              `json:"version"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	OwnerProfileID         pgtype.UUID        `json:"owner_profile_id"`
+	OwnerFullName          string             `json:"owner_full_name"`
+	DocumentTypeID         pgtype.UUID        `json:"document_type_id"`
+	IdentifierValue        *string            `json:"identifier_value"`
+	PresenceClaim          string             `json:"presence_claim"`
+	UniquenessPolicy       string             `json:"uniqueness_policy"`
 	TypeTechnicalKey       string             `json:"type_technical_key"`
 	TypeLabel              string             `json:"type_label"`
 	TypeActive             bool               `json:"type_active"`
@@ -301,6 +386,7 @@ type GetDocumentByIDRow struct {
 	TypeCreatedAt          pgtype.Timestamptz `json:"type_created_at"`
 	TypeUpdatedAt          pgtype.Timestamptz `json:"type_updated_at"`
 	CurrentHolderProfileID pgtype.UUID        `json:"current_holder_profile_id"`
+	CurrentHolderFullName  *string            `json:"current_holder_full_name"`
 	CurrentAssignedAt      pgtype.Timestamptz `json:"current_assigned_at"`
 }
 
@@ -309,16 +395,21 @@ func (q *Queries) GetDocumentByID(ctx context.Context, id pgtype.UUID) (GetDocum
 	var i GetDocumentByIDRow
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerProfileID,
-		&i.DocumentTypeID,
-		&i.IdentifierValue,
-		&i.UniquenessPolicy,
+		&i.PresenceID,
+		&i.Medium,
+		&i.IdleCustody,
 		&i.DocumentDate,
+		&i.ValidUntil,
 		&i.Notes,
-		&i.RecordState,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OwnerProfileID,
+		&i.OwnerFullName,
+		&i.DocumentTypeID,
+		&i.IdentifierValue,
+		&i.PresenceClaim,
+		&i.UniquenessPolicy,
 		&i.TypeTechnicalKey,
 		&i.TypeLabel,
 		&i.TypeActive,
@@ -328,6 +419,7 @@ func (q *Queries) GetDocumentByID(ctx context.Context, id pgtype.UUID) (GetDocum
 		&i.TypeCreatedAt,
 		&i.TypeUpdatedAt,
 		&i.CurrentHolderProfileID,
+		&i.CurrentHolderFullName,
 		&i.CurrentAssignedAt,
 	)
 	return i, err
@@ -341,6 +433,34 @@ func (q *Queries) GetDocumentCurrentUse(ctx context.Context, documentID pgtype.U
 	row := q.db.QueryRow(ctx, getDocumentCurrentUse, documentID)
 	var i DocumentCurrentUse
 	err := row.Scan(&i.DocumentID, &i.HolderProfileID, &i.AssignedAt)
+	return i, err
+}
+
+const getDocumentPresence = `-- name: GetDocumentPresence :one
+SELECT id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value, identifier_digits, version, created_at, updated_at FROM document_presences
+WHERE profile_id = $1 AND document_type_id = $2
+`
+
+type GetDocumentPresenceParams struct {
+	ProfileID      pgtype.UUID `json:"profile_id"`
+	DocumentTypeID pgtype.UUID `json:"document_type_id"`
+}
+
+func (q *Queries) GetDocumentPresence(ctx context.Context, arg GetDocumentPresenceParams) (DocumentPresence, error) {
+	row := q.db.QueryRow(ctx, getDocumentPresence, arg.ProfileID, arg.DocumentTypeID)
+	var i DocumentPresence
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileID,
+		&i.DocumentTypeID,
+		&i.UniquenessPolicy,
+		&i.Claim,
+		&i.IdentifierValue,
+		&i.IdentifierDigits,
+		&i.Version,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
@@ -434,7 +554,13 @@ func (q *Queries) ListDocumentTypes(ctx context.Context, arg ListDocumentTypesPa
 
 const listDocuments = `-- name: ListDocuments :many
 SELECT
-  document.id, document.owner_profile_id, document.document_type_id, document.identifier_value, document.uniqueness_policy, document.document_date, document.notes, document.record_state, document.version, document.created_at, document.updated_at,
+  document.id, document.presence_id, document.medium, document.idle_custody, document.document_date, document.valid_until, document.notes, document.version, document.created_at, document.updated_at,
+  presence.profile_id AS owner_profile_id,
+  owner.full_name AS owner_full_name,
+  presence.document_type_id,
+  presence.identifier_value,
+  presence.claim AS presence_claim,
+  presence.uniqueness_policy,
   document_type.technical_key AS type_technical_key,
   document_type.label AS type_label,
   document_type.active AS type_active,
@@ -444,59 +570,81 @@ SELECT
   document_type.created_at AS type_created_at,
   document_type.updated_at AS type_updated_at,
   document_current_use.holder_profile_id AS current_holder_profile_id,
+  holder.full_name AS current_holder_full_name,
   document_current_use.assigned_at AS current_assigned_at
 FROM documents AS document
-JOIN document_types AS document_type ON document_type.id = document.document_type_id
+JOIN document_presences AS presence ON presence.id = document.presence_id
+JOIN profiles AS owner ON owner.id = presence.profile_id
+JOIN document_types AS document_type ON document_type.id = presence.document_type_id
 LEFT JOIN document_current_uses AS document_current_use ON document_current_use.document_id = document.id
-WHERE ($1::uuid IS NULL OR document.owner_profile_id = $1::uuid)
-  AND ($2::uuid IS NULL OR document.document_type_id = $2::uuid)
-  AND ($3::text = '' OR lower(document.identifier_value) LIKE '%' || lower($3::text) || '%')
-  AND ($4::text = '' OR document.record_state = $4::text)
+LEFT JOIN profiles AS holder ON holder.id = document_current_use.holder_profile_id
+WHERE ($1::uuid IS NULL OR presence.profile_id = $1::uuid)
+  AND ($2::uuid IS NULL OR presence.document_type_id = $2::uuid)
+  AND (
+    $3::text = '' OR
+    CASE
+      WHEN $3::text LIKE '^%' THEN
+        lower(COALESCE(presence.identifier_value, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+      WHEN $3::text LIKE '=%' THEN
+        lower(COALESCE(presence.identifier_value, '')) = lower(substring($3::text FROM 2))
+      ELSE
+        lower(COALESCE(presence.identifier_value, '')) LIKE '%' || lower($3::text) || '%'
+    END
+  )
+  AND ($4::text = '' OR document.medium = $4::text)
   AND ($5::text = '' OR
-    ($5::text = 'IN_USE' AND document_current_use.document_id IS NOT NULL) OR
-    ($5::text = 'AVAILABLE' AND document_current_use.document_id IS NULL))
+    ($5::text = 'IN_USE' AND document.medium = 'PHYSICAL' AND document_current_use.document_id IS NOT NULL) OR
+    ($5::text = 'AVAILABLE' AND document.medium = 'PHYSICAL' AND document.idle_custody = 'ORGANIZATION' AND document_current_use.document_id IS NULL))
   AND ($6::uuid IS NULL OR document_current_use.holder_profile_id = $6::uuid)
+  AND (NOT $7::bool OR document.id = ANY($8::uuid[]))
 ORDER BY
-  CASE WHEN $7::text = 'identifier_value' AND $8::text = 'asc' THEN lower(document.identifier_value) END ASC,
-  CASE WHEN $7::text = 'identifier_value' AND $8::text = 'desc' THEN lower(document.identifier_value) END DESC,
-  CASE WHEN $7::text = 'type_label' AND $8::text = 'asc' THEN lower(document_type.label) END ASC,
-  CASE WHEN $7::text = 'type_label' AND $8::text = 'desc' THEN lower(document_type.label) END DESC,
-  CASE WHEN $7::text = 'document_date' AND $8::text = 'asc' THEN document.document_date END ASC NULLS LAST,
-  CASE WHEN $7::text = 'document_date' AND $8::text = 'desc' THEN document.document_date END DESC NULLS LAST,
-  CASE WHEN $7::text = 'created_at' AND $8::text = 'asc' THEN document.created_at END ASC,
-  CASE WHEN $7::text = 'created_at' AND $8::text = 'desc' THEN document.created_at END DESC,
-  CASE WHEN $7::text = 'updated_at' AND $8::text = 'asc' THEN document.updated_at END ASC,
-  CASE WHEN $7::text = 'updated_at' AND $8::text = 'desc' THEN document.updated_at END DESC,
+  CASE WHEN $9::text = 'identifier_value' AND $10::text = 'asc' THEN lower(presence.identifier_value) END ASC,
+  CASE WHEN $9::text = 'identifier_value' AND $10::text = 'desc' THEN lower(presence.identifier_value) END DESC,
+  CASE WHEN $9::text = 'type_label' AND $10::text = 'asc' THEN lower(document_type.label) END ASC,
+  CASE WHEN $9::text = 'type_label' AND $10::text = 'desc' THEN lower(document_type.label) END DESC,
+  CASE WHEN $9::text = 'document_date' AND $10::text = 'asc' THEN document.document_date END ASC NULLS LAST,
+  CASE WHEN $9::text = 'document_date' AND $10::text = 'desc' THEN document.document_date END DESC NULLS LAST,
+  CASE WHEN $9::text = 'created_at' AND $10::text = 'asc' THEN document.created_at END ASC,
+  CASE WHEN $9::text = 'created_at' AND $10::text = 'desc' THEN document.created_at END DESC,
+  CASE WHEN $9::text = 'updated_at' AND $10::text = 'asc' THEN document.updated_at END ASC,
+  CASE WHEN $9::text = 'updated_at' AND $10::text = 'desc' THEN document.updated_at END DESC,
   document.id ASC
-LIMIT $10
-OFFSET $9
+LIMIT $12
+OFFSET $11
 `
 
 type ListDocumentsParams struct {
-	OwnerProfileIDFilter  pgtype.UUID `json:"owner_profile_id_filter"`
-	DocumentTypeIDFilter  pgtype.UUID `json:"document_type_id_filter"`
-	IdentifierFilter      string      `json:"identifier_filter"`
-	RecordStateFilter     string      `json:"record_state_filter"`
-	StatusFilter          string      `json:"status_filter"`
-	HolderProfileIDFilter pgtype.UUID `json:"holder_profile_id_filter"`
-	SortField             string      `json:"sort_field"`
-	SortOrder             string      `json:"sort_order"`
-	PageOffset            int32       `json:"page_offset"`
-	PageLimit             int32       `json:"page_limit"`
+	OwnerProfileIDFilter  pgtype.UUID   `json:"owner_profile_id_filter"`
+	DocumentTypeIDFilter  pgtype.UUID   `json:"document_type_id_filter"`
+	IdentifierFilter      string        `json:"identifier_filter"`
+	MediumFilter          string        `json:"medium_filter"`
+	StatusFilter          string        `json:"status_filter"`
+	HolderProfileIDFilter pgtype.UUID   `json:"holder_profile_id_filter"`
+	RestrictIds           bool          `json:"restrict_ids"`
+	IDFilter              []pgtype.UUID `json:"id_filter"`
+	SortField             string        `json:"sort_field"`
+	SortOrder             string        `json:"sort_order"`
+	PageOffset            int32         `json:"page_offset"`
+	PageLimit             int32         `json:"page_limit"`
 }
 
 type ListDocumentsRow struct {
 	ID                     pgtype.UUID        `json:"id"`
-	OwnerProfileID         pgtype.UUID        `json:"owner_profile_id"`
-	DocumentTypeID         pgtype.UUID        `json:"document_type_id"`
-	IdentifierValue        string             `json:"identifier_value"`
-	UniquenessPolicy       string             `json:"uniqueness_policy"`
+	PresenceID             pgtype.UUID        `json:"presence_id"`
+	Medium                 string             `json:"medium"`
+	IdleCustody            *string            `json:"idle_custody"`
 	DocumentDate           pgtype.Date        `json:"document_date"`
+	ValidUntil             pgtype.Date        `json:"valid_until"`
 	Notes                  *string            `json:"notes"`
-	RecordState            string             `json:"record_state"`
 	Version                int64              `json:"version"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	OwnerProfileID         pgtype.UUID        `json:"owner_profile_id"`
+	OwnerFullName          string             `json:"owner_full_name"`
+	DocumentTypeID         pgtype.UUID        `json:"document_type_id"`
+	IdentifierValue        *string            `json:"identifier_value"`
+	PresenceClaim          string             `json:"presence_claim"`
+	UniquenessPolicy       string             `json:"uniqueness_policy"`
 	TypeTechnicalKey       string             `json:"type_technical_key"`
 	TypeLabel              string             `json:"type_label"`
 	TypeActive             bool               `json:"type_active"`
@@ -506,6 +654,7 @@ type ListDocumentsRow struct {
 	TypeCreatedAt          pgtype.Timestamptz `json:"type_created_at"`
 	TypeUpdatedAt          pgtype.Timestamptz `json:"type_updated_at"`
 	CurrentHolderProfileID pgtype.UUID        `json:"current_holder_profile_id"`
+	CurrentHolderFullName  *string            `json:"current_holder_full_name"`
 	CurrentAssignedAt      pgtype.Timestamptz `json:"current_assigned_at"`
 }
 
@@ -514,9 +663,11 @@ func (q *Queries) ListDocuments(ctx context.Context, arg ListDocumentsParams) ([
 		arg.OwnerProfileIDFilter,
 		arg.DocumentTypeIDFilter,
 		arg.IdentifierFilter,
-		arg.RecordStateFilter,
+		arg.MediumFilter,
 		arg.StatusFilter,
 		arg.HolderProfileIDFilter,
+		arg.RestrictIds,
+		arg.IDFilter,
 		arg.SortField,
 		arg.SortOrder,
 		arg.PageOffset,
@@ -531,16 +682,21 @@ func (q *Queries) ListDocuments(ctx context.Context, arg ListDocumentsParams) ([
 		var i ListDocumentsRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.OwnerProfileID,
-			&i.DocumentTypeID,
-			&i.IdentifierValue,
-			&i.UniquenessPolicy,
+			&i.PresenceID,
+			&i.Medium,
+			&i.IdleCustody,
 			&i.DocumentDate,
+			&i.ValidUntil,
 			&i.Notes,
-			&i.RecordState,
 			&i.Version,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OwnerProfileID,
+			&i.OwnerFullName,
+			&i.DocumentTypeID,
+			&i.IdentifierValue,
+			&i.PresenceClaim,
+			&i.UniquenessPolicy,
 			&i.TypeTechnicalKey,
 			&i.TypeLabel,
 			&i.TypeActive,
@@ -550,6 +706,7 @@ func (q *Queries) ListDocuments(ctx context.Context, arg ListDocumentsParams) ([
 			&i.TypeCreatedAt,
 			&i.TypeUpdatedAt,
 			&i.CurrentHolderProfileID,
+			&i.CurrentHolderFullName,
 			&i.CurrentAssignedAt,
 		); err != nil {
 			return nil, err
@@ -574,49 +731,85 @@ func (q *Queries) ReturnDocumentCurrentUse(ctx context.Context, documentID pgtyp
 }
 
 const updateDocument = `-- name: UpdateDocument :one
-UPDATE documents AS document
-SET owner_profile_id = $1, document_type_id = document_type.id,
-  identifier_value = $2, uniqueness_policy = document_type.uniqueness_policy,
-  document_date = $3, notes = $4, record_state = $5,
-  version = document.version + 1, updated_at = now()
-FROM document_types AS document_type
-WHERE document.id = $6 AND document.version = $7
-  AND document_type.id = $8 AND document_type.active
-RETURNING document.id, document.owner_profile_id, document.document_type_id, document.identifier_value, document.uniqueness_policy, document.document_date, document.notes, document.record_state, document.version, document.created_at, document.updated_at
+UPDATE documents
+SET presence_id = $1, idle_custody = $2,
+  document_date = $3, valid_until = $4,
+  notes = $5, medium = $6,
+  version = version + 1, updated_at = now()
+WHERE id = $7 AND version = $8
+RETURNING id, presence_id, medium, idle_custody, document_date, valid_until, notes, version, created_at, updated_at
 `
 
 type UpdateDocumentParams struct {
-	OwnerProfileID  pgtype.UUID `json:"owner_profile_id"`
-	IdentifierValue string      `json:"identifier_value"`
-	DocumentDate    pgtype.Date `json:"document_date"`
-	Notes           *string     `json:"notes"`
-	RecordState     string      `json:"record_state"`
-	ID              pgtype.UUID `json:"id"`
-	Version         int64       `json:"version"`
-	DocumentTypeID  pgtype.UUID `json:"document_type_id"`
+	PresenceID   pgtype.UUID `json:"presence_id"`
+	IdleCustody  *string     `json:"idle_custody"`
+	DocumentDate pgtype.Date `json:"document_date"`
+	ValidUntil   pgtype.Date `json:"valid_until"`
+	Notes        *string     `json:"notes"`
+	Medium       string      `json:"medium"`
+	ID           pgtype.UUID `json:"id"`
+	Version      int64       `json:"version"`
 }
 
 func (q *Queries) UpdateDocument(ctx context.Context, arg UpdateDocumentParams) (Document, error) {
 	row := q.db.QueryRow(ctx, updateDocument,
-		arg.OwnerProfileID,
-		arg.IdentifierValue,
+		arg.PresenceID,
+		arg.IdleCustody,
 		arg.DocumentDate,
+		arg.ValidUntil,
 		arg.Notes,
-		arg.RecordState,
+		arg.Medium,
 		arg.ID,
 		arg.Version,
-		arg.DocumentTypeID,
 	)
 	var i Document
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerProfileID,
-		&i.DocumentTypeID,
-		&i.IdentifierValue,
-		&i.UniquenessPolicy,
+		&i.PresenceID,
+		&i.Medium,
+		&i.IdleCustody,
 		&i.DocumentDate,
+		&i.ValidUntil,
 		&i.Notes,
-		&i.RecordState,
+		&i.Version,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateDocumentPresence = `-- name: UpdateDocumentPresence :one
+UPDATE document_presences
+SET claim = $1, identifier_value = $2,
+  uniqueness_policy = $3,
+  version = version + 1, updated_at = now()
+WHERE id = $4
+RETURNING id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value, identifier_digits, version, created_at, updated_at
+`
+
+type UpdateDocumentPresenceParams struct {
+	Claim            string      `json:"claim"`
+	IdentifierValue  *string     `json:"identifier_value"`
+	UniquenessPolicy string      `json:"uniqueness_policy"`
+	ID               pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateDocumentPresence(ctx context.Context, arg UpdateDocumentPresenceParams) (DocumentPresence, error) {
+	row := q.db.QueryRow(ctx, updateDocumentPresence,
+		arg.Claim,
+		arg.IdentifierValue,
+		arg.UniquenessPolicy,
+		arg.ID,
+	)
+	var i DocumentPresence
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileID,
+		&i.DocumentTypeID,
+		&i.UniquenessPolicy,
+		&i.Claim,
+		&i.IdentifierValue,
+		&i.IdentifierDigits,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -662,6 +855,55 @@ func (q *Queries) UpdateDocumentType(ctx context.Context, arg UpdateDocumentType
 		&i.UniquenessPolicy,
 		&i.ValidationRegex,
 		&i.DateRequired,
+		&i.Version,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertDocumentPresence = `-- name: UpsertDocumentPresence :one
+INSERT INTO document_presences (
+  id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value
+)
+SELECT $1, $2, document_type.id, document_type.uniqueness_policy,
+  $3, $4
+FROM document_types AS document_type
+WHERE document_type.id = $5
+ON CONFLICT (profile_id, document_type_id) DO UPDATE
+SET claim = EXCLUDED.claim,
+  identifier_value = EXCLUDED.identifier_value,
+  uniqueness_policy = EXCLUDED.uniqueness_policy,
+  version = document_presences.version + 1,
+  updated_at = now()
+RETURNING id, profile_id, document_type_id, uniqueness_policy, claim, identifier_value, identifier_digits, version, created_at, updated_at
+`
+
+type UpsertDocumentPresenceParams struct {
+	ID              pgtype.UUID `json:"id"`
+	ProfileID       pgtype.UUID `json:"profile_id"`
+	Claim           string      `json:"claim"`
+	IdentifierValue *string     `json:"identifier_value"`
+	DocumentTypeID  pgtype.UUID `json:"document_type_id"`
+}
+
+func (q *Queries) UpsertDocumentPresence(ctx context.Context, arg UpsertDocumentPresenceParams) (DocumentPresence, error) {
+	row := q.db.QueryRow(ctx, upsertDocumentPresence,
+		arg.ID,
+		arg.ProfileID,
+		arg.Claim,
+		arg.IdentifierValue,
+		arg.DocumentTypeID,
+	)
+	var i DocumentPresence
+	err := row.Scan(
+		&i.ID,
+		&i.ProfileID,
+		&i.DocumentTypeID,
+		&i.UniquenessPolicy,
+		&i.Claim,
+		&i.IdentifierValue,
+		&i.IdentifierDigits,
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,

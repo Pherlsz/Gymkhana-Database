@@ -78,6 +78,18 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "503": { $ref: "#/components/responses/ServiceUnavailable" }
+    delete:
+      operationId: deleteOperationImport
+      tags: [Operations]
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204":
+          description: Terminal import removed from recent history
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
   /api/v1/operations/imports/{import_id}/confirm:
     parameters:
       - { $ref: "#/components/parameters/ImportID" }

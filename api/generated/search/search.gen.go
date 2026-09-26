@@ -9,10 +9,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -156,6 +158,8 @@ type FieldError struct {
 
 // SearchCatalogField defines model for SearchCatalogField.
 type SearchCatalogField struct {
+	Group SearchModule `json:"group"`
+
 	// Key Opaque logical identifier from the authorized catalog.
 	Key    string       `json:"key"`
 	Kind   string       `json:"kind"`
@@ -181,13 +185,22 @@ type SearchCatalogModule struct {
 
 // SearchCatalogResponse defines model for SearchCatalogResponse.
 type SearchCatalogResponse struct {
-	Fields  []SearchCatalogField  `json:"fields"`
-	Limits  SearchCatalogLimits   `json:"limits"`
-	Modules []SearchCatalogModule `json:"modules"`
+	Fields    []SearchCatalogField  `json:"fields"`
+	Limits    SearchCatalogLimits   `json:"limits"`
+	Modules   []SearchCatalogModule `json:"modules"`
+	Operators []SearchOperator      `json:"operators"`
 }
 
 // SearchModule defines model for SearchModule.
 type SearchModule string
+
+// SearchOperator defines model for SearchOperator.
+type SearchOperator struct {
+	Description string `json:"description"`
+	Insert      string `json:"insert"`
+	Kind        string `json:"kind"`
+	Token       string `json:"token"`
+}
 
 // SearchPageMeta defines model for SearchPageMeta.
 type SearchPageMeta struct {
@@ -211,8 +224,11 @@ type SearchRequest struct {
 	Modules *[]SearchModule  `json:"modules,omitempty"`
 	Offset  *int32           `json:"offset,omitempty"`
 	Order   *SearchSortOrder `json:"order,omitempty"`
-	Sort    *SearchSortField `json:"sort,omitempty"`
-	Terms   []string         `json:"terms"`
+
+	// Q Search query language. Portuguese tokens (tipo, cidade, OU, cpf:).
+	Q     *string          `json:"q,omitempty"`
+	Sort  *SearchSortField `json:"sort,omitempty"`
+	Terms *[]string        `json:"terms,omitempty"`
 }
 
 // SearchResult defines model for SearchResult.
@@ -243,6 +259,17 @@ type SearchSortField string
 // SearchSortOrder defines model for SearchSortOrder.
 type SearchSortOrder string
 
+// SearchSuggestHit defines model for SearchSuggestHit.
+type SearchSuggestHit struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
+// SearchSuggestResponse defines model for SearchSuggestResponse.
+type SearchSuggestResponse struct {
+	Suggestions []SearchSuggestHit `json:"suggestions"`
+}
+
 // BadRequest defines model for BadRequest.
 type BadRequest = ErrorResponse
 
@@ -267,6 +294,14 @@ type ValidationError = ErrorResponse
 // sessionCookieContextKey is the context key for sessionCookie security scheme
 type sessionCookieContextKey string
 
+// SuggestSearchValuesParams defines parameters for SuggestSearchValues.
+type SuggestSearchValuesParams struct {
+	Field string        `form:"field" json:"field"`
+	Q     *string       `form:"q,omitempty" json:"q,omitempty"`
+	Grain *SearchModule `form:"grain,omitempty" json:"grain,omitempty"`
+	Limit *int32        `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ExecuteSearchJSONRequestBody defines body for ExecuteSearch for application/json ContentType.
 type ExecuteSearchJSONRequestBody = SearchRequest
 
@@ -278,6 +313,9 @@ type ServerInterface interface {
 	// Read the authorized logical Search catalog
 	// (GET /api/v1/search/catalog)
 	GetSearchCatalog(w http.ResponseWriter, r *http.Request)
+	// Suggest nearby values for the current Search token
+	// (GET /api/v1/search/suggest)
+	SuggestSearchValues(w http.ResponseWriter, r *http.Request, params SuggestSearchValuesParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -320,6 +358,84 @@ func (siw *ServerInterfaceWrapper) GetSearchCatalog(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSearchCatalog(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SuggestSearchValues operation middleware
+func (siw *ServerInterfaceWrapper) SuggestSearchValues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SuggestSearchValuesParams
+
+	// ------------- Required query parameter "field" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "field", r.URL.Query(), &params.Field, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "field"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "field", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "grain" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "grain", r.URL.Query(), &params.Grain, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "grain"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "grain", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SuggestSearchValues(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -451,6 +567,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/search", wrapper.ExecuteSearch)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/search/catalog", wrapper.GetSearchCatalog)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/search/suggest", wrapper.SuggestSearchValues)
 
 	return m
 }
@@ -652,6 +769,84 @@ func (response GetSearchCatalog503JSONResponse) VisitGetSearchCatalogResponse(w 
 	return err
 }
 
+type SuggestSearchValuesRequestObject struct {
+	Params SuggestSearchValuesParams
+}
+
+type SuggestSearchValuesResponseObject interface {
+	VisitSuggestSearchValuesResponse(w http.ResponseWriter) error
+}
+
+type SuggestSearchValues200JSONResponse SearchSuggestResponse
+
+func (response SuggestSearchValues200JSONResponse) VisitSuggestSearchValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SuggestSearchValues401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SuggestSearchValues401JSONResponse) VisitSuggestSearchValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SuggestSearchValues403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SuggestSearchValues403JSONResponse) VisitSuggestSearchValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SuggestSearchValues422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response SuggestSearchValues422JSONResponse) VisitSuggestSearchValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SuggestSearchValues503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response SuggestSearchValues503JSONResponse) VisitSuggestSearchValuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// Execute a bounded Search using logical identifiers
@@ -660,6 +855,9 @@ type StrictServerInterface interface {
 	// Read the authorized logical Search catalog
 	// (GET /api/v1/search/catalog)
 	GetSearchCatalog(ctx context.Context, request GetSearchCatalogRequestObject) (GetSearchCatalogResponseObject, error)
+	// Suggest nearby values for the current Search token
+	// (GET /api/v1/search/suggest)
+	SuggestSearchValues(ctx context.Context, request SuggestSearchValuesRequestObject) (SuggestSearchValuesResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -739,6 +937,32 @@ func (sh *strictHandler) GetSearchCatalog(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetSearchCatalogResponseObject); ok {
 		if err := validResponse.VisitGetSearchCatalogResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SuggestSearchValues operation middleware
+func (sh *strictHandler) SuggestSearchValues(w http.ResponseWriter, r *http.Request, params SuggestSearchValuesParams) {
+	var request SuggestSearchValuesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SuggestSearchValues(ctx, request.(SuggestSearchValuesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SuggestSearchValues")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SuggestSearchValuesResponseObject); ok {
+		if err := validResponse.VisitSuggestSearchValuesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

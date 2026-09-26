@@ -70,17 +70,19 @@ func (policy UniquenessPolicy) Valid() bool {
 	return policy == UniquenessNone || policy == UniquenessPerProfile || policy == UniquenessGlobalByType
 }
 
-type RecordState string
+type Medium string
 
 const (
-	RecordCurrent  RecordState = "CURRENT"
-	RecordReplaced RecordState = "REPLACED"
-	RecordExpired  RecordState = "EXPIRED"
-	RecordArchived RecordState = "ARCHIVED"
+	MediumPhysical Medium = "PHYSICAL"
+	MediumDigital  Medium = "DIGITAL"
 )
 
-func (state RecordState) Valid() bool {
-	return state == RecordCurrent || state == RecordReplaced || state == RecordExpired || state == RecordArchived
+func (medium Medium) Valid() bool {
+	return medium == MediumPhysical || medium == MediumDigital
+}
+
+func (medium Medium) SupportsCurrentUse() bool {
+	return medium == MediumPhysical
 }
 
 type Status string
@@ -89,6 +91,19 @@ const (
 	StatusAvailable Status = "AVAILABLE"
 	StatusInUse     Status = "IN_USE"
 )
+
+func OperationalStatus(medium Medium, inUse bool, idleCustody IdleCustody) Status {
+	if !medium.SupportsCurrentUse() {
+		return ""
+	}
+	if inUse {
+		return StatusInUse
+	}
+	if idleCustody == IdleCustodyOwner {
+		return ""
+	}
+	return StatusAvailable
+}
 
 type TypeValues struct {
 	TechnicalKey     string
@@ -100,11 +115,12 @@ type TypeValues struct {
 }
 
 type TypeDefinition struct {
-	ID        Identifier
-	Values    TypeValues
-	Version   int64
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID            Identifier
+	Values        TypeValues
+	ExemplarCount int64
+	Version       int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type Values struct {
@@ -112,24 +128,37 @@ type Values struct {
 	TypeID         Identifier
 	Identifier     string
 	DocumentDate   string
+	ValidUntil     string
 	Notes          string
-	RecordState    RecordState
+	Medium         Medium
+	IdleCustody    IdleCustody
+}
+
+type Presence struct {
+	ID         Identifier
+	ProfileID  profile.Identifier
+	TypeID     Identifier
+	Claim      Claim
+	Identifier string
+	Version    int64
 }
 
 type CurrentUse struct {
 	HolderProfileID profile.Identifier
+	HolderFullName  string
 	AssignedAt      time.Time
 }
 
 type Document struct {
-	ID         Identifier
-	Values     Values
-	Type       TypeDefinition
-	Status     Status
-	CurrentUse *CurrentUse
-	Version    int64
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID            Identifier
+	Values        Values
+	OwnerFullName string
+	Type          TypeDefinition
+	Status        Status
+	CurrentUse    *CurrentUse
+	Version       int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type FieldError struct {
@@ -178,16 +207,23 @@ func NormalizeType(values TypeValues) (TypeValues, error) {
 }
 
 func Normalize(values Values, definition TypeDefinition) (Values, error) {
+	return normalizeValues(values, definition, true)
+}
+
+func NormalizeStored(values Values, definition TypeDefinition) (Values, error) {
+	return normalizeValues(values, definition, false)
+}
+
+func normalizeValues(values Values, definition TypeDefinition, classifyIdentifier bool) (Values, error) {
 	normalized := Values{
 		OwnerProfileID: values.OwnerProfileID,
 		TypeID:         values.TypeID,
 		Identifier:     strings.TrimSpace(strings.ToValidUTF8(values.Identifier, "")),
 		DocumentDate:   strings.TrimSpace(values.DocumentDate),
+		ValidUntil:     strings.TrimSpace(values.ValidUntil),
 		Notes:          strings.TrimSpace(strings.ToValidUTF8(values.Notes, "")),
-		RecordState:    values.RecordState,
-	}
-	if normalized.RecordState == "" {
-		normalized.RecordState = RecordCurrent
+		Medium:         values.Medium,
+		IdleCustody:    values.IdleCustody,
 	}
 	validation := &ValidationError{}
 	if normalized.OwnerProfileID == (profile.Identifier{}) {
@@ -196,7 +232,17 @@ func Normalize(values Values, definition TypeDefinition) (Values, error) {
 	if normalized.TypeID.IsZero() || normalized.TypeID != definition.ID {
 		validation.add("document_type_id", "invalid_value")
 	}
-	validateRequiredText(validation, "identifier_value", normalized.Identifier, MaxIdentifierLength)
+	if classifyIdentifier {
+		classified := ClassifyIdentifier(normalized.Identifier)
+		if classified.Action == IdentifierDelete && normalized.Identifier != "" {
+			validation.add("identifier_value", "refused")
+		} else {
+			normalized.Identifier = classified.Number
+		}
+	}
+	if utf8.RuneCountInString(normalized.Identifier) > MaxIdentifierLength {
+		validation.add("identifier_value", "too_long")
+	}
 	if definition.Values.ValidationRegex != "" && normalized.Identifier != "" {
 		pattern, err := regexp.Compile(definition.Values.ValidationRegex)
 		if err != nil || !pattern.MatchString(normalized.Identifier) {
@@ -210,11 +256,24 @@ func Normalize(values Values, definition TypeDefinition) (Values, error) {
 	} else if _, err := time.Parse("2006-01-02", normalized.DocumentDate); err != nil {
 		validation.add("document_date", "invalid_format")
 	}
+	if normalized.ValidUntil != "" {
+		if _, err := time.Parse("2006-01-02", normalized.ValidUntil); err != nil {
+			validation.add("valid_until", "invalid_format")
+		}
+	}
 	if normalized.Notes != "" && utf8.RuneCountInString(normalized.Notes) > MaxNotesLength {
 		validation.add("notes", "too_long")
 	}
-	if !normalized.RecordState.Valid() {
-		validation.add("record_state", "invalid_value")
+	if !normalized.Medium.Valid() {
+		validation.add("medium", "invalid_value")
+	} else if normalized.Medium == MediumPhysical {
+		if normalized.IdleCustody == "" {
+			normalized.IdleCustody = IdleCustodyOrganization
+		} else if !normalized.IdleCustody.Valid() {
+			validation.add("idle_custody", "invalid_value")
+		}
+	} else if normalized.IdleCustody != "" {
+		validation.add("idle_custody", "unexpected")
 	}
 	if len(validation.Fields) > 0 {
 		return Values{}, validation

@@ -16,16 +16,6 @@ var (
 	ErrConflict = errors.New("profile changed concurrently")
 )
 
-type Store interface {
-	Create(context.Context, Identifier, Values) (Profile, error)
-	Get(context.Context, Identifier) (Profile, error)
-	Count(context.Context, Filters) (int64, error)
-	List(context.Context, ListOptions) ([]Profile, error)
-	Update(context.Context, Identifier, int64, Values) (Profile, error)
-	Duplicate(context.Context, Identifier, Identifier) (Profile, error)
-	Delete(context.Context, Identifier, int64) error
-}
-
 type profileQueries interface {
 	CreateProfile(context.Context, dbgen.CreateProfileParams) (dbgen.Profile, error)
 	GetProfileByID(context.Context, pgtype.UUID) (dbgen.Profile, error)
@@ -35,6 +25,10 @@ type profileQueries interface {
 	DuplicateProfile(context.Context, dbgen.DuplicateProfileParams) (dbgen.Profile, error)
 	DeleteProfile(context.Context, dbgen.DeleteProfileParams) (pgtype.UUID, error)
 	RecordProfileAuditEvent(context.Context, dbgen.RecordProfileAuditEventParams) error
+	ListProfilesByExactFullName(context.Context, string) ([]dbgen.Profile, error)
+	ListDistinctCities(context.Context, dbgen.ListDistinctCitiesParams) ([]*string, error)
+	UpsertCPFPresence(context.Context, dbgen.UpsertCPFPresenceParams) (dbgen.DocumentPresence, error)
+	ClearCPFPresenceNumber(context.Context, pgtype.UUID) error
 }
 
 type PostgresStore struct {
@@ -54,7 +48,15 @@ func (store *PostgresStore) Create(ctx context.Context, id Identifier, values Va
 	if err != nil {
 		return Profile{}, fmt.Errorf("create profile: %w", err)
 	}
-	return profileFromDatabase(value)
+	if err := store.syncCPFPresence(ctx, id, normalized.CPF); err != nil {
+		return Profile{}, err
+	}
+	mapped, err := profileFromDatabase(value)
+	if err != nil {
+		return Profile{}, err
+	}
+	mapped.Values.CPF = normalized.CPF
+	return mapped, nil
 }
 
 func (store *PostgresStore) Get(ctx context.Context, id Identifier) (Profile, error) {
@@ -75,6 +77,8 @@ func (store *PostgresStore) Count(ctx context.Context, filters Filters) (int64, 
 		EmailFilter:    filters.Email,
 		CityFilter:     filters.City,
 		StateFilter:    filters.State,
+		RestrictIds:    filters.RestrictIDs,
+		IDFilter:       uuidList(filters.IDFilter),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("count profiles: %w", err)
@@ -89,6 +93,8 @@ func (store *PostgresStore) List(ctx context.Context, options ListOptions) ([]Pr
 		EmailFilter:    options.Filters.Email,
 		CityFilter:     options.Filters.City,
 		StateFilter:    options.Filters.State,
+		RestrictIds:    options.Filters.RestrictIDs,
+		IDFilter:       uuidList(options.Filters.IDFilter),
 		SortField:      string(options.SortField),
 		SortOrder:      string(options.SortOrder),
 		PageLimit:      options.Limit,
@@ -108,6 +114,43 @@ func (store *PostgresStore) List(ctx context.Context, options ListOptions) ([]Pr
 	return profiles, nil
 }
 
+func (store *PostgresStore) ListByExactFullName(ctx context.Context, fullName string) ([]Profile, error) {
+	values, err := store.queries.ListProfilesByExactFullName(ctx, fullName)
+	if err != nil {
+		return nil, fmt.Errorf("list profiles by exact full name: %w", err)
+	}
+	profiles := make([]Profile, 0, len(values))
+	for _, value := range values {
+		mapped, mapErr := profileFromDatabase(value)
+		if mapErr != nil {
+			return nil, mapErr
+		}
+		profiles = append(profiles, mapped)
+	}
+	return profiles, nil
+}
+
+func (store *PostgresStore) DistinctCities(ctx context.Context, filters Filters, limit int32) ([]string, error) {
+	values, err := store.queries.ListDistinctCities(ctx, dbgen.ListDistinctCitiesParams{
+		FullNameFilter: filters.FullName,
+		CpfFilter:      filters.CPF,
+		EmailFilter:    filters.Email,
+		StateFilter:    filters.State,
+		ValueLimit:     limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list distinct cities: %w", err)
+	}
+	cities := make([]string, 0, len(values))
+	for _, value := range values {
+		if value == nil {
+			continue
+		}
+		cities = append(cities, *value)
+	}
+	return cities, nil
+}
+
 func (store *PostgresStore) Update(ctx context.Context, id Identifier, version int64, values Values) (Profile, error) {
 	if version <= 0 {
 		return Profile{}, ErrConflict
@@ -124,7 +167,15 @@ func (store *PostgresStore) Update(ctx context.Context, id Identifier, version i
 	if err != nil {
 		return Profile{}, fmt.Errorf("update profile: %w", err)
 	}
-	return profileFromDatabase(value)
+	if err := store.syncCPFPresence(ctx, id, normalized.CPF); err != nil {
+		return Profile{}, err
+	}
+	mapped, err := profileFromDatabase(value)
+	if err != nil {
+		return Profile{}, err
+	}
+	mapped.Values.CPF = normalized.CPF
+	return mapped, nil
 }
 
 func (store *PostgresStore) Duplicate(ctx context.Context, newID, sourceID Identifier) (Profile, error) {
@@ -190,7 +241,6 @@ func createDatabaseParams(id Identifier, values Values) dbgen.CreateProfileParam
 		ID:                  databaseUUID(id),
 		FullName:            values.FullName,
 		SocialName:          optionalString(values.SocialName),
-		Cpf:                 optionalString(values.CPF),
 		Email:               optionalString(values.Email),
 		MobilePhone:         optionalString(values.MobilePhone),
 		LandlinePhone:       optionalString(values.LandlinePhone),
@@ -202,6 +252,37 @@ func createDatabaseParams(id Identifier, values Values) dbgen.CreateProfileParam
 		AddressState:        optionalString(values.Address.State),
 		AddressPostalCode:   optionalString(values.Address.PostalCode),
 		Notes:               optionalString(values.Notes),
+		BirthDate:           optionalDate(values.BirthDate),
+		Gender:              optionalString(values.Gender),
+		BloodType:           optionalString(values.BloodType),
+		Nationality:         optionalString(values.Nationality),
+		BirthCity:           optionalString(values.BirthCity),
+		MaritalStatus:       optionalString(values.MaritalStatus),
+		WeddingDate:         optionalDate(values.WeddingDate),
+		FatherName:          optionalString(values.FatherName),
+		FatherBirthDate:     optionalDate(values.FatherBirthDate),
+		MotherName:          optionalString(values.MotherName),
+		MotherBirthDate:     optionalDate(values.MotherBirthDate),
+		HealthPlan:          optionalString(values.HealthPlan),
+		BloodDonor:          values.BloodDonor,
+		OrganDonor:          values.OrganDonor,
+		Team:                optionalString(values.Team),
+		Sector:              optionalString(values.Sector),
+		Collections:         optionalString(values.Collections),
+		VehicleModel:        optionalString(values.VehicleModel),
+		VehicleColor:        optionalString(values.VehicleColor),
+		VehiclePlate:        optionalString(values.VehiclePlate),
+		VehicleYear:         values.VehicleYear,
+		ClubMembership:      optionalString(values.ClubMembership),
+		MembershipType:      optionalString(values.MembershipType),
+		PlaceOfOrigin:       optionalString(values.PlaceOfOrigin),
+		BirthCountry:        optionalString(values.BirthCountry),
+		ParentsWeddingDate:  optionalDate(values.ParentsWedding),
+		SupermarketClub:     optionalString(values.SupermarketClub),
+		Pet:                 optionalString(values.Pet),
+		TravelCountries:     optionalString(values.TravelCountries),
+		CardBrand:           optionalString(values.CardBrand),
+		CardBank:            optionalString(values.CardBank),
 	}
 }
 
@@ -210,7 +291,6 @@ func updateDatabaseParams(id Identifier, version int64, values Values) dbgen.Upd
 	return dbgen.UpdateProfileParams{
 		FullName:            created.FullName,
 		SocialName:          created.SocialName,
-		Cpf:                 created.Cpf,
 		Email:               created.Email,
 		MobilePhone:         created.MobilePhone,
 		LandlinePhone:       created.LandlinePhone,
@@ -222,6 +302,37 @@ func updateDatabaseParams(id Identifier, version int64, values Values) dbgen.Upd
 		AddressState:        created.AddressState,
 		AddressPostalCode:   created.AddressPostalCode,
 		Notes:               created.Notes,
+		BirthDate:           created.BirthDate,
+		Gender:              created.Gender,
+		BloodType:           created.BloodType,
+		Nationality:         created.Nationality,
+		BirthCity:           created.BirthCity,
+		MaritalStatus:       created.MaritalStatus,
+		WeddingDate:         created.WeddingDate,
+		FatherName:          created.FatherName,
+		FatherBirthDate:     created.FatherBirthDate,
+		MotherName:          created.MotherName,
+		MotherBirthDate:     created.MotherBirthDate,
+		HealthPlan:          created.HealthPlan,
+		BloodDonor:          created.BloodDonor,
+		OrganDonor:          created.OrganDonor,
+		Team:                created.Team,
+		Sector:              created.Sector,
+		Collections:         created.Collections,
+		VehicleModel:        created.VehicleModel,
+		VehicleColor:        created.VehicleColor,
+		VehiclePlate:        created.VehiclePlate,
+		VehicleYear:         created.VehicleYear,
+		ClubMembership:      created.ClubMembership,
+		MembershipType:      created.MembershipType,
+		PlaceOfOrigin:       created.PlaceOfOrigin,
+		BirthCountry:        created.BirthCountry,
+		ParentsWeddingDate:  created.ParentsWeddingDate,
+		SupermarketClub:     created.SupermarketClub,
+		Pet:                 created.Pet,
+		TravelCountries:     created.TravelCountries,
+		CardBrand:           created.CardBrand,
+		CardBank:            created.CardBank,
 		ID:                  created.ID,
 		Version:             version,
 	}
@@ -240,10 +351,19 @@ func profileFromDatabase(value dbgen.Profile) (Profile, error) {
 	if err != nil {
 		return Profile{}, err
 	}
-	values, err := Normalize(Values{
+	return Profile{
+		ID:        id,
+		Values:    valuesFromDatabase(value),
+		Version:   value.Version,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
+	}, nil
+}
+
+func valuesFromDatabase(value dbgen.Profile) Values {
+	return Values{
 		FullName:      value.FullName,
 		SocialName:    stringValue(value.SocialName),
-		CPF:           stringValue(value.Cpf),
 		Email:         stringValue(value.Email),
 		MobilePhone:   stringValue(value.MobilePhone),
 		LandlinePhone: stringValue(value.LandlinePhone),
@@ -256,22 +376,51 @@ func profileFromDatabase(value dbgen.Profile) (Profile, error) {
 			State:        stringValue(value.AddressState),
 			PostalCode:   stringValue(value.AddressPostalCode),
 		},
-		Notes: stringValue(value.Notes),
-	})
-	if err != nil {
-		return Profile{}, fmt.Errorf("map profile from database: %w", err)
+		Notes:           stringValue(value.Notes),
+		BirthDate:       dateValue(value.BirthDate),
+		Gender:          stringValue(value.Gender),
+		BloodType:       stringValue(value.BloodType),
+		Nationality:     stringValue(value.Nationality),
+		BirthCity:       stringValue(value.BirthCity),
+		MaritalStatus:   stringValue(value.MaritalStatus),
+		WeddingDate:     dateValue(value.WeddingDate),
+		FatherName:      stringValue(value.FatherName),
+		FatherBirthDate: dateValue(value.FatherBirthDate),
+		MotherName:      stringValue(value.MotherName),
+		MotherBirthDate: dateValue(value.MotherBirthDate),
+		HealthPlan:      stringValue(value.HealthPlan),
+		BloodDonor:      value.BloodDonor,
+		OrganDonor:      value.OrganDonor,
+		Team:            stringValue(value.Team),
+		Sector:          stringValue(value.Sector),
+		Collections:     stringValue(value.Collections),
+		VehicleModel:    stringValue(value.VehicleModel),
+		VehicleColor:    stringValue(value.VehicleColor),
+		VehiclePlate:    stringValue(value.VehiclePlate),
+		VehicleYear:     value.VehicleYear,
+		ClubMembership:  stringValue(value.ClubMembership),
+		MembershipType:  stringValue(value.MembershipType),
+		PlaceOfOrigin:   stringValue(value.PlaceOfOrigin),
+		BirthCountry:    stringValue(value.BirthCountry),
+		ParentsWedding:  dateValue(value.ParentsWeddingDate),
+		SupermarketClub: stringValue(value.SupermarketClub),
+		Pet:             stringValue(value.Pet),
+		TravelCountries: stringValue(value.TravelCountries),
+		CardBrand:       stringValue(value.CardBrand),
+		CardBank:        stringValue(value.CardBank),
 	}
-	return Profile{
-		ID:        id,
-		Values:    values,
-		Version:   value.Version,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
-	}, nil
 }
 
 func databaseUUID(identifier Identifier) pgtype.UUID {
 	return pgtype.UUID{Bytes: identifier, Valid: true}
+}
+
+func uuidList(ids []Identifier) []pgtype.UUID {
+	out := make([]pgtype.UUID, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, databaseUUID(id))
+	}
+	return out
 }
 
 func optionalDatabaseUUID(identifier *Identifier) pgtype.UUID {
@@ -302,11 +451,51 @@ func optionalString(value string) *string {
 	return &value
 }
 
+func optionalDate(value string) pgtype.Date {
+	if value == "" {
+		return pgtype.Date{}
+	}
+	parsed, err := time.Parse("2006-01-02", value)
+	if err != nil {
+		return pgtype.Date{}
+	}
+	return pgtype.Date{Time: parsed, Valid: true}
+}
+
+func dateValue(value pgtype.Date) string {
+	if !value.Valid {
+		return ""
+	}
+	return value.Time.Format("2006-01-02")
+}
+
 func stringValue(value *string) string {
 	if value == nil {
 		return ""
 	}
 	return *value
+}
+
+func (store *PostgresStore) syncCPFPresence(ctx context.Context, profileID Identifier, cpf string) error {
+	if cpf == "" {
+		if err := store.queries.ClearCPFPresenceNumber(ctx, databaseUUID(profileID)); err != nil {
+			return fmt.Errorf("clear cpf presence: %w", err)
+		}
+		return nil
+	}
+	presenceID, err := NewIdentifier()
+	if err != nil {
+		return fmt.Errorf("generate cpf presence identifier: %w", err)
+	}
+	if _, err := store.queries.UpsertCPFPresence(ctx, dbgen.UpsertCPFPresenceParams{
+		ID: databaseUUID(presenceID), ProfileID: databaseUUID(profileID), IdentifierValue: optionalString(cpf),
+	}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return fmt.Errorf("upsert cpf presence: %w", err)
+	}
+	return nil
 }
 
 var _ Store = (*PostgresStore)(nil)
