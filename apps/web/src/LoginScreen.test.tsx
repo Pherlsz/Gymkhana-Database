@@ -41,7 +41,8 @@ describe("LoginScreen", () => {
 
   it("starts development login on the same origin as the Vite session", () => {
     const assign = vi.fn();
-    vi.stubGlobal("location", { assign });
+    // Keep hostname so apiURL's workers.dev inference does not throw on a stub.
+    vi.stubGlobal("location", { assign, hostname: "localhost" });
     renderLogin();
 
     fireEvent.click(screen.getByRole("button", { name: /Dev Login/ }));

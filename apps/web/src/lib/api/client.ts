@@ -105,6 +105,19 @@ export class APIRequestError extends Error {
   }
 }
 
+export function inferWorkersDevApiOrigin(hostname: string): string | null {
+  // Paired staging Workers: database SPA → api Container Worker on the same account.
+  if (typeof hostname !== "string" || hostname.length === 0) {
+    return null;
+  }
+  const spaPrefix = "staging-gymkhana-database.";
+  const suffix = ".workers.dev";
+  if (!hostname.startsWith(spaPrefix) || !hostname.endsWith(suffix)) {
+    return null;
+  }
+  return `https://${hostname.replace(spaPrefix, "staging-gymkhana-api.")}`;
+}
+
 export function apiURL(path: string): string {
   // Prefer an explicit API origin whenever it is configured. Do not gate this on
   // import.meta.env.DEV: a local NODE_ENV=development in .env makes Vite report
@@ -113,6 +126,12 @@ export function apiURL(path: string): string {
   const configured = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
   if (configured) {
     return `${configured}${path}`;
+  }
+  if (typeof window !== "undefined") {
+    const inferred = inferWorkersDevApiOrigin(window.location.hostname);
+    if (inferred) {
+      return `${inferred}${path}`;
+    }
   }
   if (import.meta.env.DEV && (path.startsWith("/api/") || path.startsWith("/health/"))) {
     return path;
