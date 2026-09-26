@@ -498,20 +498,3 @@ func envUint16(key string, fallback uint16) (uint16, error) {
 	}
 	return uint16(v), nil
 }
-
-func commaSeparatedValues(value string) []string {
-	seen := make(map[string]struct{})
-	values := make([]string, 0)
-	for _, item := range strings.Split(value, ",") {
-		normalized := strings.ToLower(strings.TrimSpace(item))
-		if normalized == "" {
-			continue
-		}
-		if _, exists := seen[normalized]; exists {
-			continue
-		}
-		seen[normalized] = struct{}{}
-		values = append(values, normalized)
-	}
-	return values
-}

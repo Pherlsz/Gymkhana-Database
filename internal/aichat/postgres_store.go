@@ -876,29 +876,6 @@ func scanMessage(row rowScanner) (Message, error) {
 	return value, nil
 }
 
-func scanMessageWithReferences(row rowScanner) (Message, error) {
-	var value Message
-	var id, thread, run pgtype.UUID
-	var encodedReferences []byte
-	if err := row.Scan(&id, &thread, &run, &value.Sequence, &value.Role, &value.Content, &value.CreatedAt, &encodedReferences); err != nil {
-		return Message{}, err
-	}
-	value.ID, value.ThreadID, value.RunID = chatIdentifier(id), chatIdentifier(thread), chatIdentifier(run)
-	var references []string
-	if err := json.Unmarshal(encodedReferences, &references); err != nil || len(references) > MaximumToolCalls {
-		return Message{}, ErrInvalidState
-	}
-	value.ResultReferenceIDs = make([]Identifier, 0, len(references))
-	for _, raw := range references {
-		reference, err := ParseIdentifier(raw)
-		if err != nil {
-			return Message{}, ErrInvalidState
-		}
-		value.ResultReferenceIDs = append(value.ResultReferenceIDs, reference)
-	}
-	return value, nil
-}
-
 // scanMessageWithTotal lê a coluna extra count(*) OVER () emitida pela window
 // function em ListMessages, eliminando a segunda query de COUNT.
 func scanMessageWithTotal(row rowScanner, total *int) (Message, error) {
