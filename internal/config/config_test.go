@@ -180,7 +180,7 @@ func TestLoadKeepsProductionOCRBlockedUntilOwnerActivationDecision(t *testing.T)
 			clearConfiguration(t)
 			setValidLocalAuthentication(t)
 			t.Setenv("APP_ENV", test.environment)
-				t.Setenv("OCR_PROVIDER", test.provider)
+			t.Setenv("OCR_PROVIDER", test.provider)
 			t.Setenv("OCR_MODEL", test.model)
 			if _, err := Load(); err == nil {
 				t.Fatal("Load() error = nil, want OCR activation error")

@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	KeyAIChat       = "ai_chat"
-	KeyGoogleForms  = "google_forms"
-	KeyOCR          = "ocr"
-	KeyAttachments  = "attachments"
+	KeyAIChat      = "ai_chat"
+	KeyGoogleForms = "google_forms"
+	KeyOCR         = "ocr"
+	KeyAttachments = "attachments"
 )
 
 var (
