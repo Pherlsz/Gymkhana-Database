@@ -4,13 +4,12 @@ const INSTANCE_COUNT = 1;
 
 type ApiEnv = {
   API_CONTAINER: DurableObjectNamespace<ApiContainer>;
+  API_RATE_LIMIT: RateLimit;
   DATABASE_URL: string;
   GOOGLE_OAUTH_CLIENT_ID: string;
   GOOGLE_OAUTH_CLIENT_SECRET: string;
   GOOGLE_OAUTH_REDIRECT_URL: string;
   AUTH_APPLICATION_URL: string;
-  AUTH_ALLOWED_EMAILS: string;
-  AUTH_SUPERADMIN_EMAIL: string;
   GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY: string;
   R2_ENABLED?: string;
   R2_ENDPOINT?: string;
@@ -25,6 +24,10 @@ type ApiEnv = {
   OCR_MAX_PROVIDER_USAGE_PER_HOUR?: string;
   OCR_MAX_SOURCE_BYTES?: string;
 };
+
+function isHealthPath(pathname: string): boolean {
+  return pathname === "/health/live" || pathname === "/health/ready";
+}
 
 /**
  * Proxies all HTTP traffic to the Go API container (API + River worker).
@@ -49,8 +52,6 @@ export class ApiContainer extends Container<ApiEnv> {
       GOOGLE_OAUTH_CLIENT_SECRET: env.GOOGLE_OAUTH_CLIENT_SECRET ?? "",
       GOOGLE_OAUTH_REDIRECT_URL: env.GOOGLE_OAUTH_REDIRECT_URL ?? "",
       AUTH_APPLICATION_URL: env.AUTH_APPLICATION_URL ?? "",
-      AUTH_ALLOWED_EMAILS: env.AUTH_ALLOWED_EMAILS ?? "",
-      AUTH_SUPERADMIN_EMAIL: env.AUTH_SUPERADMIN_EMAIL ?? "",
       GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY: env.GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY ?? "",
       R2_ENABLED: env.R2_ENABLED ?? "false",
       R2_ENDPOINT: env.R2_ENDPOINT ?? "",
@@ -74,6 +75,18 @@ export class ApiContainer extends Container<ApiEnv> {
 
 export default {
   async fetch(request: Request, env: ApiEnv): Promise<Response> {
+    const { pathname } = new URL(request.url);
+    if (!isHealthPath(pathname)) {
+      const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+      const { success } = await env.API_RATE_LIMIT.limit({ key: ip });
+      if (!success) {
+        return Response.json(
+          { error: "rate_limited", message: "Too many requests" },
+          { status: 429, headers: { "Retry-After": "60" } },
+        );
+      }
+    }
+
     const container = await getRandom(env.API_CONTAINER, INSTANCE_COUNT);
     return container.fetch(request);
   },

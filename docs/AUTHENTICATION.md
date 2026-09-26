@@ -76,10 +76,9 @@ GET /api/admin/users/{userID}/capabilities
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Google OAuth client secret; supply only through a local or deployment secret manager                                           |
 | `GOOGLE_OAUTH_REDIRECT_URL`  | Absolute API callback URL ending in `/auth/callback`                                                                           |
 | `AUTH_APPLICATION_URL`       | Absolute web application URL used after successful login                                                                       |
-| `AUTH_SUPERADMIN_EMAIL`      | Initial and recovery email for the single `SUPERADMIN`; it must also be allowlisted                                            |
 | `VITE_API_BASE_URL`          | Browser-visible API origin                                                                                                     |
 
-The email allowlist is now stored in the `allowed_emails` table and managed via admin endpoints, not environment variables.
+Who can sign in lives in Neon: `allowed_emails` plus a provisioned `app_users` row (Administração / provision API). There is no env allowlist or env superadmin bootstrap.
 
 Never commit real client secrets, database credentials, session values, or production URLs containing credentials. Locally, put them in gitignored `.env` (see `.env.example`).
 
@@ -88,7 +87,7 @@ Never commit real client secrets, database credentials, session values, or produ
 1. Register a Google OAuth client with:
    - Authorized JavaScript origins: `http://localhost:5173`
    - Authorized redirect URIs: `http://localhost:8080/auth/callback`
-2. Put the OAuth credentials, database URL, and superadmin email in `.env`. `.env.example` lists the names.
+2. Put the OAuth credentials and database URL in `.env`. `.env.example` lists the names.
 3. Validate the effective environment without printing secrets:
 
 ```bash
@@ -108,7 +107,7 @@ make dev-api
 make dev-web
 ```
 
-6. Sign in first with `AUTH_SUPERADMIN_EMAIL`. The first successful login creates the protected `SUPERADMIN` user.
+6. Use **Dev Login** (local only) to create/sign in as `developer@gymkhana.local` (`SUPERADMIN`), or seed a real `SUPERADMIN` in Neon and sign in with Google.
 
 ## Staging and production setup
 
@@ -127,7 +126,7 @@ The API fails closed outside local/test when the database or authentication conf
 
 1. Create the user in Administração with a role (`EXTERNAL` or `ADMIN`). A member also needs at least one capability. This also adds the email to the allowlist.
 2. Ask the user to sign in with Google. Login binds the Google identity to that existing user and keeps the role you set. An allowlisted email without a provisioned user is denied.
-3. The configured `AUTH_SUPERADMIN_EMAIL` is the only account created on first Google login, always as `SUPERADMIN`. It may sign in even when missing from `allowed_emails` so a fresh database can be recovered. No other login path creates a user.
+3. Google login never creates users. Seed the first `SUPERADMIN` in Neon (SQL/ops) or use local Dev Login. The protected `SUPERADMIN` role cannot be demoted via the administration API.
 
 ### Remove access immediately
 
@@ -231,10 +230,9 @@ Login identity is the allowlisted email. Keep the same application user.
 
 1. Update the existing user's email through the administration panel (or a reviewed operational update).
 2. Add the new email to the allowlist and remove the old email.
-3. If this is the protected superadmin, also update `AUTH_SUPERADMIN_EMAIL`.
-4. The user signs in with the new Google account email. Lookup by email loads the same row and refreshes display identity.
+3. The user signs in with the new Google account email. Lookup by email loads the same row and refreshes display identity.
 
-Do not create a second user and transfer capabilities. A new row is created only when that email has never signed in.
+Do not create a second user and transfer capabilities. A new row is created only when an admin provisions that email.
 
 ### Account compromised
 
@@ -246,7 +244,7 @@ Do not create a second user and transfer capabilities. A new row is created only
 
 ### Protected superadmin unavailable
 
-The administration API intentionally cannot demote, deactivate, or replace the protected `SUPERADMIN`. First restore access to the same Google account, or update that user's email plus `AUTH_SUPERADMIN_EMAIL` and the allowlist so the same account can sign in.
+The administration API intentionally cannot demote, deactivate, or replace the protected `SUPERADMIN`. Restore access to the same Google account, or update that user's email and the allowlist in Neon so the same account can sign in.
 
 If the Google account is permanently unrecoverable, do not run an ad-hoc partial update. Use a reviewed, transactional operational change that:
 

@@ -19,8 +19,6 @@ var configurationKeys = []string{
 	"GOOGLE_OAUTH_CLIENT_SECRET",
 	"GOOGLE_OAUTH_REDIRECT_URL",
 	"AUTH_APPLICATION_URL",
-	"AUTH_ALLOWED_EMAILS",
-	"AUTH_SUPERADMIN_EMAIL",
 	"GOOGLE_FORMS_ENABLED",
 	"GOOGLE_FORMS_OAUTH_CLIENT_ID",
 	"GOOGLE_FORMS_OAUTH_CLIENT_SECRET",
@@ -68,8 +66,6 @@ func setValidLocalAuthentication(t *testing.T) {
 	t.Setenv("GOOGLE_OAUTH_CLIENT_SECRET", "client-secret")
 	t.Setenv("GOOGLE_OAUTH_REDIRECT_URL", "http://localhost:8080/auth/callback")
 	t.Setenv("AUTH_APPLICATION_URL", "http://localhost:5173")
-	t.Setenv("AUTH_ALLOWED_EMAILS", " pedro@example.com, member@example.com ")
-	t.Setenv("AUTH_SUPERADMIN_EMAIL", "pedro@example.com")
 }
 
 func TestLoadUsesSafeTypedDefaults(t *testing.T) {
@@ -384,12 +380,6 @@ func TestLoadValidatesEnabledAuthentication(t *testing.T) {
 	if !cfg.Auth.Enabled {
 		t.Fatal("authentication is disabled")
 	}
-	if len(cfg.Auth.AllowedEmails) != 2 || cfg.Auth.AllowedEmails[0] != "pedro@example.com" {
-		t.Fatalf("AllowedEmails = %#v", cfg.Auth.AllowedEmails)
-	}
-	if cfg.Auth.SuperadminEmail != "pedro@example.com" {
-		t.Fatalf("SuperadminEmail = %q", cfg.Auth.SuperadminEmail)
-	}
 	if cfg.Auth.SecureCookies {
 		t.Fatal("local cookies are unexpectedly secure")
 	}
@@ -436,8 +426,6 @@ func TestLoadRequiresSecureCompleteAuthenticationOutsideDevelopment(t *testing.T
 	t.Setenv("DATABASE_URL", "postgres://database/gymkhana")
 	t.Setenv("GOOGLE_OAUTH_REDIRECT_URL", "https://api.database.example/auth/callback")
 	t.Setenv("AUTH_APPLICATION_URL", "https://database.example")
-	t.Setenv("AUTH_ALLOWED_EMAILS", "admin@example.com")
-	t.Setenv("AUTH_SUPERADMIN_EMAIL", "admin@example.com")
 
 	cfg, err := Load()
 	if err != nil {
