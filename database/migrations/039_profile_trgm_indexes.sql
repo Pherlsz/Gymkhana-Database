@@ -3,11 +3,11 @@
 -- lower(…) LIKE '%…%' patterns; without trigram indexes Postgres falls back
 -- to a sequential scan on every request.
 
-CREATE INDEX profiles_email_trgm_index
+CREATE INDEX IF NOT EXISTS profiles_email_trgm_index
   ON profiles USING gin (lower(email) gin_trgm_ops)
   WHERE email IS NOT NULL;
 
-CREATE INDEX profiles_address_city_trgm_index
+CREATE INDEX IF NOT EXISTS profiles_address_city_trgm_index
   ON profiles USING gin (lower(address_city) gin_trgm_ops)
   WHERE address_city IS NOT NULL;
 
