@@ -535,6 +535,14 @@
   overflow: hidden !important;
 }
 
+.spreadsheet-table .ant-table-header table {
+  /* Keep header locked to the column sum — Ant stretches it to the viewport when
+     scroll.x is narrower (assistant recorte), which desyncs from the virtual body. */
+  width: var(--spreadsheet-table-width) !important;
+  min-width: var(--spreadsheet-table-width) !important;
+  max-width: var(--spreadsheet-table-width) !important;
+}
+
 .spreadsheet-table .ant-table-body {
   flex: 1 1 0%;
   min-height: 0 !important;
@@ -558,9 +566,15 @@
 
 .spreadsheet-table .ant-table-tbody-virtual-holder-inner {
   will-change: transform;
+  width: var(--spreadsheet-table-width) !important;
+  min-width: var(--spreadsheet-table-width) !important;
+  max-width: var(--spreadsheet-table-width) !important;
 }
 
 .spreadsheet-table .ant-table-tbody-virtual-holder-inner > .ant-table-row {
+  width: var(--spreadsheet-table-width);
+  min-width: var(--spreadsheet-table-width);
+  max-width: var(--spreadsheet-table-width);
   align-items: stretch;
   box-sizing: border-box;
   height: var(--spreadsheet-row-height);
