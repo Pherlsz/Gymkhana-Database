@@ -229,6 +229,30 @@ export async function clearModelKey(provider: ModelProvider): Promise<void> {
   await requestNoContent(`/api/admin/model-keys/${provider}`, { method: "DELETE" });
 }
 
+export const FEATURE_FLAG_KEYS = ["ai_chat", "google_forms", "ocr", "attachments"] as const;
+export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];
+
+export type FeatureFlag = {
+  key: FeatureFlagKey;
+  enabled: boolean;
+  updated_at: string;
+};
+
+export type FeatureFlagsResponse = {
+  flags: FeatureFlag[];
+};
+
+export async function listFeatureFlags(signal?: AbortSignal): Promise<FeatureFlagsResponse> {
+  return requestJSON<FeatureFlagsResponse>("/api/admin/feature-flags", signal ? { signal } : {});
+}
+
+export async function setFeatureFlag(key: FeatureFlagKey, enabled: boolean): Promise<FeatureFlag> {
+  return requestJSON<FeatureFlag>(
+    `/api/admin/feature-flags/${encodeURIComponent(key)}`,
+    jsonRequest("PUT", { enabled }),
+  );
+}
+
 export async function listAdminUsers(signal?: AbortSignal): Promise<AdminUsersResponse> {
   return requestJSON<AdminUsersResponse>("/api/admin/users", signal ? { signal } : {});
 }

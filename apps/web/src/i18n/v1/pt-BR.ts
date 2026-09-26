@@ -1168,6 +1168,31 @@ export const admin = {
     access: "Acessos",
     users: "Usuários",
     integrations: "Integrações",
+    features: "Funcionalidades",
+  },
+  featureFlags: {
+    title: "Funcionalidades do produto",
+    description:
+      "Liga ou desliga módulos para todos os usuários. Credenciais e chaves continuam na configuração do ambiente; isto só controla se a função fica disponível.",
+    loadError: "Não foi possível carregar as funcionalidades.",
+    saveError: "Não foi possível atualizar a funcionalidade.",
+    columns: {
+      feature: "Funcionalidade",
+      updated: "Atualizado em",
+      enabled: "Ativa",
+    },
+    labels: {
+      ai_chat: "Assistente",
+      google_forms: "Google Forms",
+      ocr: "OCR",
+      attachments: "Anexos",
+    },
+    descriptions: {
+      ai_chat: "Chat com IA (requer chave Gemini em Integrações).",
+      google_forms: "Importação via Google Forms (requer OAuth do Forms no ambiente).",
+      ocr: "Extração de texto de anexos (requer chave Gemini).",
+      attachments: "Upload e download de arquivos privados (requer R2 no ambiente).",
+    },
   },
   modelKey: {
     title: "Chaves de IA",

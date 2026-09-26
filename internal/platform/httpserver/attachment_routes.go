@@ -12,6 +12,7 @@ import (
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/attachment"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
+	"github.com/Pherlsz/Gymkhana-Database/internal/featureflags"
 )
 
 type attachmentService interface {
@@ -78,9 +79,9 @@ type attachmentListResponse struct {
 	Attachments []attachmentResponse `json:"attachments"`
 }
 
-func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service attachmentService) {
+func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service attachmentService, flags featureFlagReader) {
 	mux.HandleFunc("POST /api/v1/attachment-upload-intents", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := attachmentActor(w, r, authentication, service)
+		actor, ok := attachmentActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -108,7 +109,7 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 	}))
 
 	mux.HandleFunc("POST /api/v1/attachment-upload-intents/{intent_id}/confirm", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := attachmentActor(w, r, authentication, service)
+		actor, ok := attachmentActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -126,7 +127,7 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 	}))
 
 	mux.HandleFunc("GET /api/v1/attachments", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := attachmentActor(w, r, authentication, service)
+		actor, ok := attachmentActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -157,7 +158,7 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 	}))
 
 	mux.HandleFunc("POST /api/v1/attachments/{attachment_id}/download", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := attachmentActor(w, r, authentication, service)
+		actor, ok := attachmentActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -175,7 +176,7 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 	}))
 
 	mux.HandleFunc("DELETE /api/v1/attachments/{attachment_id}", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := attachmentActor(w, r, authentication, service)
+		actor, ok := attachmentActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -198,7 +199,7 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 	}))
 
 	mux.HandleFunc("POST /api/v1/attachments/{attachment_id}/restore", requireCapability(auth.CapAttachments, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := attachmentActor(w, r, authentication, service)
+		actor, ok := attachmentActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -221,8 +222,8 @@ func registerAttachmentRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 	}))
 }
 
-func attachmentActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service attachmentService) (auth.Session, bool) {
-	if service == nil {
+func attachmentActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service attachmentService, flags featureFlagReader) (auth.Session, bool) {
+	if service == nil || !featureFlagOn(r.Context(), flags, featureflags.KeyAttachments) {
 		writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "Attachments are unavailable"})
 		return auth.Session{}, false
 	}

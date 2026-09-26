@@ -77,6 +77,9 @@ export const queryKeys = {
         ? (["attachments", owner, flag] as const)
         : (["attachments", owner] as const),
   },
+  admin: {
+    featureFlags: ["admin", "feature-flags"] as const,
+  },
   cadastro: {
     minimumRequirement: (ownerId?: string) =>
       ownerId !== undefined

@@ -19,7 +19,6 @@ var configurationKeys = []string{
 	"GOOGLE_OAUTH_CLIENT_SECRET",
 	"GOOGLE_OAUTH_REDIRECT_URL",
 	"AUTH_APPLICATION_URL",
-	"GOOGLE_FORMS_ENABLED",
 	"GOOGLE_FORMS_OAUTH_CLIENT_ID",
 	"GOOGLE_FORMS_OAUTH_CLIENT_SECRET",
 	"GOOGLE_FORMS_OAUTH_REDIRECT_URL",
@@ -28,11 +27,9 @@ var configurationKeys = []string{
 	"GOOGLE_FORMS_TOKEN_KEY_VERSION",
 	"GOOGLE_FORMS_SYNC_INTERVAL",
 	"GOOGLE_FORMS_RESPONSE_PAGE_SIZE",
-	"AI_CHAT_ENABLED",
 	"AI_CHAT_PROVIDER",
 	"AI_CHAT_MODEL",
 	"AI_CHAT_RETENTION",
-	"OCR_ENABLED",
 	"OCR_PROVIDER",
 	"OCR_MODEL",
 	"OCR_TIMEOUT",
@@ -44,7 +41,6 @@ var configurationKeys = []string{
 func setValidGoogleForms(t *testing.T) {
 	t.Helper()
 	setValidLocalAuthentication(t)
-	t.Setenv("GOOGLE_FORMS_ENABLED", "true")
 	t.Setenv("GOOGLE_FORMS_OAUTH_CLIENT_ID", "forms-client-id")
 	t.Setenv("GOOGLE_FORMS_OAUTH_CLIENT_SECRET", "forms-client-secret")
 	t.Setenv("GOOGLE_FORMS_OAUTH_REDIRECT_URL", "http://localhost:8080/api/v1/google-forms/oauth/callback")
@@ -131,13 +127,10 @@ func TestLoadRejectsInvalidTypedValues(t *testing.T) {
 		{name: "log level", key: "LOG_LEVEL", value: "verbose"},
 		{name: "shutdown timeout", key: "SHUTDOWN_TIMEOUT", value: "10m"},
 		{name: "auth enabled", key: "AUTH_ENABLED", value: "sometimes"},
-		{name: "google forms enabled", key: "GOOGLE_FORMS_ENABLED", value: "sometimes"},
 		{name: "google forms key version", key: "GOOGLE_FORMS_TOKEN_KEY_VERSION", value: "zero"},
 		{name: "google forms interval", key: "GOOGLE_FORMS_SYNC_INTERVAL", value: "later"},
 		{name: "google forms page size", key: "GOOGLE_FORMS_RESPONSE_PAGE_SIZE", value: "many"},
-		{name: "AI Chat enabled", key: "AI_CHAT_ENABLED", value: "sometimes"},
 		{name: "AI Chat retention", key: "AI_CHAT_RETENTION", value: "forever"},
-		{name: "OCR enabled", key: "OCR_ENABLED", value: "sometimes"},
 		{name: "OCR timeout", key: "OCR_TIMEOUT", value: "later"},
 		{name: "OCR request limit", key: "OCR_MAX_REQUESTS_PER_HOUR", value: "many"},
 		{name: "OCR usage limit", key: "OCR_MAX_PROVIDER_USAGE_PER_HOUR", value: "many"},
@@ -159,7 +152,6 @@ func TestLoadAllowsOnlyExplicitDeterministicTestOCRConfiguration(t *testing.T) {
 	clearConfiguration(t)
 	setValidLocalAuthentication(t)
 	t.Setenv("APP_ENV", "test")
-	t.Setenv("OCR_ENABLED", "true")
 	t.Setenv("OCR_PROVIDER", "fake")
 	t.Setenv("OCR_MODEL", "deterministic-v1")
 
@@ -179,7 +171,6 @@ func TestLoadKeepsProductionOCRBlockedUntilOwnerActivationDecision(t *testing.T)
 		provider    string
 		model       string
 	}{
-		{name: "missing provider", environment: "test", model: "deterministic-v1"},
 		{name: "missing model", environment: "test", provider: "fake"},
 		{name: "unsupported local adapter", environment: "local", provider: "fake", model: "deterministic-v1"},
 		{name: "unknown provider", environment: "production", provider: "vendor", model: "vision-v1"},
@@ -189,8 +180,7 @@ func TestLoadKeepsProductionOCRBlockedUntilOwnerActivationDecision(t *testing.T)
 			clearConfiguration(t)
 			setValidLocalAuthentication(t)
 			t.Setenv("APP_ENV", test.environment)
-			t.Setenv("OCR_ENABLED", "true")
-			t.Setenv("OCR_PROVIDER", test.provider)
+				t.Setenv("OCR_PROVIDER", test.provider)
 			t.Setenv("OCR_MODEL", test.model)
 			if _, err := Load(); err == nil {
 				t.Fatal("Load() error = nil, want OCR activation error")
@@ -203,7 +193,6 @@ func TestLoadAllowsOnlyExplicitDeterministicTestChatConfiguration(t *testing.T) 
 	clearConfiguration(t)
 	setValidLocalAuthentication(t)
 	t.Setenv("APP_ENV", "test")
-	t.Setenv("AI_CHAT_ENABLED", "true")
 	t.Setenv("AI_CHAT_PROVIDER", "fake")
 	t.Setenv("AI_CHAT_MODEL", "deterministic-v1")
 	t.Setenv("AI_CHAT_RETENTION", "24h")
@@ -225,7 +214,6 @@ func TestLoadKeepsProductionChatBlockedUntilOwnerActivationDecisions(t *testing.
 		model       string
 		retention   string
 	}{
-		{name: "missing provider", environment: "test", model: "deterministic-v1", retention: "24h"},
 		{name: "missing model", environment: "test", provider: "fake", retention: "24h"},
 		{name: "missing retention", environment: "test", provider: "fake", model: "deterministic-v1"},
 		{name: "short retention", environment: "test", provider: "fake", model: "deterministic-v1", retention: "30m"},
@@ -237,7 +225,6 @@ func TestLoadKeepsProductionChatBlockedUntilOwnerActivationDecisions(t *testing.
 			clearConfiguration(t)
 			setValidLocalAuthentication(t)
 			t.Setenv("APP_ENV", test.environment)
-			t.Setenv("AI_CHAT_ENABLED", "true")
 			t.Setenv("AI_CHAT_PROVIDER", test.provider)
 			t.Setenv("AI_CHAT_MODEL", test.model)
 			t.Setenv("AI_CHAT_RETENTION", test.retention)
@@ -249,7 +236,6 @@ func TestLoadKeepsProductionChatBlockedUntilOwnerActivationDecisions(t *testing.
 
 	clearConfiguration(t)
 	t.Setenv("APP_ENV", "test")
-	t.Setenv("AI_CHAT_ENABLED", "true")
 	t.Setenv("AI_CHAT_PROVIDER", "fake")
 	t.Setenv("AI_CHAT_MODEL", "deterministic-v1")
 	t.Setenv("AI_CHAT_RETENTION", "24h")
@@ -262,7 +248,6 @@ func TestLoadAllowsGoogleChatProviderWithSealingKey(t *testing.T) {
 	clearConfiguration(t)
 	setValidLocalAuthentication(t)
 	t.Setenv("APP_ENV", "local")
-	t.Setenv("AI_CHAT_ENABLED", "true")
 	t.Setenv("AI_CHAT_PROVIDER", "google")
 	t.Setenv("AI_CHAT_MODEL", "gemini-2.5-flash")
 	t.Setenv("AI_CHAT_RETENTION", "336h")
@@ -281,7 +266,6 @@ func TestLoadAllowsGoogleOCRProviderWithSealingKey(t *testing.T) {
 	clearConfiguration(t)
 	setValidLocalAuthentication(t)
 	t.Setenv("APP_ENV", "local")
-	t.Setenv("OCR_ENABLED", "true")
 	t.Setenv("OCR_PROVIDER", "google")
 	t.Setenv("OCR_MODEL", "gemini-2.5-flash")
 	t.Setenv("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY", base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{7}, 32)))
@@ -338,7 +322,10 @@ func TestLoadRejectsUnsafeGoogleFormsConfiguration(t *testing.T) {
 	}
 
 	clearConfiguration(t)
-	t.Setenv("GOOGLE_FORMS_ENABLED", "true")
+	t.Setenv("GOOGLE_FORMS_OAUTH_CLIENT_ID", "forms-client-id")
+	t.Setenv("GOOGLE_FORMS_OAUTH_CLIENT_SECRET", "forms-client-secret")
+	t.Setenv("GOOGLE_FORMS_OAUTH_REDIRECT_URL", "http://localhost:8080/api/v1/google-forms/oauth/callback")
+	t.Setenv("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY", base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{1}, 32)))
 	if _, err := Load(); err == nil {
 		t.Fatal("Load() error = nil, want authentication dependency error")
 	}

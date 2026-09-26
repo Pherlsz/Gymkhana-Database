@@ -2,15 +2,11 @@ import { Tooltip } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { ClipboardList, FileSpreadsheet, IdCard, User, Zap } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { listGoogleFormsSources } from "../api/googleForms";
+import { listGoogleFormsSources, getGoogleFormsStatus } from "../api/googleForms";
 import type { OperationImport } from "../api/operations";
 import { listOperationImports } from "../api/operations";
 import { APIRequestError } from "../api/client";
-import {
-  CADASTRO_FORMS_ENTRY_ENABLED,
-  normalizeCadastroPageSearch,
-  type TableKind,
-} from "./cadastroSearch";
+import { normalizeCadastroPageSearch, type TableKind } from "./cadastroSearch";
 import { queryKeys } from "../api/queryKeys";
 import { AppCard } from "../../components/AppCard";
 import { useI18n } from "../../i18n";
@@ -35,7 +31,12 @@ export function CadastroEntryScreen({
   const session = useApplicationSession();
   const canUseForms = propCanUseForms ?? canManageUsers(session.user.role);
   const navigate = useNavigate();
-  const formsParked = !CADASTRO_FORMS_ENTRY_ENABLED;
+  const formsStatus = useQuery({
+    queryKey: queryKeys.googleForms.status,
+    queryFn: ({ signal }) => getGoogleFormsStatus(signal),
+    enabled: canUseForms,
+  });
+  const formsParked = formsStatus.data?.enabled !== true;
 
   const handleSelectTable =
     onSelectTable ??

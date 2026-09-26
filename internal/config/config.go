@@ -116,10 +116,6 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	googleFormsEnabled, err := envBool("GOOGLE_FORMS_ENABLED", false)
-	if err != nil {
-		return Config{}, err
-	}
 	googleFormsKeyVersion, err := envUint16("GOOGLE_FORMS_TOKEN_KEY_VERSION", 1)
 	if err != nil {
 		return Config{}, err
@@ -140,20 +136,12 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("parse GOOGLE_FORMS_TOKEN_DECRYPTION_KEYS: %w", err)
 	}
-	aiChatEnabled, err := envBool("AI_CHAT_ENABLED", false)
-	if err != nil {
-		return Config{}, err
-	}
 	var aiChatRetention time.Duration
 	if value := strings.TrimSpace(os.Getenv("AI_CHAT_RETENTION")); value != "" {
 		aiChatRetention, err = time.ParseDuration(value)
 		if err != nil {
 			return Config{}, fmt.Errorf("parse AI_CHAT_RETENTION: %w", err)
 		}
-	}
-	ocrEnabled, err := envBool("OCR_ENABLED", false)
-	if err != nil {
-		return Config{}, err
 	}
 	ocrTimeout, err := envDuration("OCR_TIMEOUT", "90s")
 	if err != nil {
@@ -172,6 +160,25 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	googleFormsClientID := strings.TrimSpace(os.Getenv("GOOGLE_FORMS_OAUTH_CLIENT_ID"))
+	googleFormsClientSecret := strings.TrimSpace(os.Getenv("GOOGLE_FORMS_OAUTH_CLIENT_SECRET"))
+	googleFormsRedirectURL := strings.TrimSpace(os.Getenv("GOOGLE_FORMS_OAUTH_REDIRECT_URL"))
+	aiChatProvider := strings.ToLower(strings.TrimSpace(os.Getenv("AI_CHAT_PROVIDER")))
+	aiChatModel := strings.TrimSpace(os.Getenv("AI_CHAT_MODEL"))
+	ocrProvider := strings.ToLower(strings.TrimSpace(os.Getenv("OCR_PROVIDER")))
+	ocrModel := strings.TrimSpace(os.Getenv("OCR_MODEL"))
+
+	// Product on/off is app_feature_flags (Admin SUPERADMIN). Env only supplies credentials
+	// and provider adapters; "Enabled" here means "infra is present so the service can compose".
+	formsAny := googleFormsClientID != "" || googleFormsClientSecret != "" || googleFormsRedirectURL != ""
+	formsAll := googleFormsClientID != "" && googleFormsClientSecret != "" && googleFormsRedirectURL != ""
+	if formsAny && !formsAll {
+		return Config{}, errors.New("google forms OAuth client id, secret, and redirect URL are all required when any Forms credential is set")
+	}
+	googleFormsConfigured := formsAll
+	aiChatConfigured := aiChatProvider != ""
+	ocrConfigured := ocrProvider != ""
+
 	cfg := Config{
 		Environment:      environment,
 		HTTPAddress:      valueOrDefault("HTTP_ADDRESS", ":8080"),
@@ -188,10 +195,10 @@ func Load() (Config, error) {
 			SecureCookies:      environment == EnvironmentStaging || environment == EnvironmentProduction,
 		},
 		GoogleForms: GoogleFormsConfig{
-			Enabled:             googleFormsEnabled,
-			ClientID:            strings.TrimSpace(os.Getenv("GOOGLE_FORMS_OAUTH_CLIENT_ID")),
-			ClientSecret:        strings.TrimSpace(os.Getenv("GOOGLE_FORMS_OAUTH_CLIENT_SECRET")),
-			RedirectURL:         strings.TrimSpace(os.Getenv("GOOGLE_FORMS_OAUTH_REDIRECT_URL")),
+			Enabled:             googleFormsConfigured,
+			ClientID:            googleFormsClientID,
+			ClientSecret:        googleFormsClientSecret,
+			RedirectURL:         googleFormsRedirectURL,
 			TokenEncryptionKey:  googleFormsKey,
 			TokenEncryptionKeys: googleFormsKeys,
 			TokenKeyVersion:     googleFormsKeyVersion,
@@ -199,13 +206,13 @@ func Load() (Config, error) {
 			ResponsePageSize:    googleFormsPageSize,
 		},
 		AIChat: AIChatConfig{
-			Enabled: aiChatEnabled, Provider: strings.ToLower(strings.TrimSpace(os.Getenv("AI_CHAT_PROVIDER"))),
-			Model: strings.TrimSpace(os.Getenv("AI_CHAT_MODEL")), Retention: aiChatRetention,
+			Enabled: aiChatConfigured, Provider: aiChatProvider,
+			Model: aiChatModel, Retention: aiChatRetention,
 			KeyEncryptionKeys: googleFormsKeys, KeyVersion: googleFormsKeyVersion,
 		},
 		OCR: OCRConfig{
-			Enabled: ocrEnabled, Provider: strings.ToLower(strings.TrimSpace(os.Getenv("OCR_PROVIDER"))),
-			Model: strings.TrimSpace(os.Getenv("OCR_MODEL")), Timeout: ocrTimeout,
+			Enabled: ocrConfigured, Provider: ocrProvider,
+			Model: ocrModel, Timeout: ocrTimeout,
 			MaximumRequests: ocrMaximumRequests, MaximumProviderUsage: ocrMaximumProviderUsage,
 			MaximumSourceBytes: ocrMaximumSourceBytes,
 		},
@@ -274,13 +281,13 @@ func (cfg Config) validate() error {
 	}
 	if !cfg.Auth.Enabled {
 		if cfg.GoogleForms.Enabled {
-			return errors.New("GOOGLE_FORMS_ENABLED requires authentication")
+			return errors.New("Google Forms OAuth credentials require authentication")
 		}
 		if cfg.AIChat.Enabled {
-			return errors.New("AI_CHAT_ENABLED requires authentication")
+			return errors.New("AI_CHAT_PROVIDER requires authentication")
 		}
 		if cfg.OCR.Enabled {
-			return errors.New("OCR_ENABLED requires authentication")
+			return errors.New("OCR_PROVIDER requires authentication")
 		}
 		return nil
 	}
@@ -317,8 +324,11 @@ func (cfg Config) validate() error {
 		return errors.New("AUTH_APPLICATION_URL must use HTTPS outside local and test environments")
 	}
 	if cfg.AIChat.Enabled {
+		if !cfg.Auth.Enabled {
+			return errors.New("AI_CHAT_PROVIDER requires authentication")
+		}
 		if cfg.AIChat.Provider == "" || cfg.AIChat.Model == "" || cfg.AIChat.Retention == 0 {
-			return errors.New("AI_CHAT_PROVIDER, AI_CHAT_MODEL and AI_CHAT_RETENTION are required when AI Chat is enabled")
+			return errors.New("AI_CHAT_PROVIDER, AI_CHAT_MODEL and AI_CHAT_RETENTION are required when the AI Chat adapter is configured")
 		}
 		if len(cfg.AIChat.Model) > 120 {
 			return errors.New("AI_CHAT_MODEL cannot exceed 120 characters")
@@ -333,15 +343,18 @@ func (cfg Config) validate() error {
 			}
 		case AIChatProviders[cfg.AIChat.Provider]:
 			if cfg.AIChat.KeyEncryptionKeys[cfg.AIChat.KeyVersion] == ([32]byte{}) {
-				return errors.New("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY is required to seal the shared model key when AI Chat is enabled")
+				return errors.New("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY is required to seal the shared model key when AI Chat is configured")
 			}
 		default:
 			return fmt.Errorf("unsupported AI_CHAT_PROVIDER %q", cfg.AIChat.Provider)
 		}
 	}
 	if cfg.OCR.Enabled {
+		if !cfg.Auth.Enabled {
+			return errors.New("OCR_PROVIDER requires authentication")
+		}
 		if cfg.OCR.Provider == "" || cfg.OCR.Model == "" {
-			return errors.New("OCR_PROVIDER and OCR_MODEL are required when OCR is enabled")
+			return errors.New("OCR_PROVIDER and OCR_MODEL are required when the OCR adapter is configured")
 		}
 		if len(cfg.OCR.Model) > 120 {
 			return errors.New("OCR_MODEL cannot exceed 120 characters")
@@ -353,7 +366,7 @@ func (cfg Config) validate() error {
 			}
 		case OCRProviders[cfg.OCR.Provider]:
 			if cfg.AIChat.KeyEncryptionKeys[cfg.AIChat.KeyVersion] == ([32]byte{}) {
-				return errors.New("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY is required to seal the shared model key when OCR is enabled")
+				return errors.New("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY is required to seal the shared model key when OCR is configured")
 			}
 		default:
 			return fmt.Errorf("unsupported OCR_PROVIDER %q", cfg.OCR.Provider)
@@ -362,14 +375,17 @@ func (cfg Config) validate() error {
 	if !cfg.GoogleForms.Enabled {
 		return nil
 	}
+	if !cfg.Auth.Enabled {
+		return errors.New("Google Forms OAuth credentials require authentication")
+	}
 	if cfg.GoogleForms.ClientID == "" || cfg.GoogleForms.ClientSecret == "" {
-		return errors.New("google forms OAuth client credentials are required when Google Forms is enabled")
+		return errors.New("google forms OAuth client credentials are incomplete")
 	}
 	if cfg.GoogleForms.TokenKeyVersion == 0 {
 		return errors.New("GOOGLE_FORMS_TOKEN_KEY_VERSION must be positive")
 	}
 	if cfg.GoogleForms.TokenEncryptionKey == ([32]byte{}) {
-		return errors.New("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY is required when Google Forms is enabled")
+		return errors.New("GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY is required when Google Forms OAuth is configured")
 	}
 	if key, exists := cfg.GoogleForms.TokenEncryptionKeys[cfg.GoogleForms.TokenKeyVersion]; !exists || key != cfg.GoogleForms.TokenEncryptionKey {
 		return errors.New("GOOGLE_FORMS_TOKEN_DECRYPTION_KEYS must retain the current encryption key")

@@ -18,6 +18,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/config"
 	"github.com/Pherlsz/Gymkhana-Database/internal/customdata"
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
+	"github.com/Pherlsz/Gymkhana-Database/internal/featureflags"
 	"github.com/Pherlsz/Gymkhana-Database/internal/googleforms"
 	"github.com/Pherlsz/Gymkhana-Database/internal/matching"
 	"github.com/Pherlsz/Gymkhana-Database/internal/modelprovider"
@@ -60,6 +61,13 @@ func run() error {
 	}
 	var authService *auth.Service
 	var authStore *auth.PostgresStore
+	var featureFlagService *featureflags.Service
+	if pool != nil {
+		featureFlagService, err = featureflags.NewService(featureflags.NewPostgresStore(pool))
+		if err != nil {
+			return fmt.Errorf("configure feature flags: %w", err)
+		}
+	}
 	if cfg.Auth.Enabled {
 		if pool == nil {
 			return errors.New("authentication requires a database connection")
@@ -314,6 +322,8 @@ func run() error {
 		ChatResults:            chatTools,
 		ChatLauncher:           chatCoordinator,
 		OCR:                    ocrService,
+		FeatureFlags:           featureFlagService,
+		FeatureFlagAdmin:       featureFlagService,
 		RequireCapabilityCheck: cfg.Auth.Enabled,
 		CapabilityCheck:        authStore,
 		Development:            cfg.Environment == config.EnvironmentLocal || cfg.Environment == config.EnvironmentTest,
@@ -334,7 +344,7 @@ func run() error {
 	serverError := make(chan error, 1)
 	go func() {
 		logger.Info("api listening", "address", cfg.HTTPAddress, "environment", cfg.Environment, "authentication_enabled", cfg.Auth.Enabled,
-			"attachments_enabled", storageCfg.Enabled, "ai_chat_enabled", cfg.AIChat.Enabled, "ocr_enabled", cfg.OCR.Enabled)
+			"attachments_configured", storageCfg.Enabled, "ai_chat_configured", cfg.AIChat.Enabled, "ocr_configured", cfg.OCR.Enabled)
 		serverError <- server.ListenAndServe()
 	}()
 	select {

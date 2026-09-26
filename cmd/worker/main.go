@@ -47,7 +47,7 @@ func run() error {
 		return errors.New("operations worker requires DATABASE_URL")
 	}
 	if !storageCfg.Enabled {
-		return errors.New("operations worker requires R2_ENABLED=true")
+		return errors.New("operations worker requires private R2 credentials (R2_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY)")
 	}
 	logger := logging.New(string(cfg.LogLevel))
 	slog.SetDefault(logger)

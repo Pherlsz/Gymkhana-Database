@@ -8,9 +8,6 @@ function isTableKind(value: string): value is TableKind {
 export const CADASTRO_MODES = ["manual", "xlsx", "forms"] as const;
 export type CadastroMode = (typeof CADASTRO_MODES)[number];
 
-/** Product entry for Google Forms is parked until the integration is ready for operators. */
-export const CADASTRO_FORMS_ENTRY_ENABLED = false;
-
 export const GOOGLE_FORMS_TABS = ["sources", "history"] as const;
 export type GoogleFormsTab = (typeof GOOGLE_FORMS_TABS)[number];
 
@@ -54,10 +51,7 @@ export const CADASTRO_SEARCH_DEFAULTS: CadastroPageSearch = { table: "people" };
 
 export function normalizeCadastroPageSearch(search: Record<string, unknown>): CadastroPageSearch {
   const table = isTableKind(String(search.table ?? "")) ? (search.table as TableKind) : "people";
-  let mode = isCadastroMode(search.mode) ? search.mode : undefined;
-  if (!CADASTRO_FORMS_ENTRY_ENABLED && mode === "forms") {
-    mode = undefined;
-  }
+  const mode = isCadastroMode(search.mode) ? search.mode : undefined;
   const rawImport = typeof search.import === "string" ? search.import.trim() : "";
   const importId = importIDPattern.test(rawImport) ? rawImport : undefined;
   const owner =

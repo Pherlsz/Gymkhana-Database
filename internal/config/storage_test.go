@@ -49,11 +49,10 @@ func TestLoadStorageRequiresImmutableReleaseOutsideDevelopment(t *testing.T) {
 
 func TestLoadStorageRequiresPrivateR2SettingsWhenEnabled(t *testing.T) {
 	clearStorageEnvironment(t)
-	t.Setenv("R2_ENABLED", "true")
+	t.Setenv("R2_ENDPOINT", "https://account.r2.cloudflarestorage.com")
 	if _, err := LoadStorage(); err == nil {
 		t.Fatal("LoadStorage() error = nil, want required settings error")
 	}
-	t.Setenv("R2_ENDPOINT", "https://account.r2.cloudflarestorage.com")
 	t.Setenv("R2_BUCKET", "private-files")
 	t.Setenv("R2_ACCESS_KEY_ID", "access")
 	t.Setenv("R2_SECRET_ACCESS_KEY", "secret")
