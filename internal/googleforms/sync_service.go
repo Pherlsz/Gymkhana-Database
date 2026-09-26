@@ -12,7 +12,7 @@ import (
 )
 
 func (service *Service) Sync(ctx context.Context, id Identifier) error {
-	if service == nil || !service.enabled {
+	if !service.productOn(ctx) {
 		return ErrDisabled
 	}
 	now := service.now().UTC()
@@ -143,7 +143,7 @@ func (service *Service) failSync(ctx context.Context, run SyncRun, cause error) 
 }
 
 func (service *Service) EnqueueDueSources(ctx context.Context) (int, error) {
-	if service == nil || !service.enabled {
+	if !service.productOn(ctx) {
 		return 0, ErrDisabled
 	}
 	now := service.now().UTC()
@@ -193,7 +193,7 @@ func (service *Service) EnqueueDueSources(ctx context.Context) (int, error) {
 }
 
 func (service *Service) ScheduleDuePoll(ctx context.Context) error {
-	if service == nil || !service.enabled {
+	if !service.productOn(ctx) {
 		return nil
 	}
 	window := service.now().UTC().Truncate(5 * time.Minute)

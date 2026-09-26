@@ -4,25 +4,25 @@ Multimodal OCR is a private, permission-aware extraction path for existing PDF, 
 
 ## Activation boundary
 
-The feature is disabled by default. Production uses Gemini (`OCR_PROVIDER=google`) with the shared Administração model key — the same sealed secret Assistente uses. `fake` stays in `APP_ENV=test`. Staging and production fail closed if `OCR_ENABLED=true` without a supported provider, and the Gemini path stays off for everyone until an ADMIN/SUPERADMIN stores the key.
+The feature is off by default in Administração → Funcionalidades (`ocr`). Production uses Gemini (`OCR_PROVIDER=google`) with the shared Administração model key — the same sealed secret Assistente uses. `fake` stays in `APP_ENV=test`. Staging and production fail closed if `OCR_PROVIDER` is set without a supported adapter/model/sealing key, and the Gemini path stays off for everyone until an ADMIN/SUPERADMIN stores the key and SUPERADMIN enables the product flag.
 
 Use a model (Gemini) only when that is the adequate extraction path. Without the shared key the model path stays off. Do not send private attachments to Gemini unless the flag is on and the key is present.
 
-Production activation requires `OCR_ENABLED=true`, `OCR_PROVIDER=google`, `OCR_MODEL` as the default when Administração did not choose one, and `GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY` to seal the shared key. The extractor is `internal/modelprovider` over Gymkhana-Core `ocr` (`schema_guided`; host still supplies authorized bytes). Do not put the provider key in `.env`.
+Production activation requires `OCR_PROVIDER=google`, `OCR_MODEL` as the default when Administração did not choose one, `GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY` to seal the shared key, and the `ocr` feature flag enabled. The extractor is `internal/modelprovider` over Gymkhana-Core `ocr` (`schema_guided`; host still supplies authorized bytes). Do not put the provider key in `.env`.
 
 ## Configuration contract
 
 | Variable                          | Contract                                                                       |
 | --------------------------------- | ------------------------------------------------------------------------------ |
-| `OCR_ENABLED`                     | Explicit switch; defaults to `false`                                           |
-| `OCR_PROVIDER`                    | Required when enabled; `google`, or `fake` in `APP_ENV=test`                   |
-| `OCR_MODEL`                       | Required when enabled; default model when Administração did not choose one     |
+| Product enablement                | Administração → Funcionalidades (`ocr`); defaults off                          |
+| `OCR_PROVIDER`                    | Set to compose the adapter; `google`, or `fake` in `APP_ENV=test`              |
+| `OCR_MODEL`                       | Required when provider is set; default model when Administração did not choose one |
 | `OCR_TIMEOUT`                     | Extraction deadline from `1s` through `5m`; defaults to `90s`                  |
 | `OCR_MAX_REQUESTS_PER_HOUR`       | Persistent per-user request limit from 1 through 1,000; defaults to 10         |
 | `OCR_MAX_PROVIDER_USAGE_PER_HOUR` | Persistent per-user provider-usage limit through 100,000,000; defaults 500,000 |
 | `OCR_MAX_SOURCE_BYTES`            | Source limit through 20 MiB; defaults to 20 MiB                                |
 
-OCR also requires authentication, PostgreSQL, private attachment storage, and the Profile, Document, Bill, and Custom Data services. A missing dependency stops startup. While disabled, the authenticated capability endpoint reports `enabled=false` and safe fixed limits; lifecycle routes return `ocr_unavailable`.
+OCR also requires authentication, PostgreSQL, private attachment storage, and the Profile, Document, Bill, and Custom Data services. A missing dependency stops startup when the provider is configured. While the product flag is off, the authenticated capability endpoint reports `enabled=false` and safe fixed limits; lifecycle routes return `ocr_unavailable`.
 
 Deterministic test-only configuration:
 
@@ -134,4 +134,4 @@ Run the deterministic path only in an isolated test environment:
 - `ocr_timeout`, `ocr_malformed_provider`, or `ocr_unavailable`: keep provider details redacted, correlate by request/job ID, and disable OCR if repeated.
 - `worker_interrupted`: use an explicit linked retry only after assessing possible provider billing; never manually return the row to `QUEUED`.
 
-To disable OCR without deleting state, set `OCR_ENABLED=false` and restart API and worker. Existing jobs and review history remain private in PostgreSQL; all lifecycle routes fail closed. Migration `017_multimodal_ocr.sql` has a reversible down section for disposable migration validation, but rolling it back permanently deletes OCR jobs, suggestions, receipts, usage, and audits. Production rollback should normally disable the feature and leave the schema in place. Use the down migration only with explicit approval and a verified recovery backup.
+To disable OCR without deleting state, turn off `ocr` in Administração → Funcionalidades. Existing jobs and review history remain private in PostgreSQL; all lifecycle routes fail closed. Migration `017_multimodal_ocr.sql` has a reversible down section for disposable migration validation, but rolling it back permanently deletes OCR jobs, suggestions, receipts, usage, and audits. Production rollback should normally disable the feature and leave the schema in place. Use the down migration only with explicit approval and a verified recovery backup.

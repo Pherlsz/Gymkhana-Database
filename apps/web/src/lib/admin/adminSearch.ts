@@ -1,4 +1,4 @@
-export const ADMIN_TABS = ["access", "integrations"] as const;
+export const ADMIN_TABS = ["access", "integrations", "features"] as const;
 export type AdminTab = (typeof ADMIN_TABS)[number];
 
 export const ADMIN_OAUTH_FLAGS = ["connected", "denied"] as const;

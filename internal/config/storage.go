@@ -40,10 +40,6 @@ func LoadStorage() (StorageConfig, error) {
 		return StorageConfig{}, fmt.Errorf("validate release identity: %w", err)
 	}
 
-	enabled, err := envBool("R2_ENABLED", false)
-	if err != nil {
-		return StorageConfig{}, err
-	}
 	uploadTTL, err := envDuration("ATTACHMENT_UPLOAD_TTL", "10m")
 	if err != nil {
 		return StorageConfig{}, err
@@ -72,12 +68,23 @@ func LoadStorage() (StorageConfig, error) {
 	if err != nil {
 		return StorageConfig{}, err
 	}
+	endpoint := strings.TrimSpace(os.Getenv("R2_ENDPOINT"))
+	bucket := strings.TrimSpace(os.Getenv("R2_BUCKET"))
+	accessKeyID := strings.TrimSpace(os.Getenv("R2_ACCESS_KEY_ID"))
+	secretAccessKey := strings.TrimSpace(os.Getenv("R2_SECRET_ACCESS_KEY"))
+	// Product on/off is app_feature_flags.attachments. Env credentials decide whether R2 can compose.
+	hasAny := endpoint != "" || bucket != "" || accessKeyID != "" || secretAccessKey != ""
+	hasAll := endpoint != "" && bucket != "" && accessKeyID != "" && secretAccessKey != ""
+	if hasAny && !hasAll {
+		return StorageConfig{}, errors.New("R2 endpoint, bucket, access key, and secret are all required when any R2 credential is set")
+	}
+	enabled := hasAll
 	cfg := StorageConfig{
 		Enabled:           enabled,
-		Endpoint:          strings.TrimSpace(os.Getenv("R2_ENDPOINT")),
-		Bucket:            strings.TrimSpace(os.Getenv("R2_BUCKET")),
-		AccessKeyID:       strings.TrimSpace(os.Getenv("R2_ACCESS_KEY_ID")),
-		SecretAccessKey:   strings.TrimSpace(os.Getenv("R2_SECRET_ACCESS_KEY")),
+		Endpoint:          endpoint,
+		Bucket:            bucket,
+		AccessKeyID:       accessKeyID,
+		SecretAccessKey:   secretAccessKey,
 		UploadTTL:         uploadTTL,
 		DownloadTTL:       downloadTTL,
 		TrashRetention:    trashRetention,
@@ -118,7 +125,7 @@ func (cfg StorageConfig) validate() error {
 		return nil
 	}
 	if cfg.Endpoint == "" || cfg.Bucket == "" || cfg.AccessKeyID == "" || cfg.SecretAccessKey == "" {
-		return errors.New("R2 endpoint, bucket, access key, and secret are required when R2_ENABLED is true")
+		return errors.New("R2 endpoint, bucket, access key, and secret are required when private storage credentials are set")
 	}
 	endpoint, err := url.Parse(cfg.Endpoint)
 	if err != nil || !endpoint.IsAbs() || endpoint.Host == "" {

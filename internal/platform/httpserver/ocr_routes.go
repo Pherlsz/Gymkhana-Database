@@ -13,6 +13,7 @@ import (
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/attachment"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
+	"github.com/Pherlsz/Gymkhana-Database/internal/featureflags"
 	ocrdomain "github.com/Pherlsz/Gymkhana-Database/internal/ocr"
 )
 
@@ -169,13 +170,13 @@ type ocrApplyRequest struct {
 	Selections     []ocrApplySelectionRequest `json:"selections"`
 }
 
-func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service ocrService) {
+func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service ocrService, flags featureFlagReader) {
 	mux.HandleFunc("GET /api/v1/ocr/capability", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		if _, problem := authenticatedSession(r, authentication); problem != nil {
 			writeProblem(w, r, *problem)
 			return
 		}
-		if service == nil {
+		if service == nil || !featureFlagOn(r.Context(), flags, featureflags.KeyOCR) {
 			writeJSON(w, http.StatusOK, ocrCapabilityFromDomain(ocrdomain.DefaultCapability()))
 			return
 		}
@@ -183,7 +184,7 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 	}))
 
 	mux.HandleFunc("GET /api/v1/ocr/jobs", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredOCRActor(w, r, authentication, service)
+		actor, ok := configuredOCRActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -201,7 +202,7 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 	}))
 
 	mux.HandleFunc("POST /api/v1/ocr/jobs", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredOCRActor(w, r, authentication, service)
+		actor, ok := configuredOCRActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -233,7 +234,7 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 	}))
 
 	mux.HandleFunc("GET /api/v1/ocr/jobs/{job_id}", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredOCRActor(w, r, authentication, service)
+		actor, ok := configuredOCRActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -250,7 +251,7 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 	}))
 
 	mux.HandleFunc("POST /api/v1/ocr/jobs/{job_id}/cancel", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredOCRActor(w, r, authentication, service)
+		actor, ok := configuredOCRActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -267,7 +268,7 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 	}))
 
 	mux.HandleFunc("GET /api/v1/ocr/jobs/{job_id}/events", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredOCRActor(w, r, authentication, service)
+		actor, ok := configuredOCRActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -284,7 +285,7 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 	}))
 
 	mux.HandleFunc("GET /api/v1/ocr/jobs/{job_id}/suggestions", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredOCRActor(w, r, authentication, service)
+		actor, ok := configuredOCRActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -306,7 +307,7 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 	}))
 
 	mux.HandleFunc("PATCH /api/v1/ocr/suggestions/{suggestion_id}", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredOCRActor(w, r, authentication, service)
+		actor, ok := configuredOCRActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -330,7 +331,7 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 	}))
 
 	mux.HandleFunc("POST /api/v1/ocr/jobs/{job_id}/apply", requireCapability(auth.CapOCR, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredOCRActor(w, r, authentication, service)
+		actor, ok := configuredOCRActor(w, r, authentication, service, flags)
 		if !ok {
 			return
 		}
@@ -361,13 +362,13 @@ func registerOCRRoutes(mux *http.ServeMux, logger *slog.Logger, authentication a
 	}))
 }
 
-func configuredOCRActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service ocrService) (auth.Session, bool) {
+func configuredOCRActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service ocrService, flags featureFlagReader) (auth.Session, bool) {
 	actor, problem := authenticatedSession(r, authentication)
 	if problem != nil {
 		writeProblem(w, r, *problem)
 		return auth.Session{}, false
 	}
-	if service == nil {
+	if service == nil || !featureFlagOn(r.Context(), flags, featureflags.KeyOCR) {
 		writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeOCRUnavailable,
 			Message: "OCR está desativado até que um provedor e modelo sejam configurados"})
 		return auth.Session{}, false

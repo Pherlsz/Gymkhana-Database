@@ -44,6 +44,8 @@ type Options struct {
 	ChatLauncher           chatRunLauncher
 	OCR                    ocrService
 	ModelKeys              modelKeyService
+	FeatureFlags           featureFlagReader
+	FeatureFlagAdmin       featureFlagService
 	SecureCookies          bool
 	ApplicationURL         string
 	Release                releaseinfo.Info
@@ -93,20 +95,21 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	})
 	registerAuthRoutes(mux, logger, settings.Auth, settings.Development, settings.SecureCookies, settings.ApplicationURL)
 	registerAdministrationRoutes(mux, logger, settings.Auth)
+	registerFeatureFlagRoutes(mux, logger, settings.Auth, settings.FeatureFlagAdmin)
 	registerModelKeyRoutes(mux, logger, settings.Auth, settings.ModelKeys)
 	registerProfileRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Profile, settings.Search, pool)
 	registerDocumentRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Document, settings.Search, pool)
 	registerBillRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Bill, settings.Search, pool)
 	registerCustomDataRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.CustomData)
-	registerAttachmentRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Attachment)
+	registerAttachmentRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Attachment, settings.FeatureFlags)
 	registerSearchRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Search)
 	registerOperationsRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Operations)
-	registerGoogleFormsRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.GoogleForms, settings.ApplicationURL)
+	registerGoogleFormsRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.GoogleForms, settings.ApplicationURL, settings.FeatureFlags)
 	registerQueryRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Query)
 	registerAdvancedQueryRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Query)
 	registerMatchingRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Matching)
-	registerChatRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Chat, settings.ChatResults, settings.ChatLauncher)
-	registerOCRRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.OCR)
+	registerChatRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Chat, settings.ChatResults, settings.ChatLauncher, settings.FeatureFlags)
+	registerOCRRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.OCR, settings.FeatureFlags)
 	mux.HandleFunc("/", fallbackHandler)
 	applicationOrigin := absoluteOrigin(settings.ApplicationURL)
 	return requestIDMiddleware(recoverMiddleware(logger, securityHeaders(bodyLimitMiddleware(settings.MaxBodyBytes, browserOriginMiddleware(applicationOrigin, mux)))))

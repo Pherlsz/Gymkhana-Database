@@ -13,6 +13,7 @@ import (
 
 	chatdomain "github.com/Pherlsz/Gymkhana-Database/internal/aichat"
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
+	"github.com/Pherlsz/Gymkhana-Database/internal/featureflags"
 	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
 )
 
@@ -164,13 +165,13 @@ type chatSetActiveResultRequest struct {
 	ReferenceID json.RawMessage `json:"reference_id"`
 }
 
-func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service chatService, results chatResultReader, launcher chatRunLauncher) {
+func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service chatService, results chatResultReader, launcher chatRunLauncher, flags featureFlagReader) {
 	mux.HandleFunc("GET /api/v1/chat/capability", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
 		if _, problem := authenticatedSession(r, authentication); problem != nil {
 			writeProblem(w, r, *problem)
 			return
 		}
-		if service == nil || results == nil || launcher == nil {
+		if service == nil || results == nil || launcher == nil || !featureFlagOn(r.Context(), flags, featureflags.KeyAIChat) {
 			writeJSON(w, http.StatusOK, chatCapabilityFromDomain(chatdomain.DefaultCapability()))
 			return
 		}
@@ -178,7 +179,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("GET /api/v1/chat/threads", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -196,7 +197,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("POST /api/v1/chat/threads", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -214,7 +215,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("GET /api/v1/chat/threads/{thread_id}", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -231,7 +232,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("PATCH /api/v1/chat/threads/{thread_id}", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -253,7 +254,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("DELETE /api/v1/chat/threads/{thread_id}", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -269,7 +270,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("GET /api/v1/chat/threads/{thread_id}/messages", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -291,7 +292,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("PUT /api/v1/chat/threads/{thread_id}/active-result", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -318,7 +319,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("POST /api/v1/chat/threads/{thread_id}/turns", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -357,7 +358,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("GET /api/v1/chat/runs/{run_id}", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -374,7 +375,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("POST /api/v1/chat/runs/{run_id}/cancel", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -392,7 +393,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("GET /api/v1/chat/runs/{run_id}/events", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -409,7 +410,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("GET /api/v1/chat/result-references/{reference_id}", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -438,7 +439,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("GET /api/v1/chat/result-references/{reference_id}/recorte", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -461,7 +462,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("GET /api/v1/chat/result-references/{reference_id}/page", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -483,7 +484,7 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 
 	mux.HandleFunc("GET /api/v1/chat/result-references/{reference_id}/xlsx", requireCapability(auth.CapChat, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher)
+		actor, ok := configuredChatActor(w, r, authentication, service, results, launcher, flags)
 		if !ok {
 			return
 		}
@@ -505,13 +506,13 @@ func registerChatRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 	}))
 }
 
-func configuredChatActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service chatService, results chatResultReader, launcher chatRunLauncher) (auth.Session, bool) {
+func configuredChatActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service chatService, results chatResultReader, launcher chatRunLauncher, flags featureFlagReader) (auth.Session, bool) {
 	actor, problem := authenticatedSession(r, authentication)
 	if problem != nil {
 		writeProblem(w, r, *problem)
 		return auth.Session{}, false
 	}
-	if service == nil || results == nil || launcher == nil {
+	if service == nil || results == nil || launcher == nil || !featureFlagOn(r.Context(), flags, featureflags.KeyAIChat) {
 		writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeChatUnavailable,
 			Message: "O Chat está desativado até que provedor, modelo e retenção sejam configurados"})
 		return auth.Session{}, false

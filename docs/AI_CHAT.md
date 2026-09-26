@@ -23,10 +23,10 @@ Do not reuse `fake` in staging/production or put the provider key in `.env`; the
 
 | Variable                            | Contract                                                                                   |
 | ----------------------------------- | ------------------------------------------------------------------------------------------ |
-| `AI_CHAT_ENABLED`                   | Explicit switch; defaults to `false`                                                       |
-| `AI_CHAT_PROVIDER`                  | Required only when enabled; `google`, or `fake` in `APP_ENV=test`                          |
-| `AI_CHAT_MODEL`                     | Required only when enabled; default model when Administração did not choose one (≤ 120)    |
-| `AI_CHAT_RETENTION`                 | Required only when enabled; Go duration from `1h` through `8760h`; `336h` (14 days) advised |
+| Product enablement                  | Administração → Funcionalidades (`ai_chat`); defaults off                                  |
+| `AI_CHAT_PROVIDER`                  | Set to compose the adapter; `google`, or `fake` in `APP_ENV=test`                          |
+| `AI_CHAT_MODEL`                     | Required when provider is set; default model when Administração did not choose one (≤ 120) |
+| `AI_CHAT_RETENTION`                 | Required when provider is set; Go duration from `1h` through `8760h`; `336h` advised        |
 | `GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY` | Required with `google`; seals the shared model key (shared with Google Forms tokens)        |
 
 Administrative routes (ADMIN/SUPERADMIN): `GET/PUT/DELETE /api/admin/model-keys/{provider}`. `PUT` receives `{ "secret", "model" }`; responses carry only provider, `configured`, model and `updated_at`.
@@ -37,7 +37,6 @@ Deterministic test-only configuration:
 
 ```dotenv
 APP_ENV=test
-AI_CHAT_ENABLED=true
 AI_CHAT_PROVIDER=fake
 AI_CHAT_MODEL=deterministic-v1
 AI_CHAT_RETENTION=24h
@@ -143,6 +142,6 @@ The deterministic fake returns a fixed text response when the full API process i
 - `chat_malformed_provider`, `chat_tool_failed`, or `chat_unsafe_result`: keep the provider payload redacted, correlate by request/run ID, and disable Chat if failures repeat.
 - Abrupt-process orphan: allow the startup/minute recovery sweep to create its terminal event; never update run rows manually while the service is active.
 
-To disable Chat without deleting retained state, set `AI_CHAT_ENABLED=false` and restart the API. The capability endpoint then reports disabled and all Chat lifecycle routes fail closed. Existing rows remain stored under the same database access controls and expire only when cleanup runs after a later safe reactivation or through an explicitly reviewed maintenance procedure.
+To disable Chat without deleting retained state, turn off `ai_chat` in Administração → Funcionalidades. The capability endpoint then reports disabled and all Chat lifecycle routes fail closed. Existing rows remain stored under the same database access controls and expire only when cleanup runs after a later safe reactivation or through an explicitly reviewed maintenance procedure.
 
 Migration `016_ai_chat.sql` has a reversible down section for development validation, but rolling it back permanently removes Chat conversations, results, usage windows, and audits. Production rollback should normally disable the feature and leave the schema in place. Use the down migration only with explicit approval and a verified recovery backup.

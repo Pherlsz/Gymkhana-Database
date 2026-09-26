@@ -37,6 +37,8 @@ type ServiceOptions struct {
 	RecoveryBatch        int
 	OnAuditFailure       AuditFailureHandler
 	Ready                func(context.Context) bool
+	// ProductEnabled gates worker execution when product on/off lives outside env.
+	ProductEnabled func(context.Context) bool
 }
 
 type Service struct {
@@ -53,6 +55,7 @@ type Service struct {
 	recoveryBatch        int
 	onAuditFailure       AuditFailureHandler
 	ready                func(context.Context) bool
+	productEnabled       func(context.Context) bool
 }
 
 func NewService(store Store, jobs Jobs, sources SourceGateway, targets TargetGateway, extractor Extractor, options ServiceOptions) (*Service, error) {
@@ -89,6 +92,7 @@ func NewService(store Store, jobs Jobs, sources SourceGateway, targets TargetGat
 		now: options.Now, timeout: options.Timeout, maximumRate: options.MaximumRate,
 		maximumProviderUsage: options.MaximumProviderUsage, maximumSourceBytes: options.MaximumSourceBytes,
 		recoveryBatch: options.RecoveryBatch, onAuditFailure: options.OnAuditFailure, ready: options.Ready,
+		productEnabled: options.ProductEnabled,
 	}, nil
 }
 
@@ -554,6 +558,9 @@ func (service *Service) RunJob(ctx context.Context, id Identifier) (resultErr er
 	if id.IsZero() {
 		return ErrInvalidInput
 	}
+	if service.productEnabled != nil && !service.productEnabled(ctx) {
+		return ErrUnavailable
+	}
 	job, err := service.store.GetJobForWorker(ctx, id)
 	if err != nil {
 		return err
@@ -700,6 +707,9 @@ func (service *Service) RunJob(ctx context.Context, id Identifier) (resultErr er
 }
 
 func (service *Service) RecoverStaleJobs(ctx context.Context) (int, error) {
+	if service.productEnabled != nil && !service.productEnabled(ctx) {
+		return 0, nil
+	}
 	now := service.now().UTC()
 	affected, err := service.store.RecoverStaleJobs(ctx, now.Add(-service.timeout-staleJobGrace), now, service.recoveryBatch)
 	service.audit(ctx, nil, nil, nil, AuditJobRecovered, auditOutcome(err), intPointer(affected), err, "worker-recovery")

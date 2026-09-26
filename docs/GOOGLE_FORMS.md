@@ -35,7 +35,7 @@ The redirect URI must contain no query or fragment. HTTPS is mandatory in stagin
 
 | Variable                             | Purpose                                                            |
 | ------------------------------------ | ------------------------------------------------------------------ |
-| `GOOGLE_FORMS_ENABLED`               | Explicit feature switch; defaults to `false`                       |
+| Product enablement                       | Administração → Funcionalidades (`google_forms`); defaults off     |
 | `GOOGLE_FORMS_OAUTH_CLIENT_ID`       | Google OAuth web-client ID                                         |
 | `GOOGLE_FORMS_OAUTH_CLIENT_SECRET`   | Google OAuth client secret; secret manager only                    |
 | `GOOGLE_FORMS_OAUTH_REDIRECT_URL`    | Exact API callback ending in `/api/v1/google-forms/oauth/callback` |
@@ -54,7 +54,6 @@ openssl rand -base64 32
 Local values belong in gitignored `.env`. `.env.example` lists the names.
 
 ```dotenv
-GOOGLE_FORMS_ENABLED=true
 GOOGLE_FORMS_OAUTH_CLIENT_ID=...
 GOOGLE_FORMS_OAUTH_CLIENT_SECRET=...
 GOOGLE_FORMS_OAUTH_REDIRECT_URL=http://localhost:8080/api/v1/google-forms/oauth/callback
@@ -65,7 +64,7 @@ GOOGLE_FORMS_SYNC_INTERVAL=15m
 GOOGLE_FORMS_RESPONSE_PAGE_SIZE=100
 ```
 
-Startup fails closed when the feature is enabled with incomplete credentials, an invalid redirect, or an invalid key. With the feature disabled, API and worker startup do not require Google credentials.
+Startup fails closed when Forms OAuth credentials are partially set, or the redirect/key is invalid. Without Forms credentials, API and worker startup do not compose the Forms service. Product use is gated by Administração → Funcionalidades.
 
 ## Key rotation
 
@@ -98,4 +97,4 @@ Safe operational records contain IDs, counts, timestamps, states, and stable err
 - `response_changed`: a previously receipted response ID returned different normalized content. Investigate before retrying; the existing canonical import is not silently overwritten.
 - Cancelled or interrupted jobs are idempotent. Unique sync runs and response receipts prevent duplicate staging across retries and cursor overlap.
 
-To disable ingestion without deleting state, set `GOOGLE_FORMS_ENABLED=false` and restart API and worker. Existing encrypted credentials remain at rest for later reactivation. For suspected credential compromise, disconnect affected accounts, rotate the Google OAuth secret when applicable, rotate the application encryption key, and review Google Forms audit events.
+To disable ingestion without deleting state, turn off `google_forms` in Administração → Funcionalidades. Existing encrypted credentials remain at rest for later reactivation. For suspected credential compromise, disconnect affected accounts, rotate the Google OAuth secret when applicable, rotate the application encryption key, and review Google Forms audit events.
