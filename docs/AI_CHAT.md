@@ -25,7 +25,7 @@ Do not reuse `fake` in staging/production or put the provider key in `.env`; the
 | ----------------------------------- | ------------------------------------------------------------------------------------------ |
 | Product enablement                  | Administração → Funcionalidades (`ai_chat`); defaults off                                  |
 | `AI_CHAT_PROVIDER`                  | Set to compose the adapter; `google`, or `fake` in `APP_ENV=test`                          |
-| `AI_CHAT_MODEL`                     | Required when provider is set; default model when Administração did not choose one (≤ 120) |
+| `AI_CHAT_MODEL`                     | Optional fallback when the shared Integrações key has no model yet (≤ 120); live model is chosen with the key |
 | `AI_CHAT_RETENTION`                 | Required when provider is set; Go duration from `1h` through `8760h`; `336h` advised        |
 | `GOOGLE_FORMS_TOKEN_ENCRYPTION_KEY` | Required with `google`; seals the shared model key (shared with Google Forms tokens)        |
 

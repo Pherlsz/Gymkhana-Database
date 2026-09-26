@@ -326,10 +326,6 @@ func run() error {
 		GoogleForms:            googleFormsService,
 		Query:                  queryService,
 		Matching:               matchingService,
-		Chat:                   chatService,
-		ChatResults:            chatTools,
-		ChatLauncher:           chatCoordinator,
-		OCR:                    ocrService,
 		FeatureFlags:           featureFlagService,
 		FeatureFlagAdmin:       featureFlagService,
 		RequireCapabilityCheck: cfg.Auth.Enabled,
@@ -337,6 +333,16 @@ func run() error {
 		Development:            cfg.Environment == config.EnvironmentLocal || cfg.Environment == config.EnvironmentTest,
 		SecureCookies:          cfg.Auth.SecureCookies,
 		ApplicationURL:         cfg.Auth.ApplicationURL,
+	}
+	// Assign concrete services only when non-nil. A nil *T inside an interface is
+	// not a nil interface and would panic on method calls once a product flag is on.
+	if chatService != nil {
+		serverOptions.Chat = chatService
+		serverOptions.ChatResults = chatTools
+		serverOptions.ChatLauncher = chatCoordinator
+	}
+	if ocrService != nil {
+		serverOptions.OCR = ocrService
 	}
 	if modelKeys != nil {
 		serverOptions.ModelKeys = modelKeys
