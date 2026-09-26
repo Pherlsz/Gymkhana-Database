@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "./i18n";
-import { LoginScreen } from "./LoginScreen";
+import { AuthCheckingScreen, LoginScreen } from "./LoginScreen";
 import { ThemeProvider } from "./theme";
 
 function renderLogin(onLogin = () => undefined) {
@@ -62,5 +62,18 @@ describe("LoginScreen", () => {
     );
     expect(document.documentElement).toHaveClass("dark");
     expect(screen.queryByRole("button", { name: /tema/i })).toBeNull();
+  });
+
+  it("shows a signing-in state without login actions while the session is checked", () => {
+    render(
+      <ThemeProvider forceDark>
+        <I18nProvider locale="pt-BR">
+          <AuthCheckingScreen />
+        </I18nProvider>
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByText("Entrando…")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Entrar com Google/ })).toBeNull();
   });
 });
