@@ -4,6 +4,7 @@
   "private": true,
   "description": "Private workspace for the Gymkhana Database application.",
   "scripts": {
+    "build": "pnpm build:web",
     "dev:web": "pnpm --filter @pherlsz/gymkhana-database-web dev",
     "build:web": "pnpm --filter @pherlsz/gymkhana-database-web build",
     "deploy:web:staging": "pnpm build:web && wrangler deploy",

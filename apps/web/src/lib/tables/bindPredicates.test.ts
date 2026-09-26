@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  bindPredicates,
-  decodeFieldValue,
-  encodePredicateValue,
-} from "./bindPredicates";
+import { bindPredicates, decodeFieldValue, encodePredicateValue } from "./bindPredicates";
 import type { ToolbarFilterField } from "./FilterControl";
 
 describe("bindPredicates", () => {
@@ -64,4 +60,3 @@ describe("bindPredicates", () => {
     expect(onChangeSpy).toHaveBeenLastCalledWith("");
   });
 });
-

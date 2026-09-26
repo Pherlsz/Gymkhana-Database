@@ -260,7 +260,9 @@ describe("CadastroSingleScreen", () => {
       fireEvent.change(screen.getByLabelText(/Número do documento/i), {
         target: { value: "MG-12.345.678" },
       });
-      fireEvent.change(screen.getByLabelText(/Nome do titular/i), { target: { value: "Ana Néri" } });
+      fireEvent.change(screen.getByLabelText(/Nome do titular/i), {
+        target: { value: "Ana Néri" },
+      });
       await confirmSave();
       expect(await screen.findByText(/not_mobile/i)).not.toBeNull();
       expect(createProfile).toHaveBeenCalledTimes(1);

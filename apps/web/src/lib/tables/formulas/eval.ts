@@ -604,6 +604,6 @@ export function evalFormula(
 export function formulaIsNumeric(expression: string): boolean {
   return Boolean(
     matchFormula(expression)?.numeric ||
-      FORMULA_FUNCS.find((item) => item.numeric && foldName(item.name) === firstFnName(expression)),
+    FORMULA_FUNCS.find((item) => item.numeric && foldName(item.name) === firstFnName(expression)),
   );
 }

@@ -1319,7 +1319,9 @@ body.spreadsheet-col-resizing * {
   color: var(--md-on-surface-variant);
   cursor: help;
   opacity: 0.7;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
 }
 
 .column-funnel__hint-trigger:hover {
@@ -1392,4 +1394,3 @@ body.spreadsheet-col-resizing * {
 .column-funnel__spacer {
   min-height: 2.35rem;
 }
-

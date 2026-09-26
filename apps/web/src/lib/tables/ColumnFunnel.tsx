@@ -407,7 +407,9 @@ export const ColumnFunnel = memo(function ColumnFunnel({
                 const hint = (option.data as { hint?: string } | undefined)?.hint;
                 return (
                   <div className="column-funnel__option-row">
-                    <span className="column-funnel__option-name">{String(option.data?.label ?? option.data?.value ?? "")}</span>
+                    <span className="column-funnel__option-name">
+                      {String(option.data?.label ?? option.data?.value ?? "")}
+                    </span>
                     {hint ? (
                       <Tooltip title={hint} placement="right">
                         <span

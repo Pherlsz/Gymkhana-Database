@@ -1,8 +1,8 @@
 package aichat
 
 import (
-	_ "embed"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 )
@@ -18,8 +18,8 @@ var ReadOnlySystemPolicy string
 // toolNameToKind is the single source of truth for tool name → kind mapping.
 // Both toolKindFromName (orchestrator) and Execute (ToolGateway) derive from this.
 var toolNameToKind = map[string]ToolKind{
-	"catalog":   ToolCatalog,
-	"search":    ToolSearch,
+	"catalog": ToolCatalog,
+	"search":  ToolSearch,
 	// query, sequencia, tarefa all stored as QUERY.
 	// ponytail: sequencia and tarefa are stored as QUERY. A dedicated kind needs a migration of tool_kind.
 	"query":     ToolQuery,

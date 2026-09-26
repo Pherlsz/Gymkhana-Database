@@ -36,10 +36,9 @@ export function digitSum(value: unknown): number {
 }
 
 export function letterSum(value: unknown): number {
-  return [...asText(value)
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLocaleUpperCase("pt-BR")].reduce((sum, ch) => {
+  return [
+    ...asText(value).normalize("NFD").replace(/\p{M}/gu, "").toLocaleUpperCase("pt-BR"),
+  ].reduce((sum, ch) => {
     if (ch >= "A" && ch <= "Z") return sum + (ch.charCodeAt(0) - 64);
     if (ch >= "0" && ch <= "9") return sum + Number(ch);
     return sum;
@@ -265,4 +264,3 @@ export function maxNums(args: unknown[]): number | "" {
   if (!nums.length) return "";
   return Math.max(...nums);
 }
-

@@ -110,5 +110,3 @@ export function bindPredicatesStable(
     return { ...field, funnelKind: kind, predicate, onPredicate };
   });
 }
-
-

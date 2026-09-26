@@ -54,9 +54,7 @@ export function ProfileSearchExpand({
         ) : null}
         {profileQuery.data ? (
           <ProfileReadout
-            documentPresence={
-              <DocumentPresenceSection profile={profileQuery.data} />
-            }
+            documentPresence={<DocumentPresenceSection profile={profileQuery.data} />}
             profile={profileQuery.data}
           />
         ) : null}

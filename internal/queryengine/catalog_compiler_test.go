@@ -563,4 +563,3 @@ func TestCompileUserQueryComplexFilterTree(t *testing.T) {
 		t.Errorf("compiled SQL missing NOT (: %s", compiled.SQL)
 	}
 }
-

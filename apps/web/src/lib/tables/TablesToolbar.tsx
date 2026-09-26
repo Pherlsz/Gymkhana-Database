@@ -137,7 +137,7 @@ export function TablesToolbar({
         <div aria-label={appliedFiltersLabel} className="tables-toolbar__chips" role="group">
           {shownChips.map((chip) => (
             <Tag
-              className="tables-toolbar__chip"
+              className={chip.local ? "tables-toolbar__chip is-local" : "tables-toolbar__chip"}
               closable
               key={chip.key}
               onClose={(event) => {
@@ -147,6 +147,11 @@ export function TablesToolbar({
             >
               <span className="tables-toolbar__chip-field">{chip.field}:</span>{" "}
               <span className="tables-toolbar__chip-value">{chip.value}</span>
+              {chip.local ? (
+                <span className="tables-toolbar__chip-local" title={localHint}>
+                  {localScopeBadge}
+                </span>
+              ) : null}
             </Tag>
           ))}
           {hiddenChips > 0 ? (

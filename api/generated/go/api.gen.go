@@ -496,6 +496,24 @@ func (e ProfileSortField) Valid() bool {
 	}
 }
 
+// Defines values for ProvisionUserRequestRole.
+const (
+	ProvisionUserRequestRoleADMIN    ProvisionUserRequestRole = "ADMIN"
+	ProvisionUserRequestRoleEXTERNAL ProvisionUserRequestRole = "EXTERNAL"
+)
+
+// Valid indicates whether the value is a known member of the ProvisionUserRequestRole enum.
+func (e ProvisionUserRequestRole) Valid() bool {
+	switch e {
+	case ProvisionUserRequestRoleADMIN:
+		return true
+	case ProvisionUserRequestRoleEXTERNAL:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SortOrder.
 const (
 	Asc  SortOrder = "asc"
@@ -516,19 +534,19 @@ func (e SortOrder) Valid() bool {
 
 // Defines values for UserRole.
 const (
-	ADMIN      UserRole = "ADMIN"
-	EXTERNAL   UserRole = "EXTERNAL"
-	SUPERADMIN UserRole = "SUPERADMIN"
+	UserRoleADMIN      UserRole = "ADMIN"
+	UserRoleEXTERNAL   UserRole = "EXTERNAL"
+	UserRoleSUPERADMIN UserRole = "SUPERADMIN"
 )
 
 // Valid indicates whether the value is a known member of the UserRole enum.
 func (e UserRole) Valid() bool {
 	switch e {
-	case ADMIN:
+	case UserRoleADMIN:
 		return true
-	case EXTERNAL:
+	case UserRoleEXTERNAL:
 		return true
-	case SUPERADMIN:
+	case UserRoleSUPERADMIN:
 		return true
 	default:
 		return false
@@ -1307,6 +1325,17 @@ type ProfileValuesRequest struct {
 	WeddingDate        *openapi_types.Date `json:"wedding_date,omitempty"`
 }
 
+// ProvisionUserRequest defines model for ProvisionUserRequest.
+type ProvisionUserRequest struct {
+	Capabilities *[]string                `json:"capabilities,omitempty"`
+	DisplayName  string                   `json:"display_name"`
+	Email        string                   `json:"email"`
+	Role         ProvisionUserRequestRole `json:"role"`
+}
+
+// ProvisionUserRequestRole defines model for ProvisionUserRequest.Role.
+type ProvisionUserRequestRole string
+
 // ReplaceCustomValuesRequest defines model for ReplaceCustomValuesRequest.
 type ReplaceCustomValuesRequest struct {
 	Values  []CustomValueInput `json:"values"`
@@ -1463,9 +1492,11 @@ type UpdateProfileRequest struct {
 
 // UpdateUserAccessRequest defines model for UpdateUserAccessRequest.
 type UpdateUserAccessRequest struct {
-	Active  bool     `json:"active"`
-	Role    UserRole `json:"role"`
-	Version int64    `json:"version"`
+	Active      bool     `json:"active"`
+	DisplayName *string  `json:"display_name,omitempty"`
+	Email       *string  `json:"email,omitempty"`
+	Role        UserRole `json:"role"`
+	Version     int64    `json:"version"`
 }
 
 // UpsertDocumentPresenceRequest defines model for UpsertDocumentPresenceRequest.
@@ -1640,6 +1671,9 @@ type CompleteGitHubLoginParams struct {
 // SetModelKeyJSONRequestBody defines body for SetModelKey for application/json ContentType.
 type SetModelKeyJSONRequestBody = SetModelKeyRequest
 
+// ProvisionApplicationUserJSONRequestBody defines body for ProvisionApplicationUser for application/json ContentType.
+type ProvisionApplicationUserJSONRequestBody = ProvisionUserRequest
+
 // UpdateApplicationUserAccessJSONRequestBody defines body for UpdateApplicationUserAccess for application/json ContentType.
 type UpdateApplicationUserAccessJSONRequestBody = UpdateUserAccessRequest
 
@@ -1750,6 +1784,12 @@ type ServerInterface interface {
 	// List application users for administration
 	// (GET /api/admin/users)
 	ListApplicationUsers(w http.ResponseWriter, r *http.Request, params ListApplicationUsersParams)
+	// Create an application user with role and capabilities
+	// (POST /api/admin/users)
+	ProvisionApplicationUser(w http.ResponseWriter, r *http.Request)
+	// Delete an application user
+	// (DELETE /api/admin/users/{user_id})
+	DeleteApplicationUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
 	// Update application role and active status
 	// (PATCH /api/admin/users/{user_id}/access)
 	UpdateApplicationUserAccess(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID)
@@ -2086,6 +2126,58 @@ func (siw *ServerInterfaceWrapper) ListApplicationUsers(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListApplicationUsers(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProvisionApplicationUser operation middleware
+func (siw *ServerInterfaceWrapper) ProvisionApplicationUser(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProvisionApplicationUser(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteApplicationUser operation middleware
+func (siw *ServerInterfaceWrapper) DeleteApplicationUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "user_id" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "user_id", r.PathValue("user_id"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteApplicationUser(w, r, userId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4897,6 +4989,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/admin/model-keys/{provider}", wrapper.GetModelKeyStatus)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/api/admin/model-keys/{provider}", wrapper.SetModelKey)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/admin/users", wrapper.ListApplicationUsers)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/admin/users", wrapper.ProvisionApplicationUser)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/admin/users/{user_id}", wrapper.DeleteApplicationUser)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/admin/users/{user_id}/access", wrapper.UpdateApplicationUserAccess)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/auth/session", wrapper.GetAuthSession)
@@ -5289,6 +5383,184 @@ func (response ListApplicationUsers403JSONResponse) VisitListApplicationUsersRes
 type ListApplicationUsers503JSONResponse struct{ AuthUnavailableJSONResponse }
 
 func (response ListApplicationUsers503JSONResponse) VisitListApplicationUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUserRequestObject struct {
+	Body *ProvisionApplicationUserJSONRequestBody
+}
+
+type ProvisionApplicationUserResponseObject interface {
+	VisitProvisionApplicationUserResponse(w http.ResponseWriter) error
+}
+
+type ProvisionApplicationUser201JSONResponse AdminUser
+
+func (response ProvisionApplicationUser201JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUser400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ProvisionApplicationUser400JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ProvisionApplicationUser401JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ProvisionApplicationUser403JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUser409JSONResponse struct{ ConflictJSONResponse }
+
+func (response ProvisionApplicationUser409JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ProvisionApplicationUser503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response ProvisionApplicationUser503JSONResponse) VisitProvisionApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplicationUserRequestObject struct {
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+type DeleteApplicationUserResponseObject interface {
+	VisitDeleteApplicationUserResponse(w http.ResponseWriter) error
+}
+
+type DeleteApplicationUser204Response struct {
+}
+
+func (response DeleteApplicationUser204Response) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteApplicationUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteApplicationUser401JSONResponse) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplicationUser403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteApplicationUser403JSONResponse) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplicationUser404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteApplicationUser404JSONResponse) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplicationUser409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteApplicationUser409JSONResponse) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteApplicationUser503JSONResponse struct{ AuthUnavailableJSONResponse }
+
+func (response DeleteApplicationUser503JSONResponse) VisitDeleteApplicationUserResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -11586,6 +11858,12 @@ type StrictServerInterface interface {
 	// List application users for administration
 	// (GET /api/admin/users)
 	ListApplicationUsers(ctx context.Context, request ListApplicationUsersRequestObject) (ListApplicationUsersResponseObject, error)
+	// Create an application user with role and capabilities
+	// (POST /api/admin/users)
+	ProvisionApplicationUser(ctx context.Context, request ProvisionApplicationUserRequestObject) (ProvisionApplicationUserResponseObject, error)
+	// Delete an application user
+	// (DELETE /api/admin/users/{user_id})
+	DeleteApplicationUser(ctx context.Context, request DeleteApplicationUserRequestObject) (DeleteApplicationUserResponseObject, error)
 	// Update application role and active status
 	// (PATCH /api/admin/users/{user_id}/access)
 	UpdateApplicationUserAccess(ctx context.Context, request UpdateApplicationUserAccessRequestObject) (UpdateApplicationUserAccessResponseObject, error)
@@ -11907,6 +12185,63 @@ func (sh *strictHandler) ListApplicationUsers(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListApplicationUsersResponseObject); ok {
 		if err := validResponse.VisitListApplicationUsersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ProvisionApplicationUser operation middleware
+func (sh *strictHandler) ProvisionApplicationUser(w http.ResponseWriter, r *http.Request) {
+	var request ProvisionApplicationUserRequestObject
+
+	var body ProvisionApplicationUserJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ProvisionApplicationUser(ctx, request.(ProvisionApplicationUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ProvisionApplicationUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ProvisionApplicationUserResponseObject); ok {
+		if err := validResponse.VisitProvisionApplicationUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteApplicationUser operation middleware
+func (sh *strictHandler) DeleteApplicationUser(w http.ResponseWriter, r *http.Request, userId openapi_types.UUID) {
+	var request DeleteApplicationUserRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteApplicationUser(ctx, request.(DeleteApplicationUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteApplicationUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteApplicationUserResponseObject); ok {
+		if err := validResponse.VisitDeleteApplicationUserResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -47,10 +47,7 @@ export function DocumentPresenceSection({
       (type.active || presenceFor(profile, type.id)) && !isRepeatedIdentity(type.technical_key),
   );
   const visibleBadges = profile.document_badges ?? [];
-  if (
-    activeTypes.every((type) => !presenceFor(profile, type.id)) &&
-    visibleBadges.length === 0
-  ) {
+  if (activeTypes.every((type) => !presenceFor(profile, type.id)) && visibleBadges.length === 0) {
     return null;
   }
   return (

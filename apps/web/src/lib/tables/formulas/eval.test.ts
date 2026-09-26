@@ -12,29 +12,25 @@ const columns = [
 describe("sheet formulas", () => {
   it("evaluates TOTAL.CARAC across columns", () => {
     expect(
-      evalFormula("=TOTAL.CARAC([Nome completo]; [CPF])", { full_name: "Ana", cpf: "123" }, columns),
+      evalFormula(
+        "=TOTAL.CARAC([Nome completo]; [CPF])",
+        { full_name: "Ana", cpf: "123" },
+        columns,
+      ),
     ).toBe(6);
   });
 
   it("evaluates OU and E logic formulas", () => {
     expect(
-      evalFormula(
-        '=OU([UF]="RS"; [Cidade]="Recife")',
-        { state: "RS", city: "" },
-        columns,
-      ),
+      evalFormula('=OU([UF]="RS"; [Cidade]="Recife")', { state: "RS", city: "" }, columns),
     ).toBe("SIM");
-    expect(
-      evalFormula(
-        '=E([UF]="RS"; [Número]>50)',
-        { state: "RS", number: 120 },
-        columns,
-      ),
-    ).toBe("SIM");
+    expect(evalFormula('=E([UF]="RS"; [Número]>50)', { state: "RS", number: 120 }, columns)).toBe(
+      "SIM",
+    );
   });
 
   it("evaluates SOMA.CARAC as letter sum", () => {
-    expect(evalFormula('=SOMA.CARAC([Nome completo])', { full_name: "Ana" }, columns)).toBe(16);
+    expect(evalFormula("=SOMA.CARAC([Nome completo])", { full_name: "Ana" }, columns)).toBe(16);
     expect(
       evalFormula("=SOMA.CARAC([Nome completo])", { full_name: "Abbas Ahmad Bjaige" }, columns),
     ).toBeGreaterThan(0);
@@ -87,19 +83,19 @@ describe("sheet formulas", () => {
   });
 
   it("evaluates text and logic formulas", () => {
-    expect(evalFormula('=MAIUSCULA([Cidade])', { city: "porto alegre" }, columns)).toBe(
+    expect(evalFormula("=MAIUSCULA([Cidade])", { city: "porto alegre" }, columns)).toBe(
       "PORTO ALEGRE",
     );
-    expect(evalFormula('=MINUSCULA([UF])', { state: "RS" }, columns)).toBe("rs");
-    expect(evalFormula('=INICIAIS([Nome completo]; 3)', { full_name: "Ana Maria Silva" }, columns)).toBe(
-      "AMS",
-    );
-    expect(evalFormula('=JUNTAR([Cidade]; " - "; [UF])', { city: "Porto Alegre", state: "RS" }, columns)).toBe(
-      "Porto Alegre - RS",
-    );
+    expect(evalFormula("=MINUSCULA([UF])", { state: "RS" }, columns)).toBe("rs");
+    expect(
+      evalFormula("=INICIAIS([Nome completo]; 3)", { full_name: "Ana Maria Silva" }, columns),
+    ).toBe("AMS");
+    expect(
+      evalFormula('=JUNTAR([Cidade]; " - "; [UF])', { city: "Porto Alegre", state: "RS" }, columns),
+    ).toBe("Porto Alegre - RS");
     expect(evalFormula('=REPETIR("A"; 3)', {}, columns)).toBe("AAA");
     expect(evalFormula('=SE([UF]="RS"; "Sul"; "Outro")', { state: "RS" }, columns)).toBe("Sul");
-    expect(evalFormula('=NAO(FALSO)', {}, columns)).toBe("SIM");
-    expect(evalFormula('=NAO(VERDADEIRO)', {}, columns)).toBe("NÃO");
+    expect(evalFormula("=NAO(FALSO)", {}, columns)).toBe("SIM");
+    expect(evalFormula("=NAO(VERDADEIRO)", {}, columns)).toBe("NÃO");
   });
 });

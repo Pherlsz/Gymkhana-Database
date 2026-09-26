@@ -100,7 +100,9 @@ export function cellMatches(value: unknown, predicate: ColumnPredicate): boolean
       return lower === q || (qDigits.length > 0 && digitsVal === qDigits);
     });
   }
-  const q = String(predicate.values[0] ?? "").trim().toLowerCase();
+  const q = String(predicate.values[0] ?? "")
+    .trim()
+    .toLowerCase();
   const qDigits = q.replace(/\D/g, "");
   const digits = text.replace(/\D/g, "");
 
@@ -137,10 +139,7 @@ export function cellMatches(value: unknown, predicate: ColumnPredicate): boolean
 export function funnelKindOf(fieldKind: "text" | "date" | "select", key: string): FunnelKind {
   if (fieldKind === "date") return "date";
   if (fieldKind === "select") return key.includes("donor") ? "bool" : "select";
-  if (
-    /amount|number|cpf|phone|mobile|postal|digit|year|plate/.test(key) ||
-    key === "number"
-  ) {
+  if (/amount|number|cpf|phone|mobile|postal|digit|year|plate/.test(key) || key === "number") {
     return "number";
   }
   return "text";

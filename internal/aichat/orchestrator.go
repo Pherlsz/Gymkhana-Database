@@ -15,13 +15,13 @@ import (
 )
 
 const (
-	maximumContextMessages  = 30
-	maximumContextRunes     = 60_000
-	maximumProviderDelta    = 1000
-	maximumProviderUsage    = 100_000_000
-	finalizationTimeout     = 5 * time.Second
-	cancelCheckInterval     = 20 // poll run state every N streaming deltas
-	minimumContextMessages  = 3  // always include this many most-recent messages
+	maximumContextMessages = 30
+	maximumContextRunes    = 60_000
+	maximumProviderDelta   = 1000
+	maximumProviderUsage   = 100_000_000
+	finalizationTimeout    = 5 * time.Second
+	cancelCheckInterval    = 20 // poll run state every N streaming deltas
+	minimumContextMessages = 3  // always include this many most-recent messages
 )
 
 type TurnRunner interface {

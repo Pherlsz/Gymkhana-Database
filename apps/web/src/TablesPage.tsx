@@ -21,11 +21,7 @@ import "./tables.css";
 import { SpreadsheetTable } from "./lib/tables/SpreadsheetTable";
 import { TablesToolbar } from "./lib/tables/TablesToolbar";
 import { cellKeyForFilter, textFilter } from "./lib/tables/tableFilters";
-import {
-  bindPredicates,
-  fieldFilterActive,
-  fieldPredicate,
-} from "./lib/tables/bindPredicates";
+import { bindPredicates, fieldFilterActive, fieldPredicate } from "./lib/tables/bindPredicates";
 import { cellMatches, formulaColumnKey } from "./lib/tables/columnPredicate";
 import type { ColumnPredicate } from "./lib/tables/columnPredicate";
 import { matchFormula } from "./lib/tables/formulas/catalog";
@@ -585,10 +581,7 @@ export function TablesPage() {
     (sourceKey: string, expression: string) => setFormula(sourceKey, expression),
     [setFormula],
   );
-  const removeFormula = useCallback(
-    (sourceKey: string) => setFormula(sourceKey, ""),
-    [setFormula],
-  );
+  const removeFormula = useCallback((sourceKey: string) => setFormula(sourceKey, ""), [setFormula]);
 
   const sheetColumns = useMemo(() => {
     const source = search.result ? resultColumns : visibleColumns;

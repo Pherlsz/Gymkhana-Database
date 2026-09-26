@@ -292,8 +292,20 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
             column.key,
             {
               base: { width, minWidth: width, flex: `0 0 ${width}px` },
-              header: { width, minWidth: width, flex: `0 0 ${width}px`, position: "relative" as const },
-              cell: { width, minWidth: width, flex: `0 0 ${width}px`, display: "flex", alignItems: "center", padding: "0 0.55rem" },
+              header: {
+                width,
+                minWidth: width,
+                flex: `0 0 ${width}px`,
+                position: "relative" as const,
+              },
+              cell: {
+                width,
+                minWidth: width,
+                flex: `0 0 ${width}px`,
+                display: "flex",
+                alignItems: "center",
+                padding: "0 0.55rem",
+              },
             },
           ];
         }),
@@ -342,7 +354,12 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
         sortOrder: sorted ? (sortOrder === "asc" ? "ascend" : "descend") : null,
         showSorterTooltip: false,
         onHeaderCell: () => ({
-          style: styles?.header ?? { width, minWidth: width, flex: `0 0 ${width}px`, position: "relative" as const },
+          style: styles?.header ?? {
+            width,
+            minWidth: width,
+            flex: `0 0 ${width}px`,
+            position: "relative" as const,
+          },
           ...(onColumnWidth
             ? {
                 onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {

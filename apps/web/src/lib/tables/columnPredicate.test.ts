@@ -43,4 +43,3 @@ describe("columnPredicate", () => {
     expect(cellMatches("x", { op: "contains", values: [""] })).toBe(true);
   });
 });
-

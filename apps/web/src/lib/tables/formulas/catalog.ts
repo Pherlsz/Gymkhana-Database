@@ -13,16 +13,60 @@ export type FormulaSpec = {
 
 export const FORMULA_FUNCS: FormulaSpec[] = [
   // --- Data e Tempo ---
-  { name: "IDADE", insert: "=IDADE([$col])", hint: "idade em anos a partir da data", numeric: true },
+  {
+    name: "IDADE",
+    insert: "=IDADE([$col])",
+    hint: "idade em anos a partir da data",
+    numeric: true,
+  },
   { name: "ANO", insert: "=ANO([$col])", hint: "só o ano da data (ex: 2024)", numeric: true },
-  { name: "MES", insert: "=MES([$col])", hint: "só o mês numérico (1–12)", numeric: true, also: ["MÊS", "MONTH"] },
-  { name: "MES.NOME", insert: "=MES.NOME([$col])", hint: "nome do mês por extenso (ex: Janeiro)", also: ["NOMEDOMES"] },
-  { name: "DIA", insert: "=DIA([$col])", hint: "só o dia do mês (1–31)", numeric: true, also: ["DAY"] },
-  { name: "DIA.SEMANA", insert: "=DIA.SEMANA([$col])", hint: "dia da semana (ex: Segunda-feira)", also: ["DIASEMANA", "WEEKDAY"] },
-  { name: "DIAS", insert: "=DIAS([$col]; [$other])", hint: "quantidade de dias entre duas datas", numeric: true, also: ["DIASENTRE"] },
-  { name: "DIAS.ATE.HOJE", insert: "=DIAS.ATE.HOJE([$col])", hint: "dias corridos até a data de hoje", numeric: true, also: ["DIASATEHOJE"] },
+  {
+    name: "MES",
+    insert: "=MES([$col])",
+    hint: "só o mês numérico (1–12)",
+    numeric: true,
+    also: ["MÊS", "MONTH"],
+  },
+  {
+    name: "MES.NOME",
+    insert: "=MES.NOME([$col])",
+    hint: "nome do mês por extenso (ex: Janeiro)",
+    also: ["NOMEDOMES"],
+  },
+  {
+    name: "DIA",
+    insert: "=DIA([$col])",
+    hint: "só o dia do mês (1–31)",
+    numeric: true,
+    also: ["DAY"],
+  },
+  {
+    name: "DIA.SEMANA",
+    insert: "=DIA.SEMANA([$col])",
+    hint: "dia da semana (ex: Segunda-feira)",
+    also: ["DIASEMANA", "WEEKDAY"],
+  },
+  {
+    name: "DIAS",
+    insert: "=DIAS([$col]; [$other])",
+    hint: "quantidade de dias entre duas datas",
+    numeric: true,
+    also: ["DIASENTRE"],
+  },
+  {
+    name: "DIAS.ATE.HOJE",
+    insert: "=DIAS.ATE.HOJE([$col])",
+    hint: "dias corridos até a data de hoje",
+    numeric: true,
+    also: ["DIASATEHOJE"],
+  },
   { name: "HOJE", insert: "=HOJE()", hint: "data atual do sistema", also: ["DATA.HOJE"] },
-  { name: "VENCIDO", insert: "=VENCIDO([$col])", hint: "verdadeiro se a data já expirou/venceu", also: ["EXPIRADO"] },
+  {
+    name: "VENCIDO",
+    insert: "=VENCIDO([$col])",
+    hint: "verdadeiro se a data já expirou/venceu",
+    also: ["EXPIRADO"],
+  },
 
   // --- Matemática, Números e Finanças ---
   {
@@ -95,8 +139,19 @@ export const FORMULA_FUNCS: FormulaSpec[] = [
     numeric: true,
     also: ["PISO", "FLOOR"],
   },
-  { name: "ABS", insert: "=ABS([$col])", hint: "valor absoluto (sem sinal negativo)", numeric: true },
-  { name: "N.VALOR", insert: "=N.VALOR([$col])", hint: "converte texto em número", numeric: true, also: ["VALOR", "NUMERO"] },
+  {
+    name: "ABS",
+    insert: "=ABS([$col])",
+    hint: "valor absoluto (sem sinal negativo)",
+    numeric: true,
+  },
+  {
+    name: "N.VALOR",
+    insert: "=N.VALOR([$col])",
+    hint: "converte texto em número",
+    numeric: true,
+    also: ["VALOR", "NUMERO"],
+  },
   {
     name: "SOMA.DIGITO",
     insert: "=SOMA.DIGITO([$col])",
@@ -131,8 +186,18 @@ export const FORMULA_FUNCS: FormulaSpec[] = [
   },
 
   // --- Manipulação de Texto ---
-  { name: "MAIUSCULA", insert: "=MAIUSCULA([$col])", hint: "tudo em MAIÚSCULAS", also: ["MAIÚSCULA", "UPPER"] },
-  { name: "MINUSCULA", insert: "=MINUSCULA([$col])", hint: "tudo em minúsculas", also: ["MINÚSCULA", "LOWER"] },
+  {
+    name: "MAIUSCULA",
+    insert: "=MAIUSCULA([$col])",
+    hint: "tudo em MAIÚSCULAS",
+    also: ["MAIÚSCULA", "UPPER"],
+  },
+  {
+    name: "MINUSCULA",
+    insert: "=MINUSCULA([$col])",
+    hint: "tudo em minúsculas",
+    also: ["MINÚSCULA", "LOWER"],
+  },
   {
     name: "TOTAL.CARAC",
     insert: "=TOTAL.CARAC([$col])",
@@ -214,7 +279,8 @@ export function matchFormula(expression: string): FormulaSpec | undefined {
   const folded = firstName(expression);
   return FORMULA_FUNCS.find(
     (item) =>
-      foldName(item.name) === folded || (item.also ?? []).some((alias) => foldName(alias) === folded),
+      foldName(item.name) === folded ||
+      (item.also ?? []).some((alias) => foldName(alias) === folded),
   );
 }
 
@@ -244,38 +310,19 @@ export function funcsForKind(kind: FunnelKind, columnKey = ""): FormulaSpec[] {
 
   // Contato: Telefones, celulares, whatsapp
   if (/phone|mobile|celular|telefone|landline|contato|whatsapp/.test(key)) {
-    const names = [
-      "DDD",
-      "SO.NUMEROS",
-      "TOTAL.CARAC",
-      "N.PRIMEIRO",
-      "N.ULTIMO",
-      "SE",
-    ];
+    const names = ["DDD", "SO.NUMEROS", "TOTAL.CARAC", "N.PRIMEIRO", "N.ULTIMO", "SE"];
     return FORMULA_FUNCS.filter((item) => names.includes(item.name));
   }
 
   // CEP / Endereçamento postal
   if (/postal|cep/.test(key)) {
-    const names = [
-      "SO.NUMEROS",
-      "TOTAL.CARAC",
-      "N.PRIMEIRO",
-      "N.ULTIMO",
-      "SE",
-    ];
+    const names = ["SO.NUMEROS", "TOTAL.CARAC", "N.PRIMEIRO", "N.ULTIMO", "SE"];
     return FORMULA_FUNCS.filter((item) => names.includes(item.name));
   }
 
   // E-mail
   if (key.includes("email")) {
-    const names = [
-      "DOMINIO.EMAIL",
-      "USUARIO.EMAIL",
-      "MINUSCULA",
-      "TOTAL.CARAC",
-      "SE",
-    ];
+    const names = ["DOMINIO.EMAIL", "USUARIO.EMAIL", "MINUSCULA", "TOTAL.CARAC", "SE"];
     return FORMULA_FUNCS.filter((item) => names.includes(item.name));
   }
 
@@ -334,16 +381,7 @@ export function funcsForKind(kind: FunnelKind, columnKey = ""): FormulaSpec[] {
 
   // Nascimento / Idade
   if (/nasc|birth|aniversario/.test(key)) {
-    const names = [
-      "IDADE",
-      "ANO",
-      "MES",
-      "MES.NOME",
-      "DIA",
-      "DIA.SEMANA",
-      "HOJE",
-      "SE",
-    ];
+    const names = ["IDADE", "ANO", "MES", "MES.NOME", "DIA", "DIA.SEMANA", "HOJE", "SE"];
     return FORMULA_FUNCS.filter((item) => names.includes(item.name));
   }
 
@@ -382,13 +420,7 @@ export function funcsForKind(kind: FunnelKind, columnKey = ""): FormulaSpec[] {
             "OU",
           ]
         : kind === "select"
-          ? [
-              "MAIUSCULA",
-              "MINUSCULA",
-              "SE",
-              "E",
-              "OU",
-            ]
+          ? ["MAIUSCULA", "MINUSCULA", "SE", "E", "OU"]
           : kind === "bool"
             ? ["NAO", "SE", "E", "OU"]
             : [
@@ -424,11 +456,7 @@ export function insertFormula(
           : '=OU([$col]="RS"; [$other]="SP")';
   }
   if (spec.name === "E") {
-    insert =
-      kind === "number"
-        ? "=E([$col]>0; [$other]>0)"
-        : '=E([$col]="SP"; [$other]="Capital")';
+    insert = kind === "number" ? "=E([$col]>0; [$other]>0)" : '=E([$col]="SP"; [$other]="Capital")';
   }
   return insert.replaceAll("$col", col).replaceAll("$other", other);
 }
-

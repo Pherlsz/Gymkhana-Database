@@ -116,8 +116,26 @@ export interface paths {
     /** List application users for administration */
     get: operations["listApplicationUsers"];
     put?: never;
-    post?: never;
+    /** Create an application user with role and capabilities */
+    post: operations["provisionApplicationUser"];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/admin/users/{user_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete an application user */
+    delete: operations["deleteApplicationUser"];
     options?: never;
     head?: never;
     patch?: never;
@@ -699,6 +717,15 @@ export interface components {
       active: boolean;
       /** Format: int64 */
       version: number;
+      display_name?: string;
+      email?: string;
+    };
+    ProvisionUserRequest: {
+      email: string;
+      display_name: string;
+      /** @enum {string} */
+      role: "EXTERNAL" | "ADMIN";
+      capabilities?: string[];
     };
     /** @enum {string} */
     ModelProvider: "google";
@@ -1846,6 +1873,60 @@ export interface operations {
       400: components["responses"]["BadRequest"];
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  provisionApplicationUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProvisionUserRequest"];
+      };
+    };
+    responses: {
+      /** @description Created application user */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AdminUser"];
+        };
+      };
+      400: components["responses"]["BadRequest"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["Conflict"];
+      503: components["responses"]["AuthUnavailable"];
+    };
+  };
+  deleteApplicationUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description User deleted */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
       503: components["responses"]["AuthUnavailable"];
     };
   };

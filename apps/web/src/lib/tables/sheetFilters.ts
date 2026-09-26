@@ -330,7 +330,9 @@ export function activeFilterChips(fields: ToolbarFilterField[]): {
             ? predicate.values.join(", ")
             : predicate.op === "is_null" || predicate.op === "not_null"
               ? predicate.op
-              : predicate.values[0] || (field.kind === "select" ? filterValuePreview(field) : field.value) || "";
+              : predicate.values[0] ||
+                (field.kind === "select" ? filterValuePreview(field) : field.value) ||
+                "";
       const kind = resolveFunnelKind(field);
       const fallback = defaultOp(kind);
       return {

@@ -26,15 +26,18 @@ export function useSheetFormulas(scope: string) {
     setFormulas(typeof localStorage === "undefined" ? {} : read(scope));
   }, [scope]);
 
-  const setFormula = useCallback((sourceKey: string, expression: string) => {
-    setFormulas((current) => {
-      const next = { ...current };
-      if (!expression.trim()) delete next[sourceKey];
-      else next[sourceKey] = expression.trim();
-      write(scope, next);
-      return next;
-    });
-  }, [scope]);
+  const setFormula = useCallback(
+    (sourceKey: string, expression: string) => {
+      setFormulas((current) => {
+        const next = { ...current };
+        if (!expression.trim()) delete next[sourceKey];
+        else next[sourceKey] = expression.trim();
+        write(scope, next);
+        return next;
+      });
+    },
+    [scope],
+  );
 
   return { formulas, setFormula };
 }

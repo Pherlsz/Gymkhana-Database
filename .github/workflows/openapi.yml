@@ -48,7 +48,7 @@ jobs:
         run: corepack enable
 
       - name: Configure private Core access
-        run: scripts/configure-private-go.sh
+        run: bash scripts/configure-private-go.sh
         env:
           GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
 

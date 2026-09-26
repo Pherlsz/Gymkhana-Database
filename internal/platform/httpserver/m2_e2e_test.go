@@ -194,7 +194,7 @@ func TestM2AuthenticationAdministrationAndRevocationFlow(t *testing.T) {
 		t.Fatalf("NewIdentifier() error = %v", err)
 	}
 	if _, err := store.CreateUser(context.Background(), auth.CreateUserParams{
-		ID: memberID,
+		ID:       memberID,
 		Identity: auth.GoogleIdentity{Subject: "2", Email: "member", DisplayName: "Member"},
 		Role:     auth.RoleExternal,
 	}); err != nil {
