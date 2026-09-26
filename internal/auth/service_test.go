@@ -183,6 +183,29 @@ func TestServiceKeepsProvisionedMemberRoleOnFirstGoogleLogin(t *testing.T) {
 	}
 }
 
+func TestServiceTakesGoogleNameWhenProvisionedNameIsEmailPlaceholder(t *testing.T) {
+	userID, _ := NewIdentifier()
+	store := &fakeStore{user: User{
+		ID: userID, Email: "member@example.com", DisplayName: "member@example.com", Role: RoleExternal, Active: true,
+	}}
+	service, err := NewService(fakeProvider{identity: GoogleIdentity{
+		Email: "member@example.com", DisplayName: "Google Name",
+	}}, store, ServiceOptions{
+		AllowedEmails:   []string{"admin@example.com", "member@example.com"},
+		SuperadminEmail: "admin@example.com",
+	})
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	result, err := service.CompleteLogin(context.Background(), "code", "request-provisioned-name")
+	if err != nil {
+		t.Fatalf("CompleteLogin() error = %v", err)
+	}
+	if result.User.DisplayName != "Google Name" {
+		t.Fatalf("user = %#v", result.User)
+	}
+}
+
 func TestCompleteLoginAllowsConfiguredSuperadminWithoutDatabaseAllowlist(t *testing.T) {
 	store := &fakeStore{findUserError: ErrUserNotFound, allowedEmails: map[string]struct{}{}}
 	service, err := NewService(fakeProvider{identity: GoogleIdentity{

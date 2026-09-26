@@ -171,7 +171,12 @@ func (service *Service) ProvisionUser(ctx context.Context, actor Session, params
 	}
 	params.Email = normalizeEmail(params.Email)
 	params.DisplayName = strings.TrimSpace(params.DisplayName)
-	if params.Email == "" || params.DisplayName == "" || len(params.DisplayName) > 200 || len(params.Email) > 320 ||
+	// Name is optional at provision time; first Google login fills it. Until then
+	// use the email so the non-empty DB constraint stays satisfied.
+	if params.DisplayName == "" {
+		params.DisplayName = params.Email
+	}
+	if params.Email == "" || len(params.DisplayName) > 200 || len(params.Email) > 320 ||
 		(params.Role != RoleExternal && params.Role != RoleAdmin) {
 		service.recordAudit(ctx, &actor.User.ID, nil, AuditEventUserAccessChanged, AuditOutcomeDenied, requestID, actor.User.Email)
 		return ManagedUser{}, ErrInvalidUserAccess

@@ -722,7 +722,7 @@ export interface components {
     };
     ProvisionUserRequest: {
       email: string;
-      display_name: string;
+      display_name?: string;
       /** @enum {string} */
       role: "EXTERNAL" | "ADMIN";
       capabilities?: string[];

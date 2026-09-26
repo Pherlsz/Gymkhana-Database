@@ -1328,7 +1328,7 @@ type ProfileValuesRequest struct {
 // ProvisionUserRequest defines model for ProvisionUserRequest.
 type ProvisionUserRequest struct {
 	Capabilities *[]string                `json:"capabilities,omitempty"`
-	DisplayName  string                   `json:"display_name"`
+	DisplayName  *string                  `json:"display_name,omitempty"`
 	Email        string                   `json:"email"`
 	Role         ProvisionUserRequestRole `json:"role"`
 }

@@ -7,9 +7,10 @@ export const Route = createFileRoute("/forms")({
     source: typeof search.source === "string" ? search.source : undefined,
     google_forms: typeof search.google_forms === "string" ? search.google_forms : undefined,
   }),
-  beforeLoad: ({ search }) => {
+  beforeLoad: () => {
+    // Forms entry is parked; keep /forms as a compatibility bounce to Cadastro home.
     throw redirect({
-      search: normalizeCadastroPageSearch({ ...search, mode: "forms" }),
+      search: normalizeCadastroPageSearch({}),
       to: "/cadastro",
     });
   },

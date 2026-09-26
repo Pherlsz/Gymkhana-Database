@@ -106,13 +106,21 @@ export class APIRequestError extends Error {
 }
 
 export function apiURL(path: string): string {
+  // Prefer an explicit API origin whenever it is configured. Do not gate this on
+  // import.meta.env.DEV: a local NODE_ENV=development in .env makes Vite report
+  // DEV=true even during `vite build`, which would leave staging on same-origin
+  // /api paths and break Google login.
+  const configured = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+  if (configured) {
+    return `${configured}${path}`;
+  }
   if (import.meta.env.DEV && (path.startsWith("/api/") || path.startsWith("/health/"))) {
     return path;
   }
-  const baseURL = (
-    import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:8080" : "")
-  ).replace(/\/$/, "");
-  return `${baseURL}${path}`;
+  if (import.meta.env.DEV) {
+    return `http://localhost:8080${path}`;
+  }
+  return path;
 }
 
 export async function readJSON<T>(response: Response): Promise<T> {
@@ -208,7 +216,7 @@ export async function listAdminUsers(signal?: AbortSignal): Promise<AdminUsersRe
 
 export type AdminProvisionUser = {
   email: string;
-  display_name: string;
+  display_name?: string;
   role: "EXTERNAL" | "ADMIN";
   capabilities: string[];
 };

@@ -1,6 +1,7 @@
 *
 !/.tmp/
 !/.tmp/api
+!/.tmp/worker
 !/workers/
 !/workers/api/
 !/workers/api/entrypoint.sh
