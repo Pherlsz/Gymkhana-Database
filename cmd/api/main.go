@@ -174,6 +174,10 @@ func run() error {
 			googleFormsService, _, err = googleforms.NewRuntime(pool, operationsService, googleforms.RuntimeOptions{
 				Service: googleforms.ServiceOptions{
 					Enabled: true, ResponsePageSize: cfg.GoogleForms.ResponsePageSize,
+					ProductEnabled: func(ctx context.Context) bool {
+						ok, err := featureFlagService.IsEnabled(ctx, featureflags.KeyGoogleForms)
+						return err == nil && ok
+					},
 					OnAuditFailure: func(_ context.Context, event googleforms.AuditEvent, auditErr error) {
 						logger.Error("Google Forms audit event was not persisted", "event_type", event.EventType, "request_id", event.RequestID, "error", auditErr)
 					},
@@ -295,6 +299,10 @@ func run() error {
 				Timeout: cfg.OCR.Timeout, MaximumRate: cfg.OCR.MaximumRequests,
 				MaximumProviderUsage: cfg.OCR.MaximumProviderUsage, MaximumSourceBytes: cfg.OCR.MaximumSourceBytes,
 				Ready: ocrReady,
+				ProductEnabled: func(ctx context.Context) bool {
+					ok, err := featureFlagService.IsEnabled(ctx, featureflags.KeyOCR)
+					return err == nil && ok
+				},
 				OnAuditFailure: func(_ context.Context, event ocr.AuditEvent, auditErr error) {
 					logger.Error("OCR audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome,
 						"error_code", event.ErrorCode, "request_id", event.RequestID, "error_type", fmt.Sprintf("%T", auditErr))

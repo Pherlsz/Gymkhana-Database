@@ -25,6 +25,8 @@ type ServiceOptions struct {
 	SyncBatchSize    int
 	Now              func() time.Time
 	OnAuditFailure   AuditFailureHandler
+	// ProductEnabled gates worker sync when product on/off lives outside env.
+	ProductEnabled func(context.Context) bool
 }
 
 type Service struct {
@@ -39,6 +41,7 @@ type Service struct {
 	syncBatchSize    int
 	now              func() time.Time
 	onAuditFailure   AuditFailureHandler
+	productEnabled   func(context.Context) bool
 }
 
 type OAuthStart struct {
@@ -71,12 +74,22 @@ func NewService(store Store, provider Provider, cipher *TokenCipher, jobs Jobs, 
 		store: store, provider: provider, cipher: cipher, jobs: jobs, operations: operationService,
 		enabled: options.Enabled, importRetention: options.ImportRetention,
 		responsePageSize: options.ResponsePageSize, syncBatchSize: options.SyncBatchSize,
-		now: options.Now, onAuditFailure: options.OnAuditFailure,
+		now: options.Now, onAuditFailure: options.OnAuditFailure, productEnabled: options.ProductEnabled,
 	}, nil
 }
 
 func (service *Service) Enabled() bool {
 	return service != nil && service.enabled
+}
+
+func (service *Service) productOn(ctx context.Context) bool {
+	if service == nil || !service.enabled {
+		return false
+	}
+	if service.productEnabled == nil {
+		return true
+	}
+	return service.productEnabled(ctx)
 }
 
 func (service *Service) BeginOAuth(ctx context.Context, actor auth.Session, returnPath, requestID string) (OAuthStart, error) {

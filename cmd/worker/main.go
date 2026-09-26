@@ -16,6 +16,7 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/config"
 	"github.com/Pherlsz/Gymkhana-Database/internal/customdata"
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
+	"github.com/Pherlsz/Gymkhana-Database/internal/featureflags"
 	"github.com/Pherlsz/Gymkhana-Database/internal/googleforms"
 	"github.com/Pherlsz/Gymkhana-Database/internal/matching"
 	"github.com/Pherlsz/Gymkhana-Database/internal/modelprovider"
@@ -61,6 +62,10 @@ func run() error {
 		return errors.New("operations worker requires a database connection")
 	}
 	defer pool.Close()
+	featureFlagService, err := featureflags.NewService(featureflags.NewPostgresStore(pool))
+	if err != nil {
+		return fmt.Errorf("configure feature flags: %w", err)
+	}
 	queryCleanup, err := queryengine.NewService(queryengine.NewPostgresStore(pool), queryengine.ServiceOptions{})
 	if err != nil {
 		return fmt.Errorf("configure Query Engine cleanup: %w", err)
@@ -121,6 +126,10 @@ func run() error {
 		formsService, formsClient, runtimeErr := googleforms.NewRuntime(pool, service, googleforms.RuntimeOptions{
 			Service: googleforms.ServiceOptions{
 				Enabled: true, ResponsePageSize: cfg.GoogleForms.ResponsePageSize,
+				ProductEnabled: func(ctx context.Context) bool {
+					ok, err := featureFlagService.IsEnabled(ctx, featureflags.KeyGoogleForms)
+					return err == nil && ok
+				},
 				OnAuditFailure: func(_ context.Context, event googleforms.AuditEvent, auditErr error) {
 					logger.Error("Google Forms audit event was not persisted", "event_type", event.EventType, "request_id", event.RequestID, "error", auditErr)
 				},
@@ -195,6 +204,10 @@ func run() error {
 			Timeout: cfg.OCR.Timeout, MaximumRate: cfg.OCR.MaximumRequests,
 			MaximumProviderUsage: cfg.OCR.MaximumProviderUsage, MaximumSourceBytes: cfg.OCR.MaximumSourceBytes,
 			Ready: ocrReady,
+			ProductEnabled: func(ctx context.Context) bool {
+				ok, err := featureFlagService.IsEnabled(ctx, featureflags.KeyOCR)
+				return err == nil && ok
+			},
 			OnAuditFailure: func(_ context.Context, event ocr.AuditEvent, auditErr error) {
 				logger.Error("OCR audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome,
 					"error_code", event.ErrorCode, "request_id", event.RequestID, "error_type", fmt.Sprintf("%T", auditErr))
@@ -209,7 +222,7 @@ func run() error {
 		}
 	}
 	cleanupDone := make(chan struct{})
-	go runCleanupScheduler(rootCtx, logger, service, attachmentCleanup, queryCleanup, matchingService, googleFormsService, cfg.GoogleForms.SyncInterval, cleanupDone)
+	go runCleanupScheduler(rootCtx, logger, service, attachmentCleanup, queryCleanup, matchingService, googleFormsService, featureFlagService, cfg.GoogleForms.SyncInterval, cleanupDone)
 	ocrRecoveryDone := startOCRRecovery(rootCtx, logger, ocrService)
 	queues := []string{operations.OperationsQueue, matching.Queue}
 	if cfg.OCR.Enabled {
@@ -266,7 +279,7 @@ func run() error {
 	return nil
 }
 
-func runCleanupScheduler(ctx context.Context, logger *slog.Logger, service *operations.Service, attachmentCleanup *attachment.Service, queryCleanup *queryengine.Service, matchingCleanup *matching.Service, googleForms *googleforms.Service, googleFormsInterval time.Duration, done chan<- struct{}) {
+func runCleanupScheduler(ctx context.Context, logger *slog.Logger, service *operations.Service, attachmentCleanup *attachment.Service, queryCleanup *queryengine.Service, matchingCleanup *matching.Service, googleForms *googleforms.Service, flags *featureflags.Service, googleFormsInterval time.Duration, done chan<- struct{}) {
 	defer close(done)
 	scheduleCleanup := func() {
 		if err := service.ScheduleCleanup(ctx); err != nil && !errors.Is(err, context.Canceled) {
@@ -292,10 +305,17 @@ func runCleanupScheduler(ctx context.Context, logger *slog.Logger, service *oper
 		}
 	}
 	scheduleGoogleForms := func() {
-		if googleForms != nil {
-			if err := googleForms.ScheduleDuePoll(ctx); err != nil && !errors.Is(err, context.Canceled) {
-				logger.Error("Google Forms polling scheduling failed", "error", err)
+		if googleForms == nil {
+			return
+		}
+		if flags != nil {
+			ok, err := flags.IsEnabled(ctx, featureflags.KeyGoogleForms)
+			if err != nil || !ok {
+				return
 			}
+		}
+		if err := googleForms.ScheduleDuePoll(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			logger.Error("Google Forms polling scheduling failed", "error", err)
 		}
 	}
 	scheduleCleanup()
