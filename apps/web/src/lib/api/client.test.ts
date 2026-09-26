@@ -206,5 +206,6 @@ describe("inferWorkersDevApiOrigin", () => {
     const { inferWorkersDevApiOrigin } = await import("./client");
     expect(inferWorkersDevApiOrigin("localhost")).toBeNull();
     expect(inferWorkersDevApiOrigin("app.example.com")).toBeNull();
+    expect(inferWorkersDevApiOrigin("")).toBeNull();
   });
 });

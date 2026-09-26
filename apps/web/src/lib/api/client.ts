@@ -107,6 +107,9 @@ export class APIRequestError extends Error {
 
 export function inferWorkersDevApiOrigin(hostname: string): string | null {
   // Paired staging Workers: database SPA → api Container Worker on the same account.
+  if (typeof hostname !== "string" || hostname.length === 0) {
+    return null;
+  }
   const spaPrefix = "staging-gymkhana-database.";
   const suffix = ".workers.dev";
   if (!hostname.startsWith(spaPrefix) || !hostname.endsWith(suffix)) {
