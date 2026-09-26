@@ -57,11 +57,13 @@ export function useTableSheetData({
     document_limit: clampSpreadsheetPageSize(search.document_limit),
     bill_limit: clampSpreadsheetPageSize(search.bill_limit),
   };
+  // Assistente result mode pages its own plan; skip the normal sheet lists.
+  const sheetActive = !search.result;
 
   const peopleQuery = useQuery({
     queryKey: queryKeys.tables.profiles(profileListKey(tableSearch)),
     queryFn: ({ signal }) => listProfiles(tableSearch, signal),
-    enabled: section === "profile",
+    enabled: sheetActive && section === "profile",
   });
 
   const citiesQuery = useQuery({
@@ -81,7 +83,7 @@ export function useTableSheetData({
         },
         signal,
       ),
-    enabled: section === "profile",
+    enabled: sheetActive && section === "profile",
     staleTime: 5 * 60 * 1000,
   });
 
@@ -89,25 +91,25 @@ export function useTableSheetData({
     queryKey: queryKeys.tables.documents(documentSearch(tableSearch), tableSearch.records_owner),
     queryFn: ({ signal }) =>
       listDocuments(tableSearch.records_owner, documentSearch(tableSearch), signal),
-    enabled: section === "documents",
+    enabled: sheetActive && section === "documents",
   });
 
   const billQuery = useQuery({
     queryKey: queryKeys.tables.bills(billSearch(tableSearch), tableSearch.records_owner),
     queryFn: ({ signal }) => listBills(tableSearch.records_owner, billSearch(tableSearch), signal),
-    enabled: section === "bills",
+    enabled: sheetActive && section === "bills",
   });
 
   const documentTypes = useQuery({
     queryKey: queryKeys.types.documents,
     queryFn: ({ signal }) => listDocumentTypes(signal),
-    enabled: section === "documents" || section === "profile",
+    enabled: sheetActive && (section === "documents" || section === "profile"),
   });
 
   const billTypes = useQuery({
     queryKey: queryKeys.types.bills,
     queryFn: ({ signal }) => listBillTypes(signal),
-    enabled: section === "bills",
+    enabled: sheetActive && section === "bills",
   });
 
   const selectedProfileQuery = useQuery({
@@ -119,7 +121,7 @@ export function useTableSheetData({
   const profileFieldsQuery = useQuery({
     queryKey: queryKeys.customData.fields("PROFILE"),
     queryFn: () => listCustomFields("PROFILE"),
-    enabled: section === "profile",
+    enabled: sheetActive && section === "profile",
   });
 
   const documentTypeList = documentTypes.data?.types ?? [];
@@ -129,7 +131,7 @@ export function useTableSheetData({
     queries: documentTypeList.map((type) => ({
       queryKey: queryKeys.customData.fields("DOCUMENT_TYPE", type.id),
       queryFn: () => listCustomFields("DOCUMENT_TYPE", type.id),
-      enabled: section === "documents",
+      enabled: sheetActive && section === "documents",
     })),
   });
 
@@ -137,7 +139,7 @@ export function useTableSheetData({
     queries: billTypeList.map((type) => ({
       queryKey: queryKeys.customData.fields("BILL_TYPE", type.id),
       queryFn: () => listCustomFields("BILL_TYPE", type.id),
-      enabled: section === "bills",
+      enabled: sheetActive && section === "bills",
     })),
   });
 
