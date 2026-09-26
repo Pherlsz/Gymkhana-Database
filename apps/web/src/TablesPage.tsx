@@ -60,7 +60,11 @@ import {
   AssistantSessionFloat,
   type AssistantWindowSize,
 } from "./lib/assistant/AssistantSessionFloat";
-import { getChatResultPage } from "./lib/assistant/assistantApi";
+import { getChatCapability, getChatResultPage } from "./lib/assistant/assistantApi";
+import {
+  ASSISTANT_CAPABILITY_KEY,
+  ASSISTANT_CAPABILITY_STALE_MS,
+} from "./lib/assistant/useAssistantChat";
 import { downloadChatResultXlsx } from "./lib/assistant/recorteExport";
 import {
   RECORTE_GRID_LIMIT,
@@ -200,6 +204,14 @@ export function TablesPage() {
     queryKey: ["chat-result-grid", search.result],
     queryFn: ({ signal }) => getChatResultPage(search.result, RECORTE_GRID_LIMIT, 0, signal),
     enabled: Boolean(search.result),
+    staleTime: 30_000,
+  });
+  // Warm Assistente capability so opening the float does not wait on the first fetch.
+  useQuery({
+    queryKey: ASSISTANT_CAPABILITY_KEY,
+    queryFn: ({ signal }) => getChatCapability(signal),
+    staleTime: ASSISTANT_CAPABILITY_STALE_MS,
+    retry: 1,
   });
   const exportRecorte = useMutation({
     mutationFn: () => downloadChatResultXlsx(search.result),

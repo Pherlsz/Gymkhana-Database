@@ -110,7 +110,7 @@ export function AssistantSessionFloat({
   const chatRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const seenThread = useRef<string | null>(null);
-  const seenMessage = useRef("");
+  const seenResultReference = useRef("");
   const pendingText = chat.pending?.text ?? "";
 
   useEffect(() => {
@@ -121,13 +121,15 @@ export function AssistantSessionFloat({
       .find((message) => message.role === "ASSISTANT" && message.result_reference_ids.length > 0);
     if (seenThread.current !== threadId) {
       seenThread.current = threadId;
-      seenMessage.current = latest?.id ?? "";
+      seenResultReference.current =
+        latest?.result_reference_ids[latest.result_reference_ids.length - 1] ?? "";
       return;
     }
-    if (!latest || latest.id === seenMessage.current || chat.pending) return;
-    seenMessage.current = latest.id;
+    if (!latest || chat.pending) return;
     const referenceId = latest.result_reference_ids[latest.result_reference_ids.length - 1];
-    if (referenceId) onShowResult(referenceId);
+    if (!referenceId || referenceId === seenResultReference.current) return;
+    seenResultReference.current = referenceId;
+    onShowResult(referenceId);
   }, [chat.messages, chat.messagesLoading, chat.pending, chat.thread?.id, onShowResult]);
 
   useLayoutEffect(() => {
@@ -148,7 +150,11 @@ export function AssistantSessionFloat({
 
   if (size === "min") return null;
 
-  const enabled = chat.capability?.enabled ?? false;
+  const chatReady = chat.chatReady;
+  const composerLocked = !chatReady || chat.busy;
+  const showComposer = chatReady || chat.capabilityLoading;
+  const showUnavailable =
+    chat.capabilityFailed || (Boolean(chat.capability) && !chat.capability?.enabled);
   const title = chat.thread?.title ?? copy.assistant;
 
   const commitRename = () => {
@@ -159,7 +165,7 @@ export function AssistantSessionFloat({
   const sendDraft = (event?: FormEvent) => {
     event?.preventDefault();
     const text = draft.trim();
-    if (!text || chat.busy || !enabled) return;
+    if (!text || composerLocked) return;
     chat.send(text);
     setDraft("");
   };
@@ -273,7 +279,7 @@ export function AssistantSessionFloat({
           })}
           <button
             className="assistant-float__create"
-            disabled={!enabled || chat.busy}
+            disabled={!chatReady || chat.busy}
             type="button"
             onClick={() => {
               void chat.createThread().catch(() => undefined);
@@ -425,23 +431,43 @@ export function AssistantSessionFloat({
             </p>
           ) : null}
         </div>
-        {enabled ? (
-          <form className="assistant-composer" onSubmit={sendDraft}>
+        {showComposer ? (
+          <form
+            aria-busy={composerLocked || undefined}
+            className={composerLocked ? "assistant-composer is-busy" : "assistant-composer"}
+            onSubmit={sendDraft}
+          >
             <label className="visually-hidden" htmlFor="assistant-next">
-              {chat.thread ? copy.placeholder : copy.placeholderNew}
+              {chat.busy
+                ? copy.thinking
+                : chat.capabilityLoading
+                  ? copy.preparing
+                  : chat.thread
+                    ? copy.placeholder
+                    : copy.placeholderNew}
             </label>
             <textarea
+              aria-disabled={composerLocked || undefined}
               className="assistant-composer__input"
+              disabled={composerLocked}
               id="assistant-next"
               maxLength={chat.capability?.maximum_message_runes ?? 20000}
-              placeholder={chat.thread ? copy.placeholder : copy.placeholderNew}
+              placeholder={
+                chat.busy
+                  ? copy.thinking
+                  : chat.capabilityLoading
+                    ? copy.preparing
+                    : chat.thread
+                      ? copy.placeholder
+                      : copy.placeholderNew
+              }
               ref={inputRef}
               rows={1}
-              value={draft}
+              value={composerLocked ? "" : draft}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={onComposerKey}
             />
-            {chat.busy ? (
+            {chat.pending && !chat.pending.errorCode ? (
               <button
                 aria-label={copy.stop}
                 className="assistant-composer__send"
@@ -455,14 +481,14 @@ export function AssistantSessionFloat({
               <button
                 aria-label={copy.send}
                 className="assistant-composer__send"
-                disabled={!draft.trim()}
+                disabled={composerLocked || !draft.trim()}
                 type="submit"
               >
                 <ArrowUp aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />
               </button>
             )}
           </form>
-        ) : chat.capability ? (
+        ) : showUnavailable ? (
           <p className="assistant-float__notice" role="status">
             {copy.unavailable}
           </p>

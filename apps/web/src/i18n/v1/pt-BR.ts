@@ -707,6 +707,7 @@ export const tables = {
     emptyThread:
       "Pergunte sobre pessoas, documentos ou contas. A resposta vem com a evidência que a sustenta.",
     thinking: "Pensando…",
+    preparing: "Preparando…",
     consulting: "Consultando a base…",
     retry: "Tentar de novo",
     dismiss: "Descartar",

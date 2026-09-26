@@ -18,8 +18,13 @@ import {
 } from "./assistantApi";
 import { DEFAULT_THREAD_TITLE, threadTitle } from "./assistantTitle";
 
-const THREADS_KEY = ["assistant", "threads"] as const;
-const CAPABILITY_KEY = ["assistant", "capability"] as const;
+export const ASSISTANT_THREADS_KEY = ["assistant", "threads"] as const;
+export const ASSISTANT_CAPABILITY_KEY = ["assistant", "capability"] as const;
+/** Capability rarely changes; keep it warm so opening the float is instant. */
+export const ASSISTANT_CAPABILITY_STALE_MS = 10 * 60 * 1000;
+/** Thread list is patched locally; only refetch when stale or after errors. */
+const ASSISTANT_THREADS_STALE_MS = 60 * 1000;
+
 const messagesKey = (threadId: string) => ["assistant", "messages", threadId] as const;
 
 export type PendingRun = {
@@ -28,26 +33,31 @@ export type PendingRun = {
   content: string;
   text: string;
   toolRunning: boolean;
+  resultReferenceIds: string[];
   /** Stable public error code after a terminal failure; undefined while running. */
   errorCode?: string;
 };
 
 // One float, one active run: the engine already refuses a second run per thread.
-export function useAssistantChat(enabled: boolean) {
+export function useAssistantChat(open: boolean) {
   const queryClient = useQueryClient();
   const [threadId, setThreadId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingRun | null>(null);
   const stopStream = useRef<(() => void) | null>(null);
 
   const capability = useQuery({
-    queryKey: CAPABILITY_KEY,
+    queryKey: ASSISTANT_CAPABILITY_KEY,
     queryFn: ({ signal }) => getChatCapability(signal),
-    enabled,
+    enabled: open,
+    staleTime: ASSISTANT_CAPABILITY_STALE_MS,
+    retry: 1,
   });
+  const chatReady = capability.data?.enabled === true;
   const threads = useQuery({
-    queryKey: THREADS_KEY,
+    queryKey: ASSISTANT_THREADS_KEY,
     queryFn: ({ signal }) => listChatThreads(signal),
-    enabled,
+    enabled: open && chatReady,
+    staleTime: ASSISTANT_THREADS_STALE_MS,
   });
   const threadList = threads.data?.threads ?? [];
   const thread = threadList.find((item) => item.id === threadId) ?? threadList[0] ?? null;
@@ -56,19 +66,37 @@ export function useAssistantChat(enabled: boolean) {
   const messages = useQuery({
     queryKey: messagesKey(activeThreadId ?? ""),
     queryFn: ({ signal }) => listChatMessages(activeThreadId ?? "", signal),
-    enabled: enabled && activeThreadId !== null,
+    enabled: open && chatReady && activeThreadId !== null,
   });
 
   useEffect(() => () => stopStream.current?.(), []);
 
   const upsertThread = (next: ChatThread) =>
-    queryClient.setQueryData<ChatThreadPage>(THREADS_KEY, (page) => {
+    queryClient.setQueryData<ChatThreadPage>(ASSISTANT_THREADS_KEY, (page) => {
       const rest = (page?.threads ?? []).filter((item) => item.id !== next.id);
       return {
         threads: [next, ...rest],
         total: rest.length + 1,
         limit: page?.limit ?? 100,
         offset: 0,
+      };
+    });
+
+  const touchThread = (id: string, activeResultReferenceId?: string) =>
+    queryClient.setQueryData<ChatThreadPage>(ASSISTANT_THREADS_KEY, (page) => {
+      if (!page) return page;
+      const existing = page.threads.find((item) => item.id === id);
+      if (!existing) return page;
+      const next: ChatThread = {
+        ...existing,
+        updated_at: new Date().toISOString(),
+        ...(activeResultReferenceId
+          ? { active_result_reference_id: activeResultReferenceId }
+          : {}),
+      };
+      return {
+        ...page,
+        threads: [next, ...page.threads.filter((item) => item.id !== id)],
       };
     });
 
@@ -92,13 +120,13 @@ export function useAssistantChat(enabled: boolean) {
     mutationFn: ({ id, title, version }: { id: string; title: string; version: number }) =>
       renameChatThread(id, { title, version }),
     onSuccess: upsertThread,
-    onError: () => void queryClient.invalidateQueries({ queryKey: THREADS_KEY }),
+    onError: () => void queryClient.invalidateQueries({ queryKey: ASSISTANT_THREADS_KEY }),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => deleteChatThread(id),
     onSuccess: (_, id) => {
-      queryClient.setQueryData<ChatThreadPage>(THREADS_KEY, (page) => {
+      queryClient.setQueryData<ChatThreadPage>(ASSISTANT_THREADS_KEY, (page) => {
         const rest = (page?.threads ?? []).filter((item) => item.id !== id);
         return { threads: rest, total: rest.length, limit: page?.limit ?? 100, offset: 0 };
       });
@@ -114,10 +142,56 @@ export function useAssistantChat(enabled: boolean) {
   const follow = useCallback(
     (runId: string, id: string, content: string) => {
       stopStream.current?.();
-      setPending({ runId, threadId: id, content, text: "", toolRunning: false });
+      setPending({
+        runId,
+        threadId: id,
+        content,
+        text: "",
+        toolRunning: false,
+        resultReferenceIds: [],
+      });
       stopStream.current = streamChatEvents(
         runId,
         (event) => {
+          if (event.kind === "RESULT_REFERENCE" && event.result_reference_id) {
+            setPending((current) =>
+              current && current.runId === runId
+                ? {
+                    ...current,
+                    resultReferenceIds: current.resultReferenceIds.includes(
+                      event.result_reference_id!,
+                    )
+                      ? current.resultReferenceIds
+                      : [...current.resultReferenceIds, event.result_reference_id!],
+                  }
+                : current,
+            );
+            return;
+          }
+          if (event.kind === "RUN_COMPLETED") {
+            setPending((current) => {
+              if (!current || current.runId !== runId) return current;
+              const resultIds = current.resultReferenceIds;
+              appendMessage(id, {
+                id: `local-${runId}`,
+                thread_id: id,
+                run_id: runId,
+                sequence: Date.now(),
+                role: "ASSISTANT",
+                content: current.text,
+                result_reference_ids: resultIds,
+                created_at: new Date().toISOString(),
+              });
+              touchThread(id, resultIds[resultIds.length - 1]);
+              return null;
+            });
+            // Reconcile server message ids without clearing the optimistic transcript.
+            void queryClient.fetchQuery({
+              queryKey: messagesKey(id),
+              queryFn: ({ signal }) => listChatMessages(id, signal),
+            });
+            return;
+          }
           setPending((current) => {
             if (!current || current.runId !== runId) return current;
             switch (event.kind) {
@@ -138,11 +212,6 @@ export function useAssistantChat(enabled: boolean) {
                 return current;
             }
           });
-          if (event.kind === "RUN_COMPLETED") {
-            void queryClient.invalidateQueries({ queryKey: messagesKey(id) });
-            void queryClient.invalidateQueries({ queryKey: THREADS_KEY });
-            setPending(null);
-          }
         },
         (error) => {
           if (error) {
@@ -178,6 +247,7 @@ export function useAssistantChat(enabled: boolean) {
     },
     onSuccess: ({ id, creation, content, untitled, title, version }) => {
       appendMessage(id, creation.user_message);
+      touchThread(id);
       follow(creation.run.id, id, content);
       if (untitled && title && version && title !== DEFAULT_THREAD_TITLE) {
         rename.mutate({ id, title, version });
@@ -202,9 +272,11 @@ export function useAssistantChat(enabled: boolean) {
 
   return {
     capability: capability.data ?? null,
-    capabilityLoading: capability.isLoading,
+    capabilityLoading: capability.isPending && !capability.data,
+    capabilityFailed: capability.isError,
+    chatReady,
     threads: threadList,
-    threadsLoading: threads.isLoading,
+    threadsLoading: threads.isFetching,
     thread,
     selectThread: (id: string) => {
       setThreadId(id);
@@ -212,7 +284,8 @@ export function useAssistantChat(enabled: boolean) {
     messages: activeThreadId ? (messages.data?.messages ?? []) : [],
     messagesLoading: messages.isLoading,
     pending: pending && pending.threadId === activeThreadId ? pending : null,
-    busy: pending !== null && !pending.errorCode,
+    // One active turn per float: block compose while startTurn is in flight or a run is streaming.
+    busy: send.isPending || (pending !== null && !pending.errorCode),
     createThread: () => create.mutateAsync(undefined),
     renameThread: (id: string, title: string) => {
       const target = threadList.find((item) => item.id === id);
