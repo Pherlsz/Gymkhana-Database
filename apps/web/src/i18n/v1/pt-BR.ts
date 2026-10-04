@@ -857,6 +857,8 @@ export const search = {
   resultsUnit: "resultados",
   relevanceWord: "relevância",
   resultCount: ({ count }: { count: number }) => `${count} resultado${count === 1 ? "" : "s"}`,
+  truncated: ({ count }: { count: number }) =>
+    `Mostrando os primeiros ${count} de muitos — refine a busca.`,
   openRecord: "Abrir registro",
   openFicha: "Ficha",
   collapseFicha: "Recolher",

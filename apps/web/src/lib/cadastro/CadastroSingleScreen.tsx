@@ -252,6 +252,7 @@ export function CadastroSingleScreen({
       }
 
       void queryClient.invalidateQueries({ queryKey: queryKeys.tables.profiles() });
+      void queryClient.invalidateQueries({ queryKey: ["global-search"] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.records.documents() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.records.bills() });
