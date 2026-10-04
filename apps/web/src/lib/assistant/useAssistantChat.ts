@@ -6,6 +6,7 @@ import {
   createChatThread,
   deleteChatThread,
   getChatCapability,
+  getChatRun,
   listChatMessages,
   listChatThreads,
   renameChatThread,
@@ -32,10 +33,14 @@ export type PendingRun = {
   threadId: string;
   content: string;
   text: string;
+  /** Text since the last tool boundary. RUN_COMPLETED persists only this round. */
+  roundText: string;
   toolRunning: boolean;
   resultReferenceIds: string[];
   /** Stable public error code after a terminal failure; undefined while running. */
   errorCode?: string;
+  /** User cancellation. Partial text stays; this is not a failure and has no retry. */
+  cancelled?: boolean;
 };
 
 // One float, one active run: the engine already refuses a second run per thread.
@@ -44,6 +49,11 @@ export function useAssistantChat(open: boolean) {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingRun | null>(null);
   const stopStream = useRef<(() => void) | null>(null);
+  const pendingRef = useRef<PendingRun | null>(null);
+  const commitPending = (next: PendingRun | null) => {
+    pendingRef.current = next;
+    setPending(next);
+  };
 
   const capability = useQuery({
     queryKey: ASSISTANT_CAPABILITY_KEY,
@@ -131,9 +141,9 @@ export function useAssistantChat(open: boolean) {
       });
       queryClient.removeQueries({ queryKey: messagesKey(id) });
       if (threadId === id) setThreadId(null);
-      if (pending?.threadId === id) {
+      if (pendingRef.current?.threadId === id) {
         stopStream.current?.();
-        setPending(null);
+        commitPending(null);
       }
     },
   });
@@ -141,85 +151,127 @@ export function useAssistantChat(open: boolean) {
   const follow = useCallback(
     (runId: string, id: string, content: string) => {
       stopStream.current?.();
-      setPending({
+      commitPending({
         runId,
         threadId: id,
         content,
         text: "",
+        roundText: "",
         toolRunning: false,
         resultReferenceIds: [],
       });
+      const patchPending = (patch: (current: PendingRun) => PendingRun) => {
+        const current = pendingRef.current;
+        if (!current || current.runId !== runId) return;
+        const next = patch(current);
+        pendingRef.current = next;
+        setPending(next);
+      };
+      const finishWithSavedReply = async () => {
+        try {
+          await queryClient.fetchQuery({
+            queryKey: messagesKey(id),
+            queryFn: ({ signal }) => listChatMessages(id, signal),
+          });
+        } catch {
+          void queryClient.invalidateQueries({ queryKey: messagesKey(id) });
+        }
+        if (pendingRef.current?.runId === runId) commitPending(null);
+      };
       stopStream.current = streamChatEvents(
         runId,
         (event) => {
           if (event.kind === "RESULT_REFERENCE" && event.result_reference_id) {
-            setPending((current) =>
-              current && current.runId === runId
-                ? {
-                    ...current,
-                    resultReferenceIds: current.resultReferenceIds.includes(
-                      event.result_reference_id!,
-                    )
-                      ? current.resultReferenceIds
-                      : [...current.resultReferenceIds, event.result_reference_id!],
-                  }
-                : current,
+            const referenceId = event.result_reference_id;
+            patchPending((current) =>
+              current.resultReferenceIds.includes(referenceId)
+                ? current
+                : { ...current, resultReferenceIds: [...current.resultReferenceIds, referenceId] },
             );
             return;
           }
           if (event.kind === "RUN_COMPLETED") {
-            setPending((current) => {
-              if (!current || current.runId !== runId) return current;
-              const resultIds = current.resultReferenceIds;
+            const current = pendingRef.current;
+            if (!current || current.runId !== runId) return;
+            const resultIds = current.resultReferenceIds;
+            const persisted = current.roundText.trim();
+            if (persisted) {
               appendMessage(id, {
-                id: `local-${runId}`,
+                id: "local-" + runId,
                 thread_id: id,
                 run_id: runId,
                 sequence: Date.now(),
                 role: "ASSISTANT",
-                content: current.text,
+                content: persisted,
                 result_reference_ids: resultIds,
                 created_at: new Date().toISOString(),
               });
-              touchThread(id, resultIds[resultIds.length - 1]);
-              return null;
-            });
-            // Reconcile server message ids without clearing the optimistic transcript.
-            void queryClient.fetchQuery({
-              queryKey: messagesKey(id),
-              queryFn: ({ signal }) => listChatMessages(id, signal),
-            });
+            }
+            touchThread(id, resultIds[resultIds.length - 1]);
+            commitPending(null);
+            void finishWithSavedReply();
             return;
           }
-          setPending((current) => {
-            if (!current || current.runId !== runId) return current;
+          if (event.kind === "RUN_CANCELLED") {
+            patchPending((current) => ({ ...current, toolRunning: false, cancelled: true }));
+            return;
+          }
+          if (event.kind === "RUN_FAILED") {
+            patchPending((current) => ({
+              ...current,
+              toolRunning: false,
+              errorCode: event.error_code || "run_failed",
+            }));
+            return;
+          }
+          patchPending((current) => {
             switch (event.kind) {
-              case "TEXT_DELTA":
-                return { ...current, text: current.text + (event.text_delta ?? "") };
-              case "TOOL_STARTED":
-                return { ...current, toolRunning: true };
-              case "TOOL_COMPLETED":
-                return { ...current, toolRunning: false };
-              case "RUN_FAILED":
-              case "RUN_CANCELLED":
+              case "TEXT_DELTA": {
+                const delta = event.text_delta ?? "";
                 return {
                   ...current,
-                  toolRunning: false,
-                  errorCode: event.error_code || event.kind.toLowerCase(),
+                  text: current.text + delta,
+                  roundText: current.roundText + delta,
                 };
+              }
+              case "TOOL_STARTED":
+                return { ...current, toolRunning: true, roundText: "" };
+              case "TOOL_COMPLETED":
+                return { ...current, toolRunning: false };
               default:
                 return current;
             }
           });
         },
         (error) => {
-          if (error) {
-            setPending((current) =>
-              current && current.runId === runId && !current.errorCode
-                ? { ...current, errorCode: "stream_closed" }
-                : current,
-            );
-          }
+          if (!error) return;
+          void (async () => {
+            const current = pendingRef.current;
+            if (!current || current.runId !== runId || current.errorCode || current.cancelled) return;
+            let run: Awaited<ReturnType<typeof getChatRun>> | null = null;
+            try {
+              run = await getChatRun(runId);
+            } catch {
+              run = null;
+            }
+            const latest = pendingRef.current;
+            if (!latest || latest.runId !== runId || latest.errorCode || latest.cancelled) return;
+            if (run?.state === "COMPLETED") {
+              touchThread(id, current.resultReferenceIds[current.resultReferenceIds.length - 1]);
+              await finishWithSavedReply();
+              return;
+            }
+            if (run?.state === "CANCELLED") {
+              patchPending((value) => ({ ...value, toolRunning: false, cancelled: true }));
+              return;
+            }
+            if (run?.state === "FAILED") {
+              const code = run.error_code || "run_failed";
+              patchPending((value) => ({ ...value, toolRunning: false, errorCode: code }));
+              return;
+            }
+            patchPending((value) => ({ ...value, errorCode: "stream_closed" }));
+          })();
         },
       );
     },
@@ -231,18 +283,40 @@ export function useAssistantChat(open: boolean) {
       let id = activeThreadId;
       const untitled = Boolean(thread && thread.title === DEFAULT_THREAD_TITLE);
       const title = threadTitle(content);
-      if (!id) {
-        const created = await createChatThread(title);
-        upsertThread(created);
-        setThreadId(created.id);
-        id = created.id;
+      let createdThreadId: string | null = null;
+      const dropCreatedThread = (threadToDrop: string) => {
+        queryClient.setQueryData<ChatThreadPage>(ASSISTANT_THREADS_KEY, (page) => {
+          const rest = (page?.threads ?? []).filter((item) => item.id !== threadToDrop);
+          return { threads: rest, total: rest.length, limit: page?.limit ?? 100, offset: 0 };
+        });
+        queryClient.removeQueries({ queryKey: messagesKey(threadToDrop) });
+        setThreadId((current) => (current === threadToDrop ? null : current));
+      };
+      try {
+        if (!id) {
+          const created = await createChatThread(title);
+          createdThreadId = created.id;
+          upsertThread(created);
+          setThreadId(created.id);
+          id = created.id;
+        }
+        const creation = await startChatTurn(id, {
+          content,
+          idempotency_key: crypto.randomUUID(),
+          ...(retryOfRunId ? { retry_of_run_id: retryOfRunId } : {}),
+        });
+        return { id, creation, content, untitled, title, version: thread?.version };
+      } catch (error) {
+        if (createdThreadId) {
+          try {
+            await deleteChatThread(createdThreadId);
+          } catch {
+            // Still drop the local session so a failed first turn does not leave an empty thread open.
+          }
+          dropCreatedThread(createdThreadId);
+        }
+        throw error;
       }
-      const creation = await startChatTurn(id, {
-        content,
-        idempotency_key: crypto.randomUUID(),
-        ...(retryOfRunId ? { retry_of_run_id: retryOfRunId } : {}),
-      });
-      return { id, creation, content, untitled, title, version: thread?.version };
     },
     onSuccess: ({ id, creation, content, untitled, title, version }) => {
       appendMessage(id, creation.user_message);
@@ -261,12 +335,16 @@ export function useAssistantChat(open: boolean) {
   const retry = useCallback(() => {
     if (!pending?.errorCode) return;
     const failed = pending;
-    setPending(null);
+    commitPending(null);
     send.mutate({ content: failed.content, retryOfRunId: failed.runId });
   }, [pending, send]);
 
   const dismissError = useCallback(() => {
-    setPending((current) => (current?.errorCode ? null : current));
+    setPending((current) => {
+      if (!current?.errorCode) return current;
+      pendingRef.current = null;
+      return null;
+    });
   }, []);
 
   return {
@@ -286,7 +364,7 @@ export function useAssistantChat(open: boolean) {
     threadsLoading: threads.isPending || (threads.isFetching && threadList.length === 0),
     pending: pending && pending.threadId === activeThreadId ? pending : null,
     // One active turn per float: block compose while startTurn is in flight or a run is streaming.
-    busy: send.isPending || (pending !== null && !pending.errorCode),
+    busy: send.isPending || (pending !== null && !pending.errorCode && !pending.cancelled),
     createThread: () => create.mutateAsync(undefined),
     renameThread: (id: string, title: string) => {
       const target = threadList.find((item) => item.id === id);
@@ -298,7 +376,7 @@ export function useAssistantChat(open: boolean) {
     sendError: errorCode(send.error),
     sessionError: errorCode(create.error) ?? errorCode(rename.error) ?? errorCode(remove.error),
     cancel: () => {
-      if (pending && !pending.errorCode) cancel.mutate(pending.runId);
+      if (pending && !pending.errorCode && !pending.cancelled) cancel.mutate(pending.runId);
     },
     retry,
     dismissError,

@@ -57,6 +57,10 @@ export function cancelChatRun(runId: string): Promise<ChatRun> {
   return requestJSON<ChatRun>(`${BASE}/runs/${runId}/cancel`, { method: "POST" });
 }
 
+export function getChatRun(runId: string, signal?: AbortSignal): Promise<ChatRun> {
+  return requestJSON<ChatRun>(BASE + "/runs/" + runId, signal ? { signal } : {});
+}
+
 export type ChatTableRecorte = {
   table: "people" | "documents" | "bills";
   filters: Record<string, string>;
