@@ -477,7 +477,7 @@ SELECT address_city
 FROM profiles
 WHERE address_city IS NOT NULL
   AND address_city <> ''
-  AND ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%') ESCAPE '\'
+  AND ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%' ESCAPE '\')
   AND ($2::text = '' OR EXISTS (
     SELECT 1
     FROM document_presences AS presence
@@ -487,7 +487,7 @@ WHERE address_city IS NOT NULL
       AND presence.claim = 'informed_number'
       AND coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%' ESCAPE '\'
   ))
-  AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%') ESCAPE '\'
+  AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%' ESCAPE '\')
   AND ($4::text = '' OR coalesce(address_state, '') = $4::text)
 GROUP BY address_city
 ORDER BY address_city COLLATE gymkhana_pt_br
@@ -598,17 +598,17 @@ ORDER BY
     WHEN $1::text <> '' THEN
       CASE
         WHEN lower(full_name) = lower($1::text) THEN 0
-        WHEN lower(full_name) LIKE lower($1::text) || ' %' THEN 1 ESCAPE '\'
-        WHEN lower(full_name) LIKE lower($1::text) || '%' THEN 2 ESCAPE '\'
-        WHEN lower(full_name) LIKE '% ' || lower($1::text) || ' %' THEN 3 ESCAPE '\'
-        WHEN lower(full_name) LIKE '% ' || lower($1::text) || '%' THEN 4 ESCAPE '\'
+        WHEN lower(full_name) LIKE lower($1::text) || ' %' ESCAPE '\' THEN 1
+        WHEN lower(full_name) LIKE lower($1::text) || '%' ESCAPE '\' THEN 2
+        WHEN lower(full_name) LIKE '% ' || lower($1::text) || ' %' ESCAPE '\' THEN 3
+        WHEN lower(full_name) LIKE '% ' || lower($1::text) || '%' ESCAPE '\' THEN 4
         ELSE 5
       END
     ELSE 0
   END ASC,
   CASE
     WHEN $2::text <> '' THEN
-      CASE WHEN cpf_lookup.cpf_digits LIKE $2::text || '%' THEN 0 ELSE 1 END ESCAPE '\'
+      CASE WHEN cpf_lookup.cpf_digits LIKE $2::text || '%' ESCAPE '\' THEN 0 ELSE 1 END
     ELSE 0
   END ASC,
   (CASE WHEN $8::text = 'full_name' AND $9::text = 'asc' THEN full_name END) COLLATE gymkhana_pt_br ASC,
