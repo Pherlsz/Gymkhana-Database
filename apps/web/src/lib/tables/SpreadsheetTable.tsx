@@ -18,6 +18,7 @@ import { t } from "../../i18n";
 import { ColumnFunnel, type ColumnFunnelCopy } from "./ColumnFunnel";
 import type { ToolbarFilterField } from "./FilterControl";
 import { clampColumnWidth } from "./useSheetColumnWidths";
+import { fillSheetColumnWidths } from "./sheetColumnLayout";
 
 export type SpreadsheetColumn<T> = {
   key: string;
@@ -215,11 +216,31 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     [columnWidths],
   );
 
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const preferredWidths = useMemo(
+    () => [
+      ...(rowActions ? [SHEET_COLUMN_WIDTH.actions] : []),
+      ...columns.map((column) => resolvedWidth(column)),
+    ],
+    [columns, resolvedWidth, rowActions],
+  );
+  const displayWidths = useMemo(
+    () => fillSheetColumnWidths(preferredWidths, viewportWidth),
+    [preferredWidths, viewportWidth],
+  );
   const tableWidth = Math.max(
     1,
-    (rowActions ? SHEET_COLUMN_WIDTH.actions : 0) +
-      columns.reduce((sum, column) => sum + resolvedWidth(column), 0),
+    displayWidths.reduce((sum, width) => sum + width, 0),
   );
+  const displayWidthByKey = useMemo(() => {
+    const offset = rowActions ? 1 : 0;
+    return new Map(
+      columns.map((column, index) => [
+        column.key,
+        displayWidths[offset + index] ?? resolvedWidth(column),
+      ]),
+    );
+  }, [columns, displayWidths, resolvedWidth, rowActions]);
 
   // Remount when the column set changes (assistant recorte / formulas) so Ant's
   // header colgroup and virtual body do not keep widths from the previous layout.
@@ -332,7 +353,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     () =>
       new Map(
         columns.map((column) => {
-          const width = resolvedWidth(column);
+          const width = displayWidthByKey.get(column.key) ?? resolvedWidth(column);
           const locked = {
             width,
             minWidth: width,
@@ -357,12 +378,12 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
           ];
         }),
       ),
-    [columns, resolvedWidth],
+    [columns, displayWidthByKey, resolvedWidth],
   );
 
   const antdColumns = useMemo(() => {
     const dataColumns = columns.map((column): NonNullable<TableProps<T>["columns"]>[number] => {
-      const width = resolvedWidth(column);
+      const width = displayWidthByKey.get(column.key) ?? resolvedWidth(column);
       const sorted = Boolean(column.sortField && column.sortField === sortField);
       const cellKey = column.dataIndex ?? column.key;
       const styles = cellStyles.get(column.key);
@@ -513,6 +534,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     onColumnWidth,
     onSort,
     openFunnelKey,
+    displayWidthByKey,
     resolvedWidth,
     rowActions,
     sortField,
@@ -546,6 +568,8 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
         Math.floor(sheet.clientHeight - headerHeight),
       );
       setBodyHeight((current) => (Math.abs(current - next) <= 1 ? current : next));
+      const nextWidth = sheet.clientWidth;
+      setViewportWidth((current) => (Math.abs(current - nextWidth) <= 1 ? current : nextWidth));
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -554,10 +578,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
   }, [columnLayoutKey, showEmpty]);
 
   const columnWidthStyle = useMemo(() => {
-    const widths = [
-      ...(rowActions ? [SHEET_COLUMN_WIDTH.actions] : []),
-      ...columns.map((column) => resolvedWidth(column)),
-    ];
+    const widths = displayWidths;
     const style: Record<string, string> = {
       "--spreadsheet-table-width": `${tableWidth}px`,
     };
@@ -565,19 +586,15 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
       style[`--spreadsheet-col-${index}`] = `${width}px`;
     });
     return style;
-  }, [columns, resolvedWidth, rowActions, tableWidth]);
+  }, [displayWidths, tableWidth]);
 
-  // Column widths are fixed; the sheet scrolls horizontally when their sum exceeds
-  // the visible viewport. Never stretch header/body to fill leftover space.
+  // Preferred widths stay fixed and scroll when they overflow. Leftover viewport
+  // width is added to the last column so a short set, including a single column, fills the sheet.
   useLayoutEffect(() => {
     const root = sheetRef.current?.querySelector(".spreadsheet-table");
     if (!(root instanceof HTMLElement)) return;
-    const widths = [
-      ...(rowActions ? [SHEET_COLUMN_WIDTH.actions] : []),
-      ...columns.map((column) => resolvedWidth(column)),
-    ];
-    paintColumnVars(root, widths, tableWidth);
-  }, [columnLayoutKey, columns, resolvedWidth, rowActions, rows.length, tableWidth]);
+    paintColumnVars(root, displayWidths, tableWidth);
+  }, [columnLayoutKey, displayWidths, rows.length, tableWidth]);
 
   useEffect(() => {
     if (!onRowClick || !selectedRowId) return;
