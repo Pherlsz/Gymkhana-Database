@@ -35,11 +35,11 @@ WHERE (
     sqlc.arg(full_name_filter)::text = '' OR
     CASE
       WHEN sqlc.arg(full_name_filter)::text LIKE '^%' THEN
-        lower(full_name) LIKE lower(substring(sqlc.arg(full_name_filter)::text FROM 2)) || '%'
+        lower(full_name) LIKE lower(substring(sqlc.arg(full_name_filter)::text FROM 2)) || '%' ESCAPE '\'
       WHEN sqlc.arg(full_name_filter)::text LIKE '=%' THEN
         lower(full_name) = lower(substring(sqlc.arg(full_name_filter)::text FROM 2))
       ELSE
-        lower(full_name) LIKE '%' || lower(sqlc.arg(full_name_filter)::text) || '%'
+        lower(full_name) LIKE '%' || lower(sqlc.arg(full_name_filter)::text) || '%' ESCAPE '\'
     END
   )
   AND (sqlc.arg(cpf_filter)::text = '' OR EXISTS (
@@ -52,11 +52,11 @@ WHERE (
       AND (
         CASE
           WHEN sqlc.arg(cpf_filter)::text LIKE '^%' THEN
-            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring(sqlc.arg(cpf_filter)::text FROM 2) || '%'
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring(sqlc.arg(cpf_filter)::text FROM 2) || '%' ESCAPE '\'
           WHEN sqlc.arg(cpf_filter)::text LIKE '=%' THEN
             coalesce(presence.identifier_digits, presence.identifier_value, '') = substring(sqlc.arg(cpf_filter)::text FROM 2)
           ELSE
-            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || sqlc.arg(cpf_filter)::text || '%'
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || sqlc.arg(cpf_filter)::text || '%' ESCAPE '\'
         END
       )
   ))
@@ -64,22 +64,22 @@ WHERE (
     sqlc.arg(email_filter)::text = '' OR
     CASE
       WHEN sqlc.arg(email_filter)::text LIKE '^%' THEN
-        lower(coalesce(email, '')) LIKE lower(substring(sqlc.arg(email_filter)::text FROM 2)) || '%'
+        lower(coalesce(email, '')) LIKE lower(substring(sqlc.arg(email_filter)::text FROM 2)) || '%' ESCAPE '\'
       WHEN sqlc.arg(email_filter)::text LIKE '=%' THEN
         lower(coalesce(email, '')) = lower(substring(sqlc.arg(email_filter)::text FROM 2))
       ELSE
-        lower(coalesce(email, '')) LIKE '%' || lower(sqlc.arg(email_filter)::text) || '%'
+        lower(coalesce(email, '')) LIKE '%' || lower(sqlc.arg(email_filter)::text) || '%' ESCAPE '\'
     END
   )
   AND (
     sqlc.arg(city_filter)::text = '' OR
     CASE
       WHEN sqlc.arg(city_filter)::text LIKE '^%' THEN
-        lower(coalesce(address_city, '')) LIKE lower(substring(sqlc.arg(city_filter)::text FROM 2)) || '%'
+        lower(coalesce(address_city, '')) LIKE lower(substring(sqlc.arg(city_filter)::text FROM 2)) || '%' ESCAPE '\'
       WHEN sqlc.arg(city_filter)::text LIKE '=%' THEN
         lower(coalesce(address_city, '')) = lower(substring(sqlc.arg(city_filter)::text FROM 2))
       ELSE
-        lower(coalesce(address_city, '')) LIKE '%' || lower(sqlc.arg(city_filter)::text) || '%'
+        lower(coalesce(address_city, '')) LIKE '%' || lower(sqlc.arg(city_filter)::text) || '%' ESCAPE '\'
     END
   )
   AND (sqlc.arg(state_filter)::text = '' OR coalesce(address_state, '') = sqlc.arg(state_filter)::text)
@@ -103,11 +103,11 @@ WHERE (
     sqlc.arg(full_name_filter)::text = '' OR
     CASE
       WHEN sqlc.arg(full_name_filter)::text LIKE '^%' THEN
-        lower(full_name) LIKE lower(substring(sqlc.arg(full_name_filter)::text FROM 2)) || '%'
+        lower(full_name) LIKE lower(substring(sqlc.arg(full_name_filter)::text FROM 2)) || '%' ESCAPE '\'
       WHEN sqlc.arg(full_name_filter)::text LIKE '=%' THEN
         lower(full_name) = lower(substring(sqlc.arg(full_name_filter)::text FROM 2))
       ELSE
-        lower(full_name) LIKE '%' || lower(sqlc.arg(full_name_filter)::text) || '%'
+        lower(full_name) LIKE '%' || lower(sqlc.arg(full_name_filter)::text) || '%' ESCAPE '\'
     END
   )
   AND (sqlc.arg(cpf_filter)::text = '' OR EXISTS (
@@ -120,11 +120,11 @@ WHERE (
       AND (
         CASE
           WHEN sqlc.arg(cpf_filter)::text LIKE '^%' THEN
-            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring(sqlc.arg(cpf_filter)::text FROM 2) || '%'
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring(sqlc.arg(cpf_filter)::text FROM 2) || '%' ESCAPE '\'
           WHEN sqlc.arg(cpf_filter)::text LIKE '=%' THEN
             coalesce(presence.identifier_digits, presence.identifier_value, '') = substring(sqlc.arg(cpf_filter)::text FROM 2)
           ELSE
-            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || sqlc.arg(cpf_filter)::text || '%'
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || sqlc.arg(cpf_filter)::text || '%' ESCAPE '\'
         END
       )
   ))
@@ -132,22 +132,22 @@ WHERE (
     sqlc.arg(email_filter)::text = '' OR
     CASE
       WHEN sqlc.arg(email_filter)::text LIKE '^%' THEN
-        lower(coalesce(email, '')) LIKE lower(substring(sqlc.arg(email_filter)::text FROM 2)) || '%'
+        lower(coalesce(email, '')) LIKE lower(substring(sqlc.arg(email_filter)::text FROM 2)) || '%' ESCAPE '\'
       WHEN sqlc.arg(email_filter)::text LIKE '=%' THEN
         lower(coalesce(email, '')) = lower(substring(sqlc.arg(email_filter)::text FROM 2))
       ELSE
-        lower(coalesce(email, '')) LIKE '%' || lower(sqlc.arg(email_filter)::text) || '%'
+        lower(coalesce(email, '')) LIKE '%' || lower(sqlc.arg(email_filter)::text) || '%' ESCAPE '\'
     END
   )
   AND (
     sqlc.arg(city_filter)::text = '' OR
     CASE
       WHEN sqlc.arg(city_filter)::text LIKE '^%' THEN
-        lower(coalesce(address_city, '')) LIKE lower(substring(sqlc.arg(city_filter)::text FROM 2)) || '%'
+        lower(coalesce(address_city, '')) LIKE lower(substring(sqlc.arg(city_filter)::text FROM 2)) || '%' ESCAPE '\'
       WHEN sqlc.arg(city_filter)::text LIKE '=%' THEN
         lower(coalesce(address_city, '')) = lower(substring(sqlc.arg(city_filter)::text FROM 2))
       ELSE
-        lower(coalesce(address_city, '')) LIKE '%' || lower(sqlc.arg(city_filter)::text) || '%'
+        lower(coalesce(address_city, '')) LIKE '%' || lower(sqlc.arg(city_filter)::text) || '%' ESCAPE '\'
     END
   )
   AND (sqlc.arg(state_filter)::text = '' OR coalesce(address_state, '') = sqlc.arg(state_filter)::text)
@@ -157,17 +157,17 @@ ORDER BY
     WHEN sqlc.arg(full_name_filter)::text <> '' THEN
       CASE
         WHEN lower(full_name) = lower(sqlc.arg(full_name_filter)::text) THEN 0
-        WHEN lower(full_name) LIKE lower(sqlc.arg(full_name_filter)::text) || ' %' THEN 1
-        WHEN lower(full_name) LIKE lower(sqlc.arg(full_name_filter)::text) || '%' THEN 2
-        WHEN lower(full_name) LIKE '% ' || lower(sqlc.arg(full_name_filter)::text) || ' %' THEN 3
-        WHEN lower(full_name) LIKE '% ' || lower(sqlc.arg(full_name_filter)::text) || '%' THEN 4
+        WHEN lower(full_name) LIKE lower(sqlc.arg(full_name_filter)::text) || ' %' ESCAPE '\' THEN 1
+        WHEN lower(full_name) LIKE lower(sqlc.arg(full_name_filter)::text) || '%' ESCAPE '\' THEN 2
+        WHEN lower(full_name) LIKE '% ' || lower(sqlc.arg(full_name_filter)::text) || ' %' ESCAPE '\' THEN 3
+        WHEN lower(full_name) LIKE '% ' || lower(sqlc.arg(full_name_filter)::text) || '%' ESCAPE '\' THEN 4
         ELSE 5
       END
     ELSE 0
   END ASC,
   CASE
     WHEN sqlc.arg(cpf_filter)::text <> '' THEN
-      CASE WHEN cpf_lookup.cpf_digits LIKE sqlc.arg(cpf_filter)::text || '%' THEN 0 ELSE 1 END
+      CASE WHEN cpf_lookup.cpf_digits LIKE sqlc.arg(cpf_filter)::text || '%' ESCAPE '\' THEN 0 ELSE 1 END
     ELSE 0
   END ASC,
   (CASE WHEN sqlc.arg(sort_field)::text = 'full_name' AND sqlc.arg(sort_order)::text = 'asc' THEN full_name END) COLLATE gymkhana_pt_br ASC,
@@ -262,7 +262,7 @@ SELECT address_city
 FROM profiles
 WHERE address_city IS NOT NULL
   AND address_city <> ''
-  AND (sqlc.arg(full_name_filter)::text = '' OR lower(full_name) LIKE '%' || lower(sqlc.arg(full_name_filter)::text) || '%')
+  AND (sqlc.arg(full_name_filter)::text = '' OR lower(full_name) LIKE '%' || lower(sqlc.arg(full_name_filter)::text) || '%' ESCAPE '\')
   AND (sqlc.arg(cpf_filter)::text = '' OR EXISTS (
     SELECT 1
     FROM document_presences AS presence
@@ -270,9 +270,9 @@ WHERE address_city IS NOT NULL
     WHERE presence.profile_id = profiles.id
       AND document_type.technical_key = 'cpf'
       AND presence.claim = 'informed_number'
-      AND coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || sqlc.arg(cpf_filter)::text || '%'
+      AND coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || sqlc.arg(cpf_filter)::text || '%' ESCAPE '\'
   ))
-  AND (sqlc.arg(email_filter)::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower(sqlc.arg(email_filter)::text) || '%')
+  AND (sqlc.arg(email_filter)::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower(sqlc.arg(email_filter)::text) || '%' ESCAPE '\')
   AND (sqlc.arg(state_filter)::text = '' OR coalesce(address_state, '') = sqlc.arg(state_filter)::text)
 GROUP BY address_city
 ORDER BY address_city COLLATE gymkhana_pt_br

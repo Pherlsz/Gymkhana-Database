@@ -34,11 +34,11 @@ WHERE (
     $1::text = '' OR
     CASE
       WHEN $1::text LIKE '^%' THEN
-        lower(full_name) LIKE lower(substring($1::text FROM 2)) || '%'
+        lower(full_name) LIKE lower(substring($1::text FROM 2)) || '%' ESCAPE '\'
       WHEN $1::text LIKE '=%' THEN
         lower(full_name) = lower(substring($1::text FROM 2))
       ELSE
-        lower(full_name) LIKE '%' || lower($1::text) || '%'
+        lower(full_name) LIKE '%' || lower($1::text) || '%' ESCAPE '\'
     END
   )
   AND ($2::text = '' OR EXISTS (
@@ -51,11 +51,11 @@ WHERE (
       AND (
         CASE
           WHEN $2::text LIKE '^%' THEN
-            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring($2::text FROM 2) || '%'
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring($2::text FROM 2) || '%' ESCAPE '\'
           WHEN $2::text LIKE '=%' THEN
             coalesce(presence.identifier_digits, presence.identifier_value, '') = substring($2::text FROM 2)
           ELSE
-            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%'
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%' ESCAPE '\'
         END
       )
   ))
@@ -63,22 +63,22 @@ WHERE (
     $3::text = '' OR
     CASE
       WHEN $3::text LIKE '^%' THEN
-        lower(coalesce(email, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+        lower(coalesce(email, '')) LIKE lower(substring($3::text FROM 2)) || '%' ESCAPE '\'
       WHEN $3::text LIKE '=%' THEN
         lower(coalesce(email, '')) = lower(substring($3::text FROM 2))
       ELSE
-        lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%'
+        lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%' ESCAPE '\'
     END
   )
   AND (
     $4::text = '' OR
     CASE
       WHEN $4::text LIKE '^%' THEN
-        lower(coalesce(address_city, '')) LIKE lower(substring($4::text FROM 2)) || '%'
+        lower(coalesce(address_city, '')) LIKE lower(substring($4::text FROM 2)) || '%' ESCAPE '\'
       WHEN $4::text LIKE '=%' THEN
         lower(coalesce(address_city, '')) = lower(substring($4::text FROM 2))
       ELSE
-        lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%'
+        lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%' ESCAPE '\'
     END
   )
   AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
@@ -477,7 +477,7 @@ SELECT address_city
 FROM profiles
 WHERE address_city IS NOT NULL
   AND address_city <> ''
-  AND ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%')
+  AND ($1::text = '' OR lower(full_name) LIKE '%' || lower($1::text) || '%' ESCAPE '\')
   AND ($2::text = '' OR EXISTS (
     SELECT 1
     FROM document_presences AS presence
@@ -485,9 +485,9 @@ WHERE address_city IS NOT NULL
     WHERE presence.profile_id = profiles.id
       AND document_type.technical_key = 'cpf'
       AND presence.claim = 'informed_number'
-      AND coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%'
+      AND coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%' ESCAPE '\'
   ))
-  AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%')
+  AND ($3::text = '' OR lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%' ESCAPE '\')
   AND ($4::text = '' OR coalesce(address_state, '') = $4::text)
 GROUP BY address_city
 ORDER BY address_city COLLATE gymkhana_pt_br
@@ -544,11 +544,11 @@ WHERE (
     $1::text = '' OR
     CASE
       WHEN $1::text LIKE '^%' THEN
-        lower(full_name) LIKE lower(substring($1::text FROM 2)) || '%'
+        lower(full_name) LIKE lower(substring($1::text FROM 2)) || '%' ESCAPE '\'
       WHEN $1::text LIKE '=%' THEN
         lower(full_name) = lower(substring($1::text FROM 2))
       ELSE
-        lower(full_name) LIKE '%' || lower($1::text) || '%'
+        lower(full_name) LIKE '%' || lower($1::text) || '%' ESCAPE '\'
     END
   )
   AND ($2::text = '' OR EXISTS (
@@ -561,11 +561,11 @@ WHERE (
       AND (
         CASE
           WHEN $2::text LIKE '^%' THEN
-            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring($2::text FROM 2) || '%'
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE substring($2::text FROM 2) || '%' ESCAPE '\'
           WHEN $2::text LIKE '=%' THEN
             coalesce(presence.identifier_digits, presence.identifier_value, '') = substring($2::text FROM 2)
           ELSE
-            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%'
+            coalesce(presence.identifier_digits, presence.identifier_value, '') LIKE '%' || $2::text || '%' ESCAPE '\'
         END
       )
   ))
@@ -573,22 +573,22 @@ WHERE (
     $3::text = '' OR
     CASE
       WHEN $3::text LIKE '^%' THEN
-        lower(coalesce(email, '')) LIKE lower(substring($3::text FROM 2)) || '%'
+        lower(coalesce(email, '')) LIKE lower(substring($3::text FROM 2)) || '%' ESCAPE '\'
       WHEN $3::text LIKE '=%' THEN
         lower(coalesce(email, '')) = lower(substring($3::text FROM 2))
       ELSE
-        lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%'
+        lower(coalesce(email, '')) LIKE '%' || lower($3::text) || '%' ESCAPE '\'
     END
   )
   AND (
     $4::text = '' OR
     CASE
       WHEN $4::text LIKE '^%' THEN
-        lower(coalesce(address_city, '')) LIKE lower(substring($4::text FROM 2)) || '%'
+        lower(coalesce(address_city, '')) LIKE lower(substring($4::text FROM 2)) || '%' ESCAPE '\'
       WHEN $4::text LIKE '=%' THEN
         lower(coalesce(address_city, '')) = lower(substring($4::text FROM 2))
       ELSE
-        lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%'
+        lower(coalesce(address_city, '')) LIKE '%' || lower($4::text) || '%' ESCAPE '\'
     END
   )
   AND ($5::text = '' OR coalesce(address_state, '') = $5::text)
@@ -598,17 +598,17 @@ ORDER BY
     WHEN $1::text <> '' THEN
       CASE
         WHEN lower(full_name) = lower($1::text) THEN 0
-        WHEN lower(full_name) LIKE lower($1::text) || ' %' THEN 1
-        WHEN lower(full_name) LIKE lower($1::text) || '%' THEN 2
-        WHEN lower(full_name) LIKE '% ' || lower($1::text) || ' %' THEN 3
-        WHEN lower(full_name) LIKE '% ' || lower($1::text) || '%' THEN 4
+        WHEN lower(full_name) LIKE lower($1::text) || ' %' ESCAPE '\' THEN 1
+        WHEN lower(full_name) LIKE lower($1::text) || '%' ESCAPE '\' THEN 2
+        WHEN lower(full_name) LIKE '% ' || lower($1::text) || ' %' ESCAPE '\' THEN 3
+        WHEN lower(full_name) LIKE '% ' || lower($1::text) || '%' ESCAPE '\' THEN 4
         ELSE 5
       END
     ELSE 0
   END ASC,
   CASE
     WHEN $2::text <> '' THEN
-      CASE WHEN cpf_lookup.cpf_digits LIKE $2::text || '%' THEN 0 ELSE 1 END
+      CASE WHEN cpf_lookup.cpf_digits LIKE $2::text || '%' ESCAPE '\' THEN 0 ELSE 1 END
     ELSE 0
   END ASC,
   (CASE WHEN $8::text = 'full_name' AND $9::text = 'asc' THEN full_name END) COLLATE gymkhana_pt_br ASC,
