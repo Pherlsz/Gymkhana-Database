@@ -39,6 +39,10 @@ func (service *fakeSearchService) MatchIDs(context.Context, auth.Session, search
 	return nil, service.err
 }
 
+func (service *fakeSearchService) MatchProfileHits(context.Context, auth.Session, searchdomain.Query) ([]searchdomain.ProfileHit, error) {
+	return nil, service.err
+}
+
 func (service *fakeSearchService) Suggest(context.Context, auth.Session, searchdomain.SuggestQuery) ([]searchdomain.SuggestHit, error) {
 	return nil, service.err
 }

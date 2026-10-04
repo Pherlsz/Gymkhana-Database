@@ -33,6 +33,7 @@ func TestSearchIDQueriesTypeUnusedParameters(t *testing.T) {
 	queries := map[string]string{
 		"profiles": searchProfileIDSQL,
 		"records":  searchIDSQL,
+		"hits":     searchProfileHitSQL,
 	}
 	for name, sql := range queries {
 		for _, typed := range []string{"$3::int", "$4::int", "$5::text", "$6::text"} {

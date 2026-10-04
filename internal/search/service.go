@@ -69,6 +69,7 @@ type Store interface {
 	ReserveRateLimit(context.Context, auth.Identifier, time.Time, int) error
 	Execute(context.Context, Plan) ([]Result, int64, error)
 	MatchIDs(context.Context, Plan, Module) ([]string, error)
+	MatchProfileHits(context.Context, Plan) ([]ProfileHit, error)
 	Suggest(context.Context, SuggestQuery) ([]SuggestHit, error)
 }
 
@@ -222,6 +223,61 @@ func (service *Service) MatchIDs(ctx context.Context, actor auth.Session, query 
 		return nil, ErrCardinalityLimit
 	}
 	return ids, nil
+}
+
+func (service *Service) MatchProfileHits(ctx context.Context, actor auth.Session, query Query) ([]ProfileHit, error) {
+	query = queryWithLookup(query)
+	query.Modules = []Module{ModuleProfiles, ModuleDocuments, ModuleBills}
+	normalized, catalog, err := service.prepare(ctx, actor, query)
+	if err != nil {
+		return nil, err
+	}
+	allowed := make(map[string]struct{}, len(catalog.Fields))
+	for _, field := range catalog.Fields {
+		allowed[field.Key] = struct{}{}
+	}
+	plans, err := service.plans(normalized, catalog)
+	if err != nil {
+		return nil, err
+	}
+	queryContext, cancel := context.WithTimeout(ctx, service.timeout)
+	defer cancel()
+	best := map[string]ProfileHit{}
+	order := make([]string, 0)
+	profiles := map[string]struct{}{}
+	for _, plan := range plans {
+		matched, matchErr := service.store.MatchProfileHits(queryContext, plan)
+		if matchErr != nil {
+			if errors.Is(matchErr, context.DeadlineExceeded) || errors.Is(queryContext.Err(), context.DeadlineExceeded) {
+				return nil, ErrQueryTimeout
+			}
+			return nil, matchErr
+		}
+		for _, hit := range matched {
+			if _, ok := allowed[hit.FieldKey]; !ok || hit.ProfileID == "" || hit.FieldKey == "" {
+				continue
+			}
+			profiles[hit.ProfileID] = struct{}{}
+			key := hit.ProfileID + "\x00" + hit.FieldKey
+			current, seen := best[key]
+			if !seen {
+				order = append(order, key)
+				best[key] = hit
+				continue
+			}
+			if hit.Weight > current.Weight {
+				best[key] = hit
+			}
+		}
+	}
+	if int64(len(profiles)) > MaxResultCardinality {
+		return nil, ErrCardinalityLimit
+	}
+	hits := make([]ProfileHit, 0, len(order))
+	for _, key := range order {
+		hits = append(hits, best[key])
+	}
+	return hits, nil
 }
 
 func (service *Service) Suggest(ctx context.Context, actor auth.Session, query SuggestQuery) ([]SuggestHit, error) {

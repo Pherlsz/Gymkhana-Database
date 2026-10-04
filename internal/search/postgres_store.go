@@ -254,6 +254,47 @@ func (store *PostgresStore) MatchIDs(ctx context.Context, plan Plan, grain Modul
 	return ids, nil
 }
 
+func (store *PostgresStore) MatchProfileHits(ctx context.Context, plan Plan) ([]ProfileHit, error) {
+	tx, err := store.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+	timeoutMilliseconds := plan.StatementTimeout.Milliseconds()
+	if timeoutMilliseconds < 1 {
+		timeoutMilliseconds = 1
+	}
+	if _, err := tx.Exec(ctx, `SELECT set_config('statement_timeout', $1::text, true)`, strconv.FormatInt(timeoutMilliseconds, 10)); err != nil {
+		return nil, err
+	}
+	includes, excludes, err := encodeTermSpecs(plan)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, searchProfileHitSQL, searchArgs(plan, includes, excludes)...)
+	if err != nil {
+		return nil, normalizeExecutionError(err)
+	}
+	defer rows.Close()
+	hits := make([]ProfileHit, 0)
+	for rows.Next() {
+		var hit ProfileHit
+		if err := rows.Scan(&hit.ProfileID, &hit.FieldKey, &hit.FieldLabel, &hit.Display, &hit.Weight); err != nil {
+			return nil, err
+		}
+		if hit.ProfileID != "" && hit.FieldKey != "" {
+			hits = append(hits, hit)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, normalizeExecutionError(err)
+	}
+	if err := tx.Commit(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+		return nil, err
+	}
+	return hits, nil
+}
+
 func (store *PostgresStore) Suggest(ctx context.Context, query SuggestQuery) ([]SuggestHit, error) {
 	limit := query.Limit
 	if limit < 1 || limit > MaxSuggest {
@@ -824,6 +865,21 @@ SELECT DISTINCT split_part(scope_id, ':', 2)
 FROM bounded_matches
 WHERE scope_id LIKE 'profile:%'
   AND split_part(scope_id, ':', 2) <> ''
+  AND $3::int IS NOT NULL
+  AND $4::int IS NOT NULL
+  AND $5::text IS NOT NULL
+  AND $6::text IS NOT NULL`
+
+const searchProfileHitSQL = searchBody + `
+SELECT split_part(scope_id, ':', 2),
+       field_key,
+       field_label,
+       left(display_value, 200),
+       weight
+FROM bounded_matches
+WHERE scope_id LIKE 'profile:%'
+  AND split_part(scope_id, ':', 2) <> ''
+  AND field_key <> ''
   AND $3::int IS NOT NULL
   AND $4::int IS NOT NULL
   AND $5::text IS NOT NULL

@@ -52,6 +52,18 @@ func (store *fakeStore) MatchIDs(ctx context.Context, plan Plan, _ Module) ([]st
 	return store.ids, nil
 }
 
+func (store *fakeStore) MatchProfileHits(ctx context.Context, plan Plan) ([]ProfileHit, error) {
+	store.plan = plan
+	if store.waitForDone {
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+	if store.executeErr != nil {
+		return nil, store.executeErr
+	}
+	return nil, nil
+}
+
 func (store *fakeStore) Suggest(context.Context, SuggestQuery) ([]SuggestHit, error) {
 	return store.suggestions, store.executeErr
 }

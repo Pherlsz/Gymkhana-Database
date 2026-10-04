@@ -15,6 +15,7 @@ type searchService interface {
 	Catalog(context.Context, auth.Session) (searchdomain.Catalog, error)
 	Search(context.Context, auth.Session, searchdomain.Query) (searchdomain.Page, error)
 	MatchIDs(context.Context, auth.Session, searchdomain.Query, searchdomain.Module) ([]string, error)
+	MatchProfileHits(context.Context, auth.Session, searchdomain.Query) ([]searchdomain.ProfileHit, error)
 	Suggest(context.Context, auth.Session, searchdomain.SuggestQuery) ([]searchdomain.SuggestHit, error)
 }
 
