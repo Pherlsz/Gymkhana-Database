@@ -251,18 +251,65 @@ func (service *Service) Delete(ctx context.Context, actor auth.Session, id Ident
 	return nil
 }
 
-func normalizeFilterPattern(raw string, fn func(string) string) string {
+// escapeLike marks \, %, and _ so Postgres LIKE ... ESCAPE '\' treats them as
+// literals. Profile queries that concatenate this text must keep that clause.
+func escapeLike(value string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(value)
+}
+
+// likeSearchText folds letters like SearchText, but keeps \, %, and _ in place
+// as escaped LIKE literals instead of turning them into separators or wildcards.
+func likeSearchText(value string) string {
+	const (
+		backslashToken  = "qbkslq"
+		percentToken    = "qpctlq"
+		underscoreToken = "quscrl"
+	)
+	protected := strings.NewReplacer(
+		`\`, backslashToken,
+		`%`, percentToken,
+		`_`, underscoreToken,
+	).Replace(value)
+	folded := normalize.SearchText(protected)
+	folded = strings.ReplaceAll(folded, backslashToken, `\\`)
+	folded = strings.ReplaceAll(folded, percentToken, `\%`)
+	folded = strings.ReplaceAll(folded, underscoreToken, `\_`)
+	return folded
+}
+
+// likeDigits keeps CPF digits and escaped LIKE metacharacters. Other punctuation
+// is still ignored, matching Digits.
+func likeDigits(value string) string {
+	var builder strings.Builder
+	builder.Grow(len(value))
+	for i := 0; i < len(value); i++ {
+		switch c := value[i]; {
+		case c >= '0' && c <= '9':
+			builder.WriteByte(c)
+		case c == '\\' || c == '%' || c == '_':
+			builder.WriteByte('\\')
+			builder.WriteByte(c)
+		}
+	}
+	return builder.String()
+}
+
+func likeEmail(value string) string {
+	return escapeLike(strings.ToLower(strings.TrimSpace(value)))
+}
+
+func normalizeFilterPattern(raw string, likeFn, exactFn func(string) string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return ""
 	}
 	if strings.HasPrefix(raw, "^") {
-		return "^" + fn(raw[1:])
+		return "^" + likeFn(raw[1:])
 	}
 	if strings.HasPrefix(raw, "=") {
-		return "=" + fn(raw[1:])
+		return "=" + exactFn(raw[1:])
 	}
-	return fn(raw)
+	return likeFn(raw)
 }
 
 func normalizeListOptions(options ListOptions) (ListOptions, error) {
@@ -281,10 +328,10 @@ func normalizeListOptions(options ListOptions) (ListOptions, error) {
 	if !options.SortField.Valid() || !options.SortOrder.Valid() {
 		return ListOptions{}, ErrInvalidListOptions
 	}
-	options.Filters.FullName = normalizeFilterPattern(options.Filters.FullName, normalize.SearchText)
-	options.Filters.CPF = normalizeFilterPattern(options.Filters.CPF, normalize.Digits)
-	options.Filters.Email = normalizeFilterPattern(options.Filters.Email, func(s string) string { return strings.ToLower(strings.TrimSpace(s)) })
-	options.Filters.City = normalizeFilterPattern(options.Filters.City, normalize.SearchText)
+	options.Filters.FullName = normalizeFilterPattern(options.Filters.FullName, likeSearchText, normalize.SearchText)
+	options.Filters.CPF = normalizeFilterPattern(options.Filters.CPF, likeDigits, normalize.Digits)
+	options.Filters.Email = normalizeFilterPattern(options.Filters.Email, likeEmail, func(s string) string { return strings.ToLower(strings.TrimSpace(s)) })
+	options.Filters.City = normalizeFilterPattern(options.Filters.City, likeSearchText, normalize.SearchText)
 	options.Filters.State = strings.ToUpper(strings.TrimSpace(options.Filters.State))
 	if options.Filters.State != "" && len(options.Filters.State) != 2 {
 		return ListOptions{}, ErrInvalidListOptions
