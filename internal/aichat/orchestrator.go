@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -20,9 +21,19 @@ const (
 	maximumProviderDelta   = 1000
 	maximumProviderUsage   = 100_000_000
 	finalizationTimeout    = 5 * time.Second
-	cancelCheckInterval    = 20 // poll run state every N streaming deltas
-	minimumContextMessages = 3  // always include this many most-recent messages
+	textDeltaBatchWindow   = 100 * time.Millisecond
+	minimumContextMessages = 3 // always include this many most-recent messages
 )
+
+// errTurnPanicked is returned to the coordinator when a provider or tool panics.
+// The persisted run stores only the public internal_error code.
+var errTurnPanicked = errors.New("AI Chat turn panicked")
+
+// panickedTurnFailer marks a runner that can persist a failure after a panic
+// escapes RunTurn. Orchestrator implements it; test doubles do not have to.
+type panickedTurnFailer interface {
+	failPanickedRun(context.Context, auth.Session, Identifier, string)
+}
 
 type TurnRunner interface {
 	RunTurn(context.Context, auth.Session, Identifier, string) error
@@ -61,7 +72,17 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 	if err != nil {
 		return err
 	}
+	var openBatch *textDeltaBatch
 	defer func() {
+		if recovered := recover(); recovered != nil {
+			slog.Error("AI Chat turn panicked", "run_id", runID.String(), "panic", fmt.Sprint(recovered), "stack", string(debug.Stack()))
+			if resultErr == nil {
+				resultErr = fmt.Errorf("%w: %v", errTurnPanicked, recovered)
+			}
+		}
+		if resultErr != nil && openBatch != nil {
+			_ = openBatch.flush()
+		}
 		if resultErr != nil {
 			finalCtx, finalCancel := detachedFinalizationContext(ctx)
 			defer finalCancel()
@@ -82,7 +103,6 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 	if thread.ActiveResultReferenceID != nil {
 		request.ActiveResultReferenceID = thread.ActiveResultReferenceID.String()
 	}
-	var assistant strings.Builder
 	var roundAssistant strings.Builder
 	assistantRunes := 0
 	var inputUsage, outputUsage int64
@@ -99,30 +119,47 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 		if current.CancelRequestedAt != nil || current.State == RunCancelled {
 			return ErrCancelled
 		}
-		var deltaCount int
+		batch := &textDeltaBatch{
+			now: orchestrator.service.now,
+			write: func(chunk string) error {
+				// WithoutCancel so a cancel that already closed the run context
+				// still persists the chunk buffered before that cancel.
+				_, writeErr := orchestrator.service.appendText(context.WithoutCancel(runContext), actor, runID, chunk)
+				return writeErr
+			},
+		}
+		openBatch = batch
 		response, err := orchestrator.provider.Generate(runContext, request, func(delta string) error {
 			deltaRunes := utf8.RuneCountInString(delta)
 			if !validProviderDelta(delta) || assistantRunes+deltaRunes > MaximumMessageRunes {
+				_ = batch.flush()
 				return ErrMalformedProvider
 			}
-			deltaCount++
-			if deltaCount%cancelCheckInterval == 0 {
-				current, err := orchestrator.service.Run(runContext, actor, runID)
-				if err != nil {
-					return err
-				}
-				if current.CancelRequestedAt != nil || current.State == RunCancelled {
-					return ErrCancelled
-				}
+			if runContext.Err() != nil {
+				_ = batch.flush()
+				return ErrCancelled
 			}
-			if _, err := orchestrator.service.appendText(runContext, actor, runID, delta); err != nil {
-				return err
+			current, currentErr := orchestrator.service.Run(runContext, actor, runID)
+			if currentErr != nil {
+				_ = batch.flush()
+				return currentErr
 			}
-			assistant.WriteString(delta)
+			if current.CancelRequestedAt != nil || current.State == RunCancelled {
+				if flushErr := batch.flush(); flushErr != nil {
+					return flushErr
+				}
+				return ErrCancelled
+			}
+			if addErr := batch.add(delta); addErr != nil {
+				return addErr
+			}
 			roundAssistant.WriteString(delta)
 			assistantRunes += deltaRunes
 			return nil
 		})
+		if flushErr := batch.flush(); flushErr != nil && err == nil {
+			err = flushErr
+		}
 		if err != nil {
 			return normalizeProviderError(runContext, err)
 		}
@@ -139,7 +176,7 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 			return ErrQuotaExceeded
 		}
 		if response.ToolCall == nil {
-			content := strings.TrimSpace(assistant.String())
+			content := strings.TrimSpace(roundAssistant.String())
 			if content == "" && len(request.ToolResults) > 0 {
 				content = "Resultados disponíveis para consulta."
 			}
@@ -217,6 +254,58 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 		}
 	}
 	return ErrQuotaExceeded
+}
+
+func (orchestrator *Orchestrator) failPanickedRun(ctx context.Context, actor auth.Session, runID Identifier, requestID string) {
+	finalCtx, finalCancel := detachedFinalizationContext(ctx)
+	defer finalCancel()
+	_, _ = orchestrator.service.failRun(finalCtx, actor, runID, "internal_error", requestID)
+}
+
+// textDeltaBatch groups token deltas for about 100ms, or until a provider chunk
+// would exceed the per-event rune cap, before one store write.
+type textDeltaBatch struct {
+	now    func() time.Time
+	write  func(string) error
+	buf    strings.Builder
+	runes  int
+	opened time.Time
+}
+
+func (batch *textDeltaBatch) add(delta string) error {
+	count := utf8.RuneCountInString(delta)
+	if batch.buf.Len() > 0 && (batch.expired() || batch.runes+count > maximumProviderDelta) {
+		if err := batch.flush(); err != nil {
+			return err
+		}
+	}
+	if batch.buf.Len() == 0 {
+		batch.opened = batch.now()
+	}
+	batch.buf.WriteString(delta)
+	batch.runes += count
+	if batch.runes >= maximumProviderDelta {
+		return batch.flush()
+	}
+	return nil
+}
+
+func (batch *textDeltaBatch) expired() bool {
+	if batch == nil || batch.opened.IsZero() || batch.now == nil {
+		return false
+	}
+	return !batch.now().Before(batch.opened.Add(textDeltaBatchWindow))
+}
+
+func (batch *textDeltaBatch) flush() error {
+	if batch == nil || batch.buf.Len() == 0 {
+		return nil
+	}
+	text := batch.buf.String()
+	batch.buf.Reset()
+	batch.runes = 0
+	batch.opened = time.Time{}
+	return batch.write(text)
 }
 
 func detachedFinalizationContext(parent context.Context) (context.Context, context.CancelFunc) {
