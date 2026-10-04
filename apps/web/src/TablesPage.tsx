@@ -182,6 +182,7 @@ export function TablesPage() {
     baseRows,
     allFilters,
     loading,
+    sheetPlaceholder,
     errorDescription,
     total,
     page,
@@ -819,7 +820,7 @@ export function TablesPage() {
           caption={sectionCopy.caption}
           columns={sheetColumns}
           emptyLabel={sectionCopy.empty}
-          loading={search.result ? resultQuery.isFetching : loading}
+          loading={search.result ? resultQuery.isFetching : loading || sheetPlaceholder}
           loadingLabel={sectionCopy.loading}
           page={page}
           pageSize={pageSize}

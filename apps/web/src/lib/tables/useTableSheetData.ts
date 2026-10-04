@@ -362,6 +362,14 @@ export function useTableSheetData({
         ? billQuery.isLoading
         : peopleQuery.isLoading;
 
+  // keepPreviousData leaves isLoading false while the next page is still the previous rows.
+  const sheetPlaceholder =
+    section === "documents"
+      ? documentQuery.isPlaceholderData
+      : section === "bills"
+        ? billQuery.isPlaceholderData
+        : peopleQuery.isPlaceholderData;
+
   const error =
     section === "documents"
       ? documentQuery.error
@@ -427,6 +435,7 @@ export function useTableSheetData({
     baseRows,
     allFilters,
     loading,
+    sheetPlaceholder,
     errorDescription,
     total,
     page,
