@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fillSheetColumnWidths } from "./sheetColumnLayout";
+import { columnHasResizeHandle, fillSheetColumnWidths } from "./sheetColumnLayout";
 
 describe("fillSheetColumnWidths", () => {
   it("gives a single narrow column the rest of the sheet", () => {
@@ -21,5 +21,24 @@ describe("fillSheetColumnWidths", () => {
   it("returns preferred widths until the viewport is known", () => {
     expect(fillSheetColumnWidths([220], 0)).toEqual([220]);
     expect(fillSheetColumnWidths([], 800)).toEqual([]);
+  });
+});
+
+describe("columnHasResizeHandle", () => {
+  it("has no handle when a single column's edges are both outer", () => {
+    expect(columnHasResizeHandle(0, 1)).toBe(false);
+  });
+
+  it("only keeps the divider between two columns", () => {
+    expect(columnHasResizeHandle(0, 2)).toBe(true);
+    expect(columnHasResizeHandle(1, 2)).toBe(false);
+  });
+
+  it("drops the right edge and keeps every internal divider", () => {
+    expect([0, 1, 2].map((index) => columnHasResizeHandle(index, 3))).toEqual([
+      true,
+      true,
+      false,
+    ]);
   });
 });

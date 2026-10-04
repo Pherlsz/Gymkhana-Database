@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 const PREFIX = "gymkhana.sheet.colw.v1.";
 const MIN = 72;
-const MAX = 640;
+const MAX = 8192;
 
 function read(scope: string): Record<string, number> {
   try {

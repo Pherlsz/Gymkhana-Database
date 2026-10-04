@@ -18,7 +18,7 @@ import { t } from "../../i18n";
 import { ColumnFunnel, type ColumnFunnelCopy } from "./ColumnFunnel";
 import type { ToolbarFilterField } from "./FilterControl";
 import { clampColumnWidth } from "./useSheetColumnWidths";
-import { fillSheetColumnWidths } from "./sheetColumnLayout";
+import { columnHasResizeHandle, fillSheetColumnWidths } from "./sheetColumnLayout";
 
 export type SpreadsheetColumn<T> = {
   key: string;
@@ -249,6 +249,8 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     [columns, rowActions],
   );
 
+  const resizingRef = useRef(false);
+
   const startResize = useCallback(
     (event: ReactPointerEvent<HTMLElement>, columnKey: string, startWidth: number) => {
       if (!onColumnWidth || event.button !== 0) return;
@@ -299,6 +301,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
       };
 
       setResizingClass(true);
+      resizingRef.current = true;
       document.body.classList.add("spreadsheet-col-resizing");
       th.setPointerCapture(event.pointerId);
 
@@ -323,6 +326,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
         th.removeEventListener("pointercancel", onUp);
         paint(current);
         setResizingClass(false);
+        resizingRef.current = false;
         document.body.classList.remove("spreadsheet-col-resizing");
         // Any pointer on the resize edge must not sort — including click / dblclick with no drag.
         suppressSortClick.current = true;
@@ -382,8 +386,12 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
   );
 
   const antdColumns = useMemo(() => {
-    const dataColumns = columns.map((column): NonNullable<TableProps<T>["columns"]>[number] => {
+    const dataColumns = columns.map((column, index): NonNullable<TableProps<T>["columns"]>[number] => {
       const width = displayWidthByKey.get(column.key) ?? resolvedWidth(column);
+      const canResize = Boolean(onColumnWidth) && columnHasResizeHandle(index, columns.length);
+      const headerClass = [column.className, index === columns.length - 1 ? "spreadsheet-table__last" : ""]
+        .filter(Boolean)
+        .join(" ");
       const sorted = Boolean(column.sortField && column.sortField === sortField);
       const cellKey = column.dataIndex ?? column.key;
       const styles = cellStyles.get(column.key);
@@ -416,7 +424,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
         dataIndex: ["cells", cellKey],
         width,
         ellipsis: false,
-        ...(column.className ? { className: column.className } : {}),
+        ...(headerClass ? { className: headerClass } : {}),
         sorter: Boolean(column.sortField),
         sortDirections: ["ascend", "descend"],
         sortOrder: sorted ? (sortOrder === "asc" ? "ascend" : "descend") : null,
@@ -429,7 +437,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
             flex: `0 0 ${width}px`,
             position: "relative" as const,
           },
-          ...(onColumnWidth
+          ...(canResize
             ? {
                 onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
                   startResize(event, column.key, width);
@@ -466,7 +474,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
                   if (document.body.classList.contains("spreadsheet-col-resizing")) return;
                   // Keep sort/reorder clear of the resize strip on the right edge.
                   if (
-                    onColumnWidth &&
+                    canResize &&
                     typeof event.clientX === "number" &&
                     th instanceof HTMLElement
                   ) {
@@ -591,6 +599,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
   // Preferred widths stay fixed and scroll when they overflow. Leftover viewport
   // width is added to the last column so a short set, including a single column, fills the sheet.
   useLayoutEffect(() => {
+    if (resizingRef.current) return;
     const root = sheetRef.current?.querySelector(".spreadsheet-table");
     if (!(root instanceof HTMLElement)) return;
     paintColumnVars(root, displayWidths, tableWidth);
