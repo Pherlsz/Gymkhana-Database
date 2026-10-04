@@ -2,9 +2,13 @@ import {
   createBill,
   createDocument,
   createProfile,
+  updateBill,
+  updateDocument,
   updateProfile,
   type BillRecord,
+  type BillValuesRequest,
   type DocumentRecord,
+  type DocumentValuesRequest,
   type Profile,
   type ProfileValuesRequest,
 } from "../api/client";
@@ -57,30 +61,64 @@ async function persistCustomAndFile(args: {
   return owner;
 }
 
+type StoredRecord = { id: string; version: number };
+
+function withStoredRecord(record: StoredRecord, cause: unknown): unknown {
+  if (cause && typeof cause === "object") {
+    Object.assign(cause, { storedRecord: record });
+    return cause;
+  }
+  const error = new Error("persist failed");
+  Object.assign(error, { storedRecord: record });
+  return error;
+}
+
+export function storedRecordOf(error: unknown): StoredRecord | undefined {
+  if (!error || typeof error !== "object" || !("storedRecord" in error)) return undefined;
+  const stored = (error as { storedRecord?: StoredRecord }).storedRecord;
+  if (!stored || typeof stored.id !== "string" || typeof stored.version !== "number") return undefined;
+  return stored;
+}
+
+function documentWriteRequest(
+  ownerProfileId: string,
+  fields: DocumentFormFieldsState,
+): DocumentValuesRequest {
+  return {
+    owner_profile_id: ownerProfileId,
+    document_type_id: fields.docTypeId,
+    identifier_value: fields.docIdentifier.trim(),
+    document_date: fields.docDate ?? "",
+    notes: fields.docNotes.trim(),
+    medium: fields.docMedium,
+    ...(fields.docMedium === "PHYSICAL" ? { idle_custody: fields.docCustody } : {}),
+    ...(fields.docValidUntil ? { valid_until: fields.docValidUntil } : {}),
+  };
+}
+
 export async function persistDocumentForm(args: {
   ownerProfileId: string;
   fields: DocumentFormFieldsState;
+  existing?: StoredRecord | undefined;
 }): Promise<{ record: DocumentRecord; ocrOwner: AttachmentOwner | null }> {
-  const record = await createDocument({
-    owner_profile_id: args.ownerProfileId,
-    document_type_id: args.fields.docTypeId,
-    identifier_value: args.fields.docIdentifier.trim(),
-    document_date: args.fields.docDate ?? "",
-    notes: args.fields.docNotes.trim(),
-    medium: args.fields.docMedium,
-    ...(args.fields.docMedium === "PHYSICAL" ? { idle_custody: args.fields.docCustody } : {}),
-    ...(args.fields.docValidUntil ? { valid_until: args.fields.docValidUntil } : {}),
-  });
-  const ocrOwner = await persistCustomAndFile({
-    kind: "document",
-    definitionKind: "DOCUMENT_TYPE",
-    typeId: record.type.id,
-    recordId: record.id,
-    recordVersion: record.version,
-    draft: args.fields.customDraft,
-    file: args.fields.file,
-  });
-  return { record, ocrOwner };
+  const request = documentWriteRequest(args.ownerProfileId, args.fields);
+  const record = args.existing
+    ? await updateDocument(args.existing.id, { ...request, version: args.existing.version })
+    : await createDocument(request);
+  try {
+    const ocrOwner = await persistCustomAndFile({
+      kind: "document",
+      definitionKind: "DOCUMENT_TYPE",
+      typeId: record.type.id,
+      recordId: record.id,
+      recordVersion: record.version,
+      draft: args.fields.customDraft,
+      file: args.fields.file,
+    });
+    return { record, ocrOwner };
+  } catch (caught) {
+    throw withStoredRecord({ id: record.id, version: record.version }, caught);
+  }
 }
 
 export async function persistPendingDocument(args: {
@@ -89,6 +127,14 @@ export async function persistPendingDocument(args: {
 }): Promise<{ record: DocumentRecord; ocrOwner: AttachmentOwner | null }> {
   return persistDocumentForm({
     ownerProfileId: args.ownerProfileId,
+    ...(args.doc.savedRecordId
+      ? {
+          existing: {
+            id: args.doc.savedRecordId,
+            version: args.doc.savedRecordVersion ?? 1,
+          },
+        }
+      : {}),
     fields: {
       docTypeId: args.doc.typeId,
       docIdentifier: args.doc.number,
@@ -103,19 +149,19 @@ export async function persistPendingDocument(args: {
   });
 }
 
-export async function persistBillForm(args: {
+function billWriteRequest(args: {
   ownerProfileId: string;
   fields: BillFormFieldsState;
   demographics: PersonDemographicsState;
   fallbackHolder: string;
-}): Promise<{ record: BillRecord; ocrOwner: AttachmentOwner | null }> {
+}): BillValuesRequest {
   const printedHolder =
     args.fields.billPrintedHolder.trim() ||
     args.demographics.fullName.trim() ||
     args.fallbackHolder;
   const printedAddress =
     args.fields.billPrintedAddress.trim() || formatAddressLine(args.demographics);
-  const record = await createBill({
+  return {
     owner_profile_id: args.ownerProfileId,
     bill_type_id: args.fields.billTypeId,
     printed_holder_name: printedHolder,
@@ -126,17 +172,46 @@ export async function persistBillForm(args: {
     currency: "BRL",
     notes: args.fields.billNotes.trim(),
     medium: args.fields.billMedium,
-  });
-  const ocrOwner = await persistCustomAndFile({
-    kind: "bill",
-    definitionKind: "BILL_TYPE",
-    typeId: record.type.id,
-    recordId: record.id,
-    recordVersion: record.version,
-    draft: args.fields.customDraft,
-    file: args.fields.file,
-  });
-  return { record, ocrOwner };
+  };
+}
+
+export async function persistBillForm(args: {
+  ownerProfileId: string;
+  fields: BillFormFieldsState;
+  demographics: PersonDemographicsState;
+  fallbackHolder: string;
+  existing?: StoredRecord | undefined;
+}): Promise<{ record: BillRecord; ocrOwner: AttachmentOwner | null }> {
+  const request = billWriteRequest(args);
+  const record = args.existing
+    ? await updateBill(args.existing.id, {
+        owner_profile_id: args.ownerProfileId,
+        bill_type_id: request.bill_type_id,
+        printed_holder_name: request.printed_holder_name,
+        printed_address: request.printed_address,
+        reference_value: request.reference_value,
+        competence: request.competence,
+        amount: request.amount,
+        currency: request.currency,
+        notes: request.notes,
+        medium: request.medium,
+        version: args.existing.version,
+      })
+    : await createBill(request);
+  try {
+    const ocrOwner = await persistCustomAndFile({
+      kind: "bill",
+      definitionKind: "BILL_TYPE",
+      typeId: record.type.id,
+      recordId: record.id,
+      recordVersion: record.version,
+      draft: args.fields.customDraft,
+      file: args.fields.file,
+    });
+    return { record, ocrOwner };
+  } catch (caught) {
+    throw withStoredRecord({ id: record.id, version: record.version }, caught);
+  }
 }
 
 export async function persistPendingBill(args: {
@@ -149,6 +224,14 @@ export async function persistPendingBill(args: {
     ownerProfileId: args.ownerProfileId,
     demographics: args.demographics,
     fallbackHolder: args.fallbackHolder,
+    ...(args.bill.savedRecordId
+      ? {
+          existing: {
+            id: args.bill.savedRecordId,
+            version: args.bill.savedRecordVersion ?? 1,
+          },
+        }
+      : {}),
     fields: {
       billTypeId: args.bill.typeId,
       billInstallation: args.bill.installation,

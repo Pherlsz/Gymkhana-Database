@@ -22,8 +22,11 @@ export interface PendingDoc {
   tag: PendingTag;
   customDraft: Record<string, CustomDraftValue>;
   file?: File | undefined;
-  /** Set after the record is stored, so a later failure does not create it again. */
+  /** Set after create or update returns, even if a later step in the same save throws. */
   savedRecordId?: string | undefined;
+  savedRecordVersion?: number | undefined;
+  /** The record exists, but custom values or the file still need another save. */
+  followUpPending?: boolean | undefined;
   saveStatus?: "saved" | "error" | undefined;
 }
 
@@ -42,8 +45,11 @@ export interface PendingBill {
   tag: PendingTag;
   customDraft: Record<string, CustomDraftValue>;
   file?: File | undefined;
-  /** Set after the record is stored, so a later failure does not create it again. */
+  /** Set after create or update returns, even if a later step in the same save throws. */
   savedRecordId?: string | undefined;
+  savedRecordVersion?: number | undefined;
+  /** The record exists, but custom values or the file still need another save. */
+  followUpPending?: boolean | undefined;
   saveStatus?: "saved" | "error" | undefined;
 }
 

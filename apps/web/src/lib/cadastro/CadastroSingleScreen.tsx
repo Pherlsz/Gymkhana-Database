@@ -16,6 +16,7 @@ import {
   persistPendingDocument,
   persistDocumentForm,
   resolveOrCreateProfile,
+  storedRecordOf,
 } from "./cadastroPersist";
 import {
   cpfDigits,
@@ -238,28 +239,43 @@ export function CadastroSingleScreen({
         lastOcr = saved.ocrOwner;
       } else {
         for (const doc of documents) {
-          if (doc.savedRecordId) continue;
+          if (doc.savedRecordId && !doc.followUpPending) continue;
           try {
             const saved = await persistPendingDocument({ ownerProfileId: ownerId, doc });
             setDocuments((current) =>
               current.map((item) =>
                 item.id === doc.id
-                  ? { ...item, savedRecordId: saved.record.id, saveStatus: "saved" }
+                  ? {
+                      ...item,
+                      savedRecordId: saved.record.id,
+                      savedRecordVersion: saved.record.version,
+                      saveStatus: "saved",
+                      followUpPending: false,
+                    }
                   : item,
               ),
             );
             if (saved.ocrOwner) lastOcr = saved.ocrOwner;
           } catch (caught) {
+            const stored = storedRecordOf(caught);
             setDocuments((current) =>
-              current.map((item) =>
-                item.id === doc.id ? { ...item, saveStatus: "error" } : item,
-              ),
+              current.map((item) => {
+                if (item.id !== doc.id) return item;
+                if (!stored) return { ...item, saveStatus: "error" };
+                return {
+                  ...item,
+                  savedRecordId: stored.id,
+                  savedRecordVersion: stored.version,
+                  saveStatus: "saved",
+                  followUpPending: true,
+                };
+              }),
             );
             throw caught;
           }
         }
         for (const bill of bills) {
-          if (bill.savedRecordId) continue;
+          if (bill.savedRecordId && !bill.followUpPending) continue;
           try {
             const saved = await persistPendingBill({
               ownerProfileId: ownerId,
@@ -270,16 +286,31 @@ export function CadastroSingleScreen({
             setBills((current) =>
               current.map((item) =>
                 item.id === bill.id
-                  ? { ...item, savedRecordId: saved.record.id, saveStatus: "saved" }
+                  ? {
+                      ...item,
+                      savedRecordId: saved.record.id,
+                      savedRecordVersion: saved.record.version,
+                      saveStatus: "saved",
+                      followUpPending: false,
+                    }
                   : item,
               ),
             );
             if (saved.ocrOwner) lastOcr = saved.ocrOwner;
           } catch (caught) {
+            const stored = storedRecordOf(caught);
             setBills((current) =>
-              current.map((item) =>
-                item.id === bill.id ? { ...item, saveStatus: "error" } : item,
-              ),
+              current.map((item) => {
+                if (item.id !== bill.id) return item;
+                if (!stored) return { ...item, saveStatus: "error" };
+                return {
+                  ...item,
+                  savedRecordId: stored.id,
+                  savedRecordVersion: stored.version,
+                  saveStatus: "saved",
+                  followUpPending: true,
+                };
+              }),
             );
             throw caught;
           }

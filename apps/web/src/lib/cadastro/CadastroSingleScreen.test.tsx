@@ -66,9 +66,19 @@ vi.mock("../api/client", () => ({
     version: 1,
     type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
   }),
+  updateDocument: vi.fn().mockResolvedValue({
+    id: "doc-1",
+    version: 2,
+    type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+  }),
   createBill: vi.fn().mockResolvedValue({
     id: "bill-1",
     version: 1,
+    type: { id: "bill-type-luz", technical_key: "luz", label: "Energia Elétrica" },
+  }),
+  updateBill: vi.fn().mockResolvedValue({
+    id: "bill-1",
+    version: 2,
     type: { id: "bill-type-luz", technical_key: "luz", label: "Energia Elétrica" },
   }),
   APIRequestError: class APIRequestError extends Error {},
@@ -346,6 +356,73 @@ describe("CadastroSingleScreen", () => {
         expect(numbers.filter((value) => value === "222")).toEqual(["222", "222"]);
         expect(createProfile).toHaveBeenCalledTimes(1);
       } finally {
+        vi.mocked(createDocument).mockResolvedValue({
+          id: "doc-1",
+          version: 1,
+          type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+        } as never);
+      }
+    });
+
+    it("keeps the created document id when a later save step fails", async () => {
+      const { createDocument, createProfile, updateDocument, updateProfile } = await import(
+        "../api/client"
+      );
+      const custom = await import("../../RecordCustomFields");
+      vi.mocked(createProfile).mockClear();
+      vi.mocked(createDocument).mockClear();
+      vi.mocked(updateDocument).mockClear();
+      vi.mocked(createDocument).mockResolvedValue({
+        id: "doc-kept",
+        version: 1,
+        type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+      } as never);
+      vi.mocked(updateDocument).mockResolvedValue({
+        id: "doc-kept",
+        version: 2,
+        type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+      } as never);
+      vi.mocked(updateProfile).mockResolvedValue({
+        id: "profile-1",
+        full_name: "Ana Néri",
+        version: 2,
+      } as never);
+      const followUp = vi.spyOn(custom, "saveRecordCustomValues");
+      followUp.mockRejectedValueOnce(new Error("custom values failed"));
+
+      try {
+        renderSingleScreen("people");
+        fillPersonMinimum("Ana Néri");
+        fireEvent.click(screen.getByRole("button", { name: /Adicionar documento/i }));
+        fireEvent.mouseDown(await screen.findByLabelText(/Tipo de documento/i));
+        const rgOption = (await screen.findAllByText(/^RG$/)).find((node) =>
+          node.classList.contains("ant-select-item-option-content"),
+        );
+        if (!rgOption) throw new Error("RG option missing");
+        fireEvent.click(rgOption);
+        fireEvent.change(screen.getByLabelText(/Número do documento/i), {
+          target: { value: "111" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /^Adicionar$/i }));
+        expect(await screen.findByText(/nº 111/)).not.toBeNull();
+
+        await confirmSave();
+        expect(await screen.findByText(/custom values failed/i)).not.toBeNull();
+        expect(screen.getByText(/Salvo/)).not.toBeNull();
+        expect(createDocument).toHaveBeenCalledTimes(1);
+        expect(updateDocument).not.toHaveBeenCalled();
+
+        await confirmSave();
+        await waitFor(() => {
+          expect(updateDocument).toHaveBeenCalledTimes(1);
+        });
+        expect(createDocument).toHaveBeenCalledTimes(1);
+        expect(updateDocument).toHaveBeenCalledWith(
+          "doc-kept",
+          expect.objectContaining({ version: 1, identifier_value: "111" }),
+        );
+      } finally {
+        followUp.mockRestore();
         vi.mocked(createDocument).mockResolvedValue({
           id: "doc-1",
           version: 1,
