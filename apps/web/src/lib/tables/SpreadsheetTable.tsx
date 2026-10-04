@@ -18,7 +18,7 @@ import { t } from "../../i18n";
 import { ColumnFunnel, type ColumnFunnelCopy } from "./ColumnFunnel";
 import type { ToolbarFilterField } from "./FilterControl";
 import { clampColumnWidth } from "./useSheetColumnWidths";
-import { columnHasResizeHandle, fillSheetColumnWidths } from "./sheetColumnLayout";
+import { columnHasResizeHandle, dragSheetDivider, fillSheetColumnWidths } from "./sheetColumnLayout";
 
 export type SpreadsheetColumn<T> = {
   key: string;
@@ -93,7 +93,12 @@ function paintColumnVars(root: HTMLElement, widths: number[], tableWidth: number
 }
 
 /** Keep header + virtual body on the same pixel widths while dragging. */
-function applyLiveColumnWidth(th: HTMLElement, width: number, tableWidth: number) {
+function applyLiveColumnWidth(
+  th: HTMLElement,
+  width: number,
+  tableWidth: number,
+  markResizing = true,
+) {
   const root = th.closest(".spreadsheet-table");
   if (!(root instanceof HTMLElement)) return;
   const headerRow = th.parentElement;
@@ -116,14 +121,14 @@ function applyLiveColumnWidth(th: HTMLElement, width: number, tableWidth: number
     if (cell instanceof HTMLElement) paintCellWidth(cell, width);
   });
 
-  const resizing = document.body.classList.contains("spreadsheet-col-resizing");
+  const resizing = markResizing && document.body.classList.contains("spreadsheet-col-resizing");
   root
     .querySelectorAll<HTMLElement>(".ant-table-tbody-virtual-holder-inner > div")
     .forEach((row) => {
       const cell = row.children[index];
       if (cell instanceof HTMLElement) {
         paintCellWidth(cell, width);
-        cell.classList.toggle("is-resizing", resizing);
+        if (markResizing) cell.classList.toggle("is-resizing", resizing);
       }
       row.style.width = pxTotal;
       row.style.minWidth = pxTotal;
@@ -284,11 +289,15 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
 
       const startX = event.clientX;
       const startTotal = tableWidth;
-      let current = startWidth;
+      const startWidths = displayWidths.slice();
+      let currentWidths = startWidths.slice();
       let frame = 0;
 
       const root = th.closest(".spreadsheet-table");
       const columnIndex = Array.prototype.indexOf.call(th.parentElement?.children ?? [], th);
+      const offset = rowActions ? 1 : 0;
+      const neighborKey = columns[columnIndex - offset + 1]?.key;
+      const neighbor = th.parentElement?.children[columnIndex + 1];
 
       const setResizingClass = (on: boolean) => {
         th.classList.toggle("is-resizing", on);
@@ -305,16 +314,26 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
       document.body.classList.add("spreadsheet-col-resizing");
       th.setPointerCapture(event.pointerId);
 
-      const paint = (next: number) => {
-        applyLiveColumnWidth(th, next, startTotal + (next - startWidth));
+      const paint = (widths: number[]) => {
+        const dragged = widths[columnIndex];
+        if (dragged === undefined) return;
+        applyLiveColumnWidth(th, dragged, startTotal);
+        const neighborWidth = widths[columnIndex + 1];
+        if (neighbor instanceof HTMLElement && neighborWidth !== undefined) {
+          applyLiveColumnWidth(neighbor, neighborWidth, startTotal, false);
+        }
       };
 
       const onMove = (move: PointerEvent) => {
-        current = clampColumnWidth(startWidth + (move.clientX - startX));
+        currentWidths = dragSheetDivider(
+          startWidths,
+          columnIndex,
+          clampColumnWidth(startWidth + (move.clientX - startX)),
+        );
         if (frame) return;
         frame = requestAnimationFrame(() => {
           frame = 0;
-          paint(current);
+          paint(currentWidths);
         });
       };
 
@@ -324,20 +343,31 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
         th.removeEventListener("pointermove", onMove);
         th.removeEventListener("pointerup", onUp);
         th.removeEventListener("pointercancel", onUp);
-        paint(current);
+        paint(currentWidths);
         setResizingClass(false);
         resizingRef.current = false;
         document.body.classList.remove("spreadsheet-col-resizing");
         // Any pointer on the resize edge must not sort — including click / dblclick with no drag.
         suppressSortClick.current = true;
-        if (current !== startWidth) onColumnWidth(columnKey, current);
+        const dragged = currentWidths[columnIndex];
+        if (dragged !== undefined && dragged !== startWidth) onColumnWidth(columnKey, dragged);
+        const neighborWidth = currentWidths[columnIndex + 1];
+        const startNeighbor = startWidths[columnIndex + 1];
+        if (
+          neighborKey &&
+          neighborWidth !== undefined &&
+          startNeighbor !== undefined &&
+          neighborWidth !== startNeighbor
+        ) {
+          onColumnWidth(neighborKey, neighborWidth);
+        }
       };
 
       th.addEventListener("pointermove", onMove);
       th.addEventListener("pointerup", onUp);
       th.addEventListener("pointercancel", onUp);
     },
-    [onColumnWidth, tableWidth],
+    [columns, displayWidths, onColumnWidth, rowActions, tableWidth],
   );
 
   const pageSizeChoices = useMemo(
@@ -576,8 +606,17 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
         Math.floor(sheet.clientHeight - headerHeight),
       );
       setBodyHeight((current) => (Math.abs(current - next) <= 1 ? current : next));
-      const nextWidth = sheet.clientWidth;
-      setViewportWidth((current) => (Math.abs(current - nextWidth) <= 1 ? current : nextWidth));
+      const holder = sheet.querySelector(".ant-table-tbody-virtual-holder");
+      const holderWidth = holder instanceof HTMLElement ? holder.clientWidth : 0;
+      const nextWidth =
+        holderWidth > 0 ? Math.min(sheet.clientWidth, holderWidth) : sheet.clientWidth;
+      setViewportWidth((current) => {
+        if (nextWidth <= 0 || nextWidth === current) return current;
+        // A stuck extra pixel is enough for the virtual list to open a horizontal bar.
+        if (nextWidth < current) return nextWidth;
+        if (nextWidth - current <= 1) return current;
+        return nextWidth;
+      });
     };
     measure();
     const observer = new ResizeObserver(measure);
