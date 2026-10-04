@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
   APIRequestError,
@@ -63,6 +63,7 @@ export function useTableSheetData({
   const peopleQuery = useQuery({
     queryKey: queryKeys.tables.profiles(profileListKey(tableSearch)),
     queryFn: ({ signal }) => listProfiles(tableSearch, signal),
+    placeholderData: keepPreviousData,
     enabled: sheetActive && section === "profile",
   });
 
@@ -91,12 +92,14 @@ export function useTableSheetData({
     queryKey: queryKeys.tables.documents(documentSearch(tableSearch), tableSearch.records_owner),
     queryFn: ({ signal }) =>
       listDocuments(tableSearch.records_owner, documentSearch(tableSearch), signal),
+    placeholderData: keepPreviousData,
     enabled: sheetActive && section === "documents",
   });
 
   const billQuery = useQuery({
     queryKey: queryKeys.tables.bills(billSearch(tableSearch), tableSearch.records_owner),
     queryFn: ({ signal }) => listBills(tableSearch.records_owner, billSearch(tableSearch), signal),
+    placeholderData: keepPreviousData,
     enabled: sheetActive && section === "bills",
   });
 
@@ -153,12 +156,24 @@ export function useTableSheetData({
         ? documentTypes.isPending || documentFieldQueries.some((query) => query.isPending)
         : billTypes.isPending || billFieldQueries.some((query) => query.isPending);
 
-  const recordLabels: RecordSheetLabels = {
-    boolean: copy.boolean,
-    status: copy.status,
-    medium: copy.medium,
-    idleCustody: copy.idleCustody,
-  };
+  const recordLabels: RecordSheetLabels = useMemo(
+    () => ({
+      boolean: copy.boolean,
+      status: copy.status,
+      medium: copy.medium,
+      idleCustody: copy.idleCustody,
+    }),
+    [
+      copy.boolean?.yes,
+      copy.boolean?.no,
+      copy.status?.AVAILABLE,
+      copy.status?.IN_USE,
+      copy.medium?.PHYSICAL,
+      copy.medium?.DIGITAL,
+      copy.idleCustody?.ORGANIZATION,
+      copy.idleCustody?.OWNER,
+    ],
+  );
 
   const typeGroups = useMemo(() => {
     if (section === "documents") {
@@ -290,10 +305,14 @@ export function useTableSheetData({
 
   const distinctByKey = useMemo(() => {
     const result: Record<string, string[]> = {};
-    for (const field of selectCustomFields)
-      result[field.technical_key] = distinctValues(baseRows, field.technical_key);
+    for (const field of selectCustomFields) {
+      const catalog = optionsByFieldId.get(field.id);
+      result[field.technical_key] = catalog?.length
+        ? catalog.map((option) => option.value)
+        : distinctValues(baseRows, field.technical_key);
+    }
     return result;
-  }, [baseRows, selectCustomFields]);
+  }, [baseRows, optionsByFieldId, selectCustomFields]);
 
   const cityOptions = useMemo(
     () =>
