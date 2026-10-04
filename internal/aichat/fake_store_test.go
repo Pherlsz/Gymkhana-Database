@@ -256,10 +256,12 @@ func (store *memoryStore) AppendTextDelta(_ context.Context, id Identifier, owne
 	if err != nil {
 		return RunEvent{}, err
 	}
-	if run.CancelRequestedAt != nil {
-		return RunEvent{}, ErrCancelled
-	}
+	// A cancel request leaves the run RUNNING until the turn fails it.
+	// Text already buffered may still be flushed; a terminal run cannot.
 	if run.State != RunRunning {
+		if run.CancelRequestedAt != nil || run.State == RunCancelled {
+			return RunEvent{}, ErrCancelled
+		}
 		return RunEvent{}, ErrInvalidState
 	}
 	return store.appendEvent(RunEvent{RunID: id, Kind: EventTextDelta, TextDelta: delta, CreatedAt: now}), nil

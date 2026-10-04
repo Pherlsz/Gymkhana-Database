@@ -1,8 +1,11 @@
 package aichat
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -67,5 +70,36 @@ func TestCoordinatorRequiresParentAndRunner(t *testing.T) {
 	}
 	if _, err := NewCoordinator(context.Background(), nil); !errors.Is(err, ErrInvalidSetup) {
 		t.Fatalf("nil runner error = %v", err)
+	}
+}
+
+type staticTurnRunner struct {
+	err error
+}
+
+func (runner staticTurnRunner) RunTurn(context.Context, auth.Session, Identifier, string) error {
+	return runner.err
+}
+
+func TestCoordinatorLogsRunTurnError(t *testing.T) {
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	runner := staticTurnRunner{err: errors.New("provider unavailable for test")}
+	coordinator, err := NewCoordinator(context.Background(), runner)
+	if err != nil {
+		t.Fatalf("NewCoordinator() error = %v", err)
+	}
+	coordinator.logger = logger
+	runID := Identifier{2}
+	if !coordinator.Start(auth.Session{}, runID, "log-error") {
+		t.Fatal("Coordinator.Start() = false")
+	}
+	waitCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := coordinator.Wait(waitCtx); err != nil {
+		t.Fatalf("Coordinator.Wait() error = %v", err)
+	}
+	if !strings.Contains(buf.String(), "provider unavailable for test") {
+		t.Fatalf("RunTurn error was dropped, log = %q", buf.String())
 	}
 }

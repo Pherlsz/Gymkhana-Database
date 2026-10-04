@@ -20,6 +20,7 @@ type fakeToolSearch struct {
 	page    searchdomain.Page
 	query   searchdomain.Query
 	err     error
+	boom    bool
 }
 
 func (service *fakeToolSearch) Catalog(context.Context, auth.Session) (searchdomain.Catalog, error) {
@@ -27,6 +28,9 @@ func (service *fakeToolSearch) Catalog(context.Context, auth.Session) (searchdom
 }
 
 func (service *fakeToolSearch) Search(_ context.Context, _ auth.Session, query searchdomain.Query) (searchdomain.Page, error) {
+	if service.boom {
+		panic("search panicked")
+	}
 	service.query = query
 	return service.page, service.err
 }
