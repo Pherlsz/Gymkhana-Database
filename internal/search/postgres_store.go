@@ -813,10 +813,18 @@ const searchIDSQL = searchBody + `
 SELECT DISTINCT entity_id
 FROM bounded_matches
 WHERE module = $10
-  AND entity_id <> ''`
+  AND entity_id <> ''
+  AND $3::int IS NOT NULL
+  AND $4::int IS NOT NULL
+  AND $5::text IS NOT NULL
+  AND $6::text IS NOT NULL`
 
 const searchProfileIDSQL = searchBody + `
 SELECT DISTINCT split_part(scope_id, ':', 2)
 FROM bounded_matches
 WHERE scope_id LIKE 'profile:%'
-  AND split_part(scope_id, ':', 2) <> ''`
+  AND split_part(scope_id, ':', 2) <> ''
+  AND $3::int IS NOT NULL
+  AND $4::int IS NOT NULL
+  AND $5::text IS NOT NULL
+  AND $6::text IS NOT NULL`
