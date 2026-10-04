@@ -52,6 +52,19 @@ jobs:
           go-version: 1.26.6
           cache: true
 
+      - name: Cache tern binary
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: bin/tern
+          key: tern-v2.4.1-${{ runner.os }}-go1.26.6
+
+      - name: Install tern
+        run: |
+          mkdir -p bin
+          if [ ! -x bin/tern ]; then
+            GOBIN="$PWD/bin" go install github.com/jackc/tern/v2@v2.4.1
+          fi
+
       - name: Configure private Core access
         run: bash scripts/configure-private-go.sh
         env:
@@ -76,3 +89,58 @@ jobs:
 
       - name: Verify generated files
         run: git diff --exit-code -- internal/platform/postgres/dbgen
+
+  postgres-integration:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgres://gymkhana:gymkhana@localhost:5432/gymkhana?sslmode=disable
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: gymkhana
+          POSTGRES_USER: gymkhana
+          POSTGRES_PASSWORD: gymkhana
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gymkhana -d gymkhana"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 1.26.6
+          cache: true
+
+      - name: Cache tern binary
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: bin/tern
+          key: tern-v2.4.1-${{ runner.os }}-go1.26.6
+
+      - name: Install tern
+        run: |
+          mkdir -p bin
+          if [ ! -x bin/tern ]; then
+            GOBIN="$PWD/bin" go install github.com/jackc/tern/v2@v2.4.1
+          fi
+
+      - name: Configure private Core access
+        run: bash scripts/configure-private-go.sh
+        env:
+          GYMKHANA_REPOSITORY_TOKEN: ${{ secrets.GYMKHANA_REPOSITORY_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Apply migrations
+        run: make migrate
+
+      - name: Run PostgreSQL integration tests
+        run: go test -p=1 -tags=integration ./internal/attachment ./internal/search ./internal/operations ./internal/googleforms ./internal/queryengine ./internal/matching ./internal/aichat ./internal/ocr ./internal/profile
+

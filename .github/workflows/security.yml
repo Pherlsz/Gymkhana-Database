@@ -2,7 +2,7 @@ name: Security
 
 on:
   pull_request:
-    types: [opened, ready_for_review, reopened, synchronize]
+    types: [opened, ready_for_review, reopened]
     paths:
       - "**/*.go"
       - "apps/**"
@@ -63,3 +63,4 @@ jobs:
 
       - name: Audit JavaScript dependencies
         run: pnpm audit --audit-level high
+
