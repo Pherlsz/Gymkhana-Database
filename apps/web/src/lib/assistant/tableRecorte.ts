@@ -3,8 +3,6 @@ import {
   BILL_DEFAULT_VISIBLE_KEYS,
   DOCUMENT_DEFAULT_VISIBLE_KEYS,
   PEOPLE_DEFAULT_VISIBLE_KEYS,
-  formatColumnCols,
-  parseColumnCols,
 } from "../tables/columnVisibility";
 import { clearFilters } from "../tables/sheetQuery";
 
@@ -65,21 +63,19 @@ function pick(
   return patch;
 }
 
-function extraColumns(section: ProfileListSearch["section"], cols: string, columns: string[]) {
+function extraColumnMarker(section: ProfileListSearch["section"], columns: string[]) {
   const defaults =
     section === "documents"
       ? DOCUMENT_DEFAULT_VISIBLE_KEYS
       : section === "bills"
         ? BILL_DEFAULT_VISIBLE_KEYS
         : PEOPLE_DEFAULT_VISIBLE_KEYS;
-  const overrides = parseColumnCols(cols);
   const added: string[] = [];
   for (const key of columns) {
     if (!/^[a-z][a-z0-9_]*$/i.test(key) || defaults.has(key)) continue;
-    overrides[key] = true;
     added.push(key);
   }
-  return { cols: formatColumnCols(overrides), marker: added.join(",") };
+  return added.join(",");
 }
 
 export function applyRecortePatch(
@@ -93,18 +89,13 @@ export function applyRecortePatch(
       : section === "bills"
         ? pick(recorte.filters, BILL_FILTERS)
         : pick(recorte.filters, PEOPLE_FILTERS);
-  const { cols, marker } = extraColumns(
-    section,
-    current.section === section ? current.cols : "",
-    recorte.columns,
-  );
+  const marker = extraColumnMarker(section, recorte.columns);
   const sort = sortPatch(section, recorte.sort, recorte.order);
   return {
     section,
     ...clearFilters(section),
     ...filters,
     ...sort,
-    cols,
     recorte: marker || "on",
   };
 }
@@ -128,11 +119,7 @@ function sortPatch(
 }
 
 export function clearRecortePatch(search: ProfileListSearch): Partial<ProfileListSearch> {
-  const overrides = parseColumnCols(search.cols);
-  if (search.recorte && search.recorte !== "on") {
-    for (const key of search.recorte.split(",")) delete overrides[key];
-  }
-  return { ...clearFilters(search.section), cols: formatColumnCols(overrides), recorte: "" };
+  return { ...clearFilters(search.section), recorte: "" };
 }
 
 export function recorteFilterParts(search: ProfileListSearch): { key: string; value: string }[] {

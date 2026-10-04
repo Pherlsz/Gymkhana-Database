@@ -20,7 +20,6 @@ describe("assistant recorte on the table link", () => {
       city: "",
       sort: "full_name",
       order: "desc",
-      cols: "-city,father_name",
       recorte: "father_name",
     });
   });
@@ -41,8 +40,8 @@ describe("assistant recorte on the table link", () => {
     expect(recorteFilterParts(applied)).toEqual([{ key: "full_name", value: "Pedro" }]);
     expect(clearRecortePatch(applied)).toMatchObject({
       full_name: "",
-      cols: "-city",
       recorte: "",
     });
+    expect(clearRecortePatch(applied)).not.toHaveProperty("cols");
   });
 });

@@ -509,7 +509,7 @@ describe("TablesPage", () => {
     },
   );
 
-  it("applies compact column overrides from the people URL", async () => {
+  it("reads a legacy cols URL once and keeps the choice in localStorage", async () => {
     window.history.replaceState(null, "", "/tables/people?cols=-city,father_name");
     vi.stubGlobal(
       "fetch",
@@ -524,6 +524,28 @@ describe("TablesPage", () => {
     expect(headerTexts()).toContain("Nome do pai");
     expect(headerTexts()).not.toContain("Cidade");
     expect(headerTexts()).toContain("Nome");
+    await waitFor(() => expect(window.location.search).not.toContain("cols="));
+    expect(window.localStorage.getItem("gymkhana.sheet.cols.v1.people")).toBe(
+      "-city,father_name",
+    );
+  });
+
+  it("restores people columns from localStorage without a cols param", async () => {
+    window.localStorage.setItem("gymkhana.sheet.cols.v1.people", "-city");
+    window.history.replaceState(null, "", "/tables/people");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
+    expect(headerTexts()).not.toContain("Cidade");
+    expect(headerTexts()).toContain("Nome");
+    expect(window.location.search).not.toContain("cols=");
   });
 
   it("filters documents from the column funnel without a toolbar filter panel", async () => {
@@ -642,6 +664,8 @@ describe("TablesPage", () => {
     await waitFor(() => expect(screen.queryByText("Centro")).not.toBeInTheDocument());
     expect(screen.queryByText("Rua A")).not.toBeInTheDocument();
     expect(screen.getByText("Ana da Silva")).toBeInTheDocument();
+    expect(window.location.search).not.toContain("cols=");
+    expect(window.localStorage.getItem("gymkhana.sheet.cols.v1.people") ?? "").not.toBe("");
     fireEvent.change(screen.getByPlaceholderText("Buscar coluna\u2026"), {
       target: { value: "Bairro" },
     });
@@ -651,6 +675,7 @@ describe("TablesPage", () => {
     fireEvent.click(screen.getByText("Ocultar todas"));
     await waitFor(() => expect(screen.queryByText("Centro")).not.toBeInTheDocument());
     expect(screen.getByText("Ana da Silva")).toBeInTheDocument();
+    expect(window.location.search).not.toContain("cols=");
   });
 
   it("does not mount stored formula columns on the people sheet", async () => {

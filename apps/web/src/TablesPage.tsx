@@ -28,6 +28,7 @@ import { matchFormula } from "./lib/tables/formulas/catalog";
 import { evalFormula } from "./lib/tables/formulas/eval";
 import { useSheetFormulas } from "./lib/tables/useSheetFormulas";
 import { useSheetColumnWidths } from "./lib/tables/useSheetColumnWidths";
+import { useSheetColumnVisibility } from "./lib/tables/useSheetColumnVisibility";
 import { resultColumnWidth } from "./lib/tables/resultColumnWidth";
 import {
   columnGroup,
@@ -92,7 +93,6 @@ export function TablesPage() {
   const search = { ...routeSearch, section };
   const scope: TableSheetScope =
     section === "documents" ? "documents" : section === "bills" ? "bills" : "profiles";
-  const columnOverrides = useMemo(() => parseColumnCols(search.cols), [search.cols]);
   const [localFilters, setLocalFilters] = useState<Record<string, string>>({});
   const [extraPredicates, setExtraPredicates] = useState<Record<string, ColumnPredicate>>({});
   const { formulas, setFormula } = useSheetFormulas(scope);
@@ -122,11 +122,20 @@ export function TablesPage() {
       const { section: _section, ...rest } = patch;
       void navigate({
         params: { table: nextTable },
-        search: (current) => normalizeTableSearch({ ...current, ...rest }),
+        search: (current) => normalizeTableSearch({ ...current, ...rest, cols: "" }),
         to: "/tables/$table",
       });
     },
     [navigate, table],
+  );
+
+  const clearUrlCols = useCallback(() => {
+    updateSearch({ cols: "" });
+  }, [updateSearch]);
+  const { overrides: columnOverrides, replace: replaceColumnOverrides } = useSheetColumnVisibility(
+    tableFromSection(section),
+    search.cols,
+    clearUrlCols,
   );
 
   const [searchInput, setSearchInput] = useState(search.q);
@@ -525,11 +534,9 @@ export function TablesPage() {
 
   const updateCols = useCallback(
     (cols: string) => {
-      startTransition(() => {
-        updateSearch({ cols });
-      });
+      replaceColumnOverrides(parseColumnCols(cols));
     },
-    [updateSearch],
+    [replaceColumnOverrides],
   );
 
   const selectedRecordId =
