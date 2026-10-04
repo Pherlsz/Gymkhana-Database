@@ -42,23 +42,33 @@ async function persistCustomAndFile(args: {
   recordVersion: number;
   draft: Record<string, CustomDraftValue>;
   file?: File | undefined;
-}): Promise<AttachmentOwner | null> {
-  await saveRecordCustomValues({
-    valueTargetKind: args.kind,
-    definitionTargetKind: args.definitionKind,
-    definitionTargetId: args.typeId,
-    recordId: args.recordId,
-    recordVersion: args.recordVersion,
-    draft: args.draft,
-    force: false,
-  });
-  if (!args.file) return null;
+}): Promise<{ ocrOwner: AttachmentOwner | null; version: number }> {
+  let version = args.recordVersion;
+  try {
+    const saved = await saveRecordCustomValues({
+      valueTargetKind: args.kind,
+      definitionTargetKind: args.definitionKind,
+      definitionTargetId: args.typeId,
+      recordId: args.recordId,
+      recordVersion: args.recordVersion,
+      draft: args.draft,
+      force: false,
+    });
+    if (saved) version = saved.version;
+  } catch (caught) {
+    throw withStoredRecord({ id: args.recordId, version: args.recordVersion }, caught);
+  }
+  if (!args.file) return { ocrOwner: null, version };
   const owner: AttachmentOwner = {
     owner_kind: args.kind === "document" ? "DOCUMENT" : "BILL",
     owner_id: args.recordId,
   };
-  await uploadAttachment(owner, args.file, () => undefined);
-  return owner;
+  try {
+    await uploadAttachment(owner, args.file, () => undefined);
+  } catch (caught) {
+    throw withStoredRecord({ id: args.recordId, version }, caught);
+  }
+  return { ocrOwner: owner, version };
 }
 
 type StoredRecord = { id: string; version: number };
@@ -106,7 +116,7 @@ export async function persistDocumentForm(args: {
     ? await updateDocument(args.existing.id, { ...request, version: args.existing.version })
     : await createDocument(request);
   try {
-    const ocrOwner = await persistCustomAndFile({
+    const followed = await persistCustomAndFile({
       kind: "document",
       definitionKind: "DOCUMENT_TYPE",
       typeId: record.type.id,
@@ -115,8 +125,12 @@ export async function persistDocumentForm(args: {
       draft: args.fields.customDraft,
       file: args.fields.file,
     });
-    return { record, ocrOwner };
+    return {
+      record: followed.version === record.version ? record : { ...record, version: followed.version },
+      ocrOwner: followed.ocrOwner,
+    };
   } catch (caught) {
+    if (storedRecordOf(caught)) throw caught;
     throw withStoredRecord({ id: record.id, version: record.version }, caught);
   }
 }
@@ -199,7 +213,7 @@ export async function persistBillForm(args: {
       })
     : await createBill(request);
   try {
-    const ocrOwner = await persistCustomAndFile({
+    const followed = await persistCustomAndFile({
       kind: "bill",
       definitionKind: "BILL_TYPE",
       typeId: record.type.id,
@@ -208,8 +222,12 @@ export async function persistBillForm(args: {
       draft: args.fields.customDraft,
       file: args.fields.file,
     });
-    return { record, ocrOwner };
+    return {
+      record: followed.version === record.version ? record : { ...record, version: followed.version },
+      ocrOwner: followed.ocrOwner,
+    };
   } catch (caught) {
+    if (storedRecordOf(caught)) throw caught;
     throw withStoredRecord({ id: record.id, version: record.version }, caught);
   }
 }

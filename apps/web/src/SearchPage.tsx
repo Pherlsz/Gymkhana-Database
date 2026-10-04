@@ -334,7 +334,7 @@ export function SearchPage() {
         {showCount && !results.isFetching && cards.length === 0 ? (
           <InlineStatus kind="empty" label={searchMessages.noResults} showIcon={false} />
         ) : null}
-        {showCount && cards.length > 0 ? (
+        {showCount && !listPending && cards.length > 0 ? (
           <div className="search-results__count">
             <span>{searchMessages.resultCount({ count: resultTotal })}</span>
             {resultWindow.truncated ? (
@@ -359,7 +359,7 @@ export function SearchPage() {
           ))}
         </div>
       </section>
-      {results.data && results.data.page.total > 0 ? (
+      {results.data && !listPending && results.data.page.total > 0 ? (
         <Pagination
           current={search.page}
           pageSize={search.limit}

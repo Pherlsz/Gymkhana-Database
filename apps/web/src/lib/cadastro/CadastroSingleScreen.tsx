@@ -83,6 +83,9 @@ export function CadastroSingleScreen({
   const [saving, setSaving] = useState(false);
   const saveLock = useRef(false);
   const [persistError, setPersistError] = useState<string | null>(null);
+  const [standaloneRecord, setStandaloneRecord] = useState<{ id: string; version: number } | null>(
+    null,
+  );
   const [ocrOwner, setOcrOwner] = useState<AttachmentOwner | null>(null);
   const [savedName, setSavedName] = useState("");
 
@@ -223,7 +226,12 @@ export function CadastroSingleScreen({
           ...docFields,
           docTypeId: docFields.docTypeId || selectedDocType?.id || "",
         };
-        const saved = await persistDocumentForm({ ownerProfileId: ownerId, fields });
+        const saved = await persistDocumentForm({
+          ownerProfileId: ownerId,
+          fields,
+          ...(standaloneRecord ? { existing: standaloneRecord } : {}),
+        });
+        setStandaloneRecord(null);
         lastOcr = saved.ocrOwner;
       } else if (mode === "bills") {
         const fields = {
@@ -235,7 +243,9 @@ export function CadastroSingleScreen({
           fields,
           demographics,
           fallbackHolder: copy.holderFallbackDefault,
+          ...(standaloneRecord ? { existing: standaloneRecord } : {}),
         });
+        setStandaloneRecord(null);
         lastOcr = saved.ocrOwner;
       } else {
         for (const doc of documents) {
@@ -346,6 +356,10 @@ export function CadastroSingleScreen({
       }
       finish(name);
     } catch (caught) {
+      if (mode === "documents" || mode === "bills") {
+        const stored = storedRecordOf(caught);
+        if (stored) setStandaloneRecord(stored);
+      }
       setPersistError(errorMessage(caught) || messages.common.labels.saveError);
     } finally {
       setSaving(false);
