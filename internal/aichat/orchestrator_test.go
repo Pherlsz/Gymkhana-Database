@@ -464,3 +464,57 @@ func assertPanicFailsRun(t *testing.T, provider ModelClient, boomTool bool) {
 		t.Fatalf("panic was not logged, log = %q", logged)
 	}
 }
+
+
+func TestRunTurnAuthorizeInsertQueryCountDropsOnLargeDeltaReply(t *testing.T) {
+	const tokens = 300
+	deltas := make([]string, tokens)
+	for i := range deltas {
+		deltas[i] = "x"
+	}
+	fixture := newOrchestratorFixture(t, 1000, NewFakeProvider(FakeModelStep{
+		Deltas: deltas, Usage: ModelUsage{InputUnits: 1, OutputUnits: 1},
+	}))
+	creation := fixture.startTurn(t, "Gere muito texto", "query-count-300")
+	fixture.store.ResetQueryCounts()
+	if err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "run-300"); err != nil {
+		t.Fatalf("RunTurn() error = %v", err)
+	}
+	after := fixture.store.QueryCount("CurrentUser", "AppendTextDelta")
+	// Baseline: one CurrentUser authorize + one AppendTextDelta insert per token.
+	before := tokens * 2
+	if after*10 > before {
+		t.Fatalf("authorize+insert queries = %d, want at most %d (10x below baseline %d); counts=%v",
+			after, before/10, before, fixture.store.queryCounts)
+	}
+	ratio := float64(before)
+	if after > 0 {
+		ratio = float64(before) / float64(after)
+	}
+	t.Logf("300-delta authorize+insert queries: baseline=%d after=%d (%.1fx)", before, after, ratio)
+}
+
+func TestRunTurnRevalidatesDeactivatedUserWithinTTL(t *testing.T) {
+	current := time.Date(2026, time.July, 18, 19, 0, 0, 0, time.UTC)
+	var fixture *orchestratorFixture
+	provider := modelClientFunc(func(_ context.Context, _ ModelRequest, emit func(string) error) (ModelResponse, error) {
+		if err := emit("parte-1 "); err != nil {
+			return ModelResponse{}, err
+		}
+		current = current.Add(authorizationCacheTTL + time.Second)
+		user := fixture.store.users[fixture.actor.User.ID]
+		user.Active = false
+		fixture.store.users[fixture.actor.User.ID] = user
+		if err := emit("parte-2"); err != nil {
+			return ModelResponse{}, err
+		}
+		return ModelResponse{Usage: ModelUsage{InputUnits: 1, OutputUnits: 1}}, nil
+	})
+	fixture = newOrchestratorFixture(t, 1000, provider)
+	fixture.service.now = func() time.Time { return current }
+	creation := fixture.startTurn(t, "Continue", "deactivate-ttl-turn")
+	err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "deactivate-ttl")
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("RunTurn(deactivated within TTL) error = %v, want ErrForbidden", err)
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -22,7 +23,15 @@ const (
 	defaultCleanupBatch = 100
 	defaultRunTimeout   = 5 * time.Minute
 	staleRunGrace       = 5 * time.Second
+	// authorizationCacheTTL is how long a resolved CurrentUser stays valid for
+	// hot-path reuse, and how often RunTurn revalidates access.
+	authorizationCacheTTL = 5 * time.Second
 )
+
+type cachedCurrentUser struct {
+	user      auth.User
+	expiresAt time.Time
+}
 
 var idempotencyPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
 
@@ -51,6 +60,8 @@ type Service struct {
 	cleanupBatch   int
 	onAuditFailure AuditFailureHandler
 	ready          func(context.Context) bool
+	userCacheMu    sync.Mutex
+	userCache      map[auth.Identifier]cachedCurrentUser
 }
 
 func NewService(store Store, options ServiceOptions) (*Service, error) {
@@ -81,7 +92,7 @@ func NewService(store Store, options ServiceOptions) (*Service, error) {
 	return &Service{
 		store: store, now: options.Now, retention: options.Retention, runTimeout: options.RunTimeout,
 		rateLimit: options.RateLimit, usageLimit: options.UsageLimit, cleanupBatch: options.CleanupBatch, onAuditFailure: options.OnAuditFailure,
-		ready: options.Ready,
+		ready: options.Ready, userCache: make(map[auth.Identifier]cachedCurrentUser),
 	}, nil
 }
 
@@ -382,17 +393,78 @@ func (service *Service) CleanupExpired(ctx context.Context) (int, error) {
 }
 
 func (service *Service) authorize(ctx context.Context, actor auth.Session) (auth.User, error) {
+	return service.authorizeAt(ctx, actor, false)
+}
+
+func (service *Service) authorizeFresh(ctx context.Context, actor auth.Session) (auth.User, error) {
+	return service.authorizeAt(ctx, actor, true)
+}
+
+func (service *Service) authorizeAt(ctx context.Context, actor auth.Session, bypassCache bool) (auth.User, error) {
 	if actor.User.ID == (auth.Identifier{}) || !actor.User.Active || !actor.User.Role.CanSearch() {
 		return auth.User{}, ErrForbidden
+	}
+	now := service.now().UTC()
+	if !bypassCache {
+		service.userCacheMu.Lock()
+		entry, ok := service.userCache[actor.User.ID]
+		if ok && now.Before(entry.expiresAt) {
+			user := entry.user
+			service.userCacheMu.Unlock()
+			if !user.Active || !user.Role.CanSearch() {
+				return auth.User{}, ErrForbidden
+			}
+			return user, nil
+		}
+		service.userCacheMu.Unlock()
 	}
 	current, err := service.store.CurrentUser(ctx, actor.User.ID)
 	if err != nil {
 		return auth.User{}, err
 	}
 	if !current.Active || !current.Role.CanSearch() {
+		// Never treat a deactivated or demoted user as cacheable access.
+		service.invalidateUserCache(actor.User.ID)
 		return auth.User{}, ErrForbidden
 	}
+	service.userCacheMu.Lock()
+	if service.userCache == nil {
+		service.userCache = make(map[auth.Identifier]cachedCurrentUser)
+	}
+	service.userCache[actor.User.ID] = cachedCurrentUser{user: current, expiresAt: now.Add(authorizationCacheTTL)}
+	service.userCacheMu.Unlock()
 	return current, nil
+}
+
+func (service *Service) invalidateUserCache(id auth.Identifier) {
+	service.userCacheMu.Lock()
+	defer service.userCacheMu.Unlock()
+	delete(service.userCache, id)
+}
+
+// runOwned loads a run without re-authorizing. Callers must pass a user already
+// resolved for this turn.
+func (service *Service) runOwned(ctx context.Context, user auth.User, id Identifier) (Run, error) {
+	if id.IsZero() {
+		return Run{}, ErrNotFound
+	}
+	return service.store.GetRun(ctx, id, user.ID)
+}
+
+// threadOwned loads a thread without re-authorizing. Callers must pass a user
+// already resolved for this turn.
+func (service *Service) threadOwned(ctx context.Context, user auth.User, id Identifier, requestID string) (Thread, error) {
+	if id.IsZero() {
+		err := ErrNotFound
+		service.audit(ctx, &user.ID, &id, nil, nil, AuditThreadRead, auditOutcome(err), nil, nil, err, requestID)
+		return Thread{}, err
+	}
+	thread, err := service.store.GetThread(ctx, id, user.ID)
+	if err == nil && !thread.RetentionExpiresAt.After(service.now().UTC()) {
+		err = ErrStaleContext
+	}
+	service.audit(ctx, &user.ID, &id, nil, nil, AuditThreadRead, auditOutcome(err), nil, nil, err, requestID)
+	return thread, err
 }
 
 func validIdempotencyKey(value string) bool {

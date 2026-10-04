@@ -24,6 +24,7 @@ type memoryStore struct {
 	usage       map[auth.Identifier]int64
 	audits      []AuditEvent
 	currentErr  error
+	queryCounts map[string]int
 }
 
 func newMemoryStore(users ...auth.User) *memoryStore {
@@ -39,9 +40,44 @@ func newMemoryStore(users ...auth.User) *memoryStore {
 	return store
 }
 
+
+func (store *memoryStore) recordQuery(name string) {
+	if store.queryCounts == nil {
+		store.queryCounts = make(map[string]int)
+	}
+	store.queryCounts[name]++
+}
+
+func (store *memoryStore) QueryCount(names ...string) int {
+	store.mutex.Lock()
+	defer store.mutex.Unlock()
+	if store.queryCounts == nil {
+		return 0
+	}
+	if len(names) == 0 {
+		total := 0
+		for _, count := range store.queryCounts {
+			total += count
+		}
+		return total
+	}
+	total := 0
+	for _, name := range names {
+		total += store.queryCounts[name]
+	}
+	return total
+}
+
+func (store *memoryStore) ResetQueryCounts() {
+	store.mutex.Lock()
+	defer store.mutex.Unlock()
+	store.queryCounts = make(map[string]int)
+}
+
 func (store *memoryStore) CurrentUser(_ context.Context, id auth.Identifier) (auth.User, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("CurrentUser")
 	if store.currentErr != nil {
 		return auth.User{}, store.currentErr
 	}
@@ -55,6 +91,7 @@ func (store *memoryStore) CurrentUser(_ context.Context, id auth.Identifier) (au
 func (store *memoryStore) CreateThread(_ context.Context, input CreateThreadInput) (Thread, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("CreateThread")
 	thread := Thread{ID: input.ID, OwnerUserID: input.OwnerUserID, Title: input.Title, RetentionExpiresAt: input.RetentionExpiresAt,
 		Version: 1, CreatedAt: input.Now, UpdatedAt: input.Now}
 	store.threads[thread.ID] = thread
@@ -64,6 +101,7 @@ func (store *memoryStore) CreateThread(_ context.Context, input CreateThreadInpu
 func (store *memoryStore) ListThreads(_ context.Context, owner auth.Identifier, now time.Time, limit, offset int) (ThreadPage, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("ListThreads")
 	values := make([]Thread, 0)
 	for _, thread := range store.threads {
 		if thread.OwnerUserID == owner && thread.RetentionExpiresAt.After(now) {
@@ -82,12 +120,14 @@ func (store *memoryStore) ListThreads(_ context.Context, owner auth.Identifier, 
 func (store *memoryStore) GetThread(_ context.Context, id Identifier, owner auth.Identifier) (Thread, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("GetThread")
 	return store.ownedThread(id, owner)
 }
 
 func (store *memoryStore) RenameThread(_ context.Context, id Identifier, owner auth.Identifier, title string, version int64, now time.Time) (Thread, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("RenameThread")
 	thread, err := store.ownedThread(id, owner)
 	if err != nil {
 		return Thread{}, err
@@ -103,6 +143,7 @@ func (store *memoryStore) RenameThread(_ context.Context, id Identifier, owner a
 func (store *memoryStore) DeleteThread(_ context.Context, id Identifier, owner auth.Identifier) error {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("DeleteThread")
 	if _, err := store.ownedThread(id, owner); err != nil {
 		return err
 	}
@@ -118,6 +159,7 @@ func (store *memoryStore) DeleteThread(_ context.Context, id Identifier, owner a
 func (store *memoryStore) ListMessages(_ context.Context, threadID Identifier, owner auth.Identifier, limit, offset int) (MessagePage, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("ListMessages")
 	if _, err := store.ownedThread(threadID, owner); err != nil {
 		return MessagePage{}, err
 	}
@@ -151,6 +193,7 @@ func (store *memoryStore) ListMessages(_ context.Context, threadID Identifier, o
 func (store *memoryStore) CreateRun(_ context.Context, input CreateRunInput, _ time.Time, maximumRequests int, maximumUsage int64) (RunCreation, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("CreateRun")
 	key := input.OwnerUserID.String() + ":" + input.IdempotencyKey
 	if existingID, ok := store.idempotency[key]; ok {
 		existing := store.runs[existingID]
@@ -201,12 +244,14 @@ func (store *memoryStore) CreateRun(_ context.Context, input CreateRunInput, _ t
 func (store *memoryStore) GetRun(_ context.Context, id Identifier, owner auth.Identifier) (Run, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("GetRun")
 	return store.ownedRun(id, owner)
 }
 
 func (store *memoryStore) RequestCancellation(_ context.Context, id Identifier, owner auth.Identifier, now time.Time) (Run, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("RequestCancellation")
 	run, err := store.ownedRun(id, owner)
 	if err != nil {
 		return Run{}, err
@@ -233,6 +278,7 @@ func (store *memoryStore) RequestCancellation(_ context.Context, id Identifier, 
 func (store *memoryStore) StartRun(_ context.Context, id Identifier, owner auth.Identifier, now time.Time) (Run, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("StartRun")
 	run, err := store.ownedRun(id, owner)
 	if err != nil {
 		return Run{}, err
@@ -252,6 +298,7 @@ func (store *memoryStore) StartRun(_ context.Context, id Identifier, owner auth.
 func (store *memoryStore) AppendTextDelta(_ context.Context, id Identifier, owner auth.Identifier, delta string, now time.Time) (RunEvent, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("AppendTextDelta")
 	run, err := store.ownedRun(id, owner)
 	if err != nil {
 		return RunEvent{}, err
@@ -270,6 +317,7 @@ func (store *memoryStore) AppendTextDelta(_ context.Context, id Identifier, owne
 func (store *memoryStore) AddRunUsage(_ context.Context, id Identifier, owner auth.Identifier, input, output, maximum int64, now time.Time) (Run, bool, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("AddRunUsage")
 	run, err := store.ownedRun(id, owner)
 	if err != nil {
 		return Run{}, false, err
@@ -287,6 +335,7 @@ func (store *memoryStore) AddRunUsage(_ context.Context, id Identifier, owner au
 func (store *memoryStore) BeginTool(_ context.Context, input BeginToolInput) (ToolStep, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("BeginTool")
 	run, err := store.ownedRun(input.RunID, input.OwnerUserID)
 	if err != nil {
 		return ToolStep{}, err
@@ -312,6 +361,7 @@ func (store *memoryStore) BeginTool(_ context.Context, input BeginToolInput) (To
 func (store *memoryStore) CompleteTool(_ context.Context, input CompleteToolInput) (ToolStep, *ResultReference, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("CompleteTool")
 	run, err := store.ownedRun(input.RunID, input.OwnerUserID)
 	if err != nil {
 		return ToolStep{}, nil, err
@@ -354,6 +404,7 @@ func (store *memoryStore) CompleteTool(_ context.Context, input CompleteToolInpu
 func (store *memoryStore) FailTool(_ context.Context, stepID, runID Identifier, owner auth.Identifier, code string, now time.Time) (ToolStep, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("FailTool")
 	run, err := store.ownedRun(runID, owner)
 	if err != nil {
 		return ToolStep{}, err
@@ -375,6 +426,7 @@ func (store *memoryStore) FailTool(_ context.Context, stepID, runID Identifier, 
 func (store *memoryStore) CompleteRun(_ context.Context, input CompleteRunInput) (Run, Message, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("CompleteRun")
 	run, err := store.ownedRun(input.RunID, input.OwnerUserID)
 	if err != nil {
 		return Run{}, Message{}, err
@@ -401,6 +453,7 @@ func (store *memoryStore) CompleteRun(_ context.Context, input CompleteRunInput)
 func (store *memoryStore) FailRun(_ context.Context, id Identifier, owner auth.Identifier, code string, now time.Time) (Run, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("FailRun")
 	run, err := store.ownedRun(id, owner)
 	if err != nil {
 		return Run{}, err
@@ -423,6 +476,7 @@ func (store *memoryStore) FailRun(_ context.Context, id Identifier, owner auth.I
 func (store *memoryStore) FailStaleRuns(_ context.Context, before, now time.Time, limit int) (int, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("FailStaleRuns")
 	identifiers := make([]Identifier, 0)
 	for id, run := range store.runs {
 		if run.State.Active() && !run.CreatedAt.After(before) {
@@ -463,6 +517,7 @@ func (store *memoryStore) FailStaleRuns(_ context.Context, before, now time.Time
 func (store *memoryStore) ListRunEvents(_ context.Context, runID Identifier, owner auth.Identifier, after int64, limit int) (EventPage, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("ListRunEvents")
 	run, err := store.ownedRun(runID, owner)
 	if err != nil {
 		return EventPage{}, err
@@ -489,6 +544,7 @@ func (store *memoryStore) ListRunEvents(_ context.Context, runID Identifier, own
 func (store *memoryStore) GetResultReference(_ context.Context, id Identifier, owner auth.Identifier) (ResultReference, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("GetResultReference")
 	reference, ok := store.references[id]
 	if !ok || reference.OwnerUserID != owner {
 		return ResultReference{}, ErrNotFound
@@ -499,6 +555,7 @@ func (store *memoryStore) GetResultReference(_ context.Context, id Identifier, o
 func (store *memoryStore) SetActiveResultReference(_ context.Context, threadID Identifier, owner auth.Identifier, referenceID *Identifier, now time.Time) (Thread, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("SetActiveResultReference")
 	thread, err := store.ownedThread(threadID, owner)
 	if err != nil {
 		return Thread{}, err
@@ -517,6 +574,7 @@ func (store *memoryStore) SetActiveResultReference(_ context.Context, threadID I
 func (store *memoryStore) CleanupExpired(_ context.Context, now time.Time, limit int) (int, error) {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("CleanupExpired")
 	identifiers := make([]Identifier, 0)
 	for id, thread := range store.threads {
 		if thread.RetentionExpiresAt.After(now) {
@@ -543,6 +601,7 @@ func (store *memoryStore) CleanupExpired(_ context.Context, now time.Time, limit
 func (store *memoryStore) SaveAudit(_ context.Context, event AuditEvent) error {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
+	store.recordQuery("SaveAudit")
 	store.audits = append(store.audits, event)
 	return nil
 }
