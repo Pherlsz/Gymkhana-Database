@@ -5,6 +5,7 @@ import {
   isColumnVisible,
   parseColumnCols,
   setColumnVisible,
+  hideAllColumns,
   showAllColumns,
   withColumnLayout,
 } from "./columnVisibility";
@@ -80,6 +81,15 @@ describe("column visibility", () => {
     ];
     expect(showAllColumns(columns, {}).pet).toBe(true);
     expect(showAllColumns(columns, {}).full_name).toBeUndefined();
+  });
+
+  it("hides every unlocked column and leaves the name visible", () => {
+    const columns = [
+      withColumnLayout(column("full_name"), "profiles"),
+      withColumnLayout(column("city"), "profiles"),
+      withColumnLayout(column("pet"), "profiles"),
+    ];
+    expect(hideAllColumns(columns, { pet: true })).toEqual({ city: false });
   });
 
   it("encodes only column overrides into a compact cols token", () => {

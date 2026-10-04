@@ -33,6 +33,7 @@ import {
   columnGroup,
   columnLabel,
   formatColumnCols,
+  hideAllColumns,
   isColumnVisible,
   parseColumnCols,
   setColumnVisible,
@@ -585,8 +586,17 @@ export function TablesPage() {
     [columns, columnOverrides, updateCols],
   );
 
-  const handleColumnShowAll = () => {
-    updateCols(formatColumnCols(showAllColumns(columns, columnOverrides)));
+  const columnsForKeys = (keys: string[]) => {
+    const selected = new Set(keys);
+    return columns.filter((column) => selected.has(column.key));
+  };
+
+  const handleColumnShowAll = (keys: string[]) => {
+    updateCols(formatColumnCols(showAllColumns(columnsForKeys(keys), columnOverrides)));
+  };
+
+  const handleColumnHideAll = (keys: string[]) => {
+    updateCols(formatColumnCols(hideAllColumns(columnsForKeys(keys), columnOverrides)));
   };
 
   const handleColumnReset = () => {
@@ -734,6 +744,7 @@ export function TablesPage() {
                 title: copy.columnPicker.title,
                 searchLabel: copy.columnPicker.search,
                 showAllLabel: copy.columnPicker.showAll,
+                hideAllLabel: copy.columnPicker.hideAll,
                 resetLabel: copy.columnPicker.reset,
                 lockedLabel: copy.columnPicker.locked,
                 emptyLabel: copy.columnPicker.empty,
@@ -743,6 +754,7 @@ export function TablesPage() {
                 items: columnPickerItems,
                 onToggle: handleColumnToggle,
                 onShowAll: handleColumnShowAll,
+                onHideAll: handleColumnHideAll,
                 onReset: handleColumnReset,
               }
         }

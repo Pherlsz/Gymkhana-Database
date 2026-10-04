@@ -227,9 +227,24 @@ export function showAllColumns<T>(
   columns: SpreadsheetColumn<T>[],
   overrides: ColumnVisibilityOverrides,
 ): ColumnVisibilityOverrides {
+  return setColumnsVisible(columns, true, overrides);
+}
+
+export function hideAllColumns<T>(
+  columns: SpreadsheetColumn<T>[],
+  overrides: ColumnVisibilityOverrides,
+): ColumnVisibilityOverrides {
+  return setColumnsVisible(columns, false, overrides);
+}
+
+function setColumnsVisible<T>(
+  columns: SpreadsheetColumn<T>[],
+  visible: boolean,
+  overrides: ColumnVisibilityOverrides,
+): ColumnVisibilityOverrides {
   let next = overrides;
   for (const column of columns) {
-    next = setColumnVisible(column, true, next);
+    next = setColumnVisible(column, visible, next);
   }
   return next;
 }

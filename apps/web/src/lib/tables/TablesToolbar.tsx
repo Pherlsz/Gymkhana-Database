@@ -58,6 +58,7 @@ export function TablesToolbar({
         title: string;
         searchLabel: string;
         showAllLabel: string;
+        hideAllLabel: string;
         resetLabel: string;
         lockedLabel: string;
         emptyLabel: string;
@@ -65,7 +66,8 @@ export function TablesToolbar({
         hiddenCount: number;
         items: ColumnPickerItem[];
         onToggle: (key: string, visible: boolean) => void;
-        onShowAll: () => void;
+        onShowAll: (keys: string[]) => void;
+        onHideAll: (keys: string[]) => void;
         onReset: () => void;
       }
     | undefined;
@@ -110,8 +112,10 @@ export function TablesToolbar({
               lockedLabel={columnPicker.lockedLabel}
               resetLabel={columnPicker.resetLabel}
               searchLabel={columnPicker.searchLabel}
+              hideAllLabel={columnPicker.hideAllLabel}
               showAllLabel={columnPicker.showAllLabel}
               visibleCountLabel={columnPicker.visibleCountLabel}
+              onHideAll={columnPicker.onHideAll}
               onReset={columnPicker.onReset}
               onShowAll={columnPicker.onShowAll}
               onToggle={columnPicker.onToggle}

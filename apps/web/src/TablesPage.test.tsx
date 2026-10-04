@@ -638,6 +638,19 @@ describe("TablesPage", () => {
     fireEvent.click(await screen.findByText("Mostrar todas"));
     expect(await screen.findByText("Centro")).toBeInTheDocument();
     expect(screen.queryByText("Soma CPF")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Ocultar todas"));
+    await waitFor(() => expect(screen.queryByText("Centro")).not.toBeInTheDocument());
+    expect(screen.queryByText("Rua A")).not.toBeInTheDocument();
+    expect(screen.getByText("Ana da Silva")).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText("Buscar coluna\u2026"), {
+      target: { value: "Bairro" },
+    });
+    fireEvent.click(screen.getByText("Mostrar todas"));
+    expect(await screen.findByText("Centro")).toBeInTheDocument();
+    expect(screen.queryByText("Rua A")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Ocultar todas"));
+    await waitFor(() => expect(screen.queryByText("Centro")).not.toBeInTheDocument());
+    expect(screen.getByText("Ana da Silva")).toBeInTheDocument();
   });
 
   it("does not mount stored formula columns on the people sheet", async () => {

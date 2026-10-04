@@ -579,6 +579,7 @@ export const tables = {
     title: "Escolher colunas",
     search: "Buscar coluna…",
     showAll: "Mostrar todas",
+    hideAll: "Ocultar todas",
     reset: "Restaurar padrão",
     empty: "Nenhuma coluna encontrada.",
     locked: "Sempre visível",
