@@ -84,9 +84,14 @@ export function PendingDocumentsSection({
       items={documents.map((doc) => ({
         id: doc.id,
         title: doc.typeName,
-        subtitle: doc.number
-          ? `nº ${doc.number}${doc.file ? ` · ${doc.file.name}` : doc.notes ? ` · ${doc.notes}` : ""}`
-          : doc.notes || copy.docNumberEmpty,
+        subtitle: [
+          doc.number ? `nº ${doc.number}` : doc.notes || copy.docNumberEmpty,
+          doc.file?.name,
+          doc.saveStatus === "saved" ? copy.itemSaved : "",
+          doc.saveStatus === "error" ? copy.itemFailed : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
         tagText: doc.tag === "queued" ? labels.ocr : labels.physical,
         isOcr: doc.tag === "queued",
       }))}

@@ -22,6 +22,9 @@ export interface PendingDoc {
   tag: PendingTag;
   customDraft: Record<string, CustomDraftValue>;
   file?: File | undefined;
+  /** Set after the record is stored, so a later failure does not create it again. */
+  savedRecordId?: string | undefined;
+  saveStatus?: "saved" | "error" | undefined;
 }
 
 export interface PendingBill {
@@ -39,6 +42,9 @@ export interface PendingBill {
   tag: PendingTag;
   customDraft: Record<string, CustomDraftValue>;
   file?: File | undefined;
+  /** Set after the record is stored, so a later failure does not create it again. */
+  savedRecordId?: string | undefined;
+  saveStatus?: "saved" | "error" | undefined;
 }
 
 export const INITIAL_DEMOGRAPHICS: PersonDemographicsState = {

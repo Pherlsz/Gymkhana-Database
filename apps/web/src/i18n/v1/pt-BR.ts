@@ -384,6 +384,8 @@ export const cadastro = {
   sectionDocumentsHint:
     "Qualquer documento oficial brasileiro (CPF, RG, CNH, certidão, OAB, CRM…).",
   sectionDocumentsEmpty: "Nenhum documento adicionado ainda.",
+  itemSaved: "Salvo",
+  itemFailed: "Falhou",
   btnAddDocument: "Adicionar documento",
   fieldDocType: "Tipo de documento",
   fieldDocNumber: "Número do documento",
