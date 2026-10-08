@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -20,9 +21,19 @@ const (
 	maximumProviderDelta   = 1000
 	maximumProviderUsage   = 100_000_000
 	finalizationTimeout    = 5 * time.Second
-	cancelCheckInterval    = 20 // poll run state every N streaming deltas
-	minimumContextMessages = 3  // always include this many most-recent messages
+	textDeltaBatchWindow   = 100 * time.Millisecond
+	minimumContextMessages = 3 // always include this many most-recent messages
 )
+
+// errTurnPanicked is returned to the coordinator when a provider or tool panics.
+// The persisted run stores only the public internal_error code.
+var errTurnPanicked = errors.New("AI Chat turn panicked")
+
+// panickedTurnFailer marks a runner that can persist a failure after a panic
+// escapes RunTurn. Orchestrator implements it; test doubles do not have to.
+type panickedTurnFailer interface {
+	failPanickedRun(context.Context, auth.Session, Identifier, string)
+}
 
 type TurnRunner interface {
 	RunTurn(context.Context, auth.Session, Identifier, string) error
@@ -49,6 +60,20 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 	if err != nil {
 		return err
 	}
+	authorizedAt := orchestrator.service.now().UTC()
+	revalidate := func(force bool) error {
+		now := orchestrator.service.now().UTC()
+		if !force && !now.After(authorizedAt.Add(authorizationCacheTTL)) {
+			return nil
+		}
+		fresh, authErr := orchestrator.service.authorizeFresh(ctx, actor)
+		if authErr != nil {
+			return authErr
+		}
+		user = fresh
+		authorizedAt = now
+		return nil
+	}
 	run, err := orchestrator.service.store.GetRun(ctx, runID, user.ID)
 	if err != nil {
 		return err
@@ -57,15 +82,25 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 	if err != nil {
 		return err
 	}
-	run, err = orchestrator.service.startRun(ctx, actor, runID, requestID)
+	run, err = orchestrator.service.startRun(ctx, user, runID, requestID)
 	if err != nil {
 		return err
 	}
+	var openBatch *textDeltaBatch
 	defer func() {
+		if recovered := recover(); recovered != nil {
+			slog.Error("AI Chat turn panicked", "run_id", runID.String(), "panic", fmt.Sprint(recovered), "stack", string(debug.Stack()))
+			if resultErr == nil {
+				resultErr = fmt.Errorf("%w: %v", errTurnPanicked, recovered)
+			}
+		}
+		if resultErr != nil && openBatch != nil {
+			_ = openBatch.flush()
+		}
 		if resultErr != nil {
 			finalCtx, finalCancel := detachedFinalizationContext(ctx)
 			defer finalCancel()
-			_, _ = orchestrator.service.failRun(finalCtx, actor, runID, publicErrorCode(resultErr), requestID)
+			_, _ = orchestrator.service.failRun(finalCtx, user, runID, publicErrorCode(resultErr), requestID)
 		}
 	}()
 	runContext, cancel := context.WithTimeout(ctx, orchestrator.service.runTimeout)
@@ -82,7 +117,6 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 	if thread.ActiveResultReferenceID != nil {
 		request.ActiveResultReferenceID = thread.ActiveResultReferenceID.String()
 	}
-	var assistant strings.Builder
 	var roundAssistant strings.Builder
 	assistantRunes := 0
 	var inputUsage, outputUsage int64
@@ -92,37 +126,67 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 		maximumCalls = MaximumToolCalls
 	}
 	for round := 0; round <= maximumCalls; round++ {
-		current, err := orchestrator.service.Run(runContext, actor, runID)
+		if err := revalidate(false); err != nil {
+			return err
+		}
+		current, err := orchestrator.service.runOwned(runContext, user, runID)
 		if err != nil {
 			return err
 		}
 		if current.CancelRequestedAt != nil || current.State == RunCancelled {
+			if err := revalidate(true); err != nil {
+				return err
+			}
 			return ErrCancelled
 		}
-		var deltaCount int
+		batch := &textDeltaBatch{
+			now: orchestrator.service.now,
+			write: func(chunk string) error {
+				// WithoutCancel so a cancel that already closed the run context
+				// still persists the chunk buffered before that cancel.
+				_, writeErr := orchestrator.service.appendText(context.WithoutCancel(runContext), user, runID, chunk)
+				return writeErr
+			},
+		}
+		openBatch = batch
 		response, err := orchestrator.provider.Generate(runContext, request, func(delta string) error {
 			deltaRunes := utf8.RuneCountInString(delta)
 			if !validProviderDelta(delta) || assistantRunes+deltaRunes > MaximumMessageRunes {
+				_ = batch.flush()
 				return ErrMalformedProvider
 			}
-			deltaCount++
-			if deltaCount%cancelCheckInterval == 0 {
-				current, err := orchestrator.service.Run(runContext, actor, runID)
-				if err != nil {
-					return err
-				}
-				if current.CancelRequestedAt != nil || current.State == RunCancelled {
-					return ErrCancelled
-				}
+			if runContext.Err() != nil {
+				_ = batch.flush()
+				return ErrCancelled
 			}
-			if _, err := orchestrator.service.appendText(runContext, actor, runID, delta); err != nil {
-				return err
+			if revalidateErr := revalidate(false); revalidateErr != nil {
+				_ = batch.flush()
+				return revalidateErr
 			}
-			assistant.WriteString(delta)
+			current, currentErr := orchestrator.service.runOwned(runContext, user, runID)
+			if currentErr != nil {
+				_ = batch.flush()
+				return currentErr
+			}
+			if current.CancelRequestedAt != nil || current.State == RunCancelled {
+				if flushErr := batch.flush(); flushErr != nil {
+					return flushErr
+				}
+				if revalidateErr := revalidate(true); revalidateErr != nil {
+					return revalidateErr
+				}
+				return ErrCancelled
+			}
+			if addErr := batch.add(delta); addErr != nil {
+				return addErr
+			}
 			roundAssistant.WriteString(delta)
 			assistantRunes += deltaRunes
 			return nil
 		})
+		if flushErr := batch.flush(); flushErr != nil && err == nil {
+			err = flushErr
+		}
 		if err != nil {
 			return normalizeProviderError(runContext, err)
 		}
@@ -133,20 +197,23 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 		}
 		inputUsage += response.Usage.InputUnits
 		outputUsage += response.Usage.OutputUnits
-		if _, exceeded, err := orchestrator.service.addUsage(runContext, actor, runID, response.Usage); err != nil {
+		if err := revalidate(false); err != nil {
+			return err
+		}
+		if _, exceeded, err := orchestrator.service.addUsage(runContext, user, runID, response.Usage); err != nil {
 			return err
 		} else if exceeded {
 			return ErrQuotaExceeded
 		}
 		if response.ToolCall == nil {
-			content := strings.TrimSpace(assistant.String())
+			content := strings.TrimSpace(roundAssistant.String())
 			if content == "" && len(request.ToolResults) > 0 {
 				content = "Resultados disponíveis para consulta."
 			}
 			if !validText(content, MaximumMessageRunes, true) {
 				return ErrMalformedProvider
 			}
-			_, _, err := orchestrator.service.completeRun(runContext, actor, runID, content, inputUsage, outputUsage, requestID)
+			_, _, err := orchestrator.service.completeRun(runContext, user, runID, content, inputUsage, outputUsage, requestID)
 			return err
 		}
 		if round == maximumCalls {
@@ -163,7 +230,7 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 		if err != nil {
 			return ErrMalformedProvider
 		}
-		step, err := orchestrator.service.beginTool(runContext, actor, runID, call.Name, fingerprint)
+		step, err := orchestrator.service.beginTool(runContext, user, runID, call.Name, fingerprint)
 		if err != nil {
 			return err
 		}
@@ -171,9 +238,9 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 			slog.Warn("AI Chat tool step failed", "run_id", runID.String(), "step", step.Sequence, "tool_name", call.Name, "error", stepErr)
 			finalCtx, finalCancel := detachedFinalizationContext(runContext)
 			defer finalCancel()
-			_, _ = orchestrator.service.failTool(finalCtx, actor, step.ID, runID, publicErrorCode(stepErr), requestID)
+			_, _ = orchestrator.service.failTool(finalCtx, user, step.ID, runID, publicErrorCode(stepErr), requestID)
 		}
-		currentThread, err := orchestrator.service.Thread(runContext, actor, thread.ID, requestID)
+		currentThread, err := orchestrator.service.threadOwned(runContext, user, thread.ID, requestID)
 		if err != nil {
 			failStep(err)
 			return err
@@ -182,7 +249,7 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 		output, err := orchestrator.tools.Execute(runContext, actor, currentThread.ActiveResultReferenceID, runID, step.Sequence, call, currentThread.RetentionExpiresAt, requestID)
 		if err != nil {
 			if payload, ok := correctableToolPayload(err); ok {
-				if _, stepErr := orchestrator.service.failTool(runContext, actor, step.ID, runID, "invalid_input", requestID); stepErr != nil {
+				if _, stepErr := orchestrator.service.failTool(runContext, user, step.ID, runID, "invalid_input", requestID); stepErr != nil {
 					return stepErr
 				}
 				request.ToolResults = append(request.ToolResults, ModelToolResult{
@@ -200,7 +267,7 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 			failStep(err)
 			return err
 		}
-		_, reference, err := orchestrator.service.completeTool(runContext, actor, step, thread.ID, output, requestID)
+		_, reference, err := orchestrator.service.completeTool(runContext, user, step, thread.ID, output, requestID)
 		if err != nil {
 			failStep(err)
 			return err
@@ -217,6 +284,62 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 		}
 	}
 	return ErrQuotaExceeded
+}
+
+func (orchestrator *Orchestrator) failPanickedRun(ctx context.Context, actor auth.Session, runID Identifier, requestID string) {
+	finalCtx, finalCancel := detachedFinalizationContext(ctx)
+	defer finalCancel()
+	user, err := orchestrator.service.authorize(finalCtx, actor)
+	if err != nil {
+		return
+	}
+	_, _ = orchestrator.service.failRun(finalCtx, user, runID, "internal_error", requestID)
+}
+
+// textDeltaBatch groups token deltas for about 100ms, or until a provider chunk
+// would exceed the per-event rune cap, before one store write.
+type textDeltaBatch struct {
+	now    func() time.Time
+	write  func(string) error
+	buf    strings.Builder
+	runes  int
+	opened time.Time
+}
+
+func (batch *textDeltaBatch) add(delta string) error {
+	count := utf8.RuneCountInString(delta)
+	if batch.buf.Len() > 0 && (batch.expired() || batch.runes+count > maximumProviderDelta) {
+		if err := batch.flush(); err != nil {
+			return err
+		}
+	}
+	if batch.buf.Len() == 0 {
+		batch.opened = batch.now()
+	}
+	batch.buf.WriteString(delta)
+	batch.runes += count
+	if batch.runes >= maximumProviderDelta {
+		return batch.flush()
+	}
+	return nil
+}
+
+func (batch *textDeltaBatch) expired() bool {
+	if batch == nil || batch.opened.IsZero() || batch.now == nil {
+		return false
+	}
+	return !batch.now().Before(batch.opened.Add(textDeltaBatchWindow))
+}
+
+func (batch *textDeltaBatch) flush() error {
+	if batch == nil || batch.buf.Len() == 0 {
+		return nil
+	}
+	text := batch.buf.String()
+	batch.buf.Reset()
+	batch.runes = 0
+	batch.opened = time.Time{}
+	return batch.write(text)
 }
 
 func detachedFinalizationContext(parent context.Context) (context.Context, context.CancelFunc) {
@@ -256,40 +379,24 @@ func (orchestrator *Orchestrator) contextMessages(ctx context.Context, actor aut
 	return result, nil
 }
 
-func (service *Service) startRun(ctx context.Context, actor auth.Session, id Identifier, requestID string) (Run, error) {
-	user, err := service.authorize(ctx, actor)
-	if err != nil {
-		return Run{}, err
-	}
+func (service *Service) startRun(ctx context.Context, user auth.User, id Identifier, requestID string) (Run, error) {
 	run, err := service.store.StartRun(ctx, id, user.ID, service.now().UTC())
 	service.audit(ctx, &user.ID, nil, &id, nil, AuditRunStarted, auditOutcome(err), nil, nil, err, requestID)
 	return run, err
 }
 
-func (service *Service) appendText(ctx context.Context, actor auth.Session, id Identifier, delta string) (RunEvent, error) {
-	user, err := service.authorize(ctx, actor)
-	if err != nil {
-		return RunEvent{}, err
-	}
+func (service *Service) appendText(ctx context.Context, user auth.User, id Identifier, delta string) (RunEvent, error) {
 	if !validProviderDelta(delta) {
 		return RunEvent{}, ErrMalformedProvider
 	}
 	return service.store.AppendTextDelta(ctx, id, user.ID, delta, service.now().UTC())
 }
 
-func (service *Service) addUsage(ctx context.Context, actor auth.Session, id Identifier, usage ModelUsage) (Run, bool, error) {
-	user, err := service.authorize(ctx, actor)
-	if err != nil {
-		return Run{}, false, err
-	}
+func (service *Service) addUsage(ctx context.Context, user auth.User, id Identifier, usage ModelUsage) (Run, bool, error) {
 	return service.store.AddRunUsage(ctx, id, user.ID, usage.InputUnits, usage.OutputUnits, service.usageLimit, service.now().UTC())
 }
 
-func (service *Service) beginTool(ctx context.Context, actor auth.Session, runID Identifier, name string, fingerprint [sha256.Size]byte) (ToolStep, error) {
-	user, err := service.authorize(ctx, actor)
-	if err != nil {
-		return ToolStep{}, err
-	}
+func (service *Service) beginTool(ctx context.Context, user auth.User, runID Identifier, name string, fingerprint [sha256.Size]byte) (ToolStep, error) {
 	kind, ok := toolKindFromName(name)
 	if !ok || fingerprint == ([sha256.Size]byte{}) {
 		return ToolStep{}, ErrInvalidInput
@@ -301,11 +408,7 @@ func (service *Service) beginTool(ctx context.Context, actor auth.Session, runID
 	return service.store.BeginTool(ctx, BeginToolInput{ID: id, RunID: runID, OwnerUserID: user.ID, Kind: kind, ArgumentsFingerprint: fingerprint, Now: service.now().UTC()})
 }
 
-func (service *Service) completeTool(ctx context.Context, actor auth.Session, step ToolStep, threadID Identifier, output ToolOutput, requestID string) (ToolStep, *ResultReference, error) {
-	user, err := service.authorize(ctx, actor)
-	if err != nil {
-		return ToolStep{}, nil, err
-	}
+func (service *Service) completeTool(ctx context.Context, user auth.User, step ToolStep, threadID Identifier, output ToolOutput, requestID string) (ToolStep, *ResultReference, error) {
 	if !output.Kind.Valid() || output.Kind != step.Kind || output.RowCount < 0 || output.RowCount > MaximumToolRows ||
 		output.FieldCount < 0 || output.FieldCount > MaximumToolFields || output.ByteCount != len(output.Payload) ||
 		output.ByteCount < 0 || output.ByteCount > MaximumToolResultBytes || !json.Valid(output.Payload) {
@@ -348,12 +451,7 @@ func validResultReferenceDraft(reference ResultReferenceDraft, output ToolOutput
 	return (reference.Kind == ResultReferenceQuery) == (reference.QueryExecutionID != nil)
 }
 
-func (service *Service) failTool(ctx context.Context, actor auth.Session, stepID, runID Identifier, code, requestID string) (ToolStep, error) {
-	user, err := service.authorize(ctx, actor)
-	if err != nil {
-		service.audit(ctx, auditActor(actor), nil, &runID, nil, AuditToolExecuted, auditOutcome(err), nil, nil, err, requestID)
-		return ToolStep{}, err
-	}
+func (service *Service) failTool(ctx context.Context, user auth.User, stepID, runID Identifier, code, requestID string) (ToolStep, error) {
 	if code == "" || len(code) > 80 {
 		code = "tool_failed"
 	}
@@ -371,11 +469,7 @@ func (service *Service) failTool(ctx context.Context, actor auth.Session, stepID
 	return step, err
 }
 
-func (service *Service) completeRun(ctx context.Context, actor auth.Session, runID Identifier, content string, inputUsage, outputUsage int64, requestID string) (Run, Message, error) {
-	user, err := service.authorize(ctx, actor)
-	if err != nil {
-		return Run{}, Message{}, err
-	}
+func (service *Service) completeRun(ctx context.Context, user auth.User, runID Identifier, content string, inputUsage, outputUsage int64, requestID string) (Run, Message, error) {
 	if !validText(content, MaximumMessageRunes, true) || inputUsage < 0 || outputUsage < 0 {
 		return Run{}, Message{}, ErrMalformedProvider
 	}
@@ -389,11 +483,7 @@ func (service *Service) completeRun(ctx context.Context, actor auth.Session, run
 	return run, message, err
 }
 
-func (service *Service) failRun(ctx context.Context, actor auth.Session, runID Identifier, code, requestID string) (Run, error) {
-	user, err := service.authorize(ctx, actor)
-	if err != nil {
-		return Run{}, err
-	}
+func (service *Service) failRun(ctx context.Context, user auth.User, runID Identifier, code, requestID string) (Run, error) {
 	if code == "" || len(code) > 80 {
 		code = "internal_error"
 	}
@@ -450,6 +540,8 @@ func normalizeProviderError(ctx context.Context, err error) error {
 		return ErrQuotaExceeded
 	case errors.Is(err, ErrMalformedProvider), errors.Is(err, ErrInvalidInput):
 		return ErrMalformedProvider
+	case errors.Is(err, ErrForbidden), errors.Is(err, ErrNotFound), errors.Is(err, ErrStaleContext):
+		return err
 	case errors.Is(err, ErrProviderUnavailable):
 		return ErrUnavailable
 	default:

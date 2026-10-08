@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { StatusBanner } from "../../components/StatusBanner";
 import { useI18n } from "../../i18n";
 import type { AttachmentOwner } from "../api/attachments";
@@ -16,6 +16,7 @@ import {
   persistPendingDocument,
   persistDocumentForm,
   resolveOrCreateProfile,
+  storedRecordOf,
 } from "./cadastroPersist";
 import {
   cpfDigits,
@@ -80,7 +81,11 @@ export function CadastroSingleScreen({
   const [documents, setDocuments] = useState<PendingDoc[]>([]);
   const [bills, setBills] = useState<PendingBill[]>([]);
   const [saving, setSaving] = useState(false);
+  const saveLock = useRef(false);
   const [persistError, setPersistError] = useState<string | null>(null);
+  const [standaloneRecord, setStandaloneRecord] = useState<{ id: string; version: number } | null>(
+    null,
+  );
   const [ocrOwner, setOcrOwner] = useState<AttachmentOwner | null>(null);
   const [savedName, setSavedName] = useState("");
 
@@ -221,7 +226,12 @@ export function CadastroSingleScreen({
           ...docFields,
           docTypeId: docFields.docTypeId || selectedDocType?.id || "",
         };
-        const saved = await persistDocumentForm({ ownerProfileId: ownerId, fields });
+        const saved = await persistDocumentForm({
+          ownerProfileId: ownerId,
+          fields,
+          ...(standaloneRecord ? { existing: standaloneRecord } : {}),
+        });
+        setStandaloneRecord(null);
         lastOcr = saved.ocrOwner;
       } else if (mode === "bills") {
         const fields = {
@@ -233,25 +243,92 @@ export function CadastroSingleScreen({
           fields,
           demographics,
           fallbackHolder: copy.holderFallbackDefault,
+          ...(standaloneRecord ? { existing: standaloneRecord } : {}),
         });
+        setStandaloneRecord(null);
         lastOcr = saved.ocrOwner;
       } else {
         for (const doc of documents) {
-          const saved = await persistPendingDocument({ ownerProfileId: ownerId, doc });
-          if (saved.ocrOwner) lastOcr = saved.ocrOwner;
+          if (doc.savedRecordId && !doc.followUpPending) continue;
+          try {
+            const saved = await persistPendingDocument({ ownerProfileId: ownerId, doc });
+            setDocuments((current) =>
+              current.map((item) =>
+                item.id === doc.id
+                  ? {
+                      ...item,
+                      savedRecordId: saved.record.id,
+                      savedRecordVersion: saved.record.version,
+                      saveStatus: "saved",
+                      followUpPending: false,
+                    }
+                  : item,
+              ),
+            );
+            if (saved.ocrOwner) lastOcr = saved.ocrOwner;
+          } catch (caught) {
+            const stored = storedRecordOf(caught);
+            setDocuments((current) =>
+              current.map((item) => {
+                if (item.id !== doc.id) return item;
+                if (!stored) return { ...item, saveStatus: "error" };
+                return {
+                  ...item,
+                  savedRecordId: stored.id,
+                  savedRecordVersion: stored.version,
+                  saveStatus: "saved",
+                  followUpPending: true,
+                };
+              }),
+            );
+            throw caught;
+          }
         }
         for (const bill of bills) {
-          const saved = await persistPendingBill({
-            ownerProfileId: ownerId,
-            bill,
-            demographics,
-            fallbackHolder: copy.holderFallbackDefault,
-          });
-          if (saved.ocrOwner) lastOcr = saved.ocrOwner;
+          if (bill.savedRecordId && !bill.followUpPending) continue;
+          try {
+            const saved = await persistPendingBill({
+              ownerProfileId: ownerId,
+              bill,
+              demographics,
+              fallbackHolder: copy.holderFallbackDefault,
+            });
+            setBills((current) =>
+              current.map((item) =>
+                item.id === bill.id
+                  ? {
+                      ...item,
+                      savedRecordId: saved.record.id,
+                      savedRecordVersion: saved.record.version,
+                      saveStatus: "saved",
+                      followUpPending: false,
+                    }
+                  : item,
+              ),
+            );
+            if (saved.ocrOwner) lastOcr = saved.ocrOwner;
+          } catch (caught) {
+            const stored = storedRecordOf(caught);
+            setBills((current) =>
+              current.map((item) => {
+                if (item.id !== bill.id) return item;
+                if (!stored) return { ...item, saveStatus: "error" };
+                return {
+                  ...item,
+                  savedRecordId: stored.id,
+                  savedRecordVersion: stored.version,
+                  saveStatus: "saved",
+                  followUpPending: true,
+                };
+              }),
+            );
+            throw caught;
+          }
         }
       }
 
       void queryClient.invalidateQueries({ queryKey: queryKeys.tables.profiles() });
+      void queryClient.invalidateQueries({ queryKey: ["global-search"] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.profiles.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.records.documents() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.records.bills() });
@@ -279,6 +356,10 @@ export function CadastroSingleScreen({
       }
       finish(name);
     } catch (caught) {
+      if (mode === "documents" || mode === "bills") {
+        const stored = storedRecordOf(caught);
+        if (stored) setStandaloneRecord(stored);
+      }
       setPersistError(errorMessage(caught) || messages.common.labels.saveError);
     } finally {
       setSaving(false);
@@ -286,12 +367,16 @@ export function CadastroSingleScreen({
   };
 
   const handlePrimary = () => {
+    if (saveLock.current || saving) return;
     const error = validate();
     if (error) {
       setPersistError(error);
       return;
     }
-    void handlePersist();
+    saveLock.current = true;
+    void handlePersist().finally(() => {
+      saveLock.current = false;
+    });
   };
 
   const crumbCurrentTitle =
@@ -394,8 +479,12 @@ export function CadastroSingleScreen({
             onChangeFamily={(patch) => setFamily((prev) => ({ ...prev, ...patch }))}
             onClearProfile={handleClearProfile}
             onDraftName={handleDraftName}
-            onRemoveBill={(id) => setBills((prev) => prev.filter((b) => b.id !== id))}
-            onRemoveDoc={(id) => setDocuments((prev) => prev.filter((d) => d.id !== id))}
+            onRemoveBill={(id) =>
+              setBills((prev) => prev.filter((item) => item.id !== id || item.savedRecordId))
+            }
+            onRemoveDoc={(id) =>
+              setDocuments((prev) => prev.filter((item) => item.id !== id || item.savedRecordId))
+            }
             onSelectNewName={handleSelectNewName}
             onSelectProfile={applyProfileToState}
             onUseExisting={applyProfileToState}

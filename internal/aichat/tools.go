@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -21,6 +22,13 @@ const maximumToolCellRunes = 500
 const maximumModelSampleRows = 3
 const maximumCompactEnumOptions = 12
 const compactCatalogNotePrefix = "Cadastro lógico: "
+const compactCatalogNoteTTL = 60 * time.Second
+
+type compactCatalogNoteCache struct {
+	note      string
+	version   string
+	expiresAt time.Time
+}
 const sampleNote = "total e match_count são a quantidade no cadastro inteiro. As linhas são só uma amostra para exemplos."
 const advancedNote = "rows são o agrupamento, o padrão ou o conjunto, não uma amostra de cadastros. Numa contagem única, match_count é o total."
 
@@ -82,6 +90,8 @@ type ToolGateway struct {
 	query  QueryPort
 	refs   ResultReferencePort
 	now    func() time.Time
+	catalogNoteMu sync.Mutex
+	catalogNote   compactCatalogNoteCache
 }
 
 func NewToolGateway(search SearchPort, query QueryPort, references ResultReferencePort, now func() time.Time) (*ToolGateway, error) {
@@ -294,13 +304,39 @@ func (gateway *ToolGateway) CompactCatalogNote(ctx context.Context, actor auth.S
 	if gateway == nil || gateway.query == nil {
 		return "", ErrInvalidSetup
 	}
+	now := gateway.now().UTC()
+	gateway.catalogNoteMu.Lock()
+	cached := gateway.catalogNote
+	if cached.note != "" && now.Before(cached.expiresAt) {
+		note := cached.note
+		gateway.catalogNoteMu.Unlock()
+		return note, nil
+	}
+	gateway.catalogNoteMu.Unlock()
 	catalog, err := gateway.query.Catalog(ctx, actor, requestID)
 	note := compactCatalogNote(catalog)
 	if note == "" {
 		return "", err
 	}
+	gateway.rememberCatalogNote(catalog, note, now)
 	return note, nil
 }
+
+func (gateway *ToolGateway) rememberCatalogNote(catalog querydomain.Catalog, note string, now time.Time) {
+	if gateway == nil || note == "" {
+		return
+	}
+	gateway.catalogNoteMu.Lock()
+	defer gateway.catalogNoteMu.Unlock()
+	// Invalidate by catalog version: a newer version always replaces the cache.
+	if gateway.catalogNote.version != "" && catalog.Version != "" && gateway.catalogNote.version != catalog.Version {
+		gateway.catalogNote = compactCatalogNoteCache{}
+	}
+	gateway.catalogNote = compactCatalogNoteCache{
+		note: note, version: catalog.Version, expiresAt: now.Add(compactCatalogNoteTTL),
+	}
+}
+
 
 func (gateway *ToolGateway) catalog(ctx context.Context, actor auth.Session, raw json.RawMessage, requestID string) (ToolOutput, error) {
 	var request struct{}
@@ -310,6 +346,9 @@ func (gateway *ToolGateway) catalog(ctx context.Context, actor auth.Session, raw
 	queryCatalog, err := gateway.query.Catalog(ctx, actor, requestID)
 	if err != nil {
 		return ToolOutput{}, normalizeToolError(err)
+	}
+	if note := compactCatalogNote(queryCatalog); note != "" {
+		gateway.rememberCatalogNote(queryCatalog, note, gateway.now().UTC())
 	}
 	payload, err := marshalBoundedToolPayload(compactQueryCatalog(queryCatalog))
 	if err != nil {

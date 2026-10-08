@@ -1,10 +1,12 @@
 package aichat
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -37,8 +39,17 @@ func TestOrchestratorCompletesTextOnlyTurnWithPersistedOrderedEvents(t *testing.
 		t.Fatalf("messages = %#v", messages.Messages)
 	}
 	events, _ := fixture.service.Events(context.Background(), fixture.actor, run.ID, 0, 100)
-	if !events.Terminal || len(events.Events) != 5 || events.Events[len(events.Events)-1].Kind != EventRunCompleted {
+	if !events.Terminal || events.Events[len(events.Events)-1].Kind != EventRunCompleted {
 		t.Fatalf("events = %#v", events)
+	}
+	var deltas []string
+	for _, event := range events.Events {
+		if event.Kind == EventTextDelta {
+			deltas = append(deltas, event.TextDelta)
+		}
+	}
+	if len(deltas) != 1 || deltas[0] != "Olá, mundo." {
+		t.Fatalf("batched deltas = %#v", deltas)
 	}
 	for index, event := range events.Events {
 		if event.Sequence != int64(index+1) {
@@ -47,7 +58,7 @@ func TestOrchestratorCompletesTextOnlyTurnWithPersistedOrderedEvents(t *testing.
 	}
 }
 
-func TestOrchestratorExecutesReadOnlyToolAndPreservesAllAssistantText(t *testing.T) {
+func TestOrchestratorExecutesReadOnlyToolAndPersistsOnlyTheLastAssistantRound(t *testing.T) {
 	provider := NewFakeProvider(
 		FakeModelStep{Deltas: []string{"Consultando..."}, ToolCall: &ToolCall{ID: "call-search", Name: "search", Arguments: json.RawMessage(`{"terms":["Recife"],"limit":10}`)}, Usage: ModelUsage{InputUnits: 3, OutputUnits: 2}},
 		FakeModelStep{Deltas: []string{" Encontrei uma pessoa."}, Usage: ModelUsage{InputUnits: 4, OutputUnits: 3}},
@@ -61,7 +72,7 @@ func TestOrchestratorExecutesReadOnlyToolAndPreservesAllAssistantText(t *testing
 		t.Fatalf("RunTurn() error = %v", err)
 	}
 	messages, _ := fixture.service.Messages(context.Background(), fixture.actor, fixture.thread.ID, 100, 0, "messages")
-	if got := messages.Messages[len(messages.Messages)-1].Content; got != "Consultando... Encontrei uma pessoa." {
+	if got := messages.Messages[len(messages.Messages)-1].Content; got != "Encontrei uma pessoa." {
 		t.Fatalf("assistant content = %q", got)
 	}
 	thread, _ := fixture.service.Thread(context.Background(), fixture.actor, fixture.thread.ID, "thread")
@@ -86,6 +97,22 @@ func TestOrchestratorExecutesReadOnlyToolAndPreservesAllAssistantText(t *testing
 	events, _ := fixture.service.Events(context.Background(), fixture.actor, creation.Run.ID, 0, 100)
 	if !eventKindsContain(events.Events, EventToolStarted, EventToolCompleted, EventResultReference, EventRunCompleted) {
 		t.Fatalf("tool events = %#v", events.Events)
+	}
+	streamed := ""
+	for _, event := range events.Events {
+		streamed += event.TextDelta
+	}
+	if !strings.Contains(streamed, "Consultando...") || !strings.Contains(streamed, "Encontrei uma pessoa.") {
+		t.Fatalf("stream dropped round text = %q", streamed)
+	}
+	sawNarration := false
+	for _, message := range requests[1].Messages {
+		if strings.Contains(message.Content, "Consultando...") {
+			sawNarration = true
+		}
+	}
+	if !sawNarration {
+		t.Fatal("model context lost the intermediate assistant round")
 	}
 }
 
@@ -327,4 +354,167 @@ func eventKindsContain(events []RunEvent, kinds ...EventKind) bool {
 		}
 	}
 	return true
+}
+
+func TestOrchestratorBatchesTextDeltasAndFlushesTheLastChunkOnFailure(t *testing.T) {
+	const tokens = 12
+	failing := modelClientFunc(func(_ context.Context, _ ModelRequest, emit func(string) error) (ModelResponse, error) {
+		for range tokens {
+			if err := emit("x"); err != nil {
+				return ModelResponse{}, err
+			}
+		}
+		return ModelResponse{}, ErrProviderUnavailable
+	})
+	fixture := newOrchestratorFixture(t, 1000, failing)
+	creation := fixture.startTurn(t, "Gere texto", "batch-fail-turn")
+	err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "batch-fail")
+	if !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("RunTurn() error = %v", err)
+	}
+	run, _ := fixture.service.Run(context.Background(), fixture.actor, creation.Run.ID)
+	if run.State != RunFailed || run.ErrorCode != "unavailable" {
+		t.Fatalf("failed run = %#v", run)
+	}
+	events, _ := fixture.service.Events(context.Background(), fixture.actor, run.ID, 0, 100)
+	var deltas []string
+	for _, event := range events.Events {
+		if event.Kind == EventTextDelta {
+			deltas = append(deltas, event.TextDelta)
+		}
+	}
+	if len(deltas) != 1 || deltas[0] != strings.Repeat("x", tokens) {
+		t.Fatalf("deltas = %#v", deltas)
+	}
+	if events.Events[len(events.Events)-1].Kind != EventRunFailed {
+		t.Fatalf("terminal event = %#v", events.Events[len(events.Events)-1])
+	}
+}
+
+func TestOrchestratorFlushesTextBatchWhenTheWindowElapses(t *testing.T) {
+	current := time.Date(2026, time.July, 18, 19, 0, 0, 0, time.UTC)
+	provider := modelClientFunc(func(_ context.Context, _ ModelRequest, emit func(string) error) (ModelResponse, error) {
+		if err := emit("aa"); err != nil {
+			return ModelResponse{}, err
+		}
+		current = current.Add(textDeltaBatchWindow)
+		if err := emit("bb"); err != nil {
+			return ModelResponse{}, err
+		}
+		return ModelResponse{Usage: ModelUsage{InputUnits: 1, OutputUnits: 1}}, nil
+	})
+	fixture := newOrchestratorFixture(t, 1000, provider)
+	fixture.service.now = func() time.Time { return current }
+	creation := fixture.startTurn(t, "Janela", "batch-window-turn")
+	if err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "batch-window"); err != nil {
+		t.Fatalf("RunTurn() error = %v", err)
+	}
+	events, _ := fixture.service.Events(context.Background(), fixture.actor, creation.Run.ID, 0, 100)
+	var deltas []string
+	for _, event := range events.Events {
+		if event.Kind == EventTextDelta {
+			deltas = append(deltas, event.TextDelta)
+		}
+	}
+	if len(deltas) != 2 || deltas[0] != "aa" || deltas[1] != "bb" {
+		t.Fatalf("windowed deltas = %#v", deltas)
+	}
+}
+
+func TestCoordinatorRecoversPanicsAndFailsTheRun(t *testing.T) {
+	t.Run("provider", func(t *testing.T) {
+		assertPanicFailsRun(t, modelClientFunc(func(context.Context, ModelRequest, func(string) error) (ModelResponse, error) {
+			panic("provider exploded")
+		}), false)
+	})
+	t.Run("tool", func(t *testing.T) {
+		provider := NewFakeProvider(FakeModelStep{ToolCall: &ToolCall{ID: "call-search", Name: "search", Arguments: json.RawMessage(`{"terms":["Ana"],"limit":10}`)}})
+		assertPanicFailsRun(t, provider, true)
+	})
+}
+
+func assertPanicFailsRun(t *testing.T, provider ModelClient, boomTool bool) {
+	t.Helper()
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	fixture := newOrchestratorFixture(t, 1000, provider)
+	if boomTool {
+		fixture.search.boom = true
+	}
+	creation := fixture.startTurn(t, "Entre em panico", "panic-turn-"+strings.NewReplacer("/", "-", " ", "-").Replace(t.Name()))
+	coordinator, err := NewCoordinator(context.Background(), fixture.orchestrator)
+	if err != nil {
+		t.Fatalf("NewCoordinator() error = %v", err)
+	}
+	coordinator.logger = logger
+	if !coordinator.Start(fixture.actor, creation.Run.ID, "panic-run") {
+		t.Fatal("Coordinator.Start() = false")
+	}
+	waitCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := coordinator.Wait(waitCtx); err != nil {
+		t.Fatalf("Coordinator.Wait() error = %v", err)
+	}
+	run, runErr := fixture.service.Run(context.Background(), fixture.actor, creation.Run.ID)
+	if runErr != nil || run.State != RunFailed || run.ErrorCode != "internal_error" {
+		t.Fatalf("panicked run = %#v, error=%v", run, runErr)
+	}
+	logged := buf.String()
+	if !strings.Contains(logged, "panicked") && !strings.Contains(logged, "exploded") && !strings.Contains(logged, "search panicked") {
+		t.Fatalf("panic was not logged, log = %q", logged)
+	}
+}
+
+
+func TestRunTurnAuthorizeInsertQueryCountDropsOnLargeDeltaReply(t *testing.T) {
+	const tokens = 300
+	deltas := make([]string, tokens)
+	for i := range deltas {
+		deltas[i] = "x"
+	}
+	fixture := newOrchestratorFixture(t, 1000, NewFakeProvider(FakeModelStep{
+		Deltas: deltas, Usage: ModelUsage{InputUnits: 1, OutputUnits: 1},
+	}))
+	creation := fixture.startTurn(t, "Gere muito texto", "query-count-300")
+	fixture.store.ResetQueryCounts()
+	if err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "run-300"); err != nil {
+		t.Fatalf("RunTurn() error = %v", err)
+	}
+	after := fixture.store.QueryCount("CurrentUser", "AppendTextDelta")
+	// Baseline: one CurrentUser authorize + one AppendTextDelta insert per token.
+	before := tokens * 2
+	if after*10 > before {
+		t.Fatalf("authorize+insert queries = %d, want at most %d (10x below baseline %d); counts=%v",
+			after, before/10, before, fixture.store.queryCounts)
+	}
+	ratio := float64(before)
+	if after > 0 {
+		ratio = float64(before) / float64(after)
+	}
+	t.Logf("300-delta authorize+insert queries: baseline=%d after=%d (%.1fx)", before, after, ratio)
+}
+
+func TestRunTurnRevalidatesDeactivatedUserWithinTTL(t *testing.T) {
+	current := time.Date(2026, time.July, 18, 19, 0, 0, 0, time.UTC)
+	var fixture *orchestratorFixture
+	provider := modelClientFunc(func(_ context.Context, _ ModelRequest, emit func(string) error) (ModelResponse, error) {
+		if err := emit("parte-1 "); err != nil {
+			return ModelResponse{}, err
+		}
+		current = current.Add(authorizationCacheTTL + time.Second)
+		user := fixture.store.users[fixture.actor.User.ID]
+		user.Active = false
+		fixture.store.users[fixture.actor.User.ID] = user
+		if err := emit("parte-2"); err != nil {
+			return ModelResponse{}, err
+		}
+		return ModelResponse{Usage: ModelUsage{InputUnits: 1, OutputUnits: 1}}, nil
+	})
+	fixture = newOrchestratorFixture(t, 1000, provider)
+	fixture.service.now = func() time.Time { return current }
+	creation := fixture.startTurn(t, "Continue", "deactivate-ttl-turn")
+	err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "deactivate-ttl")
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("RunTurn(deactivated within TTL) error = %v, want ErrForbidden", err)
+	}
 }

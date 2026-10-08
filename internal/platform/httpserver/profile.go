@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
@@ -163,9 +164,16 @@ type profileResponse struct {
 	DocumentIdentifiers map[string]string         `json:"document_identifiers"`
 	DocumentBadges      []profileDocumentBadge    `json:"document_badges"`
 	DocumentPresences   []profileDocumentPresence `json:"document_presences"`
+	SearchEvidence      *profileSearchEvidence    `json:"search_evidence,omitempty"`
 	Version             int64                     `json:"version"`
 	CreatedAt           time.Time                 `json:"created_at"`
 	UpdatedAt           time.Time                 `json:"updated_at"`
+}
+
+type profileSearchEvidence struct {
+	Label              string `json:"label"`
+	Snippet            string `json:"snippet"`
+	OtherHiddenMatches int    `json:"other_hidden_matches"`
 }
 
 type profilePageResponse struct {
@@ -206,23 +214,63 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 			writeProblem(w, r, *parseProblem)
 			return
 		}
-		restrict, ids, searchProblem := applySearchQ(r, actor, search, searchdomain.ModuleProfiles)
-		if searchProblem != nil {
-			writeProblem(w, r, *searchProblem)
-			return
+		queryText := strings.TrimSpace(r.URL.Query().Get("q"))
+		restrict := false
+		var searchIDs []string
+		var hits []searchdomain.ProfileHit
+		if queryText != "" {
+			if search == nil {
+				writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "O módulo de busca não está configurado"})
+				return
+			}
+			var matchErr error
+			hits, matchErr = search.MatchProfileHits(r.Context(), actor, searchdomain.Query{Q: queryText})
+			if matchErr != nil {
+				writeProblem(w, r, *searchListProblem(matchErr))
+				return
+			}
+			restrict = true
+			searchIDs = searchdomain.ProfileIDsFromHits(hits)
+		}
+		fetchLimit, fetchOffset := limit, offset
+		if queryText != "" {
+			fetchLimit = int32(len(searchIDs))
+			if fetchLimit < 1 {
+				fetchLimit = 1
+			}
+			if fetchLimit > 1000 {
+				fetchLimit = 1000
+			}
+			fetchOffset = 0
 		}
 		page, err := service.List(r.Context(), actor, profile.ListOptions{
-			Limit: limit, Offset: offset, SortField: profile.SortField(r.URL.Query().Get("sort")), SortOrder: profile.SortOrder(r.URL.Query().Get("order")),
-			Filters: profile.Filters{FullName: r.URL.Query().Get("full_name"), CPF: r.URL.Query().Get("cpf"), Email: r.URL.Query().Get("email"), City: r.URL.Query().Get("city"), State: r.URL.Query().Get("state"), RestrictIDs: restrict, IDFilter: profileIDsFromSearch(ids)},
+			Limit: fetchLimit, Offset: fetchOffset, SortField: profile.SortField(r.URL.Query().Get("sort")), SortOrder: profile.SortOrder(r.URL.Query().Get("order")),
+			Filters: profile.Filters{FullName: r.URL.Query().Get("full_name"), CPF: r.URL.Query().Get("cpf"), Email: r.URL.Query().Get("email"), City: r.URL.Query().Get("city"), State: r.URL.Query().Get("state"), RestrictIDs: restrict, IDFilter: profileIDsFromSearch(searchIDs)},
 		})
 		if err != nil {
 			writeProfileError(w, r, logger, "list profiles", err)
 			return
 		}
-		response := profilePageResponse{Profiles: make([]profileResponse, 0, len(page.Profiles)), Page: profilePageMeta{Total: page.Total, Limit: page.Limit, Offset: page.Offset, SortField: string(page.SortField), SortOrder: string(page.SortOrder)}}
 		reveal := actor.User.Role.CanWriteProfiles()
-		for _, value := range page.Profiles {
-			response.Profiles = append(response.Profiles, profileFromDomain(value, reveal))
+		profiles := page.Profiles
+		var evidence map[string]searchdomain.HiddenFieldEvidence
+		if queryText != "" {
+			sorted := make([]string, 0, len(page.Profiles))
+			for _, value := range page.Profiles {
+				sorted = append(sorted, value.ID.String())
+			}
+			columns, useDefault := profileVisibleColumns(r)
+			ordered, hidden := searchdomain.PartitionProfileIDs(sorted, hits, columns, useDefault, nil, queryText)
+			evidence = hidden
+			profiles = pageProfilesInOrder(page.Profiles, paginateStrings(ordered, int(offset), int(limit)))
+		}
+		response := profilePageResponse{Profiles: make([]profileResponse, 0, len(profiles)), Page: profilePageMeta{Total: page.Total, Limit: limit, Offset: offset, SortField: string(page.SortField), SortOrder: string(page.SortOrder)}}
+		for _, value := range profiles {
+			item := profileFromDomain(value, reveal)
+			if ev, ok := evidence[item.ID]; ok {
+				item.SearchEvidence = &profileSearchEvidence{Label: ev.Label, Snippet: ev.Snippet, OtherHiddenMatches: ev.OtherHiddenMatches}
+			}
+			response.Profiles = append(response.Profiles, item)
 		}
 		enrichProfileList(r.Context(), pool, logger, response.Profiles, reveal)
 		writeJSON(w, http.StatusOK, response)
@@ -376,6 +424,55 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}))
+}
+
+func profileVisibleColumns(r *http.Request) ([]string, bool) {
+	if !r.URL.Query().Has("columns") {
+		return nil, true
+	}
+	columns := make([]string, 0)
+	for _, value := range r.URL.Query()["columns"] {
+		for _, part := range strings.Split(value, ",") {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				columns = append(columns, part)
+			}
+		}
+	}
+	return columns, false
+}
+
+func paginateStrings(values []string, offset, limit int) []string {
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > len(values) {
+		return []string{}
+	}
+	if limit < 1 {
+		limit = len(values) - offset
+	}
+	end := offset + limit
+	if end > len(values) {
+		end = len(values)
+	}
+	return values[offset:end]
+}
+
+func pageProfilesInOrder(profiles []profile.Profile, ids []string) []profile.Profile {
+	byID := make(map[string]profile.Profile, len(profiles))
+	for _, value := range profiles {
+		byID[value.ID.String()] = value
+	}
+	ordered := make([]profile.Profile, 0, len(ids))
+	for _, id := range ids {
+		value, ok := byID[id]
+		if !ok {
+			continue
+		}
+		ordered = append(ordered, value)
+	}
+	return ordered
 }
 
 func (request profileValuesRequest) domainValues() profile.Values {

@@ -18,6 +18,7 @@ import { t } from "../../i18n";
 import { ColumnFunnel, type ColumnFunnelCopy } from "./ColumnFunnel";
 import type { ToolbarFilterField } from "./FilterControl";
 import { clampColumnWidth } from "./useSheetColumnWidths";
+import { columnHasResizeHandle, dragSheetDivider, fillSheetColumnWidths } from "./sheetColumnLayout";
 
 export type SpreadsheetColumn<T> = {
   key: string;
@@ -92,7 +93,12 @@ function paintColumnVars(root: HTMLElement, widths: number[], tableWidth: number
 }
 
 /** Keep header + virtual body on the same pixel widths while dragging. */
-function applyLiveColumnWidth(th: HTMLElement, width: number, tableWidth: number) {
+function applyLiveColumnWidth(
+  th: HTMLElement,
+  width: number,
+  tableWidth: number,
+  markResizing = true,
+) {
   const root = th.closest(".spreadsheet-table");
   if (!(root instanceof HTMLElement)) return;
   const headerRow = th.parentElement;
@@ -115,14 +121,14 @@ function applyLiveColumnWidth(th: HTMLElement, width: number, tableWidth: number
     if (cell instanceof HTMLElement) paintCellWidth(cell, width);
   });
 
-  const resizing = document.body.classList.contains("spreadsheet-col-resizing");
+  const resizing = markResizing && document.body.classList.contains("spreadsheet-col-resizing");
   root
     .querySelectorAll<HTMLElement>(".ant-table-tbody-virtual-holder-inner > div")
     .forEach((row) => {
       const cell = row.children[index];
       if (cell instanceof HTMLElement) {
         paintCellWidth(cell, width);
-        cell.classList.toggle("is-resizing", resizing);
+        if (markResizing) cell.classList.toggle("is-resizing", resizing);
       }
       row.style.width = pxTotal;
       row.style.minWidth = pxTotal;
@@ -215,11 +221,31 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     [columnWidths],
   );
 
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const preferredWidths = useMemo(
+    () => [
+      ...(rowActions ? [SHEET_COLUMN_WIDTH.actions] : []),
+      ...columns.map((column) => resolvedWidth(column)),
+    ],
+    [columns, resolvedWidth, rowActions],
+  );
+  const displayWidths = useMemo(
+    () => fillSheetColumnWidths(preferredWidths, viewportWidth),
+    [preferredWidths, viewportWidth],
+  );
   const tableWidth = Math.max(
     1,
-    (rowActions ? SHEET_COLUMN_WIDTH.actions : 0) +
-      columns.reduce((sum, column) => sum + resolvedWidth(column), 0),
+    displayWidths.reduce((sum, width) => sum + width, 0),
   );
+  const displayWidthByKey = useMemo(() => {
+    const offset = rowActions ? 1 : 0;
+    return new Map(
+      columns.map((column, index) => [
+        column.key,
+        displayWidths[offset + index] ?? resolvedWidth(column),
+      ]),
+    );
+  }, [columns, displayWidths, resolvedWidth, rowActions]);
 
   // Remount when the column set changes (assistant recorte / formulas) so Ant's
   // header colgroup and virtual body do not keep widths from the previous layout.
@@ -227,6 +253,8 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     () => `${rowActions ? "a|" : ""}${columns.map((column) => column.key).join("|")}`,
     [columns, rowActions],
   );
+
+  const resizingRef = useRef(false);
 
   const startResize = useCallback(
     (event: ReactPointerEvent<HTMLElement>, columnKey: string, startWidth: number) => {
@@ -261,11 +289,15 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
 
       const startX = event.clientX;
       const startTotal = tableWidth;
-      let current = startWidth;
+      const startWidths = displayWidths.slice();
+      let currentWidths = startWidths.slice();
       let frame = 0;
 
       const root = th.closest(".spreadsheet-table");
       const columnIndex = Array.prototype.indexOf.call(th.parentElement?.children ?? [], th);
+      const offset = rowActions ? 1 : 0;
+      const neighborKey = columns[columnIndex - offset + 1]?.key;
+      const neighbor = th.parentElement?.children[columnIndex + 1];
 
       const setResizingClass = (on: boolean) => {
         th.classList.toggle("is-resizing", on);
@@ -278,19 +310,30 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
       };
 
       setResizingClass(true);
+      resizingRef.current = true;
       document.body.classList.add("spreadsheet-col-resizing");
       th.setPointerCapture(event.pointerId);
 
-      const paint = (next: number) => {
-        applyLiveColumnWidth(th, next, startTotal + (next - startWidth));
+      const paint = (widths: number[]) => {
+        const dragged = widths[columnIndex];
+        if (dragged === undefined) return;
+        applyLiveColumnWidth(th, dragged, startTotal);
+        const neighborWidth = widths[columnIndex + 1];
+        if (neighbor instanceof HTMLElement && neighborWidth !== undefined) {
+          applyLiveColumnWidth(neighbor, neighborWidth, startTotal, false);
+        }
       };
 
       const onMove = (move: PointerEvent) => {
-        current = clampColumnWidth(startWidth + (move.clientX - startX));
+        currentWidths = dragSheetDivider(
+          startWidths,
+          columnIndex,
+          clampColumnWidth(startWidth + (move.clientX - startX)),
+        );
         if (frame) return;
         frame = requestAnimationFrame(() => {
           frame = 0;
-          paint(current);
+          paint(currentWidths);
         });
       };
 
@@ -300,19 +343,31 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
         th.removeEventListener("pointermove", onMove);
         th.removeEventListener("pointerup", onUp);
         th.removeEventListener("pointercancel", onUp);
-        paint(current);
+        paint(currentWidths);
         setResizingClass(false);
+        resizingRef.current = false;
         document.body.classList.remove("spreadsheet-col-resizing");
         // Any pointer on the resize edge must not sort — including click / dblclick with no drag.
         suppressSortClick.current = true;
-        if (current !== startWidth) onColumnWidth(columnKey, current);
+        const dragged = currentWidths[columnIndex];
+        if (dragged !== undefined && dragged !== startWidth) onColumnWidth(columnKey, dragged);
+        const neighborWidth = currentWidths[columnIndex + 1];
+        const startNeighbor = startWidths[columnIndex + 1];
+        if (
+          neighborKey &&
+          neighborWidth !== undefined &&
+          startNeighbor !== undefined &&
+          neighborWidth !== startNeighbor
+        ) {
+          onColumnWidth(neighborKey, neighborWidth);
+        }
       };
 
       th.addEventListener("pointermove", onMove);
       th.addEventListener("pointerup", onUp);
       th.addEventListener("pointercancel", onUp);
     },
-    [onColumnWidth, tableWidth],
+    [columns, displayWidths, onColumnWidth, rowActions, tableWidth],
   );
 
   const pageSizeChoices = useMemo(
@@ -332,7 +387,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     () =>
       new Map(
         columns.map((column) => {
-          const width = resolvedWidth(column);
+          const width = displayWidthByKey.get(column.key) ?? resolvedWidth(column);
           const locked = {
             width,
             minWidth: width,
@@ -357,12 +412,16 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
           ];
         }),
       ),
-    [columns, resolvedWidth],
+    [columns, displayWidthByKey, resolvedWidth],
   );
 
   const antdColumns = useMemo(() => {
-    const dataColumns = columns.map((column): NonNullable<TableProps<T>["columns"]>[number] => {
-      const width = resolvedWidth(column);
+    const dataColumns = columns.map((column, index): NonNullable<TableProps<T>["columns"]>[number] => {
+      const width = displayWidthByKey.get(column.key) ?? resolvedWidth(column);
+      const canResize = Boolean(onColumnWidth) && columnHasResizeHandle(index, columns.length);
+      const headerClass = [column.className, index === columns.length - 1 ? "spreadsheet-table__last" : ""]
+        .filter(Boolean)
+        .join(" ");
       const sorted = Boolean(column.sortField && column.sortField === sortField);
       const cellKey = column.dataIndex ?? column.key;
       const styles = cellStyles.get(column.key);
@@ -395,7 +454,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
         dataIndex: ["cells", cellKey],
         width,
         ellipsis: false,
-        ...(column.className ? { className: column.className } : {}),
+        ...(headerClass ? { className: headerClass } : {}),
         sorter: Boolean(column.sortField),
         sortDirections: ["ascend", "descend"],
         sortOrder: sorted ? (sortOrder === "asc" ? "ascend" : "descend") : null,
@@ -408,7 +467,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
             flex: `0 0 ${width}px`,
             position: "relative" as const,
           },
-          ...(onColumnWidth
+          ...(canResize
             ? {
                 onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
                   startResize(event, column.key, width);
@@ -445,7 +504,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
                   if (document.body.classList.contains("spreadsheet-col-resizing")) return;
                   // Keep sort/reorder clear of the resize strip on the right edge.
                   if (
-                    onColumnWidth &&
+                    canResize &&
                     typeof event.clientX === "number" &&
                     th instanceof HTMLElement
                   ) {
@@ -513,6 +572,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     onColumnWidth,
     onSort,
     openFunnelKey,
+    displayWidthByKey,
     resolvedWidth,
     rowActions,
     sortField,
@@ -546,6 +606,17 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
         Math.floor(sheet.clientHeight - headerHeight),
       );
       setBodyHeight((current) => (Math.abs(current - next) <= 1 ? current : next));
+      const holder = sheet.querySelector(".ant-table-tbody-virtual-holder");
+      const holderWidth = holder instanceof HTMLElement ? holder.clientWidth : 0;
+      const nextWidth =
+        holderWidth > 0 ? Math.min(sheet.clientWidth, holderWidth) : sheet.clientWidth;
+      setViewportWidth((current) => {
+        if (nextWidth <= 0 || nextWidth === current) return current;
+        // A stuck extra pixel is enough for the virtual list to open a horizontal bar.
+        if (nextWidth < current) return nextWidth;
+        if (nextWidth - current <= 1) return current;
+        return nextWidth;
+      });
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -554,10 +625,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
   }, [columnLayoutKey, showEmpty]);
 
   const columnWidthStyle = useMemo(() => {
-    const widths = [
-      ...(rowActions ? [SHEET_COLUMN_WIDTH.actions] : []),
-      ...columns.map((column) => resolvedWidth(column)),
-    ];
+    const widths = displayWidths;
     const style: Record<string, string> = {
       "--spreadsheet-table-width": `${tableWidth}px`,
     };
@@ -565,19 +633,16 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
       style[`--spreadsheet-col-${index}`] = `${width}px`;
     });
     return style;
-  }, [columns, resolvedWidth, rowActions, tableWidth]);
+  }, [displayWidths, tableWidth]);
 
-  // Column widths are fixed; the sheet scrolls horizontally when their sum exceeds
-  // the visible viewport. Never stretch header/body to fill leftover space.
+  // Preferred widths stay fixed and scroll when they overflow. Leftover viewport
+  // width is added to the last column so a short set, including a single column, fills the sheet.
   useLayoutEffect(() => {
+    if (resizingRef.current) return;
     const root = sheetRef.current?.querySelector(".spreadsheet-table");
     if (!(root instanceof HTMLElement)) return;
-    const widths = [
-      ...(rowActions ? [SHEET_COLUMN_WIDTH.actions] : []),
-      ...columns.map((column) => resolvedWidth(column)),
-    ];
-    paintColumnVars(root, widths, tableWidth);
-  }, [columnLayoutKey, columns, resolvedWidth, rowActions, rows.length, tableWidth]);
+    paintColumnVars(root, displayWidths, tableWidth);
+  }, [columnLayoutKey, displayWidths, rows.length, tableWidth]);
 
   useEffect(() => {
     if (!onRowClick || !selectedRowId) return;

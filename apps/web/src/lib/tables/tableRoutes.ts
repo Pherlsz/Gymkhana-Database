@@ -33,6 +33,7 @@ export const TABLE_SEARCH_DEFAULTS = normalizeTableSearch({});
 export function compactTableSearch(search: TableSearch): Partial<TableSearch> {
   const next: Partial<TableSearch> = {};
   for (const key of Object.keys(search) as (keyof TableSearch)[]) {
+    if (key === "cols") continue;
     const value = search[key];
     if (value === undefined || value === TABLE_SEARCH_DEFAULTS[key]) continue;
     (next as Record<string, unknown>)[key] = value;

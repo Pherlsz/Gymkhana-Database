@@ -1,20 +1,40 @@
 import { Button } from "antd";
+import { Link } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
+import { normalizeProfileSearch } from "../../ProfilePanel";
+import { tableLinkProps } from "../tables/tableRoutes";
 import { evidenceRowsForCard } from "./groupResults";
+import { highlightParts } from "./highlightTerm";
 import { ProfileSearchExpand } from "./ProfileSearchExpand";
 import type { ProfileCard } from "./types";
 import { useI18n } from "../../i18n";
 import { ICON, ICON_STROKE } from "../../components/icons";
 
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  return highlightParts(text, query).map((part, index) =>
+    part.match ? (
+      <mark className="search-hit" key={index}>
+        {part.text}
+      </mark>
+    ) : (
+      part.text
+    ),
+  );
+}
+
 export function ProfileSearchCard({
   card,
   open,
+  query,
+  active,
   showUpdatedAt,
   moduleLabels,
   onToggle,
 }: {
   card: ProfileCard;
   open: boolean;
+  query: string;
+  active: boolean;
   showUpdatedAt: boolean;
   moduleLabels: Map<string, string>;
   onToggle: (profileId: string) => void;
@@ -27,16 +47,23 @@ export function ProfileSearchCard({
   const relatedExtra = Math.max(0, card.relatedGroups.length - relatedPreview.length);
 
   return (
-    <article className={open ? "search-card is-open" : "search-card"}>
+    <article
+      className={open ? "search-card is-open" : "search-card"}
+      data-active={active ? "true" : "false"}
+    >
+      <div className="search-card__bar">
       <Button
         aria-controls={expandId}
         aria-expanded={open}
         className="search-card__header"
+        tabIndex={active ? 0 : -1}
         type="text"
         onClick={() => onToggle(card.profileId)}
       >
         <span className="search-card__title-block">
-          <span className="search-card__name">{card.profileLabel}</span>
+          <span className="search-card__name">
+            <HighlightedText query={query} text={card.profileLabel} />
+          </span>
           {showUpdatedAt ? (
             <time className="search-card__updated" dateTime={card.updatedAt}>
               {new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(
@@ -57,6 +84,15 @@ export function ProfileSearchCard({
           />
         </span>
       </Button>
+      <Link
+        className="search-card__open-table"
+        {...tableLinkProps(
+          normalizeProfileSearch({ q: query, selected: card.profileId, mode: "view" }),
+        )}
+      >
+        {searchMessages.openInTable}
+      </Link>
+      </div>
 
       {evidence.length > 0 ? (
         <div className="search-card__evidence">
@@ -67,7 +103,9 @@ export function ProfileSearchCard({
                   ? `${moduleLabels.get(row.module) ?? row.module} · ${row.fieldLabel}`
                   : row.fieldLabel}
               </span>
-              <strong className="search-card__value">{row.preview}</strong>
+              <strong className="search-card__value">
+                <HighlightedText query={query} text={row.preview} />
+              </strong>
             </div>
           ))}
         </div>
@@ -81,7 +119,7 @@ export function ProfileSearchCard({
                 {moduleLabels.get(group.module) ?? group.module}
               </span>
               <span className="search-card__chip-value">
-                {group.matches[0]?.preview || group.entityLabel}
+                <HighlightedText query={query} text={group.matches[0]?.preview || group.entityLabel} />
               </span>
             </span>
           ))}

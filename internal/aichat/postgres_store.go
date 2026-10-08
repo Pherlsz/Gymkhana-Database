@@ -356,17 +356,18 @@ tool_call_count,input_usage,output_usage,result_bytes,error_code,cancel_requeste
 }
 
 func (store *PostgresStore) AppendTextDelta(ctx context.Context, id Identifier, owner auth.Identifier, delta string, now time.Time) (RunEvent, error) {
-	// Hot-path: chamado a cada delta de streaming. Usa CTE atômica para alocar
-	// a sequência e inserir o evento sem abrir uma transação explícita nem fazer
-	// um SELECT FOR UPDATE separado. O WHERE state='RUNNING' garante a mesma
-	// invariante de estado que o lockRun anterior.
+	// Hot path: one insert per batched chunk, not per token. A single CTE
+	// allocates the sequence without a separate SELECT FOR UPDATE.
+	// state must still be RUNNING. cancel_requested_at does not block the write:
+	// the orchestrator flushes the open batch after a cancel request so that
+	// chunk is not dropped, and it does not append tokens observed after that.
 	var event RunEvent
 	err := store.pool.QueryRow(ctx, `
 WITH seq AS (
   UPDATE ai_chat_runs
   SET next_event_sequence = next_event_sequence + 1
   WHERE id = $1 AND owner_user_id = $2
-    AND state = 'RUNNING' AND cancel_requested_at IS NULL
+    AND state = 'RUNNING'
   RETURNING next_event_sequence - 1 AS seq
 ),
 ins AS (

@@ -65,6 +65,7 @@ const ColumnPickerRow = memo(function ColumnPickerRow({
 export function ColumnPicker({
   searchLabel,
   showAllLabel,
+  hideAllLabel,
   resetLabel,
   lockedLabel,
   visibleCountLabel,
@@ -72,17 +73,20 @@ export function ColumnPicker({
   items,
   onToggle,
   onShowAll,
+  onHideAll,
   onReset,
 }: {
   searchLabel: string;
   showAllLabel: string;
+  hideAllLabel: string;
   resetLabel: string;
   lockedLabel: string;
   visibleCountLabel: (visible: number, total: number) => string;
   emptyLabel: string;
   items: ColumnPickerItem[];
   onToggle: (key: string, visible: boolean) => void;
-  onShowAll: () => void;
+  onShowAll: (keys: string[]) => void;
+  onHideAll: (keys: string[]) => void;
   onReset: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -102,10 +106,23 @@ export function ColumnPicker({
     [onToggle],
   );
 
+  const matchingKeys = useCallback(() => {
+    const needle = query.trim().toLowerCase();
+    const matching = needle
+      ? items.filter((item) => item.label.toLowerCase().includes(needle))
+      : items;
+    return matching.map((item) => item.key);
+  }, [items, query]);
+
   const handleShowAll = useCallback(() => {
     setLocalVisibility({});
-    onShowAll();
-  }, [onShowAll]);
+    onShowAll(matchingKeys());
+  }, [matchingKeys, onShowAll]);
+
+  const handleHideAll = useCallback(() => {
+    setLocalVisibility({});
+    onHideAll(matchingKeys());
+  }, [matchingKeys, onHideAll]);
 
   const handleReset = useCallback(() => {
     setLocalVisibility({});
@@ -178,6 +195,9 @@ export function ColumnPicker({
       <div className="column-picker__footer">
         <Button size="small" type="text" onClick={handleShowAll}>
           {showAllLabel}
+        </Button>
+        <Button size="small" type="text" onClick={handleHideAll}>
+          {hideAllLabel}
         </Button>
         <Button size="small" type="text" onClick={handleReset}>
           {resetLabel}

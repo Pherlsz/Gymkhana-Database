@@ -433,6 +433,12 @@
                     "description": "Search query language applied as a row recorte of this module.",
                     "schema": { "type": "string", "maxLength": 512 },
                   },
+                  {
+                    "name": "columns",
+                    "in": "query",
+                    "description": "Visible people-table column keys, comma-separated or repeated. When q is set, people who match one of these columns come first. Omitted uses the default visible set. full_name is always visible.",
+                    "schema": { "type": "string" },
+                  },
                   { "name": "full_name", "in": "query", "schema": { "type": "string" } },
                   { "name": "cpf", "in": "query", "schema": { "type": "string" } },
                   { "name": "email", "in": "query", "schema": { "type": "string" } },
@@ -3115,6 +3121,19 @@
                       "type": "array",
                       "items": { "$ref": "#/components/schemas/ProfileDocumentPresence" },
                       "description": "Sparse persisted claims for this person, including absence. Unspecified types are omitted.",
+                    },
+                  "search_evidence":
+                    {
+                      "description": "Omitted unless q matched only hidden columns. Highest-weight hidden field, plus how many other hidden fields also matched.",
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["label", "snippet", "other_hidden_matches"],
+                      "properties":
+                        {
+                          "label": { "type": "string" },
+                          "snippet": { "type": "string" },
+                          "other_hidden_matches": { "type": "integer", "minimum": 0 },
+                        },
                     },
                 },
             },

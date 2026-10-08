@@ -93,7 +93,14 @@ export function PendingBillsSection({
       items={bills.map((b) => ({
         id: b.id,
         title: b.serviceName,
-        subtitle: `${b.installation ? `${copy.fieldBillInstallation} ${b.installation}` : copy.docNumberEmpty}${b.amount ? ` · R$ ${b.amount}` : ""}`,
+        subtitle: [
+          b.installation ? `${copy.fieldBillInstallation} ${b.installation}` : copy.docNumberEmpty,
+          b.amount ? `R$ ${b.amount}` : "",
+          b.saveStatus === "saved" ? copy.itemSaved : "",
+          b.saveStatus === "error" ? copy.itemFailed : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
         tagText: b.tag === "queued" ? labels.ocr : copy.tagActive,
         isOcr: b.tag === "queued",
       }))}

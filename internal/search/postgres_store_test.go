@@ -28,3 +28,18 @@ func TestSearchSQLPlaceholdersStartAtOne(t *testing.T) {
 		t.Fatal("unused $1/$2-style gaps make PostgreSQL reject the query with 42P18")
 	}
 }
+
+func TestSearchIDQueriesTypeUnusedParameters(t *testing.T) {
+	queries := map[string]string{
+		"profiles": searchProfileIDSQL,
+		"records":  searchIDSQL,
+		"hits":     searchProfileHitSQL,
+	}
+	for name, sql := range queries {
+		for _, typed := range []string{"$3::int", "$4::int", "$5::text", "$6::text"} {
+			if !strings.Contains(sql, typed) {
+				t.Errorf("%s id query missing %s; an untyped middle parameter is SQLSTATE 42P18", name, typed)
+			}
+		}
+	}
+}

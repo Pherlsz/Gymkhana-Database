@@ -420,7 +420,11 @@ export function AssistantSessionFloat({
                     <AssistantMarkdown text={chat.pending.text} />
                   </div>
                 ) : null}
-                {chat.pending.errorCode ? (
+                {chat.pending.cancelled ? (
+                  <p className="assistant-msg__status" role="status">
+                    {copy.errors.cancelled}
+                  </p>
+                ) : chat.pending.errorCode ? (
                   <p className="assistant-msg__status is-error" role="alert">
                     {errorText(chat.pending.errorCode)}
                     {" · "}
@@ -490,7 +494,7 @@ export function AssistantSessionFloat({
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={onComposerKey}
             />
-            {chat.pending && !chat.pending.errorCode ? (
+            {chat.pending && !chat.pending.errorCode && !chat.pending.cancelled ? (
               <button
                 aria-label={copy.stop}
                 className="assistant-composer__send"

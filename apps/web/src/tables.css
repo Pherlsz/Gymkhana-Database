@@ -1491,6 +1491,13 @@
   cursor: col-resize;
 }
 
+/* The sheet's right edge is not a column divider. */
+.spreadsheet-table .ant-table-thead .ant-table-cell.spreadsheet-table__last::after {
+  content: none;
+  width: 0;
+  cursor: auto;
+}
+
 /* One accent edge while dragging — replaces the hairline on header and body. */
 .spreadsheet-table .ant-table-thead .ant-table-cell.is-resizing,
 .spreadsheet-table .ant-table-tbody .ant-table-cell.is-resizing {

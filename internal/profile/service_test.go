@@ -131,3 +131,45 @@ func TestServiceReportsValidationAsDeniedAudit(t *testing.T) {
 		t.Fatalf("audits = %#v", store.audits)
 	}
 }
+
+func TestServiceEscapesLikeWildcardsInSearchFilters(t *testing.T) {
+	store := &fakeServiceStore{total: 1}
+	service, err := NewService(store, ServiceOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = service.List(context.Background(), profileActor(auth.RoleExternal), ListOptions{
+		Filters: Filters{
+			FullName: "100% Ana_",
+			CPF:      "12%3_4",
+			Email:    "A%B_C@Example.COM",
+			City:     "Sao_Paulo%",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.filters.FullName != "100\\% ana\\_" || store.filters.CPF != "12\\%3\\_4" || store.filters.Email != "a\\%b\\_c@example.com" || store.filters.City != "sao\\_paulo\\%" {
+		t.Fatalf("contains filters = %#v", store.filters)
+	}
+
+	_, err = service.List(context.Background(), profileActor(auth.RoleExternal), ListOptions{
+		Filters: Filters{FullName: "^100%", CPF: "^12_", Email: "^A_B%@Example.COM", City: "^_Cidade%"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.filters.FullName != "^100\\%" || store.filters.CPF != "^12\\_" || store.filters.Email != "^a\\_b\\%@example.com" || store.filters.City != "^\\_cidade\\%" {
+		t.Fatalf("prefix filters = %#v", store.filters)
+	}
+
+	_, err = service.List(context.Background(), profileActor(auth.RoleExternal), ListOptions{
+		Filters: Filters{FullName: "=100%", CPF: "=12%3", Email: "=A%B@Example.COM", City: "=Sao_Paulo"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.filters.FullName != "=100" || store.filters.CPF != "=123" || store.filters.Email != "=a%b@example.com" || store.filters.City != "=sao paulo" {
+		t.Fatalf("exact filters = %#v", store.filters)
+	}
+}

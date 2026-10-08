@@ -66,9 +66,19 @@ vi.mock("../api/client", () => ({
     version: 1,
     type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
   }),
+  updateDocument: vi.fn().mockResolvedValue({
+    id: "doc-1",
+    version: 2,
+    type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+  }),
   createBill: vi.fn().mockResolvedValue({
     id: "bill-1",
     version: 1,
+    type: { id: "bill-type-luz", technical_key: "luz", label: "Energia Elétrica" },
+  }),
+  updateBill: vi.fn().mockResolvedValue({
+    id: "bill-1",
+    version: 2,
     type: { id: "bill-type-luz", technical_key: "luz", label: "Energia Elétrica" },
   }),
   APIRequestError: class APIRequestError extends Error {},
@@ -245,6 +255,7 @@ describe("CadastroSingleScreen", () => {
     it("retries a failed document save against the person already created", async () => {
       const { createDocument, createProfile, updateProfile } = await import("../api/client");
       vi.mocked(createProfile).mockClear();
+      vi.mocked(createDocument).mockClear();
       vi.mocked(updateProfile).mockClear();
       vi.mocked(createDocument).mockClear();
       vi.mocked(createDocument).mockRejectedValueOnce(new Error("mobile_phone: not_mobile"));
@@ -278,6 +289,174 @@ describe("CadastroSingleScreen", () => {
         expect(updateProfile).toHaveBeenCalled();
         expect(createProfile).toHaveBeenCalledTimes(1);
       });
+    });
+
+    it("does not create a saved document again when a later one fails", async () => {
+      const { createDocument, createProfile, updateProfile } = await import("../api/client");
+      vi.mocked(createProfile).mockClear();
+      vi.mocked(createDocument).mockClear();
+      let failSecond = true;
+      vi.mocked(createDocument).mockImplementation(async (input) => {
+        if (input.identifier_value === "222" && failSecond) {
+          failSecond = false;
+          throw new Error("second document failed");
+        }
+        return {
+          id: input.identifier_value === "111" ? "doc-1" : "doc-2",
+          version: 1,
+          type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+        } as never;
+      });
+      vi.mocked(updateProfile).mockResolvedValue({
+        id: "profile-1",
+        full_name: "Ana Néri",
+        version: 2,
+      } as never);
+
+      try {
+        renderSingleScreen("people");
+        fillPersonMinimum("Ana Néri");
+        const stage = async (number: string) => {
+          fireEvent.click(screen.getByRole("button", { name: /Adicionar documento/i }));
+          fireEvent.mouseDown(await screen.findByLabelText(/Tipo de documento/i));
+          const rgOption = (await screen.findAllByText(/^RG$/)).find((node) =>
+            node.classList.contains("ant-select-item-option-content"),
+          );
+          if (!rgOption) throw new Error("RG option missing");
+          fireEvent.click(rgOption);
+          fireEvent.change(screen.getByLabelText(/Número do documento/i), {
+            target: { value: number },
+          });
+          fireEvent.click(screen.getByRole("button", { name: /^Adicionar$/i }));
+          expect(await screen.findByText(new RegExp(`nº ${number}`))).not.toBeNull();
+        };
+        await stage("111");
+        await stage("222");
+
+        await confirmSave();
+        expect(await screen.findByText(/second document failed/i)).not.toBeNull();
+        expect(createProfile).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(createDocument).mock.calls.map((call) => call[0].identifier_value)).toEqual([
+          "111",
+          "222",
+        ]);
+        expect(screen.getByText(/Salvo/)).not.toBeNull();
+
+        await confirmSave();
+        await waitFor(() => {
+          const values = vi
+            .mocked(createDocument)
+            .mock.calls.map((call) => call[0].identifier_value);
+          expect(values.filter((value) => value === "222")).toEqual(["222", "222"]);
+        });
+        const numbers = vi
+          .mocked(createDocument)
+          .mock.calls.map((call) => call[0].identifier_value);
+        expect(numbers.filter((value) => value === "111")).toEqual(["111"]);
+        expect(numbers.filter((value) => value === "222")).toEqual(["222", "222"]);
+        expect(createProfile).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.mocked(createDocument).mockResolvedValue({
+          id: "doc-1",
+          version: 1,
+          type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+        } as never);
+      }
+    });
+
+    it("keeps the created document id when a later save step fails", async () => {
+      const { createDocument, createProfile, updateDocument, updateProfile } = await import(
+        "../api/client"
+      );
+      const custom = await import("../../RecordCustomFields");
+      vi.mocked(createProfile).mockClear();
+      vi.mocked(createDocument).mockClear();
+      vi.mocked(updateDocument).mockClear();
+      vi.mocked(createDocument).mockResolvedValue({
+        id: "doc-kept",
+        version: 1,
+        type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+      } as never);
+      vi.mocked(updateDocument).mockResolvedValue({
+        id: "doc-kept",
+        version: 2,
+        type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+      } as never);
+      vi.mocked(updateProfile).mockResolvedValue({
+        id: "profile-1",
+        full_name: "Ana Néri",
+        version: 2,
+      } as never);
+      const followUp = vi.spyOn(custom, "saveRecordCustomValues");
+      followUp.mockRejectedValueOnce(new Error("custom values failed"));
+
+      try {
+        renderSingleScreen("people");
+        fillPersonMinimum("Ana Néri");
+        fireEvent.click(screen.getByRole("button", { name: /Adicionar documento/i }));
+        fireEvent.mouseDown(await screen.findByLabelText(/Tipo de documento/i));
+        const rgOption = (await screen.findAllByText(/^RG$/)).find((node) =>
+          node.classList.contains("ant-select-item-option-content"),
+        );
+        if (!rgOption) throw new Error("RG option missing");
+        fireEvent.click(rgOption);
+        fireEvent.change(screen.getByLabelText(/Número do documento/i), {
+          target: { value: "111" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /^Adicionar$/i }));
+        expect(await screen.findByText(/nº 111/)).not.toBeNull();
+
+        await confirmSave();
+        expect(await screen.findByText(/custom values failed/i)).not.toBeNull();
+        expect(screen.getByText(/Salvo/)).not.toBeNull();
+        expect(createDocument).toHaveBeenCalledTimes(1);
+        expect(updateDocument).not.toHaveBeenCalled();
+
+        await confirmSave();
+        await waitFor(() => {
+          expect(updateDocument).toHaveBeenCalledTimes(1);
+        });
+        expect(createDocument).toHaveBeenCalledTimes(1);
+        expect(updateDocument).toHaveBeenCalledWith(
+          "doc-kept",
+          expect.objectContaining({ version: 1, identifier_value: "111" }),
+        );
+      } finally {
+        followUp.mockRestore();
+        vi.mocked(createDocument).mockResolvedValue({
+          id: "doc-1",
+          version: 1,
+          type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+        } as never);
+      }
+    });
+
+    it("creates only one profile when save is clicked twice", async () => {
+      const { createProfile } = await import("../api/client");
+      vi.mocked(createProfile).mockClear();
+      let resolveProfile: (profile: unknown) => void = () => undefined;
+      vi.mocked(createProfile).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveProfile = resolve;
+          }) as never,
+      );
+      try {
+        renderSingleScreen("people");
+        fillPersonMinimum("Ana Néri");
+        const save = screen.getByRole("button", { name: /Salvar/i });
+        fireEvent.click(save);
+        fireEvent.click(save);
+        expect(createProfile).toHaveBeenCalledTimes(1);
+        resolveProfile({ id: "profile-1", full_name: "Ana Néri", version: 1 });
+        await waitFor(() => expect(createProfile).toHaveBeenCalledTimes(1));
+      } finally {
+        vi.mocked(createProfile).mockResolvedValue({
+          id: "profile-1",
+          full_name: "Novo Usuário",
+          version: 1,
+        } as never);
+      }
     });
 
     it("allows direct editing of titular fields in people mode", () => {
@@ -367,6 +546,61 @@ describe("CadastroSingleScreen", () => {
         expect(onSuccess).toHaveBeenCalledWith("Ana Néri");
       });
     });
+
+    it("updates the document already created when a later save step fails", async () => {
+      const { createDocument, createProfile, updateDocument, updateProfile } = await import(
+        "../api/client"
+      );
+      const custom = await import("../../RecordCustomFields");
+      vi.mocked(createProfile).mockClear();
+      vi.mocked(createDocument).mockClear();
+      vi.mocked(updateDocument).mockClear();
+      vi.mocked(createDocument).mockResolvedValue({
+        id: "doc-kept",
+        version: 1,
+        type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+      } as never);
+      vi.mocked(updateDocument).mockResolvedValue({
+        id: "doc-kept",
+        version: 2,
+        type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+      } as never);
+      vi.mocked(updateProfile).mockResolvedValue({
+        id: "profile-1",
+        full_name: "Ana Néri",
+        version: 2,
+      } as never);
+      const followUp = vi.spyOn(custom, "saveRecordCustomValues");
+      followUp.mockRejectedValueOnce(new Error("custom values failed"));
+      try {
+        renderSingleScreen("documents");
+        fireEvent.mouseDown(screen.getByLabelText(/Tipo de documento/i));
+        fireEvent.click(await screen.findByText(/^RG$/));
+        fireEvent.change(screen.getByLabelText(/Número do documento/i), {
+          target: { value: "MG-1" },
+        });
+        fireEvent.change(screen.getByLabelText(/Nome do titular/i), {
+          target: { value: "Ana Néri" },
+        });
+        await confirmSave();
+        expect(await screen.findByText(/custom values failed/i)).not.toBeNull();
+        expect(createDocument).toHaveBeenCalledTimes(1);
+        await confirmSave();
+        await waitFor(() => expect(updateDocument).toHaveBeenCalledTimes(1));
+        expect(createDocument).toHaveBeenCalledTimes(1);
+        expect(updateDocument).toHaveBeenCalledWith(
+          "doc-kept",
+          expect.objectContaining({ version: 1, identifier_value: "MG-1" }),
+        );
+      } finally {
+        followUp.mockRestore();
+        vi.mocked(createDocument).mockResolvedValue({
+          id: "doc-1",
+          version: 1,
+          type: { id: "doc-type-rg", technical_key: "rg", label: "RG" },
+        } as never);
+      }
+    });
   });
 
   describe("Bill mode (targetTable='bills')", () => {
@@ -426,6 +660,66 @@ describe("CadastroSingleScreen", () => {
         );
         expect(onSuccess).toHaveBeenCalledWith("Clarice Lispector");
       });
+    });
+
+    it("updates the bill already created when a later save step fails", async () => {
+      const { createBill, createProfile, updateBill, updateProfile } = await import("../api/client");
+      const custom = await import("../../RecordCustomFields");
+      vi.mocked(createProfile).mockClear();
+      vi.mocked(createBill).mockClear();
+      vi.mocked(updateBill).mockClear();
+      vi.mocked(createBill).mockResolvedValue({
+        id: "bill-kept",
+        version: 1,
+        type: { id: "bill-type-luz", technical_key: "luz", label: "Energia Elétrica" },
+      } as never);
+      vi.mocked(updateBill).mockResolvedValue({
+        id: "bill-kept",
+        version: 2,
+        type: { id: "bill-type-luz", technical_key: "luz", label: "Energia Elétrica" },
+      } as never);
+      vi.mocked(updateProfile).mockResolvedValue({
+        id: "profile-1",
+        full_name: "Clarice Lispector",
+        version: 2,
+      } as never);
+      const followUp = vi.spyOn(custom, "saveRecordCustomValues");
+      followUp.mockRejectedValueOnce(new Error("custom values failed"));
+      try {
+        renderSingleScreen("bills");
+        fireEvent.mouseDown(screen.getByLabelText(/Serviço/i));
+        fireEvent.click(await screen.findByText(/Energia Elétrica/i));
+        fireEvent.change(screen.getByLabelText(/Número de instalação \/ Conta/i), {
+          target: { value: "987654321" },
+        });
+        fireEvent.change(screen.getByLabelText(/Competência \/ Vencimento/i), {
+          target: { value: "2026-09" },
+        });
+        fireEvent.change(screen.getByLabelText(/Valor \(R\$\)/i), {
+          target: { value: "142,50" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /\+ Dados extras da fatura/i }));
+        fireEvent.change(screen.getByLabelText(/Nome impresso na fatura/i), {
+          target: { value: "Clarice Lispector" },
+        });
+        await confirmSave();
+        expect(await screen.findByText(/custom values failed/i)).not.toBeNull();
+        expect(createBill).toHaveBeenCalledTimes(1);
+        await confirmSave();
+        await waitFor(() => expect(updateBill).toHaveBeenCalledTimes(1));
+        expect(createBill).toHaveBeenCalledTimes(1);
+        expect(updateBill).toHaveBeenCalledWith(
+          "bill-kept",
+          expect.objectContaining({ version: 1, reference_value: "987654321" }),
+        );
+      } finally {
+        followUp.mockRestore();
+        vi.mocked(createBill).mockResolvedValue({
+          id: "bill-1",
+          version: 1,
+          type: { id: "bill-type-luz", technical_key: "luz", label: "Energia Elétrica" },
+        } as never);
+      }
     });
   });
 });

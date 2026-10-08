@@ -4,9 +4,9 @@ import { PageShell } from "./components/PageShell";
 import { StateCard } from "./components/StateCard";
 import { StatusBanner } from "./components/StatusBanner";
 import "./search.css";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SearchField } from "./components/SearchField";
 import { useI18n } from "./i18n";
 import {
@@ -26,6 +26,8 @@ import { parseList, serializeList } from "./lib/search/urlState";
 import type { GlobalSearchState, SearchModule } from "./lib/search/types";
 import { ProfileSearchCard } from "./lib/search/ProfileSearchCard";
 import { searchErrorMessage } from "./lib/search/errors";
+import { searchResultKey } from "./lib/search/searchKeys";
+import { SEARCH_RESULT_CAP, searchResultWindow } from "./lib/search/searchWindow";
 
 const searchRoute = getRouteApi("/search");
 
@@ -74,7 +76,10 @@ export function SearchPage() {
   const results = useQuery({
     queryKey: queryKeys.search.global(request),
     queryFn: ({ signal }) => executeSearch(request, signal),
-    enabled: search.q.trim().length > 0 && catalog.isSuccess,
+    enabled: search.q.trim().length > 0,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
     retry: (attempt, error) =>
       !(error instanceof APIRequestError && [403, 422, 429].includes(error.status)) && attempt < 1,
   });
@@ -150,13 +155,60 @@ export function SearchPage() {
   };
   const sortValue = `${search.sort}:${search.order}` as const;
   const resultTotal = results.data?.page.total ?? 0;
-  const showCount =
-    !results.isFetching && search.q.trim().length > 0 && !results.isError && resultTotal >= 0;
+  const hasQuery = search.q.trim().length > 0;
+  const resultWindow = searchResultWindow(resultTotal, search.limit);
+  const showCount = hasQuery && !results.isError && results.data != null;
+  const listPending = Boolean(results.isFetching && results.isPlaceholderData);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const cardKey = cards.map((card) => card.key).join("|");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [prevCardKey, setPrevCardKey] = useState(cardKey);
+  const [keyboardFocus, setKeyboardFocus] = useState(false);
+  if (cardKey !== prevCardKey) {
+    setPrevCardKey(cardKey);
+    setActiveIndex(0);
+    setKeyboardFocus(false);
+  }
+  useEffect(() => {
+    if (!keyboardFocus) return;
+    listRef.current?.querySelector<HTMLElement>("[data-active='true'] .search-card__header")?.focus();
+  }, [activeIndex, keyboardFocus]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target;
+      const typing =
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT");
+      if (event.key === "Enter" && target instanceof Element && target.closest(".search-list")) return;
+      const action = searchResultKey(event.key, activeIndex, hasQuery ? cards.length : 0, typing);
+      if (action == null || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (action === "focus") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      event.preventDefault();
+      if (action === "toggle") {
+        const card = cards[activeIndex];
+        if (card) togglePreview(card.profileId);
+        return;
+      }
+      setKeyboardFocus(true);
+      setActiveIndex(action);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activeIndex, cards, hasQuery]);
 
   return (
     <PageShell className="search-page" title={searchMessages.title}>
       <section className="search-toolbar">
         <SearchField
+          inputRef={searchInputRef}
           label={searchMessages.title}
           mode="suggest"
           placeholder={searchMessages.inputPlaceholder}
@@ -271,7 +323,7 @@ export function SearchPage() {
         {results.isFetching ? (
           <InlineStatus kind="loading" label={searchMessages.loadingResults} />
         ) : null}
-        {!results.isFetching && search.q.trim().length === 0 ? (
+        {!hasQuery ? (
           <StateCard
             compact
             description={searchMessages.emptyQueryDescription}
@@ -279,38 +331,42 @@ export function SearchPage() {
             title={searchMessages.emptyQueryTitle}
           />
         ) : null}
-        {showCount && cards.length === 0 ? (
+        {showCount && !results.isFetching && cards.length === 0 ? (
           <InlineStatus kind="empty" label={searchMessages.noResults} showIcon={false} />
         ) : null}
-        {showCount && cards.length > 0 ? (
+        {showCount && !listPending && cards.length > 0 ? (
           <div className="search-results__count">
             <span>{searchMessages.resultCount({ count: resultTotal })}</span>
+            {resultWindow.truncated ? (
+              <span className="search-results__truncated">
+                {searchMessages.truncated({ count: SEARCH_RESULT_CAP })}
+              </span>
+            ) : null}
           </div>
         ) : null}
-        <div className="search-list">
-          {cards.map((card) => (
+        <div className={listPending ? "search-list search-list--pending" : "search-list"} ref={listRef}>
+          {(hasQuery ? cards : []).map((card, index) => (
             <ProfileSearchCard
+              active={index === activeIndex}
               card={card}
               key={card.key}
               moduleLabels={moduleLabels}
               open={search.preview === card.profileId}
+              query={search.q}
               showUpdatedAt={search.sort === "updated_at"}
               onToggle={togglePreview}
             />
           ))}
         </div>
       </section>
-      {results.data && results.data.page.total > 0 ? (
+      {results.data && !listPending && results.data.page.total > 0 ? (
         <Pagination
           current={search.page}
           pageSize={search.limit}
           showLessItems
           showSizeChanger={false}
           size="small"
-          total={Math.min(
-            results.data.page.total,
-            totalPagesOf(results.data.page.total, search.limit) * search.limit,
-          )}
+          total={searchResultWindow(results.data.page.total, search.limit).shown}
           onChange={(page) => updateSearch({ page, preview: "" })}
         />
       ) : null}
@@ -318,5 +374,3 @@ export function SearchPage() {
   );
 }
 
-const totalPagesOf = (total: number, limit: number) =>
-  Math.max(1, Math.min(Math.floor(10_000 / limit) + 1, Math.ceil(total / limit)));

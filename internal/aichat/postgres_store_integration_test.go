@@ -14,6 +14,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+
+func mustAuthorizeIntegration(t *testing.T, ctx context.Context, service *Service, actor auth.Session) auth.User {
+	t.Helper()
+	user, err := service.authorize(ctx, actor)
+	if err != nil {
+		t.Fatalf("authorize() error = %v", err)
+	}
+	return user
+}
+
 func TestPostgresAIChatOwnershipIdempotencyConcurrencyCancellationReferencesAndRetention(t *testing.T) {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
@@ -109,7 +119,7 @@ func TestPostgresAIChatOwnershipIdempotencyConcurrencyCancellationReferencesAndR
 	if err != nil {
 		t.Fatalf("StartTurn(race) error = %v", err)
 	}
-	if _, err := service.startRun(ctx, actor, race.Run.ID, "integration-race-start"); err != nil {
+	if _, err := service.startRun(ctx, mustAuthorizeIntegration(t, ctx, service, actor), race.Run.ID, "integration-race-start"); err != nil {
 		t.Fatalf("startRun(race) error = %v", err)
 	}
 	assistantID, _ := NewIdentifier()
@@ -147,7 +157,7 @@ func TestPostgresAIChatOwnershipIdempotencyConcurrencyCancellationReferencesAndR
 	if err != nil {
 		t.Fatalf("StartTurn(tool) error = %v", err)
 	}
-	if _, err := service.startRun(ctx, actor, toolRun.Run.ID, "integration-tool-start"); err != nil {
+	if _, err := service.startRun(ctx, mustAuthorizeIntegration(t, ctx, service, actor), toolRun.Run.ID, "integration-tool-start"); err != nil {
 		t.Fatalf("startRun(tool) error = %v", err)
 	}
 	stepID, referenceID := mustChatIdentifier(t), mustChatIdentifier(t)
@@ -175,7 +185,7 @@ func TestPostgresAIChatOwnershipIdempotencyConcurrencyCancellationReferencesAndR
 	if err != nil {
 		t.Fatalf("StartTurn(orphan) error = %v", err)
 	}
-	if _, err := service.startRun(ctx, actor, orphan.Run.ID, "integration-orphan-start"); err != nil {
+	if _, err := service.startRun(ctx, mustAuthorizeIntegration(t, ctx, service, actor), orphan.Run.ID, "integration-orphan-start"); err != nil {
 		t.Fatalf("startRun(orphan) error = %v", err)
 	}
 	orphanStep, err := store.BeginTool(ctx, BeginToolInput{ID: mustChatIdentifier(t), RunID: orphan.Run.ID, OwnerUserID: actorID,
@@ -246,13 +256,13 @@ func TestPostgresAIChatOwnershipIdempotencyConcurrencyCancellationReferencesAndR
 	if err != nil {
 		t.Fatalf("StartTurn(usage first) error = %v", err)
 	}
-	if _, err := usageService.startRun(ctx, actor, usageRun.Run.ID, "integration-usage-start"); err != nil {
+	if _, err := usageService.startRun(ctx, mustAuthorizeIntegration(t, ctx, usageService, actor), usageRun.Run.ID, "integration-usage-start"); err != nil {
 		t.Fatalf("startRun(usage) error = %v", err)
 	}
-	if _, exceeded, err := usageService.addUsage(ctx, actor, usageRun.Run.ID, ModelUsage{InputUnits: 2}); err != nil || !exceeded {
+	if _, exceeded, err := usageService.addUsage(ctx, mustAuthorizeIntegration(t, ctx, usageService, actor), usageRun.Run.ID, ModelUsage{InputUnits: 2}); err != nil || !exceeded {
 		t.Fatalf("addUsage() exceeded=%t, error=%v", exceeded, err)
 	}
-	if _, err := usageService.failRun(ctx, actor, usageRun.Run.ID, "quota_exceeded", "integration-usage-fail"); err != nil {
+	if _, err := usageService.failRun(ctx, mustAuthorizeIntegration(t, ctx, usageService, actor), usageRun.Run.ID, "quota_exceeded", "integration-usage-fail"); err != nil {
 		t.Fatalf("failRun(usage) error = %v", err)
 	}
 	if _, err := usageService.StartTurn(ctx, actor, usageThread.ID, "Nova tentativa", "integration-usage-0002", nil, "integration-usage-second"); !errors.Is(err, ErrQuotaExceeded) {

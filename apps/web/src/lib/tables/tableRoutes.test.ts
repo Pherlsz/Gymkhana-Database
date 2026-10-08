@@ -27,7 +27,6 @@ describe("table search URLs", () => {
       order: "desc",
       page: 2,
       city: "Porto Alegre",
-      cols: "-city,father_name",
     });
   });
 

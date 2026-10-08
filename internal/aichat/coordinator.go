@@ -2,6 +2,8 @@ package aichat
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
@@ -10,6 +12,7 @@ import (
 type Coordinator struct {
 	parent context.Context
 	runner TurnRunner
+	logger *slog.Logger
 
 	mutex   sync.Mutex
 	active  map[Identifier]context.CancelFunc
@@ -21,6 +24,13 @@ func NewCoordinator(parent context.Context, runner TurnRunner) (*Coordinator, er
 		return nil, ErrInvalidSetup
 	}
 	return &Coordinator{parent: parent, runner: runner, active: make(map[Identifier]context.CancelFunc)}, nil
+}
+
+func (coordinator *Coordinator) log() *slog.Logger {
+	if coordinator != nil && coordinator.logger != nil {
+		return coordinator.logger
+	}
+	return slog.Default()
 }
 
 func (coordinator *Coordinator) Start(actor auth.Session, runID Identifier, requestID string) bool {
@@ -44,7 +54,19 @@ func (coordinator *Coordinator) Start(actor auth.Session, runID Identifier, requ
 			coordinator.mutex.Unlock()
 			cancel()
 		}()
-		_ = coordinator.runner.RunTurn(ctx, actor, runID, requestID)
+		defer func() {
+			recovered := recover()
+			if recovered == nil {
+				return
+			}
+			coordinator.log().Error("AI Chat turn panicked", "run_id", runID.String(), "request_id", requestID, "panic", fmt.Sprint(recovered))
+			if failer, ok := coordinator.runner.(panickedTurnFailer); ok {
+				failer.failPanickedRun(ctx, actor, runID, requestID)
+			}
+		}()
+		if err := coordinator.runner.RunTurn(ctx, actor, runID, requestID); err != nil {
+			coordinator.log().Error("AI Chat turn failed", "run_id", runID.String(), "request_id", requestID, "error", err)
+		}
 	}()
 	return true
 }

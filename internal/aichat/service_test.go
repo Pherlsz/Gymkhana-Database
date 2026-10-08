@@ -90,7 +90,7 @@ func TestServiceReauthorizesAndCancellationWinsCompletion(t *testing.T) {
 	service, _ := NewService(store, ServiceOptions{Now: func() time.Time { return now }, Retention: time.Hour})
 	thread, _ := service.CreateThread(context.Background(), actor, "Teste", "create")
 	creation, _ := service.StartTurn(context.Background(), actor, thread.ID, "Mensagem", "running-turn-01", nil, "turn")
-	if _, err := service.startRun(context.Background(), actor, creation.Run.ID, "start"); err != nil {
+	if _, err := service.startRun(context.Background(), mustAuthorize(t, service, actor), creation.Run.ID, "start"); err != nil {
 		t.Fatalf("startRun() error = %v", err)
 	}
 	now = now.Add(time.Second)
@@ -98,7 +98,7 @@ func TestServiceReauthorizesAndCancellationWinsCompletion(t *testing.T) {
 	if err != nil || run.CancelRequestedAt == nil || run.State != RunRunning {
 		t.Fatalf("CancelRun(running) = %#v, error=%v", run, err)
 	}
-	if _, _, err := service.completeRun(context.Background(), actor, run.ID, "Resposta tardia", 1, 1, "late-complete"); !errors.Is(err, ErrCancelled) {
+	if _, _, err := service.completeRun(context.Background(), mustAuthorize(t, service, actor), run.ID, "Resposta tardia", 1, 1, "late-complete"); !errors.Is(err, ErrCancelled) {
 		t.Fatalf("completeRun(after cancel) error = %v", err)
 	}
 	terminal, _ := service.Run(context.Background(), actor, run.ID)
@@ -109,6 +109,7 @@ func TestServiceReauthorizesAndCancellationWinsCompletion(t *testing.T) {
 	current := store.users[user.ID]
 	current.Active = false
 	store.users[user.ID] = current
+	now = now.Add(authorizationCacheTTL + time.Second)
 	if _, err := service.Thread(context.Background(), actor, thread.ID, "revoked"); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("Thread(revoked actor) error = %v", err)
 	}
@@ -121,21 +122,21 @@ func TestToolCancellationWinsFailureAndIsAudited(t *testing.T) {
 	service, _ := NewService(store, ServiceOptions{Now: func() time.Time { return now }, Retention: time.Hour})
 	thread, _ := service.CreateThread(context.Background(), actor, "Cancelamento", "create")
 	creation, _ := service.StartTurn(context.Background(), actor, thread.ID, "Mensagem", "cancel-tool-turn", nil, "turn")
-	if _, err := service.startRun(context.Background(), actor, creation.Run.ID, "start"); err != nil {
+	if _, err := service.startRun(context.Background(), mustAuthorize(t, service, actor), creation.Run.ID, "start"); err != nil {
 		t.Fatalf("startRun() error = %v", err)
 	}
-	step, err := service.beginTool(context.Background(), actor, creation.Run.ID, "search", [32]byte{1})
+	step, err := service.beginTool(context.Background(), mustAuthorize(t, service, actor), creation.Run.ID, "search", [32]byte{1})
 	if err != nil {
 		t.Fatalf("beginTool() error = %v", err)
 	}
 	if _, err := service.CancelRun(context.Background(), actor, creation.Run.ID, "cancel"); err != nil {
 		t.Fatalf("CancelRun() error = %v", err)
 	}
-	failed, err := service.failTool(context.Background(), actor, step.ID, creation.Run.ID, "tool_failed", "fail-tool")
+	failed, err := service.failTool(context.Background(), mustAuthorize(t, service, actor), step.ID, creation.Run.ID, "tool_failed", "fail-tool")
 	if err != nil || failed.State != ToolStepCancelled || failed.ErrorCode != "cancelled" {
 		t.Fatalf("failTool() = %#v, error=%v", failed, err)
 	}
-	terminal, err := service.failRun(context.Background(), actor, creation.Run.ID, "tool_failed", "terminal")
+	terminal, err := service.failRun(context.Background(), mustAuthorize(t, service, actor), creation.Run.ID, "tool_failed", "terminal")
 	if err != nil || terminal.State != RunCancelled || terminal.ErrorCode != "cancelled" {
 		t.Fatalf("failRun() = %#v, error=%v", terminal, err)
 	}
@@ -265,6 +266,16 @@ func TestTerminalEventHistoryRemainsPagedUntilEveryEventIsReadable(t *testing.T)
 	if err != nil || len(second.Events) != 2 || !second.Terminal || second.Events[len(second.Events)-1].Kind != EventRunCompleted {
 		t.Fatalf("second Events() = %#v, error=%v", second, err)
 	}
+}
+
+
+func mustAuthorize(t *testing.T, service *Service, actor auth.Session) auth.User {
+	t.Helper()
+	user, err := service.authorize(context.Background(), actor)
+	if err != nil {
+		t.Fatalf("authorize() error = %v", err)
+	}
+	return user
 }
 
 func chatTestActor(t *testing.T, login string) (auth.Session, auth.User) {

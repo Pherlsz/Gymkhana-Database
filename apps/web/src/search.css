@@ -189,6 +189,22 @@
   gap: 0.75rem;
 }
 
+.search-list--pending {
+  opacity: 0.72;
+}
+
+.search-results__truncated {
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.search-hit {
+  background: color-mix(in oklch, var(--brand-accent-solid, #e8b84a) 55%, transparent);
+  color: inherit;
+  border-radius: 0.15em;
+  padding: 0 0.05em;
+}
+
 /* --- H v3 card (site radius tokens) ---------------------------------- */
 
 .search-card {
@@ -227,16 +243,45 @@ html.dark .search-card.is-open {
   }
 }
 
+.search-card__bar {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.search-card__open-table {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding-inline: 0.85rem;
+  border-inline-start: 1px solid var(--md-outline-variant);
+  background: color-mix(in oklch, var(--md-surface-container) 55%, transparent);
+  color: var(--md-primary-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.search-card__open-table:hover {
+  background: var(--md-state-hover);
+}
+
+.search-card[data-active="true"] {
+  border-color: color-mix(in oklch, var(--md-primary-text) 45%, var(--md-outline));
+}
+
 .search-card__header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  inline-size: 100%;
+  flex: 1 1 auto;
+  inline-size: auto;
   min-block-size: 2.75rem;
   margin: 0;
   padding: 0.65rem 0.85rem;
   border: none;
-  border-bottom: 1px solid var(--md-outline-variant);
+  border-bottom: none;
   background: color-mix(in oklch, var(--md-surface-container) 55%, transparent);
   color: inherit;
   text-align: start;

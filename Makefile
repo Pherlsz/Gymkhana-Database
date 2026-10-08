@@ -39,14 +39,20 @@ require-database-url:
 	fi
 
 migrate: require-database-url
-	@$(with-env) $(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --migrations database/migrations --conn-string "$$DATABASE_URL"
+	@mkdir -p "$(BIN_DIR)"
+	@if [ ! -x "$(BIN_DIR)/tern" ]; then GOBIN="$(BIN_DIR)" $(GO) install github.com/jackc/tern/v2@$(TERN_VERSION); fi
+	@$(with-env) "$(BIN_DIR)/tern" migrate --migrations database/migrations --conn-string "$$DATABASE_URL"
 	@$(GO) run ./cmd/river-migrate -action migrate
 
 migrate-down-one: require-database-url
-	@$(with-env) $(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) migrate --destination -1 --migrations database/migrations --conn-string "$$DATABASE_URL"
+	@mkdir -p "$(BIN_DIR)"
+	@if [ ! -x "$(BIN_DIR)/tern" ]; then GOBIN="$(BIN_DIR)" $(GO) install github.com/jackc/tern/v2@$(TERN_VERSION); fi
+	@$(with-env) "$(BIN_DIR)/tern" migrate --destination -1 --migrations database/migrations --conn-string "$$DATABASE_URL"
 
 migrate-status: require-database-url
-	@$(with-env) $(GO) run github.com/jackc/tern/v2@$(TERN_VERSION) status --migrations database/migrations --conn-string "$$DATABASE_URL"
+	@mkdir -p "$(BIN_DIR)"
+	@if [ ! -x "$(BIN_DIR)/tern" ]; then GOBIN="$(BIN_DIR)" $(GO) install github.com/jackc/tern/v2@$(TERN_VERSION); fi
+	@$(with-env) "$(BIN_DIR)/tern" status --migrations database/migrations --conn-string "$$DATABASE_URL"
 	@$(GO) run ./cmd/river-migrate -action validate
 
 reset-db:

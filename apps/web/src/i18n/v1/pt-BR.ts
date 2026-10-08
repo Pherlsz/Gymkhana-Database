@@ -384,6 +384,8 @@ export const cadastro = {
   sectionDocumentsHint:
     "Qualquer documento oficial brasileiro (CPF, RG, CNH, certidão, OAB, CRM…).",
   sectionDocumentsEmpty: "Nenhum documento adicionado ainda.",
+  itemSaved: "Salvo",
+  itemFailed: "Falhou",
   btnAddDocument: "Adicionar documento",
   fieldDocType: "Tipo de documento",
   fieldDocNumber: "Número do documento",
@@ -579,6 +581,7 @@ export const tables = {
     title: "Escolher colunas",
     search: "Buscar coluna…",
     showAll: "Mostrar todas",
+    hideAll: "Ocultar todas",
     reset: "Restaurar padrão",
     empty: "Nenhuma coluna encontrada.",
     locked: "Sempre visível",
@@ -856,6 +859,8 @@ export const search = {
   resultsUnit: "resultados",
   relevanceWord: "relevância",
   resultCount: ({ count }: { count: number }) => `${count} resultado${count === 1 ? "" : "s"}`,
+  truncated: ({ count }: { count: number }) =>
+    `Mostrando os primeiros ${count} de muitos — refine a busca.`,
   openRecord: "Abrir registro",
   openFicha: "Ficha",
   collapseFicha: "Recolher",

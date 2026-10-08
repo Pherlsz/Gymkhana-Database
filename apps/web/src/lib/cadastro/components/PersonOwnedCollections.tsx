@@ -14,7 +14,8 @@ import {
 import type { AttachmentOwner } from "../../api/attachments";
 import { getOCRCapability } from "../../api/ocr";
 import { queryKeys } from "../../api/queryKeys";
-import { persistDocumentForm } from "../cadastroPersist";
+import { errorMessage } from "../../formatters";
+import { persistDocumentForm, storedRecordOf } from "../cadastroPersist";
 import { OcrReviewPanel } from "../OcrReviewPanel";
 import { INITIAL_DOC_FIELDS } from "../types";
 import { useAttachmentsEnabled } from "../useAttachmentsEnabled";
@@ -72,6 +73,7 @@ export function PersonOwnedCollections({
   const [addingSaving, setAddingSaving] = useState(false);
   const [docState, setDocState] = useState<DocumentFormFieldsState>(INITIAL_DOC_FIELDS);
   const [formError, setFormError] = useState<string | null>(null);
+  const [storedDocument, setStoredDocument] = useState<{ id: string; version: number } | null>(null);
   const [ocrOwner, setOcrOwner] = useState<AttachmentOwner | null>(null);
 
   const documentTypes = useQuery({
@@ -98,6 +100,7 @@ export function PersonOwnedCollections({
     setDocState(INITIAL_DOC_FIELDS);
     setAddingDoc(false);
     setFormError(null);
+    setStoredDocument(null);
   };
 
   const handleConfirmAdd = async () => {
@@ -117,6 +120,7 @@ export function PersonOwnedCollections({
       const saved = await persistDocumentForm({
         ownerProfileId: profile.id,
         fields: { ...docState, docTypeId: type.id },
+        ...(storedDocument ? { existing: storedDocument } : {}),
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.records.documents() }),
@@ -134,8 +138,10 @@ export function PersonOwnedCollections({
       if (saved.ocrOwner && ocrCapability.data?.enabled) {
         setOcrOwner(saved.ocrOwner);
       }
-    } catch {
-      setFormError(messages.common.labels.saveError);
+    } catch (caught) {
+      const stored = storedRecordOf(caught);
+      if (stored) setStoredDocument(stored);
+      setFormError(errorMessage(caught) || messages.common.labels.saveError);
     } finally {
       setAddingSaving(false);
     }

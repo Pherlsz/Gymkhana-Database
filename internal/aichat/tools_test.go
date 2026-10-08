@@ -20,6 +20,7 @@ type fakeToolSearch struct {
 	page    searchdomain.Page
 	query   searchdomain.Query
 	err     error
+	boom    bool
 }
 
 func (service *fakeToolSearch) Catalog(context.Context, auth.Session) (searchdomain.Catalog, error) {
@@ -27,6 +28,9 @@ func (service *fakeToolSearch) Catalog(context.Context, auth.Session) (searchdom
 }
 
 func (service *fakeToolSearch) Search(_ context.Context, _ auth.Session, query searchdomain.Query) (searchdomain.Page, error) {
+	if service.boom {
+		panic("search panicked")
+	}
 	service.query = query
 	return service.page, service.err
 }
@@ -573,4 +577,54 @@ func testToolGateway(t *testing.T, search SearchPort, query QueryPort, reference
 		t.Fatalf("NewToolGateway() error = %v", err)
 	}
 	return gateway
+}
+
+
+type countingToolQuery struct {
+	fakeToolQuery
+	catalogCalls int
+}
+
+func (service *countingToolQuery) Catalog(ctx context.Context, actor auth.Session, requestID string) (querydomain.Catalog, error) {
+	service.catalogCalls++
+	return service.fakeToolQuery.Catalog(ctx, actor, requestID)
+}
+
+type staticResultRefs struct{}
+
+func (staticResultRefs) ResultReference(context.Context, auth.Session, Identifier, string) (ResultReference, error) {
+	return ResultReference{}, ErrNotFound
+}
+
+func TestCompactCatalogNoteCachesByTTLAndVersion(t *testing.T) {
+	current := time.Date(2026, time.July, 18, 19, 0, 0, 0, time.UTC)
+	query := &countingToolQuery{fakeToolQuery: fakeToolQuery{catalog: querydomain.Catalog{Version: "version-one"}}}
+	gateway, err := NewToolGateway(&fakeToolSearch{}, query, staticResultRefs{}, func() time.Time { return current })
+	if err != nil {
+		t.Fatalf("NewToolGateway() error = %v", err)
+	}
+	actor, _ := chatTestActor(t, "member")
+	note1, err := gateway.CompactCatalogNote(context.Background(), actor, "c1")
+	if err != nil || note1 == "" {
+		t.Fatalf("CompactCatalogNote() = %q, %v", note1, err)
+	}
+	if query.catalogCalls != 1 {
+		t.Fatalf("catalogCalls after first = %d", query.catalogCalls)
+	}
+	note2, err := gateway.CompactCatalogNote(context.Background(), actor, "c2")
+	if err != nil || note2 != note1 {
+		t.Fatalf("cached note = %q %v, want %q", note2, err, note1)
+	}
+	if query.catalogCalls != 1 {
+		t.Fatalf("catalogCalls while cached = %d", query.catalogCalls)
+	}
+	current = current.Add(compactCatalogNoteTTL + time.Second)
+	query.catalog.Version = "version-two"
+	note3, err := gateway.CompactCatalogNote(context.Background(), actor, "c3")
+	if err != nil || note3 == "" || note3 == note1 {
+		t.Fatalf("refreshed note = %q %v", note3, err)
+	}
+	if query.catalogCalls != 2 {
+		t.Fatalf("catalogCalls after refresh = %d", query.catalogCalls)
+	}
 }
