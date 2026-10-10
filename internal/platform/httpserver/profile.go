@@ -226,7 +226,7 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 			var matchErr error
 			hits, matchErr = search.MatchProfileHits(r.Context(), actor, searchdomain.Query{Q: queryText})
 			if matchErr != nil {
-				writeProblem(w, r, *searchListProblem(matchErr))
+				writeProblem(w, r, *searchListFailure(r, logger, matchErr))
 				return
 			}
 			restrict = true

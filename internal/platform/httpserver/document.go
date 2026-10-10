@@ -278,7 +278,7 @@ func registerDocumentRoutes(mux *http.ServeMux, logger *slog.Logger, authenticat
 			writeProblem(w, r, *problem)
 			return
 		}
-		restrict, ids, searchProblem := applySearchQ(r, actor, search, searchdomain.ModuleDocuments)
+		restrict, ids, searchProblem := applySearchQ(r, actor, search, searchdomain.ModuleDocuments, logger)
 		if searchProblem != nil {
 			writeProblem(w, r, *searchProblem)
 			return

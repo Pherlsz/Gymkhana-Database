@@ -256,7 +256,7 @@ func registerBillRoutes(mux *http.ServeMux, logger *slog.Logger, authentication 
 			writeProblem(w, r, *problem)
 			return
 		}
-		restrict, ids, searchProblem := applySearchQ(r, actor, search, searchdomain.ModuleBills)
+		restrict, ids, searchProblem := applySearchQ(r, actor, search, searchdomain.ModuleBills, logger)
 		if searchProblem != nil {
 			writeProblem(w, r, *searchProblem)
 			return
