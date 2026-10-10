@@ -525,9 +525,7 @@ describe("TablesPage", () => {
     expect(headerTexts()).not.toContain("Cidade");
     expect(headerTexts()).toContain("Nome");
     await waitFor(() => expect(window.location.search).not.toContain("cols="));
-    expect(window.localStorage.getItem("gymkhana.sheet.cols.v1.people")).toBe(
-      "-city,father_name",
-    );
+    expect(window.localStorage.getItem("gymkhana.sheet.cols.v1.people")).toBe("-city,father_name");
   });
 
   it("restores people columns from localStorage without a cols param", async () => {
@@ -1137,5 +1135,25 @@ describe("TablesPage", () => {
     const sheet = document.querySelector(".spreadsheet-table")?.textContent ?? "";
     expect(sheet.indexOf("Zélia Costa")).toBeGreaterThan(-1);
     expect(sheet.indexOf("Zélia Costa")).toBeLessThan(sheet.indexOf("Ana da Silva"));
+  });
+
+  it("opens the assistant over the sheet and marks the page", async () => {
+    window.history.replaceState(null, "", "/tables/people");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "Pessoas" })).toBeInTheDocument();
+    expect(document.querySelector(".tables-page.is-assistant-open")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Assistente" }));
+    expect(await screen.findByRole("dialog", { name: "Sessões" })).toBeInTheDocument();
+    expect(document.querySelector(".tables-page.is-assistant-open")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Ampliar" })).toBeInTheDocument();
   });
 });
