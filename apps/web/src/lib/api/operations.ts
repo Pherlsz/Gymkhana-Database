@@ -10,8 +10,6 @@ export type OperationImportPage =
   paths["/api/v1/operations/imports"]["get"]["responses"][200]["content"]["application/json"];
 export type OperationReport =
   paths["/api/v1/operations/imports/{import_id}/report"]["get"]["responses"][200]["content"]["application/json"];
-export type OperationExport =
-  paths["/api/v1/operations/exports/{export_id}"]["get"]["responses"][200]["content"]["application/json"];
 export type OperationMapping =
   paths["/api/v1/operations/imports/{import_id}/mapping"]["put"]["requestBody"]["content"]["application/json"]["mapping"];
 export type OperationDecision =

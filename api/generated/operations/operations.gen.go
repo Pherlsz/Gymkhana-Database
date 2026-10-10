@@ -22,51 +22,6 @@ const (
 	SessionCookieScopes sessionCookieContextKey = "sessionCookie.Scopes"
 )
 
-// Defines values for ExportDownloadGrantMethod.
-const (
-	GET ExportDownloadGrantMethod = "GET"
-)
-
-// Valid indicates whether the value is a known member of the ExportDownloadGrantMethod enum.
-func (e ExportDownloadGrantMethod) Valid() bool {
-	switch e {
-	case GET:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ExportState.
-const (
-	ExportStateCANCELLED ExportState = "CANCELLED"
-	ExportStateCOMPLETED ExportState = "COMPLETED"
-	ExportStateEXPIRED   ExportState = "EXPIRED"
-	ExportStateFAILED    ExportState = "FAILED"
-	ExportStateQUEUED    ExportState = "QUEUED"
-	ExportStateRUNNING   ExportState = "RUNNING"
-)
-
-// Valid indicates whether the value is a known member of the ExportState enum.
-func (e ExportState) Valid() bool {
-	switch e {
-	case ExportStateCANCELLED:
-		return true
-	case ExportStateCOMPLETED:
-		return true
-	case ExportStateEXPIRED:
-		return true
-	case ExportStateFAILED:
-		return true
-	case ExportStateQUEUED:
-		return true
-	case ExportStateRUNNING:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for FieldKind.
 const (
 	FieldKindBOOLEAN    FieldKind = "BOOLEAN"
@@ -135,49 +90,49 @@ func (e ImportStage) Valid() bool {
 
 // Defines values for ImportState.
 const (
-	ImportStateCANCELLED         ImportState = "CANCELLED"
-	ImportStateCOMPLETED         ImportState = "COMPLETED"
-	ImportStateDECISIONSREQUIRED ImportState = "DECISIONS_REQUIRED"
-	ImportStateEXPIRED           ImportState = "EXPIRED"
-	ImportStateFAILED            ImportState = "FAILED"
-	ImportStateMAPPING           ImportState = "MAPPING"
-	ImportStatePARSING           ImportState = "PARSING"
-	ImportStatePREVIEWREADY      ImportState = "PREVIEW_READY"
-	ImportStateQUEUED            ImportState = "QUEUED"
-	ImportStateREADY             ImportState = "READY"
-	ImportStateRUNNING           ImportState = "RUNNING"
-	ImportStateUPLOADED          ImportState = "UPLOADED"
-	ImportStateUPLOADING         ImportState = "UPLOADING"
+	CANCELLED         ImportState = "CANCELLED"
+	COMPLETED         ImportState = "COMPLETED"
+	DECISIONSREQUIRED ImportState = "DECISIONS_REQUIRED"
+	EXPIRED           ImportState = "EXPIRED"
+	FAILED            ImportState = "FAILED"
+	MAPPING           ImportState = "MAPPING"
+	PARSING           ImportState = "PARSING"
+	PREVIEWREADY      ImportState = "PREVIEW_READY"
+	QUEUED            ImportState = "QUEUED"
+	READY             ImportState = "READY"
+	RUNNING           ImportState = "RUNNING"
+	UPLOADED          ImportState = "UPLOADED"
+	UPLOADING         ImportState = "UPLOADING"
 )
 
 // Valid indicates whether the value is a known member of the ImportState enum.
 func (e ImportState) Valid() bool {
 	switch e {
-	case ImportStateCANCELLED:
+	case CANCELLED:
 		return true
-	case ImportStateCOMPLETED:
+	case COMPLETED:
 		return true
-	case ImportStateDECISIONSREQUIRED:
+	case DECISIONSREQUIRED:
 		return true
-	case ImportStateEXPIRED:
+	case EXPIRED:
 		return true
-	case ImportStateFAILED:
+	case FAILED:
 		return true
-	case ImportStateMAPPING:
+	case MAPPING:
 		return true
-	case ImportStatePARSING:
+	case PARSING:
 		return true
-	case ImportStatePREVIEWREADY:
+	case PREVIEWREADY:
 		return true
-	case ImportStateQUEUED:
+	case QUEUED:
 		return true
-	case ImportStateREADY:
+	case READY:
 		return true
-	case ImportStateRUNNING:
+	case RUNNING:
 		return true
-	case ImportStateUPLOADED:
+	case UPLOADED:
 		return true
-	case ImportStateUPLOADING:
+	case UPLOADING:
 		return true
 	default:
 		return false
@@ -343,22 +298,6 @@ func (e ValueKind) Valid() bool {
 	}
 }
 
-// BulkDeleteRequest defines model for BulkDeleteRequest.
-type BulkDeleteRequest struct {
-	Confirmation string `json:"confirmation"`
-	Items        []struct {
-		Id      openapi_types.UUID `json:"id"`
-		Version int64              `json:"version"`
-	} `json:"items"`
-	Module Module `json:"module"`
-}
-
-// BulkDeleteResult defines model for BulkDeleteResult.
-type BulkDeleteResult struct {
-	Deleted int    `json:"deleted"`
-	Module  Module `json:"module"`
-}
-
 // CatalogField defines model for CatalogField.
 type CatalogField struct {
 	Exportable bool      `json:"exportable"`
@@ -379,12 +318,6 @@ type CatalogModule struct {
 	Fields        []CatalogField `json:"fields"`
 	Id            Module         `json:"id"`
 	Label         string         `json:"label"`
-}
-
-// CreateExportRequest defines model for CreateExportRequest.
-type CreateExportRequest struct {
-	IdempotencyKey string `json:"idempotency_key"`
-	Module         Module `json:"module"`
 }
 
 // CreateImportRequest defines model for CreateImportRequest.
@@ -408,27 +341,6 @@ type ErrorResponse struct {
 	} `json:"field_errors,omitempty"`
 	RequestId *string `json:"request_id,omitempty"`
 }
-
-// ExportDownloadGrant defines model for ExportDownloadGrant.
-type ExportDownloadGrant struct {
-	ExpiresAt time.Time                 `json:"expires_at"`
-	Method    ExportDownloadGrantMethod `json:"method"`
-	Url       string                    `json:"url"`
-}
-
-// ExportDownloadGrantMethod defines model for ExportDownloadGrant.Method.
-type ExportDownloadGrantMethod string
-
-// ExportPage defines model for ExportPage.
-type ExportPage struct {
-	Exports []OperationExport `json:"exports"`
-	Limit   int               `json:"limit"`
-	Offset  int               `json:"offset"`
-	Total   int64             `json:"total"`
-}
-
-// ExportState defines model for ExportState.
-type ExportState string
 
 // FieldKind defines model for FieldKind.
 type FieldKind string
@@ -533,22 +445,6 @@ type ImportUploadGrantMethod string
 // Module defines model for Module.
 type Module string
 
-// OperationExport defines model for OperationExport.
-type OperationExport struct {
-	ByteSize    int64              `json:"byte_size"`
-	CompletedAt *time.Time         `json:"completed_at,omitempty"`
-	CreatedAt   time.Time          `json:"created_at"`
-	ErrorCode   *string            `json:"error_code,omitempty"`
-	ExpiresAt   time.Time          `json:"expires_at"`
-	Filename    string             `json:"filename"`
-	Id          openapi_types.UUID `json:"id"`
-	Module      Module             `json:"module"`
-	RowCount    int                `json:"row_count"`
-	State       ExportState        `json:"state"`
-	UpdatedAt   time.Time          `json:"updated_at"`
-	Version     int64              `json:"version"`
-}
-
 // OperationImport defines model for OperationImport.
 type OperationImport struct {
 	ActualSize           *int64                    `json:"actual_size,omitempty"`
@@ -643,9 +539,6 @@ type VersionRequest struct {
 	Version int64 `json:"version"`
 }
 
-// ExportID defines model for ExportID.
-type ExportID = openapi_types.UUID
-
 // ImportID defines model for ImportID.
 type ImportID = openapi_types.UUID
 
@@ -682,23 +575,11 @@ type ValidationError = ErrorResponse
 // sessionCookieContextKey is the context key for sessionCookie security scheme
 type sessionCookieContextKey string
 
-// ListOperationExportsParams defines parameters for ListOperationExports.
-type ListOperationExportsParams struct {
-	Limit  *Limit  `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
-}
-
 // ListOperationImportsParams defines parameters for ListOperationImports.
 type ListOperationImportsParams struct {
 	Limit  *Limit  `form:"limit,omitempty" json:"limit,omitempty"`
 	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
 }
-
-// BulkDeleteOperationRecordsJSONRequestBody defines body for BulkDeleteOperationRecords for application/json ContentType.
-type BulkDeleteOperationRecordsJSONRequestBody = BulkDeleteRequest
-
-// CreateOperationExportJSONRequestBody defines body for CreateOperationExport for application/json ContentType.
-type CreateOperationExportJSONRequestBody = CreateExportRequest
 
 // CreateOperationImportJSONRequestBody defines body for CreateOperationImport for application/json ContentType.
 type CreateOperationImportJSONRequestBody = CreateImportRequest
@@ -724,23 +605,8 @@ type SelectOperationImportSheetJSONRequestBody = SelectSheetRequest
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
-	// (POST /api/v1/operations/bulk-delete)
-	BulkDeleteOperationRecords(w http.ResponseWriter, r *http.Request)
-
 	// (GET /api/v1/operations/catalog)
 	GetOperationsCatalog(w http.ResponseWriter, r *http.Request)
-
-	// (GET /api/v1/operations/exports)
-	ListOperationExports(w http.ResponseWriter, r *http.Request, params ListOperationExportsParams)
-
-	// (POST /api/v1/operations/exports)
-	CreateOperationExport(w http.ResponseWriter, r *http.Request)
-
-	// (GET /api/v1/operations/exports/{export_id})
-	GetOperationExport(w http.ResponseWriter, r *http.Request, exportId ExportID)
-
-	// (POST /api/v1/operations/exports/{export_id}/download)
-	DownloadOperationExport(w http.ResponseWriter, r *http.Request, exportId ExportID)
 
 	// (GET /api/v1/operations/imports)
 	ListOperationImports(w http.ResponseWriter, r *http.Request, params ListOperationImportsParams)
@@ -788,26 +654,6 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-// BulkDeleteOperationRecords operation middleware
-func (siw *ServerInterfaceWrapper) BulkDeleteOperationRecords(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.BulkDeleteOperationRecords(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetOperationsCatalog operation middleware
 func (siw *ServerInterfaceWrapper) GetOperationsCatalog(w http.ResponseWriter, r *http.Request) {
 
@@ -819,142 +665,6 @@ func (siw *ServerInterfaceWrapper) GetOperationsCatalog(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetOperationsCatalog(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// ListOperationExports operation middleware
-func (siw *ServerInterfaceWrapper) ListOperationExports(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListOperationExportsParams
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "offset" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListOperationExports(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CreateOperationExport operation middleware
-func (siw *ServerInterfaceWrapper) CreateOperationExport(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateOperationExport(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetOperationExport operation middleware
-func (siw *ServerInterfaceWrapper) GetOperationExport(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "export_id" -------------
-	var exportId ExportID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "export_id", r.PathValue("export_id"), &exportId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "export_id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOperationExport(w, r, exportId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DownloadOperationExport operation middleware
-func (siw *ServerInterfaceWrapper) DownloadOperationExport(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "export_id" -------------
-	var exportId ExportID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "export_id", r.PathValue("export_id"), &exportId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "export_id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, SessionCookieScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DownloadOperationExport(w, r, exportId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1476,12 +1186,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/operations/bulk-delete", wrapper.BulkDeleteOperationRecords)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/operations/catalog", wrapper.GetOperationsCatalog)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/operations/exports", wrapper.ListOperationExports)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/operations/exports", wrapper.CreateOperationExport)
-	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/operations/exports/{export_id}", wrapper.GetOperationExport)
-	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/operations/exports/{export_id}/download", wrapper.DownloadOperationExport)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v1/operations/imports", wrapper.ListOperationImports)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v1/operations/imports", wrapper.CreateOperationImport)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v1/operations/imports/{import_id}", wrapper.DeleteOperationImport)
@@ -1513,98 +1218,6 @@ type ServiceUnavailableJSONResponse ErrorResponse
 type UnauthorizedJSONResponse ErrorResponse
 
 type ValidationErrorJSONResponse ErrorResponse
-
-type BulkDeleteOperationRecordsRequestObject struct {
-	Body *BulkDeleteOperationRecordsJSONRequestBody
-}
-
-type BulkDeleteOperationRecordsResponseObject interface {
-	VisitBulkDeleteOperationRecordsResponse(w http.ResponseWriter) error
-}
-
-type BulkDeleteOperationRecords200JSONResponse BulkDeleteResult
-
-func (response BulkDeleteOperationRecords200JSONResponse) VisitBulkDeleteOperationRecordsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type BulkDeleteOperationRecords400JSONResponse struct{ BadRequestJSONResponse }
-
-func (response BulkDeleteOperationRecords400JSONResponse) VisitBulkDeleteOperationRecordsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type BulkDeleteOperationRecords401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response BulkDeleteOperationRecords401JSONResponse) VisitBulkDeleteOperationRecordsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type BulkDeleteOperationRecords403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response BulkDeleteOperationRecords403JSONResponse) VisitBulkDeleteOperationRecordsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type BulkDeleteOperationRecords409JSONResponse struct{ ConflictJSONResponse }
-
-func (response BulkDeleteOperationRecords409JSONResponse) VisitBulkDeleteOperationRecordsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(409)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type BulkDeleteOperationRecords503JSONResponse struct{ ServiceUnavailableJSONResponse }
-
-func (response BulkDeleteOperationRecords503JSONResponse) VisitBulkDeleteOperationRecordsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(503)
-	_, err := buf.WriteTo(w)
-	return err
-}
 
 type GetOperationsCatalogRequestObject struct {
 }
@@ -1658,374 +1271,6 @@ func (response GetOperationsCatalog403JSONResponse) VisitGetOperationsCatalogRes
 type GetOperationsCatalog503JSONResponse struct{ ServiceUnavailableJSONResponse }
 
 func (response GetOperationsCatalog503JSONResponse) VisitGetOperationsCatalogResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(503)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListOperationExportsRequestObject struct {
-	Params ListOperationExportsParams
-}
-
-type ListOperationExportsResponseObject interface {
-	VisitListOperationExportsResponse(w http.ResponseWriter) error
-}
-
-type ListOperationExports200JSONResponse ExportPage
-
-func (response ListOperationExports200JSONResponse) VisitListOperationExportsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListOperationExports400JSONResponse struct{ BadRequestJSONResponse }
-
-func (response ListOperationExports400JSONResponse) VisitListOperationExportsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListOperationExports401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response ListOperationExports401JSONResponse) VisitListOperationExportsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListOperationExports403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response ListOperationExports403JSONResponse) VisitListOperationExportsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type ListOperationExports503JSONResponse struct{ ServiceUnavailableJSONResponse }
-
-func (response ListOperationExports503JSONResponse) VisitListOperationExportsResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(503)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateOperationExportRequestObject struct {
-	Body *CreateOperationExportJSONRequestBody
-}
-
-type CreateOperationExportResponseObject interface {
-	VisitCreateOperationExportResponse(w http.ResponseWriter) error
-}
-
-type CreateOperationExport202JSONResponse OperationExport
-
-func (response CreateOperationExport202JSONResponse) VisitCreateOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(202)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateOperationExport400JSONResponse struct{ BadRequestJSONResponse }
-
-func (response CreateOperationExport400JSONResponse) VisitCreateOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateOperationExport401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response CreateOperationExport401JSONResponse) VisitCreateOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateOperationExport403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response CreateOperationExport403JSONResponse) VisitCreateOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateOperationExport429JSONResponse struct{ RateLimitedJSONResponse }
-
-func (response CreateOperationExport429JSONResponse) VisitCreateOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(429)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type CreateOperationExport503JSONResponse struct{ ServiceUnavailableJSONResponse }
-
-func (response CreateOperationExport503JSONResponse) VisitCreateOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(503)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetOperationExportRequestObject struct {
-	ExportId ExportID `json:"export_id"`
-}
-
-type GetOperationExportResponseObject interface {
-	VisitGetOperationExportResponse(w http.ResponseWriter) error
-}
-
-type GetOperationExport200JSONResponse OperationExport
-
-func (response GetOperationExport200JSONResponse) VisitGetOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetOperationExport400JSONResponse struct{ BadRequestJSONResponse }
-
-func (response GetOperationExport400JSONResponse) VisitGetOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetOperationExport401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response GetOperationExport401JSONResponse) VisitGetOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetOperationExport403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response GetOperationExport403JSONResponse) VisitGetOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetOperationExport404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response GetOperationExport404JSONResponse) VisitGetOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type GetOperationExport503JSONResponse struct{ ServiceUnavailableJSONResponse }
-
-func (response GetOperationExport503JSONResponse) VisitGetOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(503)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DownloadOperationExportRequestObject struct {
-	ExportId ExportID `json:"export_id"`
-}
-
-type DownloadOperationExportResponseObject interface {
-	VisitDownloadOperationExportResponse(w http.ResponseWriter) error
-}
-
-type DownloadOperationExport200JSONResponse ExportDownloadGrant
-
-func (response DownloadOperationExport200JSONResponse) VisitDownloadOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DownloadOperationExport400JSONResponse struct{ BadRequestJSONResponse }
-
-func (response DownloadOperationExport400JSONResponse) VisitDownloadOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DownloadOperationExport401JSONResponse struct{ UnauthorizedJSONResponse }
-
-func (response DownloadOperationExport401JSONResponse) VisitDownloadOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DownloadOperationExport403JSONResponse struct{ ForbiddenJSONResponse }
-
-func (response DownloadOperationExport403JSONResponse) VisitDownloadOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DownloadOperationExport404JSONResponse struct{ NotFoundJSONResponse }
-
-func (response DownloadOperationExport404JSONResponse) VisitDownloadOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DownloadOperationExport409JSONResponse struct{ ConflictJSONResponse }
-
-func (response DownloadOperationExport409JSONResponse) VisitDownloadOperationExportResponse(w http.ResponseWriter) error {
-
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(response); err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(409)
-	_, err := buf.WriteTo(w)
-	return err
-}
-
-type DownloadOperationExport503JSONResponse struct{ ServiceUnavailableJSONResponse }
-
-func (response DownloadOperationExport503JSONResponse) VisitDownloadOperationExportResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -3284,23 +2529,8 @@ func (response SelectOperationImportSheet503JSONResponse) VisitSelectOperationIm
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
-	// (POST /api/v1/operations/bulk-delete)
-	BulkDeleteOperationRecords(ctx context.Context, request BulkDeleteOperationRecordsRequestObject) (BulkDeleteOperationRecordsResponseObject, error)
-
 	// (GET /api/v1/operations/catalog)
 	GetOperationsCatalog(ctx context.Context, request GetOperationsCatalogRequestObject) (GetOperationsCatalogResponseObject, error)
-
-	// (GET /api/v1/operations/exports)
-	ListOperationExports(ctx context.Context, request ListOperationExportsRequestObject) (ListOperationExportsResponseObject, error)
-
-	// (POST /api/v1/operations/exports)
-	CreateOperationExport(ctx context.Context, request CreateOperationExportRequestObject) (CreateOperationExportResponseObject, error)
-
-	// (GET /api/v1/operations/exports/{export_id})
-	GetOperationExport(ctx context.Context, request GetOperationExportRequestObject) (GetOperationExportResponseObject, error)
-
-	// (POST /api/v1/operations/exports/{export_id}/download)
-	DownloadOperationExport(ctx context.Context, request DownloadOperationExportRequestObject) (DownloadOperationExportResponseObject, error)
 
 	// (GET /api/v1/operations/imports)
 	ListOperationImports(ctx context.Context, request ListOperationImportsRequestObject) (ListOperationImportsResponseObject, error)
@@ -3368,37 +2598,6 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
-// BulkDeleteOperationRecords operation middleware
-func (sh *strictHandler) BulkDeleteOperationRecords(w http.ResponseWriter, r *http.Request) {
-	var request BulkDeleteOperationRecordsRequestObject
-
-	var body BulkDeleteOperationRecordsJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.BulkDeleteOperationRecords(ctx, request.(BulkDeleteOperationRecordsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "BulkDeleteOperationRecords")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(BulkDeleteOperationRecordsResponseObject); ok {
-		if err := validResponse.VisitBulkDeleteOperationRecordsResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // GetOperationsCatalog operation middleware
 func (sh *strictHandler) GetOperationsCatalog(w http.ResponseWriter, r *http.Request) {
 	var request GetOperationsCatalogRequestObject
@@ -3416,115 +2615,6 @@ func (sh *strictHandler) GetOperationsCatalog(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetOperationsCatalogResponseObject); ok {
 		if err := validResponse.VisitGetOperationsCatalogResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// ListOperationExports operation middleware
-func (sh *strictHandler) ListOperationExports(w http.ResponseWriter, r *http.Request, params ListOperationExportsParams) {
-	var request ListOperationExportsRequestObject
-
-	request.Params = params
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.ListOperationExports(ctx, request.(ListOperationExportsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListOperationExports")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(ListOperationExportsResponseObject); ok {
-		if err := validResponse.VisitListOperationExportsResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// CreateOperationExport operation middleware
-func (sh *strictHandler) CreateOperationExport(w http.ResponseWriter, r *http.Request) {
-	var request CreateOperationExportRequestObject
-
-	var body CreateOperationExportJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.CreateOperationExport(ctx, request.(CreateOperationExportRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "CreateOperationExport")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(CreateOperationExportResponseObject); ok {
-		if err := validResponse.VisitCreateOperationExportResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// GetOperationExport operation middleware
-func (sh *strictHandler) GetOperationExport(w http.ResponseWriter, r *http.Request, exportId ExportID) {
-	var request GetOperationExportRequestObject
-
-	request.ExportId = exportId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetOperationExport(ctx, request.(GetOperationExportRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetOperationExport")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetOperationExportResponseObject); ok {
-		if err := validResponse.VisitGetOperationExportResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// DownloadOperationExport operation middleware
-func (sh *strictHandler) DownloadOperationExport(w http.ResponseWriter, r *http.Request, exportId ExportID) {
-	var request DownloadOperationExportRequestObject
-
-	request.ExportId = exportId
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.DownloadOperationExport(ctx, request.(DownloadOperationExportRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DownloadOperationExport")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(DownloadOperationExportResponseObject); ok {
-		if err := validResponse.VisitDownloadOperationExportResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

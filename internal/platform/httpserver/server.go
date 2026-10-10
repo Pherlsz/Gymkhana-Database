@@ -37,8 +37,6 @@ type Options struct {
 	Search                 searchService
 	Operations             operationsService
 	GoogleForms            googleFormsService
-	Query                  queryService
-	Matching               matchingService
 	Chat                   chatService
 	ChatResults            chatResultReader
 	ChatLauncher           chatRunLauncher
@@ -105,9 +103,6 @@ func New(logger *slog.Logger, pool *pgxpool.Pool, options ...Options) http.Handl
 	registerSearchRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Search)
 	registerOperationsRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Operations)
 	registerGoogleFormsRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.GoogleForms, settings.ApplicationURL, settings.FeatureFlags)
-	registerQueryRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Query)
-	registerAdvancedQueryRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Query)
-	registerMatchingRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Matching)
 	registerChatRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.Chat, settings.ChatResults, settings.ChatLauncher, settings.FeatureFlags)
 	registerOCRRoutes(mux, logger, settings.Auth, settings.CapabilityCheck, settings.OCR, settings.FeatureFlags)
 	mux.HandleFunc("/", fallbackHandler)

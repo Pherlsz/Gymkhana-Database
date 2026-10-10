@@ -367,12 +367,6 @@ function apiResponse(url: string): Response | undefined {
       summary: "2 pessoas",
     });
   }
-  if (url.includes("/api/v1/custom-entity-types")) {
-    return jsonResponse({ types: [], page: { total: 0, limit: 1000, offset: 0 } });
-  }
-  if (url.includes("/api/v1/custom-entities?")) {
-    return jsonResponse({ entities: [], page: { total: 0, limit: 1, offset: 0 } });
-  }
   return jsonResponse({ status: "ok" });
 }
 

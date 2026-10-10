@@ -27,12 +27,6 @@ type ExecuteImportArgs struct {
 
 func (ExecuteImportArgs) Kind() string { return "operations_execute_import" }
 
-type GenerateExportArgs struct {
-	ExportID string `json:"export_id" river:"unique"`
-}
-
-func (GenerateExportArgs) Kind() string { return "operations_generate_export" }
-
 type CleanupArgs struct {
 	Window string `json:"window" river:"unique"`
 }
@@ -65,10 +59,6 @@ func (jobs *RiverJobs) EnqueueParse(ctx context.Context, id Identifier) (int64, 
 
 func (jobs *RiverJobs) EnqueueExecute(ctx context.Context, id Identifier) (int64, error) {
 	return jobs.insert(ctx, ExecuteImportArgs{ImportID: id.String()})
-}
-
-func (jobs *RiverJobs) EnqueueExport(ctx context.Context, id Identifier) (int64, error) {
-	return jobs.insert(ctx, GenerateExportArgs{ExportID: id.String()})
 }
 
 func (jobs *RiverJobs) EnqueueCleanup(ctx context.Context, window time.Time) (int64, error) {
@@ -158,7 +148,6 @@ func RegisterRiverWorkers(workers *river.Workers, service *Service) error {
 	}
 	river.AddWorker(workers, &parseImportWorker{service: service})
 	river.AddWorker(workers, &executeImportWorker{service: service})
-	river.AddWorker(workers, &generateExportWorker{service: service})
 	river.AddWorker(workers, &cleanupWorker{service: service})
 	return nil
 }
@@ -217,11 +206,6 @@ func (worker *executeImportWorker) Work(ctx context.Context, job *river.Job[Exec
 	return riverWorkerResult(worker.service.ExecuteImport(ctx, id))
 }
 
-type generateExportWorker struct {
-	river.WorkerDefaults[GenerateExportArgs]
-	service *Service
-}
-
 type cleanupWorker struct {
 	river.WorkerDefaults[CleanupArgs]
 	service *Service
@@ -230,14 +214,6 @@ type cleanupWorker struct {
 func (worker *cleanupWorker) Work(ctx context.Context, _ *river.Job[CleanupArgs]) error {
 	_, err := worker.service.Cleanup(ctx)
 	return riverWorkerResult(err)
-}
-
-func (worker *generateExportWorker) Work(ctx context.Context, job *river.Job[GenerateExportArgs]) error {
-	id, err := ParseIdentifier(job.Args.ExportID)
-	if err != nil {
-		return river.JobCancel(err)
-	}
-	return riverWorkerResult(worker.service.GenerateExport(ctx, id))
 }
 
 func riverWorkerResult(err error) error {

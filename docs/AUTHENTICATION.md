@@ -33,10 +33,10 @@ The capability system provides granular permission control beyond role-based acc
 | `data_tables`  | Access to documents, bills, custom data. A dedicated `custom_data` capability (beyond formula columns and user-created columns) is an open product question; do not invent a new grant surface until that is decided. |
 | `attachments`  | Access to file attachments                                                                                                                                                                                            |
 | `ocr`          | Access to OCR processing                                                                                                                                                                                              |
-| `operations`   | Access to bulk operations                                                                                                                                                                                             |
+| `operations`   | Access to XLSX import operations                                                                                                                                                                                      |
 | `google_forms` | Access to Google Forms integration                                                                                                                                                                                    |
-| `query`        | Access to query engine                                                                                                                                                                                                |
-| `matching`     | Access to duplicate matching                                                                                                                                                                                          |
+| `query`        | Access to the Assistente Query Engine library (no public Query HTTP API)                                                                                                                                              |
+| `matching`     | Retired. Leftover grants stay valid so old rows do not break; migration 042 revokes them.                                                                                                                             |
 | `chat`         | Access to the Assistente (same HTTP engine; not a /chat destination page)                                                                                                                                             |
 
 ### Granting capabilities

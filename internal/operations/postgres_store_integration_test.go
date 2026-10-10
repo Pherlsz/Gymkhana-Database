@@ -19,7 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func TestPostgresOperationLifecycleIdempotencyOwnershipExportAndBulkDelete(t *testing.T) {
+func TestPostgresOperationLifecycleIdempotencyAndOwnership(t *testing.T) {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		t.Skip("DATABASE_URL is required for operations PostgreSQL integration tests")
@@ -36,8 +36,6 @@ func TestPostgresOperationLifecycleIdempotencyOwnershipExportAndBulkDelete(t *te
 
 	actorID, _ := auth.NewIdentifier()
 	otherActorID, _ := auth.NewIdentifier()
-	bulkOne, _ := NewIdentifier()
-	bulkTwo, _ := NewIdentifier()
 	customFieldID, _ := NewIdentifier()
 	key := "operations_" + strings.ReplaceAll(actorID.String(), "-", "")[:18]
 	insertOperationActor(t, ctx, pool, actorID, key, key, auth.RoleAdmin)
@@ -51,9 +49,8 @@ VALUES($1,'PROFILE','member_code','Código de associado','TEXT',false,true)`, da
 		cleanup := context.Background()
 		_, _ = pool.Exec(cleanup, `DELETE FROM operation_audit_events WHERE actor_user_id IN ($1,$2)`, authDatabaseUUID(actorID), authDatabaseUUID(otherActorID))
 		_, _ = pool.Exec(cleanup, `DELETE FROM operation_imports WHERE actor_user_id IN ($1,$2)`, authDatabaseUUID(actorID), authDatabaseUUID(otherActorID))
-		_, _ = pool.Exec(cleanup, `DELETE FROM operation_exports WHERE actor_user_id IN ($1,$2)`, authDatabaseUUID(actorID), authDatabaseUUID(otherActorID))
 		_, _ = pool.Exec(cleanup, `DELETE FROM operation_rate_limits WHERE actor_user_id IN ($1,$2)`, authDatabaseUUID(actorID), authDatabaseUUID(otherActorID))
-		_, _ = pool.Exec(cleanup, `DELETE FROM profiles WHERE full_name LIKE $1 OR id IN ($2,$3)`, key+"%", databaseUUID(bulkOne), databaseUUID(bulkTwo))
+		_, _ = pool.Exec(cleanup, `DELETE FROM profiles WHERE full_name LIKE $1`, key+"%")
 		_, _ = pool.Exec(cleanup, `DELETE FROM custom_field_definitions WHERE id=$1`, databaseUUID(customFieldID))
 		_, _ = pool.Exec(cleanup, `DELETE FROM app_users WHERE id IN ($1,$2)`, authDatabaseUUID(actorID), authDatabaseUUID(otherActorID))
 	}()
@@ -531,68 +528,6 @@ VALUES($1,'PROFILE','member_code','Código de associado','TEXT',false,true)`, da
 		t.Fatalf("cancellation did not stop between rows: first=%d second=%d import=%#v", firstCancellationCount, secondCancellationCount, cancelledImport)
 	}
 
-	exported, err := service.CreateExport(ctx, actor, ModuleProfiles, "full-profile-export", "integration-export")
-	if err != nil {
-		t.Fatalf("CreateExport() error = %v", err)
-	}
-	replayedExport, err := service.CreateExport(ctx, actor, ModuleProfiles, "full-profile-export", "integration-export-replay")
-	if err != nil || replayedExport.ID != exported.ID {
-		t.Fatalf("idempotent CreateExport() = %s, error = %v", replayedExport.ID, err)
-	}
-	if err := service.GenerateExport(ctx, exported.ID); err != nil {
-		t.Fatalf("GenerateExport() error = %v", err)
-	}
-	if err := service.GenerateExport(ctx, exported.ID); err != nil {
-		t.Fatalf("duplicate GenerateExport() error = %v", err)
-	}
-	finishedExport, err := service.GetExport(ctx, actor, exported.ID)
-	if err != nil || finishedExport.State != ExportCompleted || finishedExport.RowCount < 1 {
-		t.Fatalf("completed export = %#v, error = %v", finishedExport, err)
-	}
-	exportData := objects.get(t, finishedExport.ObjectKey)
-	workbook, _, err := ReadWorkbook(bytes.NewReader(exportData), int64(len(exportData)))
-	if err != nil {
-		t.Fatalf("ReadWorkbook(export) error = %v", err)
-	}
-	if !workbookContainsLiteral(workbook, "=literal-not-formula") || !workbookContainsLiteral(workbook, "00123") || workbookContainsFormula(workbook) {
-		t.Fatal("export lost the literal formula marker or emitted an executable formula")
-	}
-	if objects.putCount(finishedExport.ObjectKey) != 1 {
-		t.Fatalf("duplicate export wrote object %d times", objects.putCount(finishedExport.ObjectKey))
-	}
-
-	if _, err := pool.Exec(ctx, `INSERT INTO profiles(id, full_name) VALUES($1,$2),($3,$4)`,
-		databaseUUID(bulkOne), key+" bulk one", databaseUUID(bulkTwo), key+" bulk two"); err != nil {
-		t.Fatalf("insert bulk profiles: %v", err)
-	}
-	items := []BulkItem{{ID: bulkOne, Version: 1}, {ID: bulkTwo, Version: 2}}
-	if _, err := pool.Exec(ctx, `UPDATE app_users SET role='EXTERNAL' WHERE id=$1`, authDatabaseUUID(actorID)); err != nil {
-		t.Fatalf("revoke bulk delete actor: %v", err)
-	}
-	if _, err := service.BulkDelete(ctx, actor, ModuleProfiles, []BulkItem{{ID: bulkOne, Version: 1}}, BulkDeleteConfirmation, "integration-bulk-revoked"); !errors.Is(err, ErrForbidden) {
-		t.Fatalf("revoked BulkDelete() error = %v", err)
-	}
-	if countOperationProfiles(t, ctx, pool, bulkOne, bulkTwo) != 2 {
-		t.Fatal("revoked bulk deletion changed canonical records")
-	}
-	if _, err := pool.Exec(ctx, `UPDATE app_users SET role='ADMIN' WHERE id=$1`, authDatabaseUUID(actorID)); err != nil {
-		t.Fatalf("restore bulk delete actor: %v", err)
-	}
-	if _, err := service.BulkDelete(ctx, actor, ModuleProfiles, items, BulkDeleteConfirmation, "integration-bulk-conflict"); !errors.Is(err, ErrConflict) {
-		t.Fatalf("stale BulkDelete() error = %v", err)
-	}
-	if countOperationProfiles(t, ctx, pool, bulkOne, bulkTwo) != 2 {
-		t.Fatal("conflicted bulk deletion was not rolled back")
-	}
-	items[1].Version = 1
-	if _, err := service.BulkDelete(ctx, actor, ModuleProfiles, items, "confirmar", "integration-bulk-invalid"); !errors.Is(err, ErrInvalidConfirmation) {
-		t.Fatalf("invalid confirmation BulkDelete() error = %v", err)
-	}
-	deleted, err := service.BulkDelete(ctx, actor, ModuleProfiles, items, BulkDeleteConfirmation, "integration-bulk-success")
-	if err != nil || deleted.Deleted != 2 || countOperationProfiles(t, ctx, pool, bulkOne, bulkTwo) != 0 {
-		t.Fatalf("BulkDelete() = %#v, remaining=%d, error=%v", deleted, countOperationProfiles(t, ctx, pool, bulkOne, bulkTwo), err)
-	}
-
 	if _, err := pool.Exec(ctx, `UPDATE operation_imports SET expires_at=$2 WHERE id=$1`, databaseUUID(completed.ID), fixedNow.Add(-time.Minute)); err != nil {
 		t.Fatalf("expire import fixture: %v", err)
 	}
@@ -666,15 +601,6 @@ VALUES($1,$2,lower($3) || '@example.test',$4,$5,true)`, authDatabaseUUID(id), su
 }
 
 func fixedNowValue(value time.Time) func() time.Time { return func() time.Time { return value } }
-
-func countOperationProfiles(t *testing.T, ctx context.Context, pool *pgxpool.Pool, first, second Identifier) int {
-	t.Helper()
-	var count int
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM profiles WHERE id=$1 OR id=$2`, databaseUUID(first), databaseUUID(second)).Scan(&count); err != nil {
-		t.Fatalf("count operation profiles: %v", err)
-	}
-	return count
-}
 
 func catalogContainsField(catalog []ModuleCatalog, module Module, fieldID string) bool {
 	for _, candidate := range catalog {
@@ -825,10 +751,6 @@ func (jobs *memoryOperationJobs) EnqueueParse(context.Context, Identifier) (int6
 }
 
 func (jobs *memoryOperationJobs) EnqueueExecute(context.Context, Identifier) (int64, error) {
-	return jobs.enqueue()
-}
-
-func (jobs *memoryOperationJobs) EnqueueExport(context.Context, Identifier) (int64, error) {
 	return jobs.enqueue()
 }
 

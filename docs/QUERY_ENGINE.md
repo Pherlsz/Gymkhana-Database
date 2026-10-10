@@ -23,14 +23,9 @@ The public catalog is rebuilt from current authorization and active custom defin
 - Typed cells and logical entity provenance are retained for one hour by default. Expired results return a stable safe code and are deleted in bounded batches; owner activity can also remove expired records opportunistically.
 - Failed and cancelled executions transition atomically and expose no partial result rows. Audits contain only logical event types, IDs, counts, request IDs, outcomes, and plan fingerprints—not predicate values or result cells.
 
-## HTTP surface
+## Product surface
 
-- `GET /api/v1/query/catalog`
-- `POST /api/v1/query/validate`
-- `POST /api/v1/query/executions`
-- `GET /api/v1/query/executions/{execution_id}/result`
-
-All endpoints require the existing application session. Error responses use the shared request-ID envelope and stable codes for invalid plans, validation, stale catalogs, authorization, cost, rate, conflict, cancellation, timeout, expiry, and absence. Internal compiler/database details are logged only on unexpected failures and are never returned to the client.
+There is no public Query HTTP API. The Assistente is the only caller and uses the Query Engine as an internal library.
 
 ## Operations and rollback
 

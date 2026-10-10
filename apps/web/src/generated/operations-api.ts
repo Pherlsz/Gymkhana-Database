@@ -198,74 +198,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/operations/exports": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get: operations["listOperationExports"];
-    put?: never;
-    post: operations["createOperationExport"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/operations/exports/{export_id}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        export_id: components["parameters"]["ExportID"];
-      };
-      cookie?: never;
-    };
-    get: operations["getOperationExport"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/operations/exports/{export_id}/download": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        export_id: components["parameters"]["ExportID"];
-      };
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations["downloadOperationExport"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/operations/bulk-delete": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post: operations["bulkDeleteOperationRecords"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -298,8 +230,6 @@ export interface components {
       | "EXPIRED";
     /** @enum {string} */
     ImportStage: "UPLOAD" | "PARSE" | "MAP" | "PREVIEW" | "EXECUTE" | "REPORT" | "CLEANUP";
-    /** @enum {string} */
-    ExportState: "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED" | "EXPIRED";
     /** @enum {string} */
     RowAction: "CREATE" | "UPDATE" | "LINK" | "SKIP" | "ERROR";
     /** @enum {string} */
@@ -508,61 +438,6 @@ export interface components {
       outcome?: components["schemas"]["OutcomeKind"];
       error_code?: string;
     };
-    CreateExportRequest: {
-      module: components["schemas"]["Module"];
-      idempotency_key: string;
-    };
-    OperationExport: {
-      /** Format: uuid */
-      id: string;
-      module: components["schemas"]["Module"];
-      state: components["schemas"]["ExportState"];
-      filename: string;
-      row_count: number;
-      /** Format: int64 */
-      byte_size: number;
-      error_code?: string;
-      /** Format: date-time */
-      expires_at: string;
-      /** Format: date-time */
-      completed_at?: string;
-      /** Format: int64 */
-      version: number;
-      /** Format: date-time */
-      created_at: string;
-      /** Format: date-time */
-      updated_at: string;
-    };
-    ExportPage: {
-      exports: components["schemas"]["OperationExport"][];
-      /** Format: int64 */
-      total: number;
-      limit: number;
-      offset: number;
-    };
-    ExportDownloadGrant: {
-      /** Format: uri */
-      url: string;
-      /** @enum {string} */
-      method: "GET";
-      /** Format: date-time */
-      expires_at: string;
-    };
-    BulkDeleteRequest: {
-      module: components["schemas"]["Module"];
-      items: {
-        /** Format: uuid */
-        id: string;
-        /** Format: int64 */
-        version: number;
-      }[];
-      /** @constant */
-      confirmation: "Confirmar";
-    };
-    BulkDeleteResult: {
-      module: components["schemas"]["Module"];
-      deleted: number;
-    };
   };
   responses: {
     /** @description Invalid JSON, identifier, pagination or request shape */
@@ -640,7 +515,6 @@ export interface components {
   };
   parameters: {
     ImportID: string;
-    ExportID: string;
     Limit: number;
     Offset: number;
   };
@@ -1029,146 +903,6 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
-      503: components["responses"]["ServiceUnavailable"];
-    };
-  };
-  listOperationExports: {
-    parameters: {
-      query?: {
-        limit?: components["parameters"]["Limit"];
-        offset?: components["parameters"]["Offset"];
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Exports created by the authenticated actor */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ExportPage"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      503: components["responses"]["ServiceUnavailable"];
-    };
-  };
-  createOperationExport: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["CreateExportRequest"];
-      };
-    };
-    responses: {
-      /** @description Full-table authorized export queued */
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["OperationExport"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      429: components["responses"]["RateLimited"];
-      503: components["responses"]["ServiceUnavailable"];
-    };
-  };
-  getOperationExport: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        export_id: components["parameters"]["ExportID"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Export state and metadata */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["OperationExport"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-      503: components["responses"]["ServiceUnavailable"];
-    };
-  };
-  downloadOperationExport: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        export_id: components["parameters"]["ExportID"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Short-lived private download URL */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["ExportDownloadGrant"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-      409: components["responses"]["Conflict"];
-      503: components["responses"]["ServiceUnavailable"];
-    };
-  };
-  bulkDeleteOperationRecords: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["BulkDeleteRequest"];
-      };
-    };
-    responses: {
-      /** @description Transactional bulk deletion result */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["BulkDeleteResult"];
-        };
-      };
-      400: components["responses"]["BadRequest"];
-      401: components["responses"]["Unauthorized"];
-      403: components["responses"]["Forbidden"];
-      409: components["responses"]["Conflict"];
       503: components["responses"]["ServiceUnavailable"];
     };
   };

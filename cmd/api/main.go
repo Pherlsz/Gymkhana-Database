@@ -20,7 +20,6 @@ import (
 	"github.com/Pherlsz/Gymkhana-Database/internal/document"
 	"github.com/Pherlsz/Gymkhana-Database/internal/featureflags"
 	"github.com/Pherlsz/Gymkhana-Database/internal/googleforms"
-	"github.com/Pherlsz/Gymkhana-Database/internal/matching"
 	"github.com/Pherlsz/Gymkhana-Database/internal/modelprovider"
 	"github.com/Pherlsz/Gymkhana-Database/internal/ocr"
 	"github.com/Pherlsz/Gymkhana-Database/internal/operations"
@@ -99,7 +98,6 @@ func run() error {
 	var operationsService *operations.Service
 	var googleFormsService *googleforms.Service
 	var queryService *queryengine.Service
-	var matchingService *matching.Service
 	var chatService *aichat.Service
 	var chatTools *aichat.ToolGateway
 	var chatCoordinator *aichat.Coordinator
@@ -157,7 +155,7 @@ func run() error {
 				return fmt.Errorf("configure attachment service: %w", err)
 			}
 			operationsService, _, err = operations.NewRuntime(pool, objects, operations.ServiceOptions{
-				UploadTTL: storageCfg.UploadTTL, DownloadTTL: storageCfg.DownloadTTL,
+				UploadTTL:    storageCfg.UploadTTL,
 				CleanupBatch: storageCfg.CleanupBatch,
 				OnAuditFailure: func(_ context.Context, event operations.AuditEvent, auditErr error) {
 					logger.Error("operation audit event was not persisted", "event_type", event.EventType, "outcome", event.Outcome, "request_id", event.RequestID, "error", auditErr)
@@ -203,14 +201,6 @@ func run() error {
 		})
 		if err != nil {
 			return fmt.Errorf("configure Query Engine service: %w", err)
-		}
-		matchingService, _, err = matching.NewRuntime(pool, matching.ServiceOptions{
-			OnAuditFailure: func(_ context.Context, event matching.AuditEvent, auditErr error) {
-				logger.Error("matching audit event was not persisted", "event_type", event.EventType, "request_id", event.RequestID, "error", auditErr)
-			},
-		}, false)
-		if err != nil {
-			return fmt.Errorf("configure matching service: %w", err)
 		}
 		if cfg.UsesSharedModelKey() {
 			modelKeys, err = modelprovider.NewSealedKeyService(pool, cfg.AIChat.KeyVersion, cfg.AIChat.KeyEncryptionKeys, time.Now)
@@ -330,8 +320,6 @@ func run() error {
 		Search:                 searchService,
 		Operations:             operationsService,
 		GoogleForms:            googleFormsService,
-		Query:                  queryService,
-		Matching:               matchingService,
 		FeatureFlags:           featureFlagService,
 		FeatureFlagAdmin:       featureFlagService,
 		RequireCapabilityCheck: cfg.Auth.Enabled,
