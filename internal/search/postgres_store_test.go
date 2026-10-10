@@ -21,19 +21,21 @@ func TestNormalizeExecutionErrorMapsPostgresCancellationToStableTimeout(t *testi
 }
 
 func TestSearchSQLPlaceholdersStartAtOne(t *testing.T) {
+	searchSQL, idSQL, _, _ := compiledSearchSQLForTest()
 	if !strings.Contains(searchSQL, "ANY($1::text[])") || !strings.Contains(searchSQL, "$8::jsonb") {
 		t.Fatal("search SQL must bind modules as $1 and include specs as $8")
 	}
-	if strings.Contains(searchBody, "$11") || strings.Contains(searchSQL, "$11") || strings.Contains(searchIDSQL, "$12") {
+	if strings.Contains(searchBodyTemplate, "$11") || strings.Contains(searchSQL, "$11") || strings.Contains(idSQL, "$12") {
 		t.Fatal("unused $1/$2-style gaps make PostgreSQL reject the query with 42P18")
 	}
 }
 
 func TestSearchIDQueriesTypeUnusedParameters(t *testing.T) {
+	_, idSQL, profileIDSQL, hitSQL := compiledSearchSQLForTest()
 	queries := map[string]string{
-		"profiles": searchProfileIDSQL,
-		"records":  searchIDSQL,
-		"hits":     searchProfileHitSQL,
+		"profiles": profileIDSQL,
+		"records":  idSQL,
+		"hits":     hitSQL,
 	}
 	for name, sql := range queries {
 		for _, typed := range []string{"$3::int", "$4::int", "$5::text", "$6::text"} {
@@ -41,5 +43,11 @@ func TestSearchIDQueriesTypeUnusedParameters(t *testing.T) {
 				t.Errorf("%s id query missing %s; an untyped middle parameter is SQLSTATE 42P18", name, typed)
 			}
 		}
+	}
+}
+
+func TestSearchBodyTemplateKeepsProfileFieldTokens(t *testing.T) {
+	if !strings.Contains(searchBodyTemplate, profileValuesToken) || !strings.Contains(searchBodyTemplate, profilePrefilterToken) {
+		t.Fatal("search body template must keep profile field bind tokens")
 	}
 }

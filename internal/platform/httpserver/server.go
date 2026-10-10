@@ -179,7 +179,44 @@ func trustedBrowserOrigin(origin, applicationOrigin string) bool {
 	if origin == applicationOrigin {
 		return true
 	}
+	if trustedWorkersDevPreviewOrigin(origin, applicationOrigin) {
+		return true
+	}
 	return sameLoopbackOrigin(origin, applicationOrigin)
+}
+
+func trustedWorkersDevPreviewOrigin(origin, applicationOrigin string) bool {
+	left, err := url.Parse(origin)
+	if err != nil || left.User != nil || left.RawQuery != "" || left.Fragment != "" {
+		return false
+	}
+	if left.Path != "" && left.Path != "/" {
+		return false
+	}
+	right, err := url.Parse(applicationOrigin)
+	if err != nil {
+		return false
+	}
+	if !strings.EqualFold(left.Scheme, "https") || !strings.EqualFold(right.Scheme, "https") {
+		return false
+	}
+	originHost := strings.ToLower(left.Hostname())
+	appHost := strings.ToLower(right.Hostname())
+	const workersDev = ".workers.dev"
+	if !strings.HasSuffix(originHost, workersDev) || !strings.HasSuffix(appHost, workersDev) {
+		return false
+	}
+	dot := strings.IndexByte(appHost, '.')
+	if dot <= 0 {
+		return false
+	}
+	workerName := appHost[:dot]
+	accountSuffix := appHost[dot:]
+	if !strings.HasSuffix(originHost, accountSuffix) {
+		return false
+	}
+	label := strings.TrimSuffix(originHost, accountSuffix)
+	return label == workerName || strings.HasSuffix(label, "-"+workerName)
 }
 
 func sameLoopbackOrigin(origin, application string) bool {

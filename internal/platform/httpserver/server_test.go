@@ -182,6 +182,44 @@ func TestLoopbackApplicationOriginTrustsLocalViteHosts(t *testing.T) {
 	}
 }
 
+func TestWorkersDevPreviewOriginIsTrustedForSameAccountSPA(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	handler := New(logger, nil, Options{
+		ApplicationURL: "https://staging-gymkhana-database.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev",
+	})
+	allowed := []string{
+		"https://staging-gymkhana-database.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev",
+		"https://cursor-fix-table-search-f17b-staging-gymkhana-database.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev",
+	}
+	for _, origin := range allowed {
+		request := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+		request.Header.Set("Origin", origin)
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code == http.StatusForbidden {
+			t.Fatalf("origin %s rejected with 403", origin)
+		}
+		if response.Header().Get("Access-Control-Allow-Origin") != origin {
+			t.Fatalf("allow origin for %s = %q", origin, response.Header().Get("Access-Control-Allow-Origin"))
+		}
+	}
+
+	denied := []string{
+		"https://staging-gymkhana-api.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev",
+		"https://cursor-fix-table-search-f17b-staging-gymkhana-database.other-account.workers.dev",
+		"https://evil-staging-gymkhana-database.example.workers.dev",
+	}
+	for _, origin := range denied {
+		request := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+		request.Header.Set("Origin", origin)
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusForbidden {
+			t.Fatalf("origin %s status = %d, want 403", origin, response.Code)
+		}
+	}
+}
+
 func TestSafeMethodReceivesCorsOnlyForTrustedOrigin(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	handler := New(logger, nil, Options{ApplicationURL: "https://app.example"})

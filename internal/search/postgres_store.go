@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
@@ -16,10 +17,35 @@ import (
 
 type PostgresStore struct {
 	pool *pgxpool.Pool
+
+	sqlMu               sync.Mutex
+	searchSQL           string
+	searchIDSQL         string
+	searchProfileIDSQL  string
+	searchProfileHitSQL string
 }
 
 func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 	return &PostgresStore{pool: pool}
+}
+
+func (store *PostgresStore) compiledSearchSQL(ctx context.Context) (search, ids, profileIDs, hits string, err error) {
+	store.sqlMu.Lock()
+	defer store.sqlMu.Unlock()
+	if store.searchSQL != "" {
+		return store.searchSQL, store.searchIDSQL, store.searchProfileIDSQL, store.searchProfileHitSQL, nil
+	}
+	columns, err := loadProfileColumns(ctx, store.pool)
+	if err != nil {
+		return "", "", "", "", err
+	}
+	values, prefilter := renderProfileSearchSQL(columns)
+	body := bindProfileSearchSQL(searchBodyTemplate, values, prefilter)
+	store.searchSQL = body + searchSQLTail
+	store.searchIDSQL = body + searchIDSQLTail
+	store.searchProfileIDSQL = body + searchProfileIDSQLTail
+	store.searchProfileHitSQL = body + searchProfileHitSQLTail
+	return store.searchSQL, store.searchIDSQL, store.searchProfileIDSQL, store.searchProfileHitSQL, nil
 }
 
 func (store *PostgresStore) ListDynamicFields(ctx context.Context) ([]FieldDefinition, error) {
@@ -98,6 +124,10 @@ SELECT EXISTS(SELECT 1 FROM reservation)`, actorID.String(), window, maximum).Sc
 }
 
 func (store *PostgresStore) Execute(ctx context.Context, plan Plan) ([]Result, int64, error) {
+	searchSQL, _, _, _, err := store.compiledSearchSQL(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
 	tx, err := store.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return nil, 0, err
@@ -208,6 +238,10 @@ func searchArgs(plan Plan, includes, excludes []byte) []any {
 }
 
 func (store *PostgresStore) MatchIDs(ctx context.Context, plan Plan, grain Module) ([]string, error) {
+	_, idSQL, profileIDSQL, _, err := store.compiledSearchSQL(ctx)
+	if err != nil {
+		return nil, err
+	}
 	tx, err := store.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return nil, err
@@ -224,10 +258,10 @@ func (store *PostgresStore) MatchIDs(ctx context.Context, plan Plan, grain Modul
 	if err != nil {
 		return nil, err
 	}
-	sql := searchProfileIDSQL
+	sql := profileIDSQL
 	args := searchArgs(plan, includes, excludes)
 	if grain != ModuleProfiles {
-		sql = searchIDSQL
+		sql = idSQL
 		args = append(args, string(grain))
 	}
 	rows, err := tx.Query(ctx, sql, args...)
@@ -255,6 +289,10 @@ func (store *PostgresStore) MatchIDs(ctx context.Context, plan Plan, grain Modul
 }
 
 func (store *PostgresStore) MatchProfileHits(ctx context.Context, plan Plan) ([]ProfileHit, error) {
+	_, _, _, hitSQL, err := store.compiledSearchSQL(ctx)
+	if err != nil {
+		return nil, err
+	}
 	tx, err := store.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
 	if err != nil {
 		return nil, err
@@ -271,7 +309,7 @@ func (store *PostgresStore) MatchProfileHits(ctx context.Context, plan Plan) ([]
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, searchProfileHitSQL, searchArgs(plan, includes, excludes)...)
+	rows, err := tx.Query(ctx, hitSQL, searchArgs(plan, includes, excludes)...)
 	if err != nil {
 		return nil, normalizeExecutionError(err)
 	}
@@ -371,7 +409,7 @@ LIMIT $4`, []any{typeKey, digitValue(fragment), like, limit}
 	}
 }
 
-const searchBody = `
+const searchBodyTemplate = `
 WITH include_specs AS MATERIALIZED (
   SELECT spec->>'term' AS term,
          COALESCE(
@@ -419,28 +457,7 @@ search_values AS NOT MATERIALIZED (
          profile.updated_at
 	FROM profiles AS profile
   CROSS JOIN LATERAL (VALUES
-    ('profile.full_name', 'Nome completo', profile.full_name, profile.full_name, 80),
-    ('profile.social_name', 'Nome social', profile.social_name, profile.social_name, 70),
-    ('profile.email', 'E-mail', profile.email, profile.email, 60),
-    ('profile.mobile_phone', 'Celular', profile.mobile_phone, profile.mobile_phone, 55),
-    ('profile.landline_phone', 'Telefone', profile.landline_phone, profile.landline_phone, 50),
-    ('profile.address_street', 'Logradouro', profile.address_street, profile.address_street, 35),
-    ('profile.address_number', 'Número', profile.address_number, profile.address_number, 25),
-    ('profile.address_complement', 'Complemento', profile.address_complement, profile.address_complement, 20),
-    ('profile.address_neighborhood', 'Bairro', profile.address_neighborhood, profile.address_neighborhood, 30),
-    ('profile.address_city', 'Cidade', profile.address_city, profile.address_city, 40),
-    ('profile.address_state', 'UF', profile.address_state, profile.address_state, 20),
-    ('profile.address_postal_code', 'CEP', profile.address_postal_code, profile.address_postal_code, 45),
-    ('profile.notes', 'Observações', profile.notes, profile.notes, 10),
-    ('profile.team', 'Equipe', profile.team, profile.team, 40),
-    ('profile.club_membership', 'Sócio clube', profile.club_membership, profile.club_membership, 35),
-    ('profile.place_of_origin', 'Naturalidade', profile.place_of_origin, profile.place_of_origin, 30),
-    ('profile.birth_country', 'País de nascimento', profile.birth_country, profile.birth_country, 25),
-    ('profile.supermarket_club', 'Clube de supermercado', profile.supermarket_club, profile.supermarket_club, 25),
-    ('profile.pet', 'Animal', profile.pet, profile.pet, 20),
-    ('profile.travel_countries', 'Viagem', profile.travel_countries, profile.travel_countries, 20),
-    ('profile.card_brand', 'Bandeira do cartão', profile.card_brand, profile.card_brand, 15),
-    ('profile.card_bank', 'Banco do cartão', profile.card_bank, profile.card_bank, 15)
+__PROFILE_FIELD_VALUES__
   ) AS field(field_key, field_label, search_value, display_value, weight)
   WHERE
     field.search_value IS NOT NULL AND field.search_value <> ''
@@ -448,16 +465,7 @@ search_values AS NOT MATERIALIZED (
       SELECT 1 FROM include_specs AS spec
       WHERE EXISTS (
         SELECT 1 FROM unnest(spec.patterns) AS pattern
-        WHERE profile.full_name ILIKE pattern ESCAPE '\'
-           OR COALESCE(profile.social_name, '') ILIKE pattern ESCAPE '\'
-           OR COALESCE(profile.email, '') ILIKE pattern ESCAPE '\'
-           OR COALESCE(profile.team, '') ILIKE pattern ESCAPE '\'
-           OR COALESCE(profile.address_city, '') ILIKE pattern ESCAPE '\'
-           OR COALESCE(profile.address_street, '') ILIKE pattern ESCAPE '\'
-           OR COALESCE(profile.place_of_origin, '') ILIKE pattern ESCAPE '\'
-           OR COALESCE(profile.birth_country, '') ILIKE pattern ESCAPE '\'
-           OR COALESCE(profile.mobile_phone, '') ILIKE pattern ESCAPE '\'
-           OR COALESCE(profile.notes, '') ILIKE pattern ESCAPE '\'
+        WHERE __PROFILE_PREFILTER__
       )
     )
 
@@ -822,7 +830,7 @@ bounded_matches AS MATERIALIZED (
   SELECT * FROM matches LIMIT $7
 )`
 
-const searchSQL = searchBody + `
+const searchSQLTail = `
 SELECT module,
        entity_kind,
        entity_id,
@@ -850,7 +858,7 @@ ORDER BY
   field_key
 LIMIT $3 OFFSET $4`
 
-const searchIDSQL = searchBody + `
+const searchIDSQLTail = `
 SELECT DISTINCT entity_id
 FROM bounded_matches
 WHERE module = $10
@@ -860,7 +868,7 @@ WHERE module = $10
   AND $5::text IS NOT NULL
   AND $6::text IS NOT NULL`
 
-const searchProfileIDSQL = searchBody + `
+const searchProfileIDSQLTail = `
 SELECT DISTINCT split_part(scope_id, ':', 2)
 FROM bounded_matches
 WHERE scope_id LIKE 'profile:%'
@@ -870,7 +878,7 @@ WHERE scope_id LIKE 'profile:%'
   AND $5::text IS NOT NULL
   AND $6::text IS NOT NULL`
 
-const searchProfileHitSQL = searchBody + `
+const searchProfileHitSQLTail = `
 SELECT split_part(scope_id, ':', 2),
        field_key,
        field_label,

@@ -4,7 +4,38 @@
   "main": "workers/api/src/index.ts",
   "compatibility_date": "2026-09-26",
   "workers_dev": true,
-  "preview_urls": false,
+  "preview_urls": true,
+  "previews": {
+    "containers": [
+      {
+        "class_name": "ApiContainer",
+        "image": "./Dockerfile.api",
+        "instance_type": "basic",
+        "max_instances": 1,
+      },
+    ],
+    "durable_objects": {
+      "bindings": [
+        {
+          "name": "API_CONTAINER",
+          "class_name": "ApiContainer",
+        },
+      ],
+    },
+    "vars": {
+      "AUTH_APPLICATION_URL": "https://staging-gymkhana-database.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev",
+      "GOOGLE_OAUTH_REDIRECT_URL": "https://staging-gymkhana-api.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev/auth/callback",
+      "R2_BUCKET": "gymkhana-files",
+      "OCR_PROVIDER": "google",
+      "OCR_MODEL": "gemini-2.5-flash",
+      "OCR_TIMEOUT": "90s",
+      "OCR_MAX_REQUESTS_PER_HOUR": "10",
+      "OCR_MAX_PROVIDER_USAGE_PER_HOUR": "500000",
+      "OCR_MAX_SOURCE_BYTES": "20971520",
+      "AI_CHAT_PROVIDER": "google",
+      "AI_CHAT_RETENTION": "336h",
+    },
+  },
   "containers": [
     {
       "class_name": "ApiContainer",

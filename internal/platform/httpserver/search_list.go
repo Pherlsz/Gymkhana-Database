@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -12,7 +13,7 @@ import (
 	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
 )
 
-func applySearchQ(r *http.Request, actor auth.Session, service searchService, grain searchdomain.Module) (bool, []string, *Problem) {
+func applySearchQ(r *http.Request, actor auth.Session, service searchService, grain searchdomain.Module, logger *slog.Logger) (bool, []string, *Problem) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	if q == "" {
 		return false, nil, nil
@@ -22,9 +23,17 @@ func applySearchQ(r *http.Request, actor auth.Session, service searchService, gr
 	}
 	matched, err := service.MatchIDs(r.Context(), actor, searchdomain.Query{Q: q}, grain)
 	if err != nil {
-		return false, nil, searchListProblem(err)
+		return false, nil, searchListFailure(r, logger, err)
 	}
 	return true, matched, nil
+}
+
+func searchListFailure(r *http.Request, logger *slog.Logger, err error) *Problem {
+	problem := searchListProblem(err)
+	if logger != nil && problem != nil && problem.Status >= http.StatusInternalServerError {
+		logger.Error("table search", "request_id", requestIDFromContext(r.Context()), "error", err)
+	}
+	return problem
 }
 
 func searchListProblem(err error) *Problem {
