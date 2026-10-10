@@ -21,6 +21,7 @@ type fakeSearchService struct {
 	page    searchdomain.Page
 	query   searchdomain.Query
 	actor   auth.Session
+	hits    []searchdomain.ProfileHit
 	err     error
 }
 
@@ -40,7 +41,7 @@ func (service *fakeSearchService) MatchIDs(context.Context, auth.Session, search
 }
 
 func (service *fakeSearchService) MatchProfileHits(context.Context, auth.Session, searchdomain.Query) ([]searchdomain.ProfileHit, error) {
-	return nil, service.err
+	return service.hits, service.err
 }
 
 func (service *fakeSearchService) Suggest(context.Context, auth.Session, searchdomain.SuggestQuery) ([]searchdomain.SuggestHit, error) {

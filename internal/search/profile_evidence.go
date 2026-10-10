@@ -1,6 +1,7 @@
 package search
 
 import (
+	"sort"
 	"strings"
 	"unicode/utf8"
 )
@@ -113,6 +114,62 @@ func PartitionProfileIDs(sortedIDs []string, hits []ProfileHit, columns []string
 		}
 	}
 	return append(visible, hidden...), evidence
+}
+
+// RankProfileIDs orders people by the best matching field: higher catalog
+// weight first (Nome before e-mail before notes), then match quality
+// (exact, prefix, contains).
+func RankProfileIDs(hits []ProfileHit, term string) []string {
+	type scored struct {
+		weight  int32
+		quality int
+	}
+	best := map[string]scored{}
+	ids := make([]string, 0)
+	for _, hit := range hits {
+		if hit.ProfileID == "" || hit.FieldKey == "" {
+			continue
+		}
+		quality := matchQuality(hit.Display, term)
+		current, seen := best[hit.ProfileID]
+		if !seen {
+			ids = append(ids, hit.ProfileID)
+			best[hit.ProfileID] = scored{weight: hit.Weight, quality: quality}
+			continue
+		}
+		if hit.Weight > current.weight || (hit.Weight == current.weight && quality > current.quality) {
+			best[hit.ProfileID] = scored{weight: hit.Weight, quality: quality}
+		}
+	}
+	sort.SliceStable(ids, func(i, j int) bool {
+		left, right := best[ids[i]], best[ids[j]]
+		if left.weight != right.weight {
+			return left.weight > right.weight
+		}
+		if left.quality != right.quality {
+			return left.quality > right.quality
+		}
+		return ids[i] < ids[j]
+	})
+	return ids
+}
+
+func matchQuality(display, term string) int {
+	display = foldValue(display)
+	term = foldValue(term)
+	if term == "" || display == "" {
+		return 0
+	}
+	if display == term {
+		return 3
+	}
+	if strings.HasPrefix(display, term) {
+		return 2
+	}
+	if strings.Contains(display, term) {
+		return 1
+	}
+	return 0
 }
 
 func ProfileIDsFromHits(hits []ProfileHit) []string {

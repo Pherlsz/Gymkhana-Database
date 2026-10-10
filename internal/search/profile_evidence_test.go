@@ -49,6 +49,37 @@ func TestHiddenEvidenceOmitsFieldsTheCallerCannotSearch(t *testing.T) {
 	}
 }
 
+func TestRankProfileIDsOrdersByFieldWeightThenMatchQuality(t *testing.T) {
+	hits := []ProfileHit{
+		{ProfileID: "street", FieldKey: "profile.address_street", Display: "Rua Pedro I", Weight: 35},
+		{ProfileID: "notes", FieldKey: "profile.notes", Display: "falou com Pedro", Weight: 10},
+		{ProfileID: "contains", FieldKey: "profile.full_name", Display: "João Pedro Lima", Weight: 80},
+		{ProfileID: "prefix", FieldKey: "profile.full_name", Display: "Pedro Alves", Weight: 80},
+		{ProfileID: "email", FieldKey: "profile.email", Display: "pedro@example.com", Weight: 60},
+	}
+	ordered := RankProfileIDs(hits, "Pedro")
+	want := []string{"prefix", "contains", "email", "street", "notes"}
+	if len(ordered) != len(want) {
+		t.Fatalf("ordered = %#v", ordered)
+	}
+	for index, id := range want {
+		if ordered[index] != id {
+			t.Fatalf("ordered = %#v, want %#v", ordered, want)
+		}
+	}
+}
+
+func TestRankProfileIDsFoldsAccentsWhenScoringPrefix(t *testing.T) {
+	hits := []ProfileHit{
+		{ProfileID: "z-accent", FieldKey: "profile.full_name", Display: "Pédro Alves", Weight: 80},
+		{ProfileID: "a-contains", FieldKey: "profile.full_name", Display: "João Pedro Lima", Weight: 80},
+	}
+	ordered := RankProfileIDs(hits, "Pedro")
+	if len(ordered) != 2 || ordered[0] != "z-accent" || ordered[1] != "a-contains" {
+		t.Fatalf("ordered = %#v", ordered)
+	}
+}
+
 func TestDefaultColumnsTreatNotesAsHiddenAndNameAsVisible(t *testing.T) {
 	hits := []ProfileHit{
 		{ProfileID: "notes", FieldKey: "profile.notes", FieldLabel: "Observações", Display: "só Pedro aqui", Weight: 10},

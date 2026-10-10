@@ -11,6 +11,7 @@ import (
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	"github.com/Pherlsz/Gymkhana-Database/internal/profile"
+	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
 )
 
 type fakeProfileService struct {
@@ -63,6 +64,56 @@ func profileHTTPFixture(t *testing.T) (*fakeAdministrationService, *fakeProfileS
 	value := profile.Profile{ID: id, Values: profile.Values{FullName: "Ana", CPF: "52998224725"}, Version: 1, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
 	service := &fakeProfileService{value: value, page: profile.Page{Profiles: []profile.Profile{value}, Total: 1, Limit: 100, SortField: profile.SortFullName, SortOrder: profile.SortAscending}}
 	return authentication, service, id, New(authTestLogger(), nil, Options{Auth: authentication, Profile: service})
+}
+
+func TestProfileListSearchOrdersByColumnPriority(t *testing.T) {
+	notesID, err := profile.NewIdentifier()
+	if err != nil {
+		t.Fatalf("notes id: %v", err)
+	}
+	nameID, err := profile.NewIdentifier()
+	if err != nil {
+		t.Fatalf("name id: %v", err)
+	}
+	notes := profile.Profile{ID: notesID, Values: profile.Values{FullName: "Acebiades Lima"}, Version: 1}
+	named := profile.Profile{ID: nameID, Values: profile.Values{FullName: "Pedro Alves"}, Version: 1}
+	actorID, err := auth.NewIdentifier()
+	if err != nil {
+		t.Fatalf("actor id: %v", err)
+	}
+	authentication := &fakeAdministrationService{fakeAuthenticationService: fakeAuthenticationService{session: auth.Session{User: auth.User{
+		ID: actorID, Email: "member", Role: auth.RoleExternal, Active: true,
+	}}}}
+	profiles := &fakeProfileService{page: profile.Page{
+		Profiles:  []profile.Profile{notes, named},
+		Total:     2,
+		Limit:     100,
+		SortField: profile.SortFullName,
+		SortOrder: profile.SortAscending,
+	}}
+	search := &fakeSearchService{hits: []searchdomain.ProfileHit{
+		{ProfileID: notesID.String(), FieldKey: "profile.notes", FieldLabel: "Observações", Display: "falou com Pedro", Weight: 10},
+		{ProfileID: nameID.String(), FieldKey: "profile.full_name", FieldLabel: "Nome completo", Display: "Pedro Alves", Weight: 80},
+	}}
+	handler := New(authTestLogger(), nil, Options{Auth: authentication, Profile: profiles, Search: search})
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/profiles?q=Pedro&sort=full_name&order=asc&limit=100", nil)
+	request.AddCookie(&http.Cookie{Name: sessionCookieName, Value: "session"})
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+	}
+	if len(profiles.listOptions.Filters.IDFilter) != 2 || profiles.listOptions.Filters.IDFilter[0] != nameID || profiles.listOptions.Filters.IDFilter[1] != notesID {
+		t.Fatalf("IDFilter = %#v", profiles.listOptions.Filters.IDFilter)
+	}
+	var payload profilePageResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if payload.Page.Total != 2 || len(payload.Profiles) != 2 || payload.Profiles[0].ID != nameID.String() || payload.Profiles[1].ID != notesID.String() {
+		t.Fatalf("payload = %#v", payload)
+	}
 }
 
 func TestProfileRoutesListDistinctCities(t *testing.T) {
