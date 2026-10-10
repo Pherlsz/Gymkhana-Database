@@ -218,6 +218,7 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 		restrict := false
 		var searchIDs []string
 		var hits []searchdomain.ProfileHit
+		var ranked []string
 		if queryText != "" {
 			if search == nil {
 				writeProblem(w, r, Problem{Status: http.StatusServiceUnavailable, Code: ErrorCodeInternal, Message: "O módulo de busca não está configurado"})
@@ -230,16 +231,14 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 				return
 			}
 			restrict = true
-			searchIDs = searchdomain.ProfileIDsFromHits(hits)
+			ranked = searchdomain.RankProfileIDs(hits, queryText)
+			searchIDs = paginateStrings(ranked, int(offset), int(limit))
 		}
 		fetchLimit, fetchOffset := limit, offset
 		if queryText != "" {
 			fetchLimit = int32(len(searchIDs))
 			if fetchLimit < 1 {
 				fetchLimit = 1
-			}
-			if fetchLimit > 1000 {
-				fetchLimit = 1000
 			}
 			fetchOffset = 0
 		}
@@ -253,18 +252,16 @@ func registerProfileRoutes(mux *http.ServeMux, logger *slog.Logger, authenticati
 		}
 		reveal := actor.User.Role.CanWriteProfiles()
 		profiles := page.Profiles
+		total := page.Total
 		var evidence map[string]searchdomain.HiddenFieldEvidence
 		if queryText != "" {
-			sorted := make([]string, 0, len(page.Profiles))
-			for _, value := range page.Profiles {
-				sorted = append(sorted, value.ID.String())
-			}
 			columns, useDefault := profileVisibleColumns(r)
-			ordered, hidden := searchdomain.PartitionProfileIDs(sorted, hits, columns, useDefault, nil, queryText)
+			_, hidden := searchdomain.PartitionProfileIDs(searchIDs, hits, columns, useDefault, nil, queryText)
 			evidence = hidden
-			profiles = pageProfilesInOrder(page.Profiles, paginateStrings(ordered, int(offset), int(limit)))
+			profiles = pageProfilesInOrder(page.Profiles, searchIDs)
+			total = int64(len(ranked))
 		}
-		response := profilePageResponse{Profiles: make([]profileResponse, 0, len(profiles)), Page: profilePageMeta{Total: page.Total, Limit: limit, Offset: offset, SortField: string(page.SortField), SortOrder: string(page.SortOrder)}}
+		response := profilePageResponse{Profiles: make([]profileResponse, 0, len(profiles)), Page: profilePageMeta{Total: total, Limit: limit, Offset: offset, SortField: string(page.SortField), SortOrder: string(page.SortOrder)}}
 		for _, value := range profiles {
 			item := profileFromDomain(value, reveal)
 			if ev, ok := evidence[item.ID]; ok {

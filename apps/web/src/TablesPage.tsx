@@ -861,8 +861,8 @@ export function TablesPage() {
                   ? search.bill_selected
                   : search.selected
           }
-          sortField={search.result ? recorteSort.field : sortField}
-          sortOrder={search.result ? recorteSort.order : sortOrder}
+          sortField={search.result ? recorteSort.field : search.q.trim() ? "" : sortField}
+          sortOrder={search.result ? recorteSort.order : search.q.trim() ? "asc" : sortOrder}
           total={search.result ? matchedRows.length : total}
           onPage={onTablePage}
           onRowClick={onTableRowClick}

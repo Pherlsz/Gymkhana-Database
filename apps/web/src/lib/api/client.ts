@@ -107,15 +107,31 @@ export class APIRequestError extends Error {
 
 export function inferWorkersDevApiOrigin(hostname: string): string | null {
   // Paired staging Workers: database SPA → api Container Worker on the same account.
+  // Live: staging-gymkhana-database.<account>.workers.dev
+  // Preview: <alias>-staging-gymkhana-database.<account>.workers.dev
+  // Always target the live API host. An API preview hostname does not exist.
   if (typeof hostname !== "string" || hostname.length === 0) {
     return null;
   }
-  const spaPrefix = "staging-gymkhana-database.";
+  const spaName = "staging-gymkhana-database";
+  const apiName = "staging-gymkhana-api";
   const suffix = ".workers.dev";
-  if (!hostname.startsWith(spaPrefix) || !hostname.endsWith(suffix)) {
+  if (!hostname.endsWith(suffix)) {
     return null;
   }
-  return `https://${hostname.replace(spaPrefix, "staging-gymkhana-api.")}`;
+  const labels = hostname.slice(0, -suffix.length).split(".");
+  if (labels.length < 2) {
+    return null;
+  }
+  const workerLabel = labels[0] ?? "";
+  if (workerLabel !== spaName && !workerLabel.endsWith(`-${spaName}`)) {
+    return null;
+  }
+  const account = labels.slice(1).join(".");
+  if (!account) {
+    return null;
+  }
+  return `https://${apiName}.${account}${suffix}`;
 }
 
 export function apiURL(path: string): string {

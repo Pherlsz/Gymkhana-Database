@@ -416,6 +416,22 @@ describe("TablesPage", () => {
     await waitFor(() => expect(window.location.search).not.toContain("city="));
   });
 
+  it("clears the name sort marker while toolbar search is active", async () => {
+    window.history.replaceState(null, "", "/tables/people?q=Pedro");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    expect(await screen.findByDisplayValue("Pedro")).toBeInTheDocument();
+    expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
+    expect(document.querySelector(".spreadsheet-table thead .ant-table-column-sort")).toBeNull();
+  });
+
   it("commits text filters only after Enter in the column funnel", async () => {
     window.history.replaceState(null, "", "/tables/people");
     const fetchMock = vi
