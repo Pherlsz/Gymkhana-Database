@@ -215,7 +215,11 @@ describe("inferWorkersDevApiOrigin", () => {
     const { inferWorkersDevApiOrigin } = await import("./client");
     expect(inferWorkersDevApiOrigin("localhost")).toBeNull();
     expect(inferWorkersDevApiOrigin("app.example.com")).toBeNull();
-    expect(inferWorkersDevApiOrigin("staging-gymkhana-api.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev")).toBeNull();
+    expect(
+      inferWorkersDevApiOrigin(
+        "staging-gymkhana-api.0489dcd6-95ac-4740-817c-94c0211c6141.workers.dev",
+      ),
+    ).toBeNull();
     expect(inferWorkersDevApiOrigin("")).toBeNull();
   });
 });
