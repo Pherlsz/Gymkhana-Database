@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CustomField } from "./lib/api/customdata";
-import { sortCustomFieldsByContext } from "./RecordCustomFields";
+import { customInputsFromDraft, sortCustomFieldsByContext } from "./RecordCustomFields";
 
 function field(technical_key: string, label: string): CustomField {
   return {
@@ -35,5 +35,18 @@ describe("sortCustomFieldsByContext", () => {
       "reading_route",
       "nf",
     ]);
+  });
+});
+
+describe("customInputsFromDraft", () => {
+  it("omits invalid integers instead of sending them as text", () => {
+    const integerField: CustomField = {
+      ...field("seats", "Lugares"),
+      field_kind: "INTEGER",
+    };
+    expect(customInputsFromDraft([integerField], { seats: "12" })).toEqual([
+      { field_definition_id: "seats", field_kind: "INTEGER", integer: 12 },
+    ]);
+    expect(customInputsFromDraft([integerField], { seats: "doze" })).toEqual([]);
   });
 });

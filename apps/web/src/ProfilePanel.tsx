@@ -245,8 +245,8 @@ export function ProfilePanel(props: {
               cancelLabel={copy.cancel}
               confirmLabel={copy.deleteConfirm}
               confirmationLabel={copy.deleteHint}
-              confirmationWord="Confirmar"
-              description="Esta ação exclui a pessoa permanentemente e não pode ser desfeita."
+              confirmationWord={messages.common.actions.confirm}
+              description={copy.deletePersonDesc}
               pending={props.pending}
               title={copy.deleteTitle}
               onCancel={() => {

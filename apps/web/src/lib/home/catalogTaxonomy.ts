@@ -200,6 +200,10 @@ export function isCanonicalContextSlug(id: string): boolean {
   return CANONICAL_CONTEXTS.some((context) => context.slug === id);
 }
 
+export function catalogRowNavigable(item: Pick<HomeCatalogItem, "id">): boolean {
+  return !isCanonicalContextSlug(item.id);
+}
+
 export function normalizeCatalogToken(value: string): string {
   return value
     .normalize("NFD")

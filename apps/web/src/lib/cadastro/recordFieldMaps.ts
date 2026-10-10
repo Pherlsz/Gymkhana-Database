@@ -2,6 +2,7 @@ import type { BillValuesRequest, DocumentValuesRequest } from "../api/client";
 import { physicalCustody } from "../records/RecordEditorCommon";
 import type { BillFormFieldsState } from "./components/BillFormFields";
 import type { DocumentFormFieldsState } from "./components/DocumentFormFields";
+import { canonicalBillAmount } from "./cadastroValidate";
 
 export function documentFormFromValues(values: DocumentValuesRequest): DocumentFormFieldsState {
   return {
@@ -58,7 +59,7 @@ export function billValuesFromForm(
     printed_address: state.billPrintedAddress,
     reference_value: state.billInstallation,
     competence: state.billCompetence,
-    amount: state.billAmount,
+    amount: canonicalBillAmount(state.billAmount),
     currency: extras.currency,
     notes: state.billNotes,
     medium: state.billMedium,

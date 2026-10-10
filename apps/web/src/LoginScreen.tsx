@@ -77,13 +77,28 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export function LoginScreen({ onLogin }: { onLogin: () => void }) {
-  return <LoginScreenContent onLogin={onLogin} />;
+export type LoginScreenStatus = "login" | "disabled" | "unavailable";
+
+export function LoginScreen({
+  onLogin,
+  status = "login",
+}: {
+  onLogin: () => void;
+  status?: LoginScreenStatus;
+}) {
+  return <LoginScreenContent onLogin={onLogin} status={status} />;
 }
 
-function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
+function LoginScreenContent({
+  onLogin,
+  status,
+}: {
+  onLogin: () => void;
+  status: LoginScreenStatus;
+}) {
   const { messages } = useI18n();
   const copy = messages.auth.login;
+  const blocked = status !== "login";
   const [loading, setLoading] = useState<LoginAction>(null);
   const [error, setError] = useState("");
 
@@ -162,36 +177,47 @@ function LoginScreenContent({ onLogin }: { onLogin: () => void }) {
           <section className="login-card login-card-enter" aria-label={copy.title}>
             <div className="login-card-highlight" aria-hidden />
             <div className="login-card__body">
-              {error ? (
+              {blocked ? (
+                <p className="login-alert" role="alert">
+                  <strong>
+                    {status === "disabled" ? copy.disabledTitle : copy.unavailableTitle}
+                  </strong>
+                  <span>{status === "disabled" ? copy.disabledBody : copy.unavailableBody}</span>
+                </p>
+              ) : error ? (
                 <p className="login-alert" role="alert">
                   {error}
                 </p>
               ) : null}
 
-              <div className="login-card-divider" aria-hidden />
+              {blocked ? null : (
+                <>
+                  <div className="login-card-divider" aria-hidden />
 
-              <Button
-                className="login-google-btn"
-                disabled={loading !== null}
-                icon={loading !== "google" ? <GoogleIcon /> : undefined}
-                loading={loading === "google"}
-                onClick={handleGoogleSignIn}
-                size="large"
-              >
-                {copy.googleButton}
-              </Button>
+                  <Button
+                    className="login-google-btn"
+                    disabled={loading !== null}
+                    icon={loading !== "google" ? <GoogleIcon /> : undefined}
+                    loading={loading === "google"}
+                    onClick={handleGoogleSignIn}
+                    size="large"
+                  >
+                    {copy.googleButton}
+                  </Button>
 
-              {import.meta.env.DEV ? (
-                <Button
-                  className="login-google-btn login-google-btn--dev"
-                  disabled={loading !== null}
-                  loading={loading === "development"}
-                  onClick={handleDevelopmentSignIn}
-                  size="large"
-                >
-                  {copy.developmentButton}
-                </Button>
-              ) : null}
+                  {import.meta.env.DEV ? (
+                    <Button
+                      className="login-google-btn login-google-btn--dev"
+                      disabled={loading !== null}
+                      loading={loading === "development"}
+                      onClick={handleDevelopmentSignIn}
+                      size="large"
+                    >
+                      {copy.developmentButton}
+                    </Button>
+                  ) : null}
+                </>
+              )}
             </div>
           </section>
         </div>

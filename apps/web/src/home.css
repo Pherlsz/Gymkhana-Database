@@ -459,6 +459,21 @@ html.dark .home-attention--warning {
   transform: translateX(2px);
 }
 
+.home-catalog__row--placeholder {
+  cursor: default;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-catalog__row--placeholder:hover {
+    background: transparent;
+  }
+}
+
+.home-catalog__row--placeholder:active {
+  background: transparent;
+  transform: none;
+}
+
 /* ==========================================================================
    6. Responsive Adaptations
    ========================================================================== */

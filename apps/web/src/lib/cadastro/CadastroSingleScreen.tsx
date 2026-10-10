@@ -19,10 +19,11 @@ import {
   storedRecordOf,
 } from "./cadastroPersist";
 import {
+  billFieldError,
   cpfDigits,
-  isCompetenceMonth,
+  documentFieldError,
   isCompleteCpf,
-  matchesValidationRegex,
+  isValidCpf,
 } from "./cadastroValidate";
 import { CadastroStickyBar } from "./components/CadastroStickyBar";
 import { CadastroWorkShell } from "./CadastroWork";
@@ -169,19 +170,31 @@ export function CadastroSingleScreen({
 
   const validate = (): string | null => {
     if (mode === "documents") {
-      if (!docFields.docTypeId && !selectedDocType) return copy.errorDocTypeRequired;
-      if (!docFields.docIdentifier.trim()) return copy.errorDocNumberRequired;
-      const regex = selectedDocType?.validation_regex ?? "";
-      if (!matchesValidationRegex(docFields.docIdentifier, regex)) return copy.errorIdentifierRegex;
-      if (selectedDocType?.date_required && !docFields.docDate) return copy.errorDocDateRequired;
+      const fieldError = documentFieldError(
+        {
+          typeId: docFields.docTypeId,
+          identifier: docFields.docIdentifier,
+          date: docFields.docDate,
+        },
+        selectedDocType,
+        copy,
+      );
+      if (fieldError) return fieldError;
       if (!selectedProfile && !demographics.fullName.trim()) return copy.errorHolderRequired;
       return null;
     }
     if (mode === "bills") {
-      if (!billFields.billTypeId && !selectedBillType) return copy.errorBillTypeRequired;
-      if (!billFields.billInstallation.trim()) return copy.errorBillInstallationRequired;
-      if (!isCompetenceMonth(billFields.billCompetence)) return copy.errorBillCompetenceRequired;
-      if (!billFields.billAmount.trim()) return copy.errorBillAmountRequired;
+      const fieldError = billFieldError(
+        {
+          typeId: billFields.billTypeId,
+          installation: billFields.billInstallation,
+          competence: billFields.billCompetence,
+          amount: billFields.billAmount,
+        },
+        selectedBillType?.id,
+        copy,
+      );
+      if (fieldError) return fieldError;
       if (
         !selectedProfile &&
         !demographics.fullName.trim() &&
@@ -193,6 +206,9 @@ export function CadastroSingleScreen({
     }
     if (!demographics.fullName.trim() && !selectedProfile) {
       return messages.common.validation.fullNameRequired;
+    }
+    if (demographics.cpf.trim() && !isValidCpf(demographics.cpf)) {
+      return messages.common.validation.invalidCpf;
     }
     return null;
   };

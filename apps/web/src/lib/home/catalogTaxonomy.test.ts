@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { groupHomeCatalog, normalizeCatalogToken, type HomeCatalogItem } from "./catalogTaxonomy";
+import {
+  catalogRowNavigable,
+  groupHomeCatalog,
+  normalizeCatalogToken,
+  type HomeCatalogItem,
+} from "./catalogTaxonomy";
 import { ptBRV1 } from "../../i18n/v1/pt-BR";
 
 function item(
@@ -117,6 +122,13 @@ describe("groupHomeCatalog", () => {
     expect(
       groups.find((group) => group.key === "work")?.items.map((row) => row.label),
     ).not.toContain("CREA / OAB");
+  });
+});
+
+describe("catalogRowNavigable", () => {
+  it("does not treat canonical placeholder slugs as typed table links", () => {
+    expect(catalogRowNavigable(item("conta-luz", "Conta de luz", "conta-luz", "bill"))).toBe(false);
+    expect(catalogRowNavigable(item("bill-luz-id", "Conta de luz", "energia", "bill"))).toBe(true);
   });
 });
 

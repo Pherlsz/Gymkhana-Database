@@ -237,6 +237,9 @@
 
 .login-alert {
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   border: 1px solid color-mix(in oklch, var(--gym-color-danger) 30%, transparent);
   border-radius: var(--gym-radius-md);
   padding: 0.5rem 0.75rem;

@@ -1153,7 +1153,7 @@ describe("TablesPage", () => {
     expect(sheet.indexOf("Zélia Costa")).toBeLessThan(sheet.indexOf("Ana da Silva"));
   });
 
-  it("opens the assistant over the sheet and marks the page", async () => {
+  it("hides the assistant trigger when the capability is off", async () => {
     window.history.replaceState(null, "", "/tables/people");
     vi.stubGlobal(
       "fetch",
@@ -1165,9 +1165,38 @@ describe("TablesPage", () => {
     );
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Pessoas" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Assistente" })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("opens the assistant over the sheet and marks the page", async () => {
+    window.history.replaceState(null, "", "/tables/people");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/v1/chat/capability")) {
+          return Promise.resolve(
+            jsonResponse({
+              enabled: true,
+              maximum_tool_calls: 8,
+              maximum_rows: 100,
+              maximum_result_bytes: 256,
+              maximum_usage: 1,
+              maximum_duration_seconds: 1,
+              maximum_message_runes: 1,
+            }),
+          );
+        }
+        return Promise.resolve(apiResponse(url));
+      }),
+    );
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "Pessoas" })).toBeInTheDocument();
     expect(document.querySelector(".tables-page.is-assistant-open")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Assistente" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Assistente" }));
     expect(await screen.findByRole("dialog", { name: "Sessões" })).toBeInTheDocument();
     expect(document.querySelector(".tables-page.is-assistant-open")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Ampliar" })).toBeInTheDocument();

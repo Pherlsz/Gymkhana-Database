@@ -1,4 +1,5 @@
 import type { ProfileListSearch, ProfileValuesRequest } from "../api/client";
+import { isValidCpf } from "../cadastro/cadastroValidate";
 
 export const emptyValues: ProfileValuesRequest = {
   full_name: "",
@@ -21,7 +22,7 @@ export const emptyValues: ProfileValuesRequest = {
 
 export function validateProfileForm(
   values: ProfileValuesRequest,
-  validation?: { fullNameRequired: string; invalidEmail: string },
+  validation?: { fullNameRequired: string; invalidEmail: string; invalidCpf?: string },
 ):
   | { success: true; output: ProfileValuesRequest }
   | { success: false; issues: { message: string }[] } {
@@ -36,6 +37,10 @@ export function validateProfileForm(
     if (!emailRegex.test(email)) {
       issues.push({ message: validation?.invalidEmail ?? "" });
     }
+  }
+  const cpf = values.cpf?.trim() ?? "";
+  if (cpf.length > 0 && !isValidCpf(cpf)) {
+    issues.push({ message: validation?.invalidCpf ?? "" });
   }
   if (issues.length > 0) {
     return { success: false, issues };

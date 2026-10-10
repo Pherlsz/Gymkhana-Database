@@ -51,6 +51,24 @@ describe("LoginScreen", () => {
     expect(String(assign.mock.calls[0]?.[0])).toMatch(/\/api\/auth\/dev-login$/);
   });
 
+  it("explains disabled and unavailable auth without login buttons", () => {
+    const { rerender } = render(
+      <I18nProvider locale="pt-BR">
+        <LoginScreen status="disabled" onLogin={() => undefined} />
+      </I18nProvider>,
+    );
+    expect(screen.getByText("Acesso indisponível")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Entrar com Google/ })).toBeNull();
+
+    rerender(
+      <I18nProvider locale="pt-BR">
+        <LoginScreen status="unavailable" onLogin={() => undefined} />
+      </I18nProvider>,
+    );
+    expect(screen.getByText("Sistema indisponível")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Dev Login/ })).toBeNull();
+  });
+
   it("stays dark even when the stored theme is light", () => {
     localStorage.setItem("gymkhana-theme", "light");
     render(

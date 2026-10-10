@@ -104,7 +104,16 @@ export function App() {
   } else {
     tree = (
       <Suspense fallback={null}>
-        <LoginScreen onLogin={() => window.location.assign(apiURL("/auth/login"))} />
+        <LoginScreen
+          status={
+            authentication.kind === "disabled"
+              ? "disabled"
+              : authentication.kind === "unavailable"
+                ? "unavailable"
+                : "login"
+          }
+          onLogin={() => window.location.assign(apiURL("/auth/login"))}
+        />
       </Suspense>
     );
   }

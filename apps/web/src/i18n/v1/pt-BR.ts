@@ -256,6 +256,10 @@ export const auth = {
     accessDenied: "Seu e-mail não está autorizado. Contate o administrador.",
     oauthError: "Erro de autenticação. Tente novamente.",
     signingIn: "Entrando…",
+    disabledTitle: "Acesso indisponível",
+    disabledBody: "O login está desativado neste ambiente. Contate o administrador.",
+    unavailableTitle: "Sistema indisponível",
+    unavailableBody: "Não foi possível verificar a sessão agora. Tente de novo em instantes.",
   },
 } as const;
 
@@ -537,6 +541,13 @@ export const cadastro = {
     applySuccess: "Valores aceitos foram aplicados ao registro.",
     applyError: "Não foi possível aplicar",
     unexpectedError: "Erro inesperado.",
+    states: {
+      QUEUED: "Na fila",
+      RUNNING: "Processando",
+      COMPLETED: "Concluído",
+      FAILED: "Falhou",
+      CANCELLED: "Cancelado",
+    },
   },
 } as const;
 
@@ -638,7 +649,7 @@ export const tables = {
       is_null: "vazio",
       not_null: "preenchido",
     },
-    localOnly: "Filtro só nesta página",
+    localOnly: "Só nas linhas já carregadas nesta página — não busca no acervo inteiro.",
     localScopeBadge: "página",
   },
   boolean: {
@@ -776,6 +787,7 @@ export const tables = {
     deleteTitle: common.labels.permanentDeletion,
     deleteHint: "Digite Confirmar para excluir esta pessoa.",
     deleteConfirm: "Excluir permanentemente",
+    deletePersonDesc: "Esta ação exclui a pessoa permanentemente e não pode ser desfeita.",
     confirmPlaceholder: common.actions.confirm,
     loading: "Carregando perfil",
     notFound: common.labels.personNotFound,
@@ -1420,6 +1432,31 @@ export const attachments = {
   emptyWithTrash: "Nenhum anexo ativo ou recuperável.",
   operationError: "Não foi possível concluir a operação",
   noticeTitle: "Anexos",
+  title: "Anexos privados",
+  description:
+    "Arquivos são enviados diretamente ao armazenamento privado e verificados antes de serem registrados.",
+  uploaded: "Arquivo verificado e anexado.",
+  trashed: "Anexo movido para a lixeira por sete dias.",
+  restored: "Anexo restaurado.",
+  emptyFile: "Selecione um arquivo que não esteja vazio.",
+  tooLarge: "O arquivo ultrapassa o limite de 50 MB.",
+  unsupportedType: "O formato deste arquivo ainda não é aceito.",
+  showTrash: "Mostrar lixeira",
+  addFile: "Adicionar arquivo",
+  acceptedHint: "PDF, imagens, texto/CSV, DOCX, XLSX, áudio e vídeo. Limite: 50 MB.",
+  sending: "Enviando {progress}%",
+  verifying: "Verificando arquivo",
+  addedAt: "Adicionado em {date}",
+  purgeAt: "Exclusão definitiva em {date}",
+  active: "Ativo",
+  inTrash: "Na lixeira",
+  download: "Baixar",
+  moveToTrash: "Mover para lixeira",
+  restore: "Restaurar",
+  conflict: "O anexo foi alterado por outra pessoa. Atualize e tente novamente.",
+  expired: "O envio expirou. Selecione o arquivo novamente.",
+  storageUnavailable: "O armazenamento privado está indisponível no momento.",
+  unexpected: "Erro inesperado ao processar o anexo.",
 } as const;
 
 export const ptBR = {

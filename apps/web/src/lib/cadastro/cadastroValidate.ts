@@ -16,6 +16,63 @@ export function isCompleteCpf(value: string): boolean {
   return cpfDigits(value).length === 11;
 }
 
+export function isValidCpf(value: string): boolean {
+  const digits = cpfDigits(value);
+  if (digits.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(digits)) return false;
+  const check = (len: number) => {
+    let sum = 0;
+    for (let i = 0; i < len; i += 1) {
+      sum += Number(digits[i]) * (len + 1 - i);
+    }
+    const rem = (sum * 10) % 11;
+    return rem === 10 ? 0 : rem;
+  };
+  return check(9) === Number(digits[9]) && check(10) === Number(digits[10]);
+}
+
+export type DocumentFieldCopy = {
+  errorDocTypeRequired: string;
+  errorDocNumberRequired: string;
+  errorIdentifierRegex: string;
+  errorDocDateRequired: string;
+};
+
+export function documentFieldError(
+  fields: { typeId: string; identifier: string; date?: string | undefined },
+  type: { validation_regex?: string | undefined; date_required?: boolean | undefined } | undefined,
+  copy: DocumentFieldCopy,
+): string | null {
+  if (!fields.typeId && !type) return copy.errorDocTypeRequired;
+  if (!fields.identifier.trim()) return copy.errorDocNumberRequired;
+  const regex = type?.validation_regex ?? "";
+  if (!matchesValidationRegex(fields.identifier, regex)) return copy.errorIdentifierRegex;
+  if (type?.date_required && !fields.date) return copy.errorDocDateRequired;
+  return null;
+}
+
+export type BillFieldCopy = {
+  errorBillTypeRequired: string;
+  errorBillInstallationRequired: string;
+  errorBillCompetenceRequired: string;
+  errorBillAmountRequired: string;
+};
+
+const billAmountPattern = /^[0-9]+(?:\.[0-9]{1,2})?$/;
+
+export function billFieldError(
+  fields: { typeId: string; installation: string; competence: string; amount: string },
+  typeIdFallback: string | undefined,
+  copy: BillFieldCopy,
+): string | null {
+  if (!fields.typeId && !typeIdFallback) return copy.errorBillTypeRequired;
+  if (!fields.installation.trim()) return copy.errorBillInstallationRequired;
+  if (!isCompetenceMonth(fields.competence)) return copy.errorBillCompetenceRequired;
+  const amount = canonicalBillAmount(fields.amount);
+  if (!amount || !billAmountPattern.test(amount)) return copy.errorBillAmountRequired;
+  return null;
+}
+
 export function matchesValidationRegex(value: string, regex: string): boolean {
   const pattern = regex.trim();
   if (!pattern) return true;
