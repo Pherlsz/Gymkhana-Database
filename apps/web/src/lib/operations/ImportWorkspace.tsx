@@ -459,7 +459,7 @@ function MappingWorkspace({
                 key={sheet.index}
                 onClick={() => selectSheet.mutate(sheet.index)}
               >
-                {sheet.name} · {sheet.row_count} {messages.operations.export.linesCount}
+                {sheet.name} · {sheet.row_count} {copy.linesCount}
                 {value.selected_sheet_index === sheet.index ? ` · ${copy.sheetSelected}` : ""}
               </Button>
             ))}

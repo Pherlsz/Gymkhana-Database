@@ -272,13 +272,9 @@ export const shell = {
     collapseMenu: "Recolher menu",
     expandMenu: "Expandir menu",
   },
-  comingSoon: "Em desenvolvimento",
-  roles: {},
   account: {
     openMenu: "Abrir menu da conta",
-    settings: "Configurações",
     appearance: "Aparência",
-    modelKey: "Chave do Assistente",
   },
   signOut: "Sair",
   signingOut: "Saindo",
@@ -995,22 +991,6 @@ export const records = {
 } as const;
 
 export const operations = {
-  eyebrow: "M8 · Operações",
-  titleWithImports: "Importações e exportações XLSX",
-  titleWithoutImports: "Exportações e exclusão em massa",
-  descWithImports:
-    "Envie planilhas privadas, revise o mapeamento e as alterações antes da execução e gere exportações completas conforme suas permissões.",
-  descWithoutImports:
-    "Gere exportações completas e execute exclusões em massa conforme suas permissões. Importações ficam em Cadastro.",
-  unavailable: "Operações indisponíveis",
-  loadError: "Não foi possível carregar importações",
-  emptyImports: "Nenhuma importação criada.",
-  loadingImports: "Carregando importações…",
-  openImport: "Abrir importação",
-  sectionImports: "Importações",
-  sectionImportsDesc:
-    "Cada upload é validado e processado em segundo plano. Somente suas operações aparecem aqui.",
-  sourceFallback: "Google Forms",
   creator: {
     title: "Nova importação",
     description: "com cabeçalhos na primeira linha e sem macros ou vínculos externos.",
@@ -1035,6 +1015,7 @@ export const operations = {
     loadError: "Não foi possível carregar a importação",
     stepSheet: "Aba",
     sheetSelected: "selecionada",
+    linesCount: "linha(s)",
     mappingPreservedTitle: "Mapeamento preservado",
     mappingPreservedDesc:
       "Há linhas já confirmadas. A aba e o mapeamento ficam bloqueados para que esses resultados nunca sejam apagados ou repetidos; revalide o preview para continuar.",
@@ -1087,36 +1068,6 @@ export const operations = {
     reportSheet: "Aba",
     noValues: "Sem valores visíveis",
     outcome: "Resultado",
-  },
-  export: {
-    title: "Exportações",
-    description:
-      "A exportação consulta a tabela completa no servidor e gera um XLSX privado com validade curta.",
-    btnExport: "Exportar",
-    error: "Não foi possível concluir a exportação",
-    caption: "Exportações XLSX",
-    empty: "Nenhuma exportação criada.",
-    loading: "Carregando exportações…",
-    btnDownload: common.actions.download,
-    btnDownloadExport: "Baixar exportação",
-    expires: "Expira",
-    secureCode: "Código seguro:",
-    linesCount: "linha(s)",
-  },
-  bulkDelete: {
-    title: "Exclusão em lote",
-    description:
-      "A exclusão exige IDs e versões atuais, confirmação literal e permissão administrativa. Toda a seleção é transacional.",
-    recordsLabel: "Registros — um por linha no formato UUID,versão",
-    helpText:
-      "Selecionar não altera dados. A exclusão ocorre somente após enviar este formulário com a confirmação exata.",
-    reviewWarning: "Revise a seleção",
-    noneDeleted: "Nenhum registro foi excluído",
-    completed: "Exclusão concluída",
-    completedCount: "registro(s) excluído(s).",
-    btnSubmit: "Excluir seleção",
-    formatError: "Use uma linha UUID,versão para cada registro.",
-    rangeError: "Selecione entre 1 e 500 registros.",
   },
   states: {
     UPLOADING: "Aguardando envio",
