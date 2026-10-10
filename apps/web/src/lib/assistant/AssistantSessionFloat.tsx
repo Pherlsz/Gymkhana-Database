@@ -21,6 +21,8 @@ import {
 } from "react";
 import { ICON, ICON_STROKE } from "../../components/icons";
 import { useI18n } from "../../i18n";
+import { below } from "../breakpoints";
+import { useMediaQuery } from "../useMediaQuery";
 import { AssistantMarkdown } from "./assistantMarkdown";
 import { useAssistantChat } from "./useAssistantChat";
 import "./assistant.css";
@@ -103,10 +105,16 @@ export function AssistantSessionFloat({
   const { messages, t } = useI18n();
   const copy = messages.tables.assistant;
   const chat = useAssistantChat(size !== "min");
+  const compact = useMediaQuery(below("sm"));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [draft, setDraft] = useState("");
-  const [sessionsOpen, setSessionsOpen] = useState(true);
+  const [sessionsOpen, setSessionsOpen] = useState(
+    () =>
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function" ||
+      !window.matchMedia(below("sm")).matches,
+  );
   const chatRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const seenThread = useRef<string | null>(null);
@@ -190,6 +198,7 @@ export function AssistantSessionFloat({
         "assistant-float",
         size === "wide" ? "is-wide" : "is-float",
         sessionsOpen ? "" : "is-sessions-collapsed",
+        compact ? "is-compact" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -317,29 +326,33 @@ export function AssistantSessionFloat({
               <PanelLeftOpen aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />
             </button>
           )}
-          <Sparkles
-            aria-hidden
-            className="assistant-float__mark"
-            size={ICON.sm}
-            strokeWidth={ICON_STROKE}
-          />
+          {compact ? null : (
+            <Sparkles
+              aria-hidden
+              className="assistant-float__mark"
+              size={ICON.sm}
+              strokeWidth={ICON_STROKE}
+            />
+          )}
           <div className="assistant-float__identity">
             <p className="assistant-float__title">{title}</p>
             <p className="assistant-float__scope">{t(copy.tableScope, { table: tableLabel })}</p>
           </div>
           <div className="assistant-float__tools">
-            <button
-              aria-label={size === "wide" ? copy.collapseWindow : copy.expand}
-              className="assistant-float__icon"
-              type="button"
-              onClick={() => onSizeChange(size === "wide" ? "float" : "wide")}
-            >
-              {size === "wide" ? (
-                <Minimize2 aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />
-              ) : (
-                <Maximize2 aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />
-              )}
-            </button>
+            {compact ? null : (
+              <button
+                aria-label={size === "wide" ? copy.collapseWindow : copy.expand}
+                className="assistant-float__icon"
+                type="button"
+                onClick={() => onSizeChange(size === "wide" ? "float" : "wide")}
+              >
+                {size === "wide" ? (
+                  <Minimize2 aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />
+                ) : (
+                  <Maximize2 aria-hidden size={ICON.sm} strokeWidth={ICON_STROKE} />
+                )}
+              </button>
+            )}
             <button
               aria-label={copy.minimize}
               className="assistant-float__icon"

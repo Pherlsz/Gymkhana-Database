@@ -1152,4 +1152,24 @@ describe("TablesPage", () => {
     expect(sheet.indexOf("Zélia Costa")).toBeGreaterThan(-1);
     expect(sheet.indexOf("Zélia Costa")).toBeLessThan(sheet.indexOf("Ana da Silva"));
   });
+
+  it("opens the assistant over the sheet and marks the page", async () => {
+    window.history.replaceState(null, "", "/tables/people");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    expect(await screen.findByRole("heading", { name: "Pessoas" })).toBeInTheDocument();
+    expect(document.querySelector(".tables-page.is-assistant-open")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Assistente" }));
+    expect(await screen.findByRole("dialog", { name: "Sessões" })).toBeInTheDocument();
+    expect(document.querySelector(".tables-page.is-assistant-open")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Ampliar" })).toBeInTheDocument();
+  });
 });

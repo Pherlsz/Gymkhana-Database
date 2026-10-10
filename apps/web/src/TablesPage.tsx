@@ -681,7 +681,7 @@ export function TablesPage() {
 
   return (
     <PageShell
-      className="tables-page"
+      className={assistantSize === "min" ? "tables-page" : "tables-page is-assistant-open"}
       description={sectionCopy.description}
       title={sectionCopy.title}
     >
