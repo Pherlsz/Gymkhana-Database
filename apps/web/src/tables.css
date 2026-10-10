@@ -72,6 +72,20 @@
   flex: none;
 }
 
+@media (max-width: 599px) {
+  .app-shell__content:has(.tables-page.is-assistant-open) {
+    padding: 0;
+  }
+
+  .tables-page.is-assistant-open {
+    gap: 0;
+  }
+
+  .tables-page.is-assistant-open > :not(.tables-page__workspace) {
+    display: none;
+  }
+}
+
 .tables-page .page-header__title.ant-typography {
   margin: 0;
   font-size: 1.5rem;
