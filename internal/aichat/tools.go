@@ -29,6 +29,7 @@ type compactCatalogNoteCache struct {
 	version   string
 	expiresAt time.Time
 }
+
 const sampleNote = "total e match_count são a quantidade no cadastro inteiro. As linhas são só uma amostra para exemplos."
 const advancedNote = "rows são o agrupamento, o padrão ou o conjunto, não uma amostra de cadastros. Numa contagem única, match_count é o total."
 
@@ -86,10 +87,10 @@ type ToolOutput struct {
 }
 
 type ToolGateway struct {
-	search SearchPort
-	query  QueryPort
-	refs   ResultReferencePort
-	now    func() time.Time
+	search        SearchPort
+	query         QueryPort
+	refs          ResultReferencePort
+	now           func() time.Time
 	catalogNoteMu sync.Mutex
 	catalogNote   compactCatalogNoteCache
 }
@@ -336,7 +337,6 @@ func (gateway *ToolGateway) rememberCatalogNote(catalog querydomain.Catalog, not
 		note: note, version: catalog.Version, expiresAt: now.Add(compactCatalogNoteTTL),
 	}
 }
-
 
 func (gateway *ToolGateway) catalog(ctx context.Context, actor auth.Session, raw json.RawMessage, requestID string) (ToolOutput, error) {
 	var request struct{}
@@ -952,8 +952,9 @@ func normalizeToolError(err error) error {
 }
 
 // correctableToolPayload is the only tool failure the model may see and retry.
-// Decode rejects (bare ErrInvalidInput, including unknown JSON fields) stay fatal.
-// The payload is field paths and codes from the query catalog, never row values or source errors.
+// Plan, search, and decode rejects (unknown JSON fields, wrong types) stay
+// generic: field paths and codes from the query catalog, never row values or
+// source errors. The unknown field is not executed.
 func correctableToolPayload(err error) (json.RawMessage, bool) {
 	if err == nil || !errors.Is(err, ErrInvalidInput) {
 		return nil, false
@@ -962,10 +963,7 @@ func correctableToolPayload(err error) (json.RawMessage, bool) {
 	if errors.As(err, &validation) {
 		return validationFeedback(validation), true
 	}
-	if errors.Is(err, querydomain.ErrInvalidPlan) || errors.Is(err, searchdomain.ErrInvalidQuery) {
-		return json.RawMessage(`{"error":"invalid_input"}`), true
-	}
-	return nil, false
+	return json.RawMessage(`{"error":"invalid_input"}`), true
 }
 
 func validationFeedback(validation *querydomain.ValidationError) json.RawMessage {

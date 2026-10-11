@@ -139,7 +139,7 @@ The deterministic fake returns a fixed text response when the full API process i
 - `rate_limited` or `chat_quota_exceeded`: wait for Gemini or check the Google AI Studio quota. Do not raise limits from client/model input.
 - `chat_timeout`: use the explicit retry action after the terminal event; investigate repeated tool latency using safe IDs and timing only.
 - `chat_stale_context`: clear the active result and reopen or execute a fresh authorized result.
-- `chat_malformed_provider`, `chat_tool_failed`, or `chat_unsafe_result`: keep the provider payload redacted, correlate by request/run ID, and disable Chat if failures repeat.
+- `chat_malformed_provider`, `chat_tool_failed`, or `chat_unsafe_result`: keep the provider payload redacted, correlate by request/run ID, and disable Chat if failures repeat. Unknown JSON fields or a mistyped tool argument are a correctable `invalid_input`; the model may retry and a result already stored in the turn stays on the thread and the open sheet.
 - Abrupt-process orphan: allow the startup/minute recovery sweep to create its terminal event; never update run rows manually while the service is active.
 
 To disable Chat without deleting retained state, turn off `ai_chat` in Administração → Funcionalidades. The capability endpoint then reports disabled and all Chat lifecycle routes fail closed. Existing rows remain stored under the same database access controls and expire only when cleanup runs after a later safe reactivation or through an explicitly reviewed maintenance procedure.

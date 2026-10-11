@@ -217,8 +217,11 @@ export function useAssistantChat(open: boolean) {
             return;
           }
           if (event.kind === "RUN_FAILED") {
-            patchPending((current) => ({
-              ...current,
+            const current = pendingRef.current;
+            const lastResult = current?.resultReferenceIds[current.resultReferenceIds.length - 1];
+            if (lastResult) touchThread(id, lastResult);
+            patchPending((value) => ({
+              ...value,
               toolRunning: false,
               errorCode: event.error_code || "run_failed",
             }));
@@ -247,7 +250,8 @@ export function useAssistantChat(open: boolean) {
           if (!error) return;
           void (async () => {
             const current = pendingRef.current;
-            if (!current || current.runId !== runId || current.errorCode || current.cancelled) return;
+            if (!current || current.runId !== runId || current.errorCode || current.cancelled)
+              return;
             let run: Awaited<ReturnType<typeof getChatRun>> | null = null;
             try {
               run = await getChatRun(runId);
@@ -266,6 +270,8 @@ export function useAssistantChat(open: boolean) {
               return;
             }
             if (run?.state === "FAILED") {
+              const lastResult = latest.resultReferenceIds[latest.resultReferenceIds.length - 1];
+              if (lastResult) touchThread(id, lastResult);
               const code = run.error_code || "run_failed";
               patchPending((value) => ({ ...value, toolRunning: false, errorCode: code }));
               return;

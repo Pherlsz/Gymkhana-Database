@@ -152,7 +152,6 @@ func TestOrchestratorRejectsMalformedUnknownToolsAndRedactsProviderFailures(t *t
 		wantCode  string
 	}{
 		{name: "unknown tool", step: FakeModelStep{ToolCall: &ToolCall{ID: "call-delete", Name: "delete", Arguments: json.RawMessage(`{}`)}}, wantError: ErrMalformedProvider, wantCode: "malformed_provider"},
-		{name: "unknown argument", step: FakeModelStep{ToolCall: &ToolCall{ID: "call-search", Name: "search", Arguments: json.RawMessage(`{"terms":["Ana"],"sql":"SELECT secret"}`)}}, wantError: ErrMalformedProvider, wantCode: "malformed_provider"},
 		{name: "negative usage", step: FakeModelStep{Usage: ModelUsage{InputUnits: -1}}, wantError: ErrMalformedProvider, wantCode: "malformed_provider"},
 		{name: "oversized usage", step: FakeModelStep{Usage: ModelUsage{OutputUnits: maximumProviderUsage + 1}}, wantError: ErrMalformedProvider, wantCode: "malformed_provider"},
 		{name: "provider unavailable", step: FakeModelStep{Err: errors.New("provider payload: secret-token")}, wantError: ErrUnavailable, wantCode: "unavailable"},
@@ -177,6 +176,103 @@ func TestOrchestratorRejectsMalformedUnknownToolsAndRedactsProviderFailures(t *t
 				}
 			}
 		})
+	}
+}
+
+func TestOrchestratorFeedsUnknownToolFieldsBackToTheModel(t *testing.T) {
+	provider := NewFakeProvider(
+		FakeModelStep{ToolCall: &ToolCall{ID: "call-search", Name: "search", Arguments: json.RawMessage(`{"terms":["Ana"],"sql":"SELECT secret"}`)}},
+		FakeModelStep{Deltas: []string{"Uma pessoa."}, Usage: ModelUsage{InputUnits: 2, OutputUnits: 2}},
+	)
+	fixture := newOrchestratorFixture(t, 1000, provider)
+	creation := fixture.startTurn(t, "Quem é Ana?", "unknown-field-turn")
+	if err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "unknown-field"); err != nil {
+		t.Fatalf("RunTurn() error = %v", err)
+	}
+	run, _ := fixture.service.Run(context.Background(), fixture.actor, creation.Run.ID)
+	if run.State != RunCompleted {
+		t.Fatalf("run = %#v", run)
+	}
+	requests := provider.Requests()
+	if len(requests) != 2 || len(requests[1].ToolResults) != 1 {
+		t.Fatalf("provider requests = %#v", requests)
+	}
+	feedback := string(requests[1].ToolResults[0].Data)
+	if feedback != `{"error":"invalid_input"}` || strings.Contains(feedback, "SELECT") || strings.Contains(feedback, "sql") {
+		t.Fatalf("tool feedback leaked source = %s", feedback)
+	}
+	found := false
+	for _, step := range fixture.store.steps {
+		if step.RunID != run.ID {
+			continue
+		}
+		found = true
+		if step.State != ToolStepFailed || step.ErrorCode != "invalid_input" {
+			t.Fatalf("tool step = %#v", step)
+		}
+	}
+	if !found {
+		t.Fatal("unknown-field step was not recorded")
+	}
+	for _, audit := range fixture.store.audits {
+		if strings.Contains(audit.ErrorCode, "secret") || strings.Contains(audit.RequestID, "secret") {
+			t.Fatalf("provider payload leaked to audit: %#v", audit)
+		}
+	}
+}
+
+func TestOrchestratorKeepsAValidQueryWhenTheFollowUpHasUnknownFields(t *testing.T) {
+	catalogVersion := strings.Repeat("c", 64)
+	validQuery := `{"plan":{"version":"v1","catalog_version":"` + catalogVersion + `","root_entity":"profiles","projections":["profile.full_name","profile.vehicle_model"],"filter":{"kind":"predicate","field":"profile.vehicle_model","operator":"in","values":["astra"]},"maximum_rows":10}}`
+	provider := NewFakeProvider(
+		FakeModelStep{ToolCall: &ToolCall{ID: "call-query-1", Name: "query", Arguments: json.RawMessage(validQuery)}},
+		FakeModelStep{ToolCall: &ToolCall{ID: "call-query-2", Name: "query", Arguments: json.RawMessage(`{"plan":{"version":"v1","catalog_version":"` + catalogVersion + `","root_entity":"profiles","projections":["profile.full_name"],"maximum_rows":10},"offset":3}`)}},
+		FakeModelStep{Deltas: []string{"Sete pessoas com Astra."}, Usage: ModelUsage{InputUnits: 3, OutputUnits: 4}},
+	)
+	fixture := newOrchestratorFixture(t, 1000, provider)
+	fixture.query.catalog = querydomain.Catalog{
+		Version:  catalogVersion,
+		Entities: []querydomain.EntityDefinition{{Key: "profiles", Label: "Pessoas"}},
+		Fields: []querydomain.FieldDefinition{
+			{Key: "profile.full_name", Entity: "profiles", Label: "Nome", Kind: querydomain.ValueText, Projectable: true, Filterable: true, Operators: []querydomain.Operator{querydomain.OperatorEqual}},
+			{Key: "profile.vehicle_model", Entity: "profiles", Label: "Modelo", Kind: querydomain.ValueText, Projectable: true, Filterable: true, Operators: []querydomain.Operator{querydomain.OperatorIn}},
+		},
+		Limits: querydomain.CatalogLimits{MaximumRows: 100},
+	}
+	executionID := querydomain.Identifier{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}
+	fixture.query.execution = querydomain.Execution{
+		ID: executionID, State: querydomain.ExecutionCompleted, CatalogVersion: catalogVersion,
+		RootEntity: "profiles", MaximumRows: 10, RowCount: 7, ColumnCount: 2,
+		ExpiresAt: fixture.service.now().UTC().Add(time.Hour),
+	}
+	fixture.query.matchCount = 7
+	name, model := "Ana Astra", "Astra"
+	fixture.query.page = querydomain.ResultPage{
+		Columns: []querydomain.ResultColumn{{Position: 1, FieldKey: "profile.full_name", Label: "Nome"}, {Position: 2, FieldKey: "profile.vehicle_model", Label: "Modelo"}},
+		Rows: []querydomain.ResultRow{{
+			Position: 1, EntityKind: "profile", EntityID: "p1", EntityLabel: name,
+			Cells: []querydomain.ResultCell{{ColumnPosition: 1, Kind: querydomain.ValueText, TextValue: &name}, {ColumnPosition: 2, Kind: querydomain.ValueText, TextValue: &model}},
+		}},
+		Total: 7, Limit: 10,
+	}
+	creation := fixture.startTurn(t, "Pessoas com Astra", "follow-up-unknown-field")
+	if err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "follow-up"); err != nil {
+		t.Fatalf("RunTurn() error = %v", err)
+	}
+	run, _ := fixture.service.Run(context.Background(), fixture.actor, creation.Run.ID)
+	if run.State != RunCompleted {
+		t.Fatalf("run = %#v", run)
+	}
+	thread, _ := fixture.service.Thread(context.Background(), fixture.actor, fixture.thread.ID, "thread")
+	if thread.ActiveResultReferenceID == nil {
+		t.Fatal("first query result was dropped after the unknown-field follow-up")
+	}
+	requests := provider.Requests()
+	if len(requests) != 3 || len(requests[2].ToolResults) != 2 {
+		t.Fatalf("provider requests = %#v", requests)
+	}
+	if got := string(requests[2].ToolResults[1].Data); got != `{"error":"invalid_input"}` {
+		t.Fatalf("follow-up feedback = %s", got)
 	}
 }
 
@@ -464,7 +560,6 @@ func assertPanicFailsRun(t *testing.T, provider ModelClient, boomTool bool) {
 		t.Fatalf("panic was not logged, log = %q", logged)
 	}
 }
-
 
 func TestRunTurnAuthorizeInsertQueryCountDropsOnLargeDeltaReply(t *testing.T) {
 	const tokens = 300

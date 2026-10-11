@@ -127,14 +127,16 @@ export function AssistantSessionFloat({
     const latest = [...chat.messages]
       .toReversed()
       .find((message) => message.role === "ASSISTANT" && message.result_reference_ids.length > 0);
+    const latestResult = latest?.result_reference_ids[latest.result_reference_ids.length - 1] ?? "";
     if (seenThread.current !== threadId) {
       seenThread.current = threadId;
-      seenResultReference.current =
-        latest?.result_reference_ids[latest.result_reference_ids.length - 1] ?? "";
-      return;
+      seenResultReference.current = latestResult;
     }
-    if (!latest || chat.pending) return;
-    const referenceId = latest.result_reference_ids[latest.result_reference_ids.length - 1];
+    const failedResult =
+      chat.pending?.errorCode && chat.pending.resultReferenceIds.length > 0
+        ? chat.pending.resultReferenceIds[chat.pending.resultReferenceIds.length - 1]
+        : "";
+    const referenceId = failedResult || (!chat.pending ? latestResult : "");
     if (!referenceId || referenceId === seenResultReference.current) return;
     seenResultReference.current = referenceId;
     onShowResult(referenceId);

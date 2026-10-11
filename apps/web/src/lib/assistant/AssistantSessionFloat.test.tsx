@@ -123,6 +123,34 @@ describe("AssistantSessionFloat", () => {
     expect(onSizeChange).toHaveBeenCalledWith("min");
   });
 
+  it("applies the last pending result when the turn fails", () => {
+    const onShowResult = vi.fn();
+    vi.mocked(useAssistantChat).mockReturnValue(
+      chatStub({
+        pending: {
+          runId: "run-2",
+          threadId: thread.id,
+          content: "veiculos",
+          text: "",
+          roundText: "",
+          toolRunning: false,
+          resultReferenceIds: ["ref-7"],
+          errorCode: "malformed_provider",
+        },
+        busy: false,
+      }),
+    );
+    renderFloat(
+      <AssistantSessionFloat
+        onShowResult={onShowResult}
+        onSizeChange={vi.fn()}
+        size="float"
+        tableLabel="Pessoas"
+      />,
+    );
+    expect(onShowResult).toHaveBeenCalledWith("ref-7");
+  });
+
   it("uses a compact sheet on narrow viewports: no expand, sessions closed", () => {
     stubMatchMedia(true);
     renderFloat(<AssistantSessionFloat size="float" tableLabel="Pessoas" onSizeChange={vi.fn()} />);
