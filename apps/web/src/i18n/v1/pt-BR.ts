@@ -723,6 +723,8 @@ export const tables = {
       busy: "Esta sessão ainda está respondendo. Aguarde ou pare a resposta atual.",
       rate_limited: "O Gemini recusou por excesso de pedidos. Espere um pouco e tente de novo.",
       quota_exceeded: "A cota do Gemini esgotou. Verifique o plano em Google AI Studio.",
+      tool_limit:
+        "A consulta usou o máximo de passos. Tente um pedido mais específico ou continue em outra mensagem.",
       timeout:
         "A resposta demorou demais (consultas longas ou o Gemini lento). Simplifique a pergunta ou tente de novo.",
       cancelled: "Resposta interrompida.",
