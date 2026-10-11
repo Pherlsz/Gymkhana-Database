@@ -127,8 +127,8 @@ func addStaticFields(catalog *resolvedCatalog) {
 		field("profile.address_state", "profiles", "UF", ValueEnum, true, true, true, true, "{root}.address_state"),
 		field("profile.address_postal_code", "profiles", "CEP", ValueIdentifier, true, true, true, true, "{root}.address_postal_code"),
 		field("profile.notes", "profiles", "Observações", ValueLongText, true, true, true, false, "{root}.notes"),
-		field("profile.team", "profiles", "Equipe", ValueText, true, true, true, true, "{root}.team"),
-		field("profile.club_membership", "profiles", "Sócio clube", ValueText, true, true, true, true, "{root}.club_membership"),
+		field("profile.team", "profiles", "Equipe da gincana", ValueText, true, true, true, true, "{root}.team"),
+		clubMembershipField(),
 		field("profile.membership_type", "profiles", "Categoria de sócio", ValueText, true, true, true, true, "{root}.membership_type"),
 		field("profile.place_of_origin", "profiles", "Naturalidade", ValueText, true, true, true, true, "{root}.place_of_origin"),
 		field("profile.birth_country", "profiles", "País de nascimento", ValueText, true, true, true, true, "{root}.birth_country"),
@@ -371,14 +371,23 @@ func relation(key, from, to, label string, cardinality RelationCardinality, cond
 		JoinCondition: condition, TargetEntityKey: to}
 }
 
+func clubMembershipField() sqlFieldDefinition {
+	value := field("profile.club_membership", "profiles", "Sócio de clube de futebol", ValueText, true, true, true, true, "{root}.club_membership")
+	value.Public.Options = []OptionDefinition{
+		{Key: "gremio", Label: "Grêmio"},
+		{Key: "internacional", Label: "Internacional"},
+	}
+	return value
+}
+
 // nameInitialField is the first letter of the given name, with Portuguese
 // accents folded (Ó → O). Gymkhana proofs filter this, not starts_with on the
 // full name.
 func nameInitialField() sqlFieldDefinition {
 	value := field("profile.name_initial", "profiles", "Inicial", ValueText, true, true, true, true,
 		"upper(substring(translate(split_part(btrim({root}.full_name), ' ', 1), "+
-			"'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',"+
-			"'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC') from '[A-Za-z]'))")
+			"'"+portugueseAccentFrom+"',"+
+			"'"+portugueseAccentTo+"') from '[A-Za-z]'))")
 	value.Public.Operators = []Operator{OperatorEqual, OperatorNotEqual, OperatorIn, OperatorIsNull, OperatorNotNull}
 	value.Public.Source = "profile.full_name"
 	return value

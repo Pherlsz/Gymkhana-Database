@@ -91,6 +91,7 @@ func TestOrchestratorExecutesReadOnlyToolAndPersistsOnlyTheLastAssistantRound(t 
 	}
 	if !strings.Contains(requests[1].Policy, "somente leitura") || !strings.Contains(requests[1].Policy, "Número da casa") ||
 		!strings.Contains(requests[1].Policy, "conferir") || !strings.Contains(requests[1].Policy, "replaces") ||
+		!strings.Contains(requests[1].Policy, "club_membership") ||
 		strings.Contains(requests[1].Policy, "UPDATE profiles") {
 		t.Fatalf("provider policy = %q", requests[1].Policy)
 	}
@@ -464,7 +465,6 @@ func assertPanicFailsRun(t *testing.T, provider ModelClient, boomTool bool) {
 		t.Fatalf("panic was not logged, log = %q", logged)
 	}
 }
-
 
 func TestRunTurnAuthorizeInsertQueryCountDropsOnLargeDeltaReply(t *testing.T) {
 	const tokens = 300
