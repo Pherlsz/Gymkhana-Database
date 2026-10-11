@@ -8,7 +8,7 @@ Gymkhana tasks that consume Query results are documented in [`TASKS.md`](TASKS.m
 
 ## Supported v1 plan
 
-`QueryPlan` v1 contains one root entity, up to 20 projections, nested `AND`/`OR`/`NOT` filters, allowlisted relation filters, up to three deterministic sorts, and a maximum of 500 rows. Logical identifiers must be present in the freshly loaded server catalog. Predicate values are always PostgreSQL parameters; only server-owned expressions and relation fragments can become SQL.
+`QueryPlan` v1 contains one root entity, up to 20 projections, nested `AND`/`OR`/`NOT` filters, allowlisted relation filters, up to three deterministic sorts, and a maximum of 500 rows. Two filterable fields on the same row may be compared with `other_field`. On civil dates and timestamps, `part` (`year`, `month`, `day`, `month_day`) compares only that component — `month_day` is the anniversary (day and month, year ignored). Without `part`, equality is the full value. Logical identifiers must be present in the freshly loaded server catalog. Predicate values are always PostgreSQL parameters; only server-owned expressions and relation fragments can become SQL.
 
 The public catalog is rebuilt from current authorization and active custom definitions on every service operation. Its SHA-256 version lets the backend reject stale plans. There is no Query editor. An Assistente recorte may enter a table link as a compiled plan (Orchestration §12.1), not as text for the model to reinterpret and not as result rows in the URL. Clients must not place result rows in local storage or session storage.
 

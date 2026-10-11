@@ -171,6 +171,12 @@ export interface components {
       kind: components["schemas"]["FilterKind"];
       conjunction?: components["schemas"]["Conjunction"];
       field?: components["schemas"]["LogicalKey"];
+      other_field?: components["schemas"]["LogicalKey"];
+      /**
+       * @description Compare only this component of a civil date or timestamp. month_day is day-and-month (anniversary); omit part to compare the full value.
+       * @enum {string}
+       */
+      part?: "year" | "month" | "day" | "month_day";
       operator?: components["schemas"]["QueryOperator"];
       values?: string[];
       relation?: components["schemas"]["LogicalKey"];

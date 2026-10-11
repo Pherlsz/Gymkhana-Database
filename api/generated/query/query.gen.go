@@ -88,6 +88,30 @@ func (e FilterKind) Valid() bool {
 	}
 }
 
+// Defines values for FilterNodePart.
+const (
+	Day      FilterNodePart = "day"
+	Month    FilterNodePart = "month"
+	MonthDay FilterNodePart = "month_day"
+	Year     FilterNodePart = "year"
+)
+
+// Valid indicates whether the value is a known member of the FilterNodePart enum.
+func (e FilterNodePart) Valid() bool {
+	switch e {
+	case Day:
+		return true
+	case Month:
+		return true
+	case MonthDay:
+		return true
+	case Year:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for QueryOperator.
 const (
 	Between    QueryOperator = "between"
@@ -306,9 +330,16 @@ type FilterNode struct {
 	Field       *LogicalKey    `json:"field,omitempty"`
 	Kind        FilterKind     `json:"kind"`
 	Operator    *QueryOperator `json:"operator,omitempty"`
-	Relation    *LogicalKey    `json:"relation,omitempty"`
-	Values      *[]string      `json:"values,omitempty"`
+	OtherField  *LogicalKey    `json:"other_field,omitempty"`
+
+	// Part Compare only this component of a civil date or timestamp. month_day is day-and-month (anniversary); omit part to compare the full value.
+	Part     *FilterNodePart `json:"part,omitempty"`
+	Relation *LogicalKey     `json:"relation,omitempty"`
+	Values   *[]string       `json:"values,omitempty"`
 }
+
+// FilterNodePart Compare only this component of a civil date or timestamp. month_day is day-and-month (anniversary); omit part to compare the full value.
+type FilterNodePart string
 
 // Fingerprint defines model for Fingerprint.
 type Fingerprint = string

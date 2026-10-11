@@ -416,6 +416,12 @@ components:
           $ref: "#/components/schemas/Conjunction"
         field:
           $ref: "#/components/schemas/LogicalKey"
+        other_field:
+          $ref: "#/components/schemas/LogicalKey"
+        part:
+          type: string
+          enum: [year, month, day, month_day]
+          description: Compare only this component of a civil date or timestamp. month_day is day-and-month (anniversary); omit part to compare the full value.
         operator:
           $ref: "#/components/schemas/QueryOperator"
         values:

@@ -285,6 +285,7 @@ func normalizeFilter(node FilterNode, validation *ValidationError, path string, 
 	}
 	node.Field = strings.TrimSpace(node.Field)
 	node.OtherField = strings.TrimSpace(node.OtherField)
+	node.Part = DatePart(strings.TrimSpace(strings.ToLower(string(node.Part))))
 	node.Relation = strings.TrimSpace(node.Relation)
 	values := make([]string, 0, len(node.Values))
 	for _, value := range node.Values {
@@ -406,6 +407,18 @@ func (state *compileState) compilePredicate(node FilterNode, entityKey, prefix, 
 		state.validation.add(path+".operator", "unsupported")
 		return ""
 	}
+	if node.Part != "" && !validDatePart(node.Part) {
+		state.validation.add(path+".part", "unsupported")
+		return ""
+	}
+	if node.Part != "" && !dateLikeKind(definition.Public.Kind) {
+		state.validation.add(path+".part", "unsupported")
+		return ""
+	}
+	if node.Part != "" && !datePartAllowsOperator(node.Operator) {
+		state.validation.add(path+".part", "unsupported")
+		return ""
+	}
 	minimum, maximum := operatorArity(node.Operator)
 	if len(node.Values) < minimum || len(node.Values) > maximum {
 		state.validation.add(path+".values", "wrong_arity")
@@ -413,6 +426,15 @@ func (state *compileState) compilePredicate(node FilterNode, entityKey, prefix, 
 	}
 	values := make([]string, 0, len(node.Values))
 	for index, value := range node.Values {
+		if node.Part != "" {
+			normalized, ok := normalizeDatePartValue(value, node.Part)
+			if !ok {
+				state.validation.add(fmt.Sprintf("%s.values.%d", path, index), "invalid_type")
+				continue
+			}
+			values = append(values, normalized)
+			continue
+		}
 		if !validPredicateValue(value, definition.Public.Kind) {
 			state.validation.add(fmt.Sprintf("%s.values.%d", path, index), "invalid_type")
 			continue
@@ -423,6 +445,9 @@ func (state *compileState) compilePredicate(node FilterNode, entityKey, prefix, 
 		return ""
 	}
 	expression := expandSQL(definition.Expression, prefix)
+	if node.Part != "" {
+		expression = datePartSQL(expression, node.Part)
+	}
 	switch node.Operator {
 	case OperatorIsNull:
 		return "(" + expression + ") IS NULL"
@@ -437,18 +462,28 @@ func (state *compileState) compilePredicate(node FilterNode, entityKey, prefix, 
 	case OperatorIn:
 		parts := make([]string, 0, len(values))
 		for _, value := range values {
+			if node.Part != "" {
+				parts = append(parts, state.datePartPlaceholder(value, node.Part))
+				continue
+			}
 			parts = append(parts, state.placeholder(value, definition.Public.Kind))
 		}
-		if isTextKind(definition.Public.Kind) {
+		if node.Part == "" && isTextKind(definition.Public.Kind) {
 			return fmt.Sprintf("lower((%s)::text) IN (%s)", expression, strings.Join(lowerPlaceholders(parts), ","))
 		}
 		return fmt.Sprintf("(%s) IN (%s)", expression, strings.Join(parts, ","))
 	case OperatorBetween:
+		if node.Part != "" {
+			return fmt.Sprintf("(%s) BETWEEN %s AND %s", expression, state.datePartPlaceholder(values[0], node.Part), state.datePartPlaceholder(values[1], node.Part))
+		}
 		left := state.placeholder(values[0], definition.Public.Kind)
 		right := state.placeholder(values[1], definition.Public.Kind)
 		return fmt.Sprintf("(%s) BETWEEN %s AND %s", expression, left, right)
 	default:
 		operator := map[Operator]string{OperatorEqual: "=", OperatorNotEqual: "<>", OperatorGreater: ">", OperatorGreaterEq: ">=", OperatorLess: "<", OperatorLessEq: "<="}[node.Operator]
+		if node.Part != "" {
+			return fmt.Sprintf("(%s) %s %s", expression, operator, state.datePartPlaceholder(values[0], node.Part))
+		}
 		placeholder := state.placeholder(values[0], definition.Public.Kind)
 		if isTextKind(definition.Public.Kind) {
 			return fmt.Sprintf("lower((%s)::text) %s lower(%s::text)", expression, operator, placeholder)
@@ -467,6 +502,14 @@ func (state *compileState) compileFieldCompare(node FilterNode, definition sqlFi
 		state.validation.add(path+".other_field", "unsupported")
 		return ""
 	}
+	if node.Part != "" && !validDatePart(node.Part) {
+		state.validation.add(path+".part", "unsupported")
+		return ""
+	}
+	if node.Part != "" && (!dateLikeKind(definition.Public.Kind) || !dateLikeKind(other.Public.Kind)) {
+		state.validation.add(path+".part", "unsupported")
+		return ""
+	}
 	switch node.Operator {
 	case OperatorEqual, OperatorNotEqual, OperatorGreater, OperatorGreaterEq, OperatorLess, OperatorLessEq:
 	default:
@@ -476,10 +519,133 @@ func (state *compileState) compileFieldCompare(node FilterNode, definition sqlFi
 	operator := map[Operator]string{OperatorEqual: "=", OperatorNotEqual: "<>", OperatorGreater: ">", OperatorGreaterEq: ">=", OperatorLess: "<", OperatorLessEq: "<="}[node.Operator]
 	left := expandSQL(definition.Expression, prefix)
 	right := expandSQL(other.Expression, prefix)
+	if node.Part != "" {
+		return fmt.Sprintf("(%s) %s (%s)", datePartSQL(left, node.Part), operator, datePartSQL(right, node.Part))
+	}
 	if isTextKind(definition.Public.Kind) || isTextKind(other.Public.Kind) {
 		return fmt.Sprintf("lower((%s)::text) %s lower((%s)::text)", left, operator, right)
 	}
 	return fmt.Sprintf("(%s) %s (%s)", left, operator, right)
+}
+
+func dateLikeKind(kind ValueKind) bool {
+	return kind == ValueCivilDate || kind == ValueTimestamp
+}
+
+func validDatePart(part DatePart) bool {
+	switch part {
+	case DatePartYear, DatePartMonth, DatePartDay, DatePartMonthDay:
+		return true
+	default:
+		return false
+	}
+}
+
+func datePartAllowsOperator(operator Operator) bool {
+	switch operator {
+	case OperatorEqual, OperatorNotEqual, OperatorGreater, OperatorGreaterEq, OperatorLess, OperatorLessEq, OperatorBetween, OperatorIn:
+		return true
+	default:
+		return false
+	}
+}
+
+func datePartSQL(expression string, part DatePart) string {
+	inner := "(" + expression + ")::date"
+	switch part {
+	case DatePartYear:
+		return "EXTRACT(YEAR FROM " + inner + ")"
+	case DatePartMonth:
+		return "EXTRACT(MONTH FROM " + inner + ")"
+	case DatePartDay:
+		return "EXTRACT(DAY FROM " + inner + ")"
+	case DatePartMonthDay:
+		return "to_char(" + inner + ", 'MM-DD')"
+	default:
+		return expression
+	}
+}
+
+func normalizeDatePartValue(value string, part DatePart) (string, bool) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", false
+	}
+	if parsed, err := time.Parse("2006-01-02", value); err == nil {
+		switch part {
+		case DatePartYear:
+			return parsed.Format("2006"), true
+		case DatePartMonth:
+			return strconv.Itoa(int(parsed.Month())), true
+		case DatePartDay:
+			return strconv.Itoa(parsed.Day()), true
+		case DatePartMonthDay:
+			return parsed.Format("01-02"), true
+		}
+	}
+	switch part {
+	case DatePartYear:
+		year, err := strconv.Atoi(value)
+		if err != nil || year < 1000 || year > 9999 {
+			return "", false
+		}
+		return strconv.Itoa(year), true
+	case DatePartMonth:
+		month, err := strconv.Atoi(value)
+		if err != nil || month < 1 || month > 12 {
+			return "", false
+		}
+		return strconv.Itoa(month), true
+	case DatePartDay:
+		day, err := strconv.Atoi(value)
+		if err != nil || day < 1 || day > 31 {
+			return "", false
+		}
+		return strconv.Itoa(day), true
+	case DatePartMonthDay:
+		if month, day, ok := parseMonthDay(value); ok {
+			return fmt.Sprintf("%02d-%02d", month, day), true
+		}
+		return "", false
+	default:
+		return "", false
+	}
+}
+
+func parseMonthDay(value string) (int, int, bool) {
+	if strings.Contains(value, "/") {
+		parts := strings.Split(value, "/")
+		if len(parts) != 2 {
+			return 0, 0, false
+		}
+		day, dayErr := strconv.Atoi(strings.TrimSpace(parts[0]))
+		month, monthErr := strconv.Atoi(strings.TrimSpace(parts[1]))
+		if dayErr != nil || monthErr != nil || month < 1 || month > 12 || day < 1 || day > 31 {
+			return 0, 0, false
+		}
+		return month, day, true
+	}
+	parts := strings.Split(value, "-")
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	month, monthErr := strconv.Atoi(strings.TrimSpace(parts[0]))
+	day, dayErr := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if monthErr != nil || dayErr != nil || month < 1 || month > 12 || day < 1 || day > 31 {
+		return 0, 0, false
+	}
+	return month, day, true
+}
+
+func (state *compileState) datePartPlaceholder(value string, part DatePart) string {
+	if part == DatePartMonthDay {
+		return state.placeholder(value, ValueText)
+	}
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return state.placeholder(value, ValueText)
+	}
+	return fmt.Sprintf("$%d::numeric", state.bind(parsed))
 }
 
 func (state *compileState) placeholder(value string, kind ValueKind) string {
