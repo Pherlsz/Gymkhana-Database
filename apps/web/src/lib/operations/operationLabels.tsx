@@ -3,11 +3,7 @@ import { useI18n } from "../../i18n";
 import type { TranslationKeys } from "../../i18n/v1/pt-BR";
 import type { ImportReportRow, ImportRow, OperationImport } from "../api/operations";
 
-export function OperationStatus({
-  value,
-}: {
-  value: OperationImport["state"];
-}) {
+export function OperationStatus({ value }: { value: OperationImport["state"] }) {
   const { messages } = useI18n();
   return <Tag color={statusTone(value)}>{stateLabel(value, messages)}</Tag>;
 }
@@ -20,7 +16,9 @@ export function operationTerminal(state: OperationImport["state"]): boolean {
   return ["COMPLETED", "FAILED", "CANCELLED", "EXPIRED"].includes(state);
 }
 
-export function statusTone(state: OperationImport["state"]): "neutral" | "success" | "warning" | "info" {
+export function statusTone(
+  state: OperationImport["state"],
+): "neutral" | "success" | "warning" | "info" {
   if (state === "COMPLETED") return "success";
   if (state === "FAILED" || state === "CANCELLED" || state === "EXPIRED") return "warning";
   if (state === "RUNNING" || state === "PARSING" || state === "QUEUED") return "info";

@@ -49,14 +49,14 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.6
+          go-version: 1.26.9
           cache: true
 
       - name: Cache tern binary
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: bin/tern
-          key: tern-v2.4.1-${{ runner.os }}-go1.26.6
+          key: tern-v2.4.1-${{ runner.os }}-go1.26.9
 
       - name: Install tern
         run: |
@@ -117,14 +117,14 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: 1.26.6
+          go-version: 1.26.9
           cache: true
 
       - name: Cache tern binary
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: bin/tern
-          key: tern-v2.4.1-${{ runner.os }}-go1.26.6
+          key: tern-v2.4.1-${{ runner.os }}-go1.26.9
 
       - name: Install tern
         run: |
@@ -143,4 +143,3 @@ jobs:
 
       - name: Run PostgreSQL integration tests
         run: go test -p=1 -tags=integration ./internal/attachment ./internal/search ./internal/operations ./internal/googleforms ./internal/queryengine ./internal/aichat ./internal/ocr ./internal/profile
-

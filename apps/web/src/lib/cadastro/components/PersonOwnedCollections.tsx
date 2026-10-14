@@ -73,7 +73,9 @@ export function PersonOwnedCollections({
   const [addingSaving, setAddingSaving] = useState(false);
   const [docState, setDocState] = useState<DocumentFormFieldsState>(INITIAL_DOC_FIELDS);
   const [formError, setFormError] = useState<string | null>(null);
-  const [storedDocument, setStoredDocument] = useState<{ id: string; version: number } | null>(null);
+  const [storedDocument, setStoredDocument] = useState<{ id: string; version: number } | null>(
+    null,
+  );
   const [ocrOwner, setOcrOwner] = useState<AttachmentOwner | null>(null);
 
   const documentTypes = useQuery({

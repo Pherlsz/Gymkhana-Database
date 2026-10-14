@@ -16,7 +16,7 @@ The application consumes:
 
 ## Requirements
 
-- Go 1.26.5
+- Go 1.26.9
 - Node.js 24 LTS
 - pnpm 11.12.0
 - GNU Make or a compatible environment such as WSL/Git Bash on Windows

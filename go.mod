@@ -2,7 +2,7 @@ module github.com/Pherlsz/Gymkhana-Database
 
 go 1.26.0
 
-toolchain go1.26.5
+toolchain go1.26.9
 
 require (
 	github.com/Pherlsz/Gymkhana-Core v0.7.0

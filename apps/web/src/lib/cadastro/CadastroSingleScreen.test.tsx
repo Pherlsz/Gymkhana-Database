@@ -336,10 +336,9 @@ describe("CadastroSingleScreen", () => {
         await confirmSave();
         expect(await screen.findByText(/second document failed/i)).not.toBeNull();
         expect(createProfile).toHaveBeenCalledTimes(1);
-        expect(vi.mocked(createDocument).mock.calls.map((call) => call[0].identifier_value)).toEqual([
-          "111",
-          "222",
-        ]);
+        expect(
+          vi.mocked(createDocument).mock.calls.map((call) => call[0].identifier_value),
+        ).toEqual(["111", "222"]);
         expect(screen.getByText(/Salvo/)).not.toBeNull();
 
         await confirmSave();
@@ -365,9 +364,8 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("keeps the created document id when a later save step fails", async () => {
-      const { createDocument, createProfile, updateDocument, updateProfile } = await import(
-        "../api/client"
-      );
+      const { createDocument, createProfile, updateDocument, updateProfile } =
+        await import("../api/client");
       const custom = await import("../../RecordCustomFields");
       vi.mocked(createProfile).mockClear();
       vi.mocked(createDocument).mockClear();
@@ -548,9 +546,8 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("updates the document already created when a later save step fails", async () => {
-      const { createDocument, createProfile, updateDocument, updateProfile } = await import(
-        "../api/client"
-      );
+      const { createDocument, createProfile, updateDocument, updateProfile } =
+        await import("../api/client");
       const custom = await import("../../RecordCustomFields");
       vi.mocked(createProfile).mockClear();
       vi.mocked(createDocument).mockClear();
@@ -663,7 +660,8 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("updates the bill already created when a later save step fails", async () => {
-      const { createBill, createProfile, updateBill, updateProfile } = await import("../api/client");
+      const { createBill, createProfile, updateBill, updateProfile } =
+        await import("../api/client");
       const custom = await import("../../RecordCustomFields");
       vi.mocked(createProfile).mockClear();
       vi.mocked(createBill).mockClear();

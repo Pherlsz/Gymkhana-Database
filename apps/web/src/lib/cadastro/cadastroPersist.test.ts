@@ -50,9 +50,9 @@ describe("persistDocumentForm", () => {
     });
     vi.mocked(uploadAttachment).mockRejectedValueOnce(new Error("upload failed"));
 
-    await expect(
-      persistDocumentForm({ ownerProfileId: "profile-1", fields }),
-    ).rejects.toThrow(/upload failed/i);
+    await expect(persistDocumentForm({ ownerProfileId: "profile-1", fields })).rejects.toThrow(
+      /upload failed/i,
+    );
     const failed = vi.mocked(uploadAttachment).mock.results[0]?.value;
     await expect(failed).rejects.toThrow(/upload failed/i);
     const stored = storedRecordOf(await failed.catch((error: unknown) => error));

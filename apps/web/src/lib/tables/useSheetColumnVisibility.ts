@@ -20,16 +20,12 @@ export function readSheetColumnVisibility(table: TableKind): ColumnVisibilityOve
   }
 }
 
-export function writeSheetColumnVisibility(
-  table: TableKind,
-  overrides: ColumnVisibilityOverrides,
-) {
+export function writeSheetColumnVisibility(table: TableKind, overrides: ColumnVisibilityOverrides) {
   const key = sheetColumnVisibilityKey(table);
   const token = formatColumnCols(parseColumnCols(formatColumnCols(overrides)));
   if (!token) localStorage.removeItem(key);
   else localStorage.setItem(key, token);
 }
-
 
 function sameOverrides(left: ColumnVisibilityOverrides, right: ColumnVisibilityOverrides) {
   const leftKeys = Object.keys(left);
