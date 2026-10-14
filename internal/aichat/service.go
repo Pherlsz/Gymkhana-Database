@@ -551,6 +551,8 @@ func publicErrorCode(err error) string {
 		return "rate_limited"
 	case errors.Is(err, ErrQuotaExceeded):
 		return "quota_exceeded"
+	case errors.Is(err, ErrToolLimit):
+		return "tool_limit"
 	case errors.Is(err, ErrUnavailable):
 		return "unavailable"
 	case errors.Is(err, ErrTimeout):
@@ -586,6 +588,8 @@ func errorFromPublicCode(code string) error {
 		return ErrRateLimited
 	case "quota_exceeded":
 		return ErrQuotaExceeded
+	case "tool_limit":
+		return ErrToolLimit
 	case "unavailable":
 		return ErrUnavailable
 	case "timeout":

@@ -451,7 +451,7 @@ func (store *PostgresStore) BeginTool(ctx context.Context, input BeginToolInput)
 		return ToolStep{}, ErrInvalidState
 	}
 	if run.ToolCallCount >= MaximumToolCalls {
-		return ToolStep{}, ErrQuotaExceeded
+		return ToolStep{}, ErrToolLimit
 	}
 	sequence := run.ToolCallCount + 1
 	step, err := scanToolStep(tx.QueryRow(ctx, `INSERT INTO ai_chat_tool_steps

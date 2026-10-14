@@ -10,6 +10,7 @@ var (
 	ErrInvalidState      = errors.New("AI Chat state transition is invalid")
 	ErrRateLimited       = errors.New("AI Chat rate limit exceeded")
 	ErrQuotaExceeded     = errors.New("AI Chat usage quota exceeded")
+	ErrToolLimit         = errors.New("AI Chat tool call limit exceeded")
 	ErrUnavailable       = errors.New("AI Chat is unavailable")
 	ErrTimeout           = errors.New("AI Chat run timed out")
 	ErrCancelled         = errors.New("AI Chat run was cancelled")

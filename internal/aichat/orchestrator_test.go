@@ -91,6 +91,7 @@ func TestOrchestratorExecutesReadOnlyToolAndPersistsOnlyTheLastAssistantRound(t 
 	}
 	if !strings.Contains(requests[1].Policy, "somente leitura") || !strings.Contains(requests[1].Policy, "Número da casa") ||
 		!strings.Contains(requests[1].Policy, "conferir") || !strings.Contains(requests[1].Policy, "replaces") ||
+		!strings.Contains(requests[1].Policy, "tool_limit") ||
 		strings.Contains(requests[1].Policy, "UPDATE profiles") {
 		t.Fatalf("provider policy = %q", requests[1].Policy)
 	}
@@ -355,6 +356,64 @@ func TestOrchestratorCancellationAndUsageQuotaHaveDeterministicTerminalStates(t 
 	}
 	if _, err := quotaFixture.service.StartTurn(context.Background(), quotaFixture.actor, quotaFixture.thread.ID, "Outra tentativa", "quota-next-turn", nil, "quota-next"); !errors.Is(err, ErrQuotaExceeded) {
 		t.Fatalf("StartTurn(after persistent quota) error = %v", err)
+	}
+}
+
+func TestOrchestratorFinishesAfterToolCapInsteadOfGeminiQuota(t *testing.T) {
+	steps := make([]FakeModelStep, 0, MaximumToolCalls+2)
+	for index := 0; index < MaximumToolCalls+1; index++ {
+		steps = append(steps, FakeModelStep{
+			ToolCall: &ToolCall{ID: fmt.Sprintf("call-%d", index+1), Name: "search", Arguments: json.RawMessage(`{"terms":["Recife"]}`)},
+			Usage:    ModelUsage{InputUnits: 1, OutputUnits: 1},
+		})
+	}
+	steps = append(steps, FakeModelStep{Deltas: []string{"Fechei com o que já tinha."}, Usage: ModelUsage{InputUnits: 1, OutputUnits: 1}})
+	provider := NewFakeProvider(steps...)
+	fixture := newOrchestratorFixture(t, 1000, provider)
+	fixture.search.page = searchdomain.Page{Results: []searchdomain.Result{{
+		Module: searchdomain.ModuleProfiles, EntityKind: "profile", EntityID: "person-1",
+		TargetKind: "profile", TargetID: "person-1", EntityLabel: "Ana", FieldKey: "profile.full_name", FieldLabel: "Nome",
+		Preview: "Ana", Score: 100,
+	}}, Total: 1, Limit: 10}
+	creation := fixture.startTurn(t, "Liste sócios", "tool-limit-finish-turn")
+	if err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "tool-limit-finish"); err != nil {
+		t.Fatalf("RunTurn() error = %v", err)
+	}
+	run, _ := fixture.service.Run(context.Background(), fixture.actor, creation.Run.ID)
+	if run.State != RunCompleted || run.ErrorCode != "" || run.ToolCallCount != MaximumToolCalls {
+		t.Fatalf("run = %#v", run)
+	}
+	requests := provider.Requests()
+	if len(requests) != MaximumToolCalls+2 {
+		t.Fatalf("provider requests = %d", len(requests))
+	}
+	last := requests[len(requests)-1]
+	if len(last.Tools) != 0 || len(last.ToolResults) == 0 || !strings.Contains(string(last.ToolResults[len(last.ToolResults)-1].Data), `"tool_limit"`) {
+		t.Fatalf("finish request = %#v", last)
+	}
+}
+
+func TestOrchestratorReportsToolLimitWhenTheModelKeepsCallingTools(t *testing.T) {
+	steps := make([]FakeModelStep, 0, MaximumToolCalls+2)
+	for index := 0; index < MaximumToolCalls+2; index++ {
+		steps = append(steps, FakeModelStep{
+			ToolCall: &ToolCall{ID: fmt.Sprintf("call-%d", index+1), Name: "search", Arguments: json.RawMessage(`{"terms":["Recife"]}`)},
+			Usage:    ModelUsage{InputUnits: 1, OutputUnits: 1},
+		})
+	}
+	fixture := newOrchestratorFixture(t, 1000, NewFakeProvider(steps...))
+	fixture.search.page = searchdomain.Page{Results: []searchdomain.Result{{
+		Module: searchdomain.ModuleProfiles, EntityKind: "profile", EntityID: "person-1",
+		TargetKind: "profile", TargetID: "person-1", EntityLabel: "Ana", FieldKey: "profile.full_name", FieldLabel: "Nome",
+		Preview: "Ana", Score: 100,
+	}}, Total: 1, Limit: 10}
+	creation := fixture.startTurn(t, "Liste sócios", "tool-limit-fail-turn")
+	if err := fixture.orchestrator.RunTurn(context.Background(), fixture.actor, creation.Run.ID, "tool-limit-fail"); !errors.Is(err, ErrToolLimit) {
+		t.Fatalf("RunTurn() error = %v", err)
+	}
+	run, _ := fixture.service.Run(context.Background(), fixture.actor, creation.Run.ID)
+	if run.State != RunFailed || run.ErrorCode != "tool_limit" {
+		t.Fatalf("run = %#v", run)
 	}
 }
 

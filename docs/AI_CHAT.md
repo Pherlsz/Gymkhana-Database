@@ -84,7 +84,7 @@ Application logs and audits must never include prompts, message bodies, text del
 | Active runs                     |                                           1 per thread |
 | New runs / usage window         | Gemini quota and 429 responses; no extra app hourly cap |
 | Run wall time                   |                                              5 minutes |
-| Tool calls                      |                                              8 per run |
+| Tool calls                      | 8 per run; a 9th call asks the model to answer with what it has (`tool_limit`), not Gemini quota |
 | Rows returned to the model       |                               100 per tool result/page |
 | Rows on the open sheet           |                          500, paged from the stored plan |
 | Projected fields                |                                                     20 |
