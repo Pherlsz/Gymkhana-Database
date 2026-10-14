@@ -2,6 +2,7 @@ name: Security
 
 on:
   pull_request:
+    # synchronize lets a later push clear a failed scan without reopening the pull request.
     types: [opened, ready_for_review, reopened, synchronize]
     paths:
       - "**/*.go"
