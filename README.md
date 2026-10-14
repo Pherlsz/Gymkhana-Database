@@ -16,7 +16,7 @@ The application consumes:
 
 ## Requirements
 
-- Go 1.26.5
+- Go 1.26.9
 - Node.js 24 LTS
 - pnpm 11.12.0
 - GNU Make or a compatible environment such as WSL/Git Bash on Windows
@@ -114,11 +114,7 @@ Configuration, key rotation, smoke testing, and recovery procedures are in [`doc
 
 ## Query Engine
 
-The authenticated Query Engine builds permission-filtered, typed, read-only relational plans without accepting SQL or physical schema paths. Versioned plan nodes, limits, retention, and rollback are documented in [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md). Gymkhana tasks are Chat capabilities, not a user module; see [`docs/TASKS.md`](docs/TASKS.md).
-
-## Profile Matching
-
-The authenticated Matching HTTP API generates bounded, explainable Profile candidates on demand, persists human review decisions and permits only ADMIN/SUPERADMIN to perform an explicit previewed transactional merge. Orchestration §15: this is the last module to implement; there is no `/matching` destination. Candidate rules, permissions, dependency movement, recovery and rollback are documented in [`docs/MATCHING.md`](docs/MATCHING.md).
+The Query Engine is an internal library for the Assistente. It builds permission-filtered, typed, read-only relational plans without accepting SQL or physical schema paths. There is no public Query HTTP API. Versioned plan nodes, limits, retention, and rollback are documented in [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md). Gymkhana tasks are Chat capabilities, not a user module; see [`docs/TASKS.md`](docs/TASKS.md).
 
 ## AI Assistente
 
@@ -218,9 +214,8 @@ Core versions are pinned only after their releases are published. Permanent bran
 - [Issue #31](https://github.com/Pherlsz/Gymkhana-Database/issues/31) is the only live project checklist and continuation tracker.
 - [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) is an operational runbook for the implemented authentication feature.
 - [`docs/GOOGLE_FORMS.md`](docs/GOOGLE_FORMS.md) is the activation, rotation, smoke-test, and recovery runbook for Google Forms ingestion.
-- [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md) defines QueryPlan security, execution, retention, and rollback boundaries.
+- [`docs/QUERY_ENGINE.md`](docs/QUERY_ENGINE.md) defines QueryPlan security, execution, retention, and rollback boundaries. The Assistente is the only caller; there is no public Query HTTP API.
 - [`docs/TASKS.md`](docs/TASKS.md) defines gymkhana task interpretation as a Chat capability (no user Tasks workspace).
-- [`docs/MATCHING.md`](docs/MATCHING.md) defines Profile candidate evidence, review lifecycle, explicit merge invariants, operations, and rollback boundaries.
 - [`docs/AI_CHAT.md`](docs/AI_CHAT.md) defines the read-only tool boundary, privacy, quotas, activation, recovery, retention, smoke-test, and rollback procedures.
 - [`docs/OCR.md`](docs/OCR.md) defines source/provider validation, privacy, review/application, retries, activation, acceptance, and rollback procedures.
 - [`docs/LAUNCH_RUNBOOK.md`](docs/LAUNCH_RUNBOOK.md) is the production cutover, promotion, and rollback procedure.

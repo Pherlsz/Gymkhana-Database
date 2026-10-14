@@ -22,12 +22,12 @@ This is an implementation inventory, not a live tracker. Current work and next a
 
 | Bucket                    | Count                                                                                                                                                                                                                                                                                                                                                             |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Done for initial scope    | Auth product (Google + allowlist + SUPERADMIN/ADMIN/EXTERNAL), Profile CRUD including absorbed person fields and writable `team` / `club_membership`, document presences + exemplars, Bills, current-use, Custom data (no formulas), Attachments/R2, Search, Query v1+v2 HTTP, Matching HTTP (no SPA route), XLSX operations lifecycle, Google Forms, Admin users |
+| Done for initial scope    | Auth product (Google + allowlist + SUPERADMIN/ADMIN/EXTERNAL), Profile CRUD including absorbed person fields and writable `team` / `club_membership`, document presences + exemplars, Bills, current-use, Custom field values (no formulas, no custom-entity HTTP), Attachments/R2, Search, Query Engine library for Assistente, XLSX import lifecycle, Google Forms, Admin users |
 | Partial                   | AI Assistente (shared Administração model key, not per-user BYOK), OCR model path fake-only, Query/task tools inside Chat                                                                                                                                                                                                                                         |
-| Deferred by Orchestration | Objects module, full usage/gymkhana-team history, redo of Neon import, Profile matching UI (last module; no `/matching` route)                                                                                                                                                                                                                                    |
+| Deferred by Orchestration | Objects module, full usage/gymkhana-team history, redo of Neon import                                                                                                                                                                                                                                                                                             |
 | Missing vs Orchestration  | Shared Administração model key for Assistente/OCR, Chat query v2 + task interpretation, Gemini-only OCR flag gated on that key, import column/value catalogs (§16.2)                                                                                                                                                                                              |
 | Bugs / wiring             | —                                                                                                                                                                                                                                                                                                                                                                 |
-| Out of product            | User Tasks workspace (`/tasks`, `TASKS` capability); gymkhana team or football club as a module or User field; per-user model keys; `/matching` as a destination                                                                                                                                                                                                  |
+| Out of product            | User Tasks workspace (`/tasks`, `TASKS` capability); gymkhana team or football club as a module or User field; per-user model keys; `/matching` destination; Matching HTTP; public Query HTTP; XLSX export download; bulk-delete HTTP; custom-entity HTTP                                                                                                         |
 
 The rebuild is **ahead of legacy** on Query Engine (typed plans, no client SQL), generic custom entities, document/bill types, presence vs exemplar, and current-use on bills. It is **behind legacy** on a production model provider for Assistente/OCR. Neon 18 Dev/Prod have schema version 30 and empty cadastro; the older Postgres 17 projects still hold the imported copy with gaps (no bills/attachments). Reimport is later work.
 
@@ -185,11 +185,10 @@ The rebuild is **ahead of legacy** on Query Engine (typed plans, no client SQL),
 
 ## 11. Query Engine
 
-**Rebuild: Done** for v1 and v2 HTTP
+**Rebuild: Done** as an internal library for the Assistente. There is no public Query HTTP API.
 
-- v1: `/api/v1/query/*` — projection, filters, relations, sort, pagination, catalog version, read-only SQL, result snapshots.
-- v2: `/api/v1/query/v2/*` — grouping, aggregates, HAVING, patterns, sets, combinations (`internal/queryengine/advanced_*.go`, executed, not compiler-only).
-- Chat tools still call **v1 only**.
+- `internal/queryengine` remains for Assistente tools and recorte. Chat tools still call **v1 only**.
+- Public `/api/v1/query/*` and `/api/v1/query/v2/*` were retired with unused P2 backends.
 
 **Orchestration §14:** one versioned engine. v1 is the live subset; v2 is the rest of the same surface. No `/query` destination.
 
@@ -204,23 +203,19 @@ The rebuild is **ahead of legacy** on Query Engine (typed plans, no client SQL),
 
 ## 12. Matching / merge
 
-**Rebuild: Partial** — HTTP exists; SPA destination must not.
-
-- Analyses (River), cases, dismiss, merge-preview, merge (`MESCLAR`), ADMIN/SUPERADMIN for merge. No `/matching` route (Orchestration §12.0 / §15). Review UI, when built, belongs in Administração or the people grid.
+**Rebuild: Retired.** Matching HTTP, River analyses, cases, dismiss, merge-preview, and merge were removed. Migration `042` drops matching tables and revokes leftover `MATCHING` grants. Profile trigram/phone indexes stay for Search.
 
 **Orchestration §15:** Profiles only; last module; no automatic merge; no `/matching` destination.
 
 **Legacy:** several overlapping flows (create-time `detectDuplicates`, import staging merge, context duplicate review, `ProfileDuplicateReview` list without resolve).
 
-**Still to do:** document/bill duplicate modules are out of the Profile-only rule unless later approved. Do not add a matching menu route.
-
 ---
 
-## 13. XLSX import / export
+## 13. XLSX import
 
 **Rebuild: Partial** for profiles/documents/bills
 
-- Import lifecycle (sheet → operator mapping → preview → decisions → execute), export download, bulk-delete. Executable spreadsheet formulas rejected. Custom fields on PROFILE only. Needs R2 + worker.
+- Import lifecycle (sheet → operator mapping → preview → decisions → execute). Export download and bulk-delete HTTP were retired; migration `042` drops `operation_exports`. Executable spreadsheet formulas rejected. Custom fields on PROFILE only. Needs R2 + worker.
 - Mapping today is per-import: the operator assigns `source column → target field`. Headers are not folded against a catalog; closed-list values are not collapsed; calculated/discard columns are not dropped automatically; labeled document remaps (OAB in a generic card column, TRI/TEU, PIS vs CTPS) are not applied unless the operator maps them by hand.
 
 **Legacy:** **CSV import**, XLSX **export**. Promote into Profile/Document/Bill.
@@ -325,7 +320,7 @@ Neon (survey 2026-08-16, counts only, no row payloads):
 | Command                             | Role                                             |
 | ----------------------------------- | ------------------------------------------------ |
 | `cmd/api`                           | HTTP API                                         |
-| `cmd/worker`                        | River: operations, matching, Forms, OCR, cleanup |
+| `cmd/worker`                        | River: operations import, Forms, OCR, cleanup |
 | `cmd/migrate` / `cmd/river-migrate` | schema                                           |
 | `cmd/configcheck`                   | fail-closed config                               |
 | `cmd/launch-smoke`                  | live/ready + revision                            |
@@ -340,7 +335,6 @@ These are the gaps that block product use, not a milestone list:
 
 1. Continue the Assistente with the shared Administração model key, with Query and gymkhana-task tools inside Chat (no user Tasks module, no per-user keys).
 2. Optional Gemini-only OCR flag gated on that shared key.
-3. Matching review UI last, in Administração or the people grid — no `/matching` route.
-5. Neon 18 reimport later, not now.
+3. Neon 18 reimport later, not now.
 
 Do not start Objects, usage history, or executable formulas. Orchestration already deferred or rejected them.

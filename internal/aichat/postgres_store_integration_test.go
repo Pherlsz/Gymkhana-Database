@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-
 func mustAuthorizeIntegration(t *testing.T, ctx context.Context, service *Service, actor auth.Session) auth.User {
 	t.Helper()
 	user, err := service.authorize(ctx, actor)
@@ -271,6 +270,7 @@ func TestPostgresAIChatOwnershipIdempotencyConcurrencyCancellationReferencesAndR
 	if _, err := pool.Exec(ctx, `UPDATE app_users SET active=false WHERE id=$1`, actorID.String()); err != nil {
 		t.Fatalf("revoke AI Chat actor: %v", err)
 	}
+	current = current.Add(authorizationCacheTTL + time.Second)
 	if _, err := limitedService.Thread(ctx, actor, limitedThread.ID, "integration-revoked"); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("Thread(revoked current user) error = %v", err)
 	}

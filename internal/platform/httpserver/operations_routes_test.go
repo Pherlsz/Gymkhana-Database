@@ -14,14 +14,10 @@ import (
 )
 
 type fakeOperationsService struct {
-	catalog    []operations.ModuleCatalog
-	imported   operations.Import
-	report     operations.Report
-	exported   operations.Export
-	bulk       operations.BulkDeleteResult
-	err        error
-	lastModule operations.Module
-	lastItems  []operations.BulkItem
+	catalog  []operations.ModuleCatalog
+	imported operations.Import
+	report   operations.Report
+	err      error
 }
 
 func (service *fakeOperationsService) GetReport(context.Context, auth.Session, operations.Identifier) (operations.Report, error) {
@@ -76,29 +72,6 @@ func (service *fakeOperationsService) DeleteImport(context.Context, auth.Session
 	return service.err
 }
 
-func (service *fakeOperationsService) CreateExport(_ context.Context, _ auth.Session, module operations.Module, _, _ string) (operations.Export, error) {
-	service.lastModule = module
-	return service.exported, service.err
-}
-
-func (service *fakeOperationsService) GetExport(context.Context, auth.Session, operations.Identifier) (operations.Export, error) {
-	return service.exported, service.err
-}
-
-func (service *fakeOperationsService) ListExports(context.Context, auth.Session, operations.ListOptions) (operations.ExportPage, error) {
-	return operations.ExportPage{Exports: []operations.Export{service.exported}, Total: 1, Limit: 50}, service.err
-}
-
-func (service *fakeOperationsService) DownloadExport(context.Context, auth.Session, operations.Identifier, string) (operations.DownloadGrant, error) {
-	return operations.DownloadGrant{URL: "https://storage.invalid/download", Method: "GET", ExpiresAt: service.exported.ExpiresAt}, service.err
-}
-
-func (service *fakeOperationsService) BulkDelete(_ context.Context, _ auth.Session, module operations.Module, items []operations.BulkItem, _, _ string) (operations.BulkDeleteResult, error) {
-	service.lastModule = module
-	service.lastItems = items
-	return service.bulk, service.err
-}
-
 func operationsHTTPFixture(t *testing.T, service *fakeOperationsService) http.Handler {
 	t.Helper()
 	actorID, err := auth.NewIdentifier()
@@ -135,8 +108,6 @@ func TestOperationsHTTPUsesLogicalRedactedContracts(t *testing.T) {
 			Skipped: 4, Errored: 5, Conflicted: 6, Decisions: 7,
 			Rows: []operations.ReportRow{{SheetIndex: 0, RowNumber: 2, Outcome: operations.OutcomeLinked}},
 		},
-		exported: operations.Export{ID: id, ActorUserID: actorID, Module: operations.ModuleProfiles, State: operations.ExportCompleted, ObjectKey: "operations/private/export.xlsx", RiverJobID: 456, Filename: "profiles.xlsx", ExpiresAt: now.Add(time.Hour), Version: 2, CreatedAt: now, UpdatedAt: now},
-		bulk:     operations.BulkDeleteResult{Module: operations.ModuleProfiles, Deleted: 1},
 	}
 	handler := operationsHTTPFixture(t, service)
 
@@ -171,15 +142,6 @@ func TestOperationsHTTPUsesLogicalRedactedContracts(t *testing.T) {
 		if strings.Contains(report.Body.String(), forbidden) {
 			t.Fatalf("report response exposed %q: %s", forbidden, report.Body.String())
 		}
-	}
-
-	bulkBody := `{"module":"PROFILES","items":[{"id":"` + id.String() + `","version":2}],"confirmation":"Confirmar"}`
-	bulk := operationRequest(t, handler, http.MethodPost, "/api/v1/operations/bulk-delete", bulkBody)
-	if bulk.Code != http.StatusOK || strings.TrimSpace(bulk.Body.String()) != `{"module":"PROFILES","deleted":1}` {
-		t.Fatalf("bulk response = %d, %s", bulk.Code, bulk.Body.String())
-	}
-	if service.lastModule != operations.ModuleProfiles || len(service.lastItems) != 1 || service.lastItems[0].Version != 2 {
-		t.Fatalf("bulk service input = %q, %#v", service.lastModule, service.lastItems)
 	}
 }
 

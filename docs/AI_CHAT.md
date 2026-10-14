@@ -60,7 +60,7 @@ All user messages, prior assistant messages, and database/tool values are marked
 
 ## What the plan can say
 
-A pasted proof is still a question. The model composes one plan. A requirement the catalog does not store, such as a clip or a placement, is answered in the chat and does not replace the grid. Operational detail for the older task runner lives in [`TASKS.md`](TASKS.md).
+A pasted proof is still a question. The model composes one plan. Same-row date fields compare with `other_field`; an anniversary (day and month, years may differ) uses `part: month_day`, not full-date equality. Football-club membership is `profile.club_membership` (Sócio de clube de futebol), not gymkhana `profile.team` (Equipe). A name-to-club pairing is one or two query plans, not a search per name. A requirement the catalog does not store, such as a clip or a placement, is answered in the chat and does not replace the grid. If a branch of the plan is refused, the model must say so instead of publishing a weaker or stricter substitute. Operational detail for the older task runner lives in [`TASKS.md`](TASKS.md).
 
 ## Persistent data and privacy
 
@@ -84,7 +84,7 @@ Application logs and audits must never include prompts, message bodies, text del
 | Active runs                     |                                           1 per thread |
 | New runs / usage window         | Gemini quota and 429 responses; no extra app hourly cap |
 | Run wall time                   |                                              5 minutes |
-| Tool calls                      |                                              8 per run |
+| Tool calls                      | 8 per run; a 9th call asks the model to answer with what it has (`tool_limit`), not Gemini quota |
 | Rows returned to the model       |                               100 per tool result/page |
 | Rows on the open sheet           |                          500, paged from the stored plan |
 | Projected fields                |                                                     20 |
@@ -139,7 +139,7 @@ The deterministic fake returns a fixed text response when the full API process i
 - `rate_limited` or `chat_quota_exceeded`: wait for Gemini or check the Google AI Studio quota. Do not raise limits from client/model input.
 - `chat_timeout`: use the explicit retry action after the terminal event; investigate repeated tool latency using safe IDs and timing only.
 - `chat_stale_context`: clear the active result and reopen or execute a fresh authorized result.
-- `chat_malformed_provider`, `chat_tool_failed`, or `chat_unsafe_result`: keep the provider payload redacted, correlate by request/run ID, and disable Chat if failures repeat.
+- `chat_malformed_provider`, `chat_tool_failed`, or `chat_unsafe_result`: keep the provider payload redacted, correlate by request/run ID, and disable Chat if failures repeat. Unknown JSON fields or a mistyped tool argument are a correctable `invalid_input`; the model may retry and a result already stored in the turn stays on the thread and the open sheet.
 - Abrupt-process orphan: allow the startup/minute recovery sweep to create its terminal event; never update run rows manually while the service is active.
 
 To disable Chat without deleting retained state, turn off `ai_chat` in Administração → Funcionalidades. The capability endpoint then reports disabled and all Chat lifecycle routes fail closed. Existing rows remain stored under the same database access controls and expire only when cleanup runs after a later safe reactivation or through an explicitly reviewed maintenance procedure.

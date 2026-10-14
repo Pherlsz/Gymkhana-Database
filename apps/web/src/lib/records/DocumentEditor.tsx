@@ -25,6 +25,7 @@ import { StatusBanner } from "../../components/StatusBanner";
 import { DocumentFormFields } from "../cadastro/components/DocumentFormFields";
 import { RecordScreen } from "../cadastro/components/RecordScreen";
 import { documentFormFromValues, documentValuesFromForm } from "../cadastro/recordFieldMaps";
+import { documentFieldError } from "../cadastro/cadastroValidate";
 import {
   CurrentUseControls,
   EditorActions,
@@ -80,6 +81,20 @@ export function DocumentEditor(props: {
   const attachmentsEnabled = useAttachmentsEnabled();
   const editable = props.mode !== "view";
   const submit = async () => {
+    const selectedType = props.types.find((type) => type.id === fields.docTypeId) ?? props.types[0];
+    const invalid = documentFieldError(
+      {
+        typeId: fields.docTypeId,
+        identifier: fields.docIdentifier,
+        date: fields.docDate,
+      },
+      selectedType,
+      cadastro,
+    );
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {

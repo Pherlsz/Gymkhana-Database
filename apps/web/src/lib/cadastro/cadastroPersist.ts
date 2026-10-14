@@ -86,7 +86,8 @@ function withStoredRecord(record: StoredRecord, cause: unknown): unknown {
 export function storedRecordOf(error: unknown): StoredRecord | undefined {
   if (!error || typeof error !== "object" || !("storedRecord" in error)) return undefined;
   const stored = (error as { storedRecord?: StoredRecord }).storedRecord;
-  if (!stored || typeof stored.id !== "string" || typeof stored.version !== "number") return undefined;
+  if (!stored || typeof stored.id !== "string" || typeof stored.version !== "number")
+    return undefined;
   return stored;
 }
 
@@ -126,7 +127,8 @@ export async function persistDocumentForm(args: {
       file: args.fields.file,
     });
     return {
-      record: followed.version === record.version ? record : { ...record, version: followed.version },
+      record:
+        followed.version === record.version ? record : { ...record, version: followed.version },
       ocrOwner: followed.ocrOwner,
     };
   } catch (caught) {
@@ -223,7 +225,8 @@ export async function persistBillForm(args: {
       file: args.fields.file,
     });
     return {
-      record: followed.version === record.version ? record : { ...record, version: followed.version },
+      record:
+        followed.version === record.version ? record : { ...record, version: followed.version },
       ocrOwner: followed.ocrOwner,
     };
   } catch (caught) {

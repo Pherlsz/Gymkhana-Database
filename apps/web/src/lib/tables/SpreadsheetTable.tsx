@@ -18,7 +18,11 @@ import { t } from "../../i18n";
 import { ColumnFunnel, type ColumnFunnelCopy } from "./ColumnFunnel";
 import type { ToolbarFilterField } from "./FilterControl";
 import { clampColumnWidth } from "./useSheetColumnWidths";
-import { columnHasResizeHandle, dragSheetDivider, fillSheetColumnWidths } from "./sheetColumnLayout";
+import {
+  columnHasResizeHandle,
+  dragSheetDivider,
+  fillSheetColumnWidths,
+} from "./sheetColumnLayout";
 
 export type SpreadsheetColumn<T> = {
   key: string;
@@ -416,130 +420,135 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
   );
 
   const antdColumns = useMemo(() => {
-    const dataColumns = columns.map((column, index): NonNullable<TableProps<T>["columns"]>[number] => {
-      const width = displayWidthByKey.get(column.key) ?? resolvedWidth(column);
-      const canResize = Boolean(onColumnWidth) && columnHasResizeHandle(index, columns.length);
-      const headerClass = [column.className, index === columns.length - 1 ? "spreadsheet-table__last" : ""]
-        .filter(Boolean)
-        .join(" ");
-      const sorted = Boolean(column.sortField && column.sortField === sortField);
-      const cellKey = column.dataIndex ?? column.key;
-      const styles = cellStyles.get(column.key);
-      const field = column.sortField;
-      return {
-        key: column.key,
-        title: (
-          <span className="spreadsheet-table__head">
-            <span className="spreadsheet-table__head-label">{column.title}</span>
-            {funnel && column.filterField ? (
-              <span
-                className="column-funnel__anchor"
-                onClick={(event) => event.stopPropagation()}
-                onDoubleClick={(event) => event.stopPropagation()}
-                onMouseDown={(event) => event.stopPropagation()}
-                onPointerDown={(event) => event.stopPropagation()}
-              >
-                <ColumnFunnel
-                  columns={funnel.columns}
-                  copy={funnel.copy}
-                  field={column.filterField}
-                  formula={column.formula}
-                  open={openFunnelKey === column.key}
-                  onOpenChange={(next) => setOpenFunnelKey(next ? column.key : null)}
-                />
-              </span>
-            ) : null}
-          </span>
-        ),
-        dataIndex: ["cells", cellKey],
-        width,
-        ellipsis: false,
-        ...(headerClass ? { className: headerClass } : {}),
-        sorter: Boolean(column.sortField),
-        sortDirections: ["ascend", "descend"],
-        sortOrder: sorted ? (sortOrder === "asc" ? "ascend" : "descend") : null,
-        showSorterTooltip: false,
-        onHeaderCell: () => ({
-          style: styles?.header ?? {
-            width,
-            minWidth: width,
-            maxWidth: width,
-            flex: `0 0 ${width}px`,
-            position: "relative" as const,
-          },
-          ...(canResize
-            ? {
-                onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
-                  startResize(event, column.key, width);
-                },
-              }
-            : {}),
-          ...(field
-            ? {
-                onClick: (event: {
-                  target: EventTarget | null;
-                  clientX?: number;
-                  currentTarget?: EventTarget | null;
-                }) => {
-                  if (suppressSortClick.current) {
-                    suppressSortClick.current = false;
-                    return;
-                  }
-                  const th = event.currentTarget;
-                  if (
-                    th instanceof HTMLElement &&
-                    event.target instanceof Node &&
-                    !th.contains(event.target)
-                  ) {
-                    return;
-                  }
-                  if (
-                    event.target instanceof Element &&
-                    event.target.closest(
-                      ".column-funnel__anchor, .column-funnel__trigger, .column-funnel, .column-funnel__overlay, .column-funnel__dropdown, .ant-select-dropdown, .ant-popover, .ant-picker-dropdown, .ant-modal",
-                    )
-                  ) {
-                    return;
-                  }
-                  if (document.body.classList.contains("spreadsheet-col-resizing")) return;
-                  // Keep sort/reorder clear of the resize strip on the right edge.
-                  if (
-                    canResize &&
-                    typeof event.clientX === "number" &&
-                    th instanceof HTMLElement
-                  ) {
-                    const rect = th.getBoundingClientRect();
+    const dataColumns = columns.map(
+      (column, index): NonNullable<TableProps<T>["columns"]>[number] => {
+        const width = displayWidthByKey.get(column.key) ?? resolvedWidth(column);
+        const canResize = Boolean(onColumnWidth) && columnHasResizeHandle(index, columns.length);
+        const headerClass = [
+          column.className,
+          index === columns.length - 1 ? "spreadsheet-table__last" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        const sorted = Boolean(column.sortField && column.sortField === sortField);
+        const cellKey = column.dataIndex ?? column.key;
+        const styles = cellStyles.get(column.key);
+        const field = column.sortField;
+        return {
+          key: column.key,
+          title: (
+            <span className="spreadsheet-table__head">
+              <span className="spreadsheet-table__head-label">{column.title}</span>
+              {funnel && column.filterField ? (
+                <span
+                  className="column-funnel__anchor"
+                  onClick={(event) => event.stopPropagation()}
+                  onDoubleClick={(event) => event.stopPropagation()}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                >
+                  <ColumnFunnel
+                    columns={funnel.columns}
+                    copy={funnel.copy}
+                    field={column.filterField}
+                    formula={column.formula}
+                    open={openFunnelKey === column.key}
+                    onOpenChange={(next) => setOpenFunnelKey(next ? column.key : null)}
+                  />
+                </span>
+              ) : null}
+            </span>
+          ),
+          dataIndex: ["cells", cellKey],
+          width,
+          ellipsis: false,
+          ...(headerClass ? { className: headerClass } : {}),
+          sorter: Boolean(column.sortField),
+          sortDirections: ["ascend", "descend"],
+          sortOrder: sorted ? (sortOrder === "asc" ? "ascend" : "descend") : null,
+          showSorterTooltip: false,
+          onHeaderCell: () => ({
+            style: styles?.header ?? {
+              width,
+              minWidth: width,
+              maxWidth: width,
+              flex: `0 0 ${width}px`,
+              position: "relative" as const,
+            },
+            ...(canResize
+              ? {
+                  onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
+                    startResize(event, column.key, width);
+                  },
+                }
+              : {}),
+            ...(field
+              ? {
+                  onClick: (event: {
+                    target: EventTarget | null;
+                    clientX?: number;
+                    currentTarget?: EventTarget | null;
+                  }) => {
+                    if (suppressSortClick.current) {
+                      suppressSortClick.current = false;
+                      return;
+                    }
+                    const th = event.currentTarget;
                     if (
-                      rect.width > 0 &&
-                      event.clientX >= rect.right - RESIZE_EDGE_PX &&
-                      event.clientX <= rect.right
+                      th instanceof HTMLElement &&
+                      event.target instanceof Node &&
+                      !th.contains(event.target)
                     ) {
                       return;
                     }
-                  }
-                  if (field === sortField) {
-                    onSort(field, sortOrder === "asc" ? "desc" : "asc");
-                    return;
-                  }
-                  onSort(field, "asc");
-                },
-              }
-            : {}),
-        }),
-        onCell: () => ({
-          style: styles?.cell ?? {
-            width,
-            minWidth: width,
-            maxWidth: width,
-            flex: `0 0 ${width}px`,
-            display: "flex",
-            alignItems: "center",
-            padding: "0 0.55rem",
-          },
-        }),
-        ...(column.render ? { render: (_value: unknown, row: T) => column.render?.(row) } : {}),
-      };
-    });
+                    if (
+                      event.target instanceof Element &&
+                      event.target.closest(
+                        ".column-funnel__anchor, .column-funnel__trigger, .column-funnel, .column-funnel__overlay, .column-funnel__dropdown, .ant-select-dropdown, .ant-popover, .ant-picker-dropdown, .ant-modal",
+                      )
+                    ) {
+                      return;
+                    }
+                    if (document.body.classList.contains("spreadsheet-col-resizing")) return;
+                    // Keep sort/reorder clear of the resize strip on the right edge.
+                    if (
+                      canResize &&
+                      typeof event.clientX === "number" &&
+                      th instanceof HTMLElement
+                    ) {
+                      const rect = th.getBoundingClientRect();
+                      if (
+                        rect.width > 0 &&
+                        event.clientX >= rect.right - RESIZE_EDGE_PX &&
+                        event.clientX <= rect.right
+                      ) {
+                        return;
+                      }
+                    }
+                    if (field === sortField) {
+                      onSort(field, sortOrder === "asc" ? "desc" : "asc");
+                      return;
+                    }
+                    onSort(field, "asc");
+                  },
+                }
+              : {}),
+          }),
+          onCell: () => ({
+            style: styles?.cell ?? {
+              width,
+              minWidth: width,
+              maxWidth: width,
+              flex: `0 0 ${width}px`,
+              display: "flex",
+              alignItems: "center",
+              padding: "0 0.55rem",
+            },
+          }),
+          ...(column.render ? { render: (_value: unknown, row: T) => column.render?.(row) } : {}),
+        };
+      },
+    );
     if (!rowActions) return dataColumns;
     const width = SHEET_COLUMN_WIDTH.actions;
     const cellStyle = { width, minWidth: width, maxWidth: width, flex: `0 0 ${width}px` };

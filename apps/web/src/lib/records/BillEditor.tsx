@@ -23,6 +23,7 @@ import { StatusBanner } from "../../components/StatusBanner";
 import { BillFormFields } from "../cadastro/components/BillFormFields";
 import { RecordScreen } from "../cadastro/components/RecordScreen";
 import { billFormFromValues, billValuesFromForm } from "../cadastro/recordFieldMaps";
+import { billFieldError } from "../cadastro/cadastroValidate";
 import {
   CurrentUseControls,
   EditorActions,
@@ -85,6 +86,20 @@ export function BillEditor(props: {
   const queryClient = useQueryClient();
   const editable = props.mode !== "view";
   const submit = async () => {
+    const invalid = billFieldError(
+      {
+        typeId: fields.billTypeId,
+        installation: fields.billInstallation,
+        competence: fields.billCompetence,
+        amount: fields.billAmount,
+      },
+      fields.billTypeId || props.types.find((value) => value.active)?.id,
+      cadastro,
+    );
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {

@@ -94,7 +94,7 @@ func TestGoogleAdapterConformance(t *testing.T) {
 		FailureProbes: []adaptertest.FailureProbe{
 			{Name: "auth", Err: &ProviderHTTPError{Status: http.StatusForbidden}, Want: assistant.FailureAuth},
 			{Name: "rate-limit", Err: &ProviderHTTPError{Status: http.StatusTooManyRequests, Code: "RESOURCE_EXHAUSTED"}, Want: assistant.FailureRateLimit},
-			{Name: "quota", Err: &ProviderHTTPError{Status: http.StatusTooManyRequests, Message: "You exceeded your current quota"}, Want: assistant.FailureQuota},
+			{Name: "rate-limit-quota-wording", Err: &ProviderHTTPError{Status: http.StatusTooManyRequests, Message: "You exceeded your current quota"}, Want: assistant.FailureRateLimit},
 			{Name: "prepay-depleted", Err: &ProviderHTTPError{Status: http.StatusPaymentRequired, Code: "RESOURCE_EXHAUSTED"}, Want: assistant.FailureQuota},
 			{Name: "timeout", Err: &ProviderHTTPError{Status: http.StatusGatewayTimeout}, Want: assistant.FailureTimeout},
 			{Name: "invalid", Err: &ProviderHTTPError{Status: http.StatusBadRequest, Code: "INVALID_ARGUMENT"}, Want: assistant.FailureInvalid},

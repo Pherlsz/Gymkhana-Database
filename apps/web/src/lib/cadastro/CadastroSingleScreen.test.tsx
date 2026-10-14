@@ -1,6 +1,6 @@
 import { message } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../../i18n";
 import { CadastroSingleScreen } from "./CadastroSingleScreen";
@@ -8,11 +8,14 @@ import { createBill, createDocument, createProfile } from "../api/client";
 
 let activeClient: QueryClient | null = null;
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   message.destroy();
   activeClient?.clear();
   activeClient = null;
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 });
 
 vi.mock("./useAttachmentsEnabled", () => ({
@@ -336,10 +339,9 @@ describe("CadastroSingleScreen", () => {
         await confirmSave();
         expect(await screen.findByText(/second document failed/i)).not.toBeNull();
         expect(createProfile).toHaveBeenCalledTimes(1);
-        expect(vi.mocked(createDocument).mock.calls.map((call) => call[0].identifier_value)).toEqual([
-          "111",
-          "222",
-        ]);
+        expect(
+          vi.mocked(createDocument).mock.calls.map((call) => call[0].identifier_value),
+        ).toEqual(["111", "222"]);
         expect(screen.getByText(/Salvo/)).not.toBeNull();
 
         await confirmSave();
@@ -365,9 +367,8 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("keeps the created document id when a later save step fails", async () => {
-      const { createDocument, createProfile, updateDocument, updateProfile } = await import(
-        "../api/client"
-      );
+      const { createDocument, createProfile, updateDocument, updateProfile } =
+        await import("../api/client");
       const custom = await import("../../RecordCustomFields");
       vi.mocked(createProfile).mockClear();
       vi.mocked(createDocument).mockClear();
@@ -548,9 +549,8 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("updates the document already created when a later save step fails", async () => {
-      const { createDocument, createProfile, updateDocument, updateProfile } = await import(
-        "../api/client"
-      );
+      const { createDocument, createProfile, updateDocument, updateProfile } =
+        await import("../api/client");
       const custom = await import("../../RecordCustomFields");
       vi.mocked(createProfile).mockClear();
       vi.mocked(createDocument).mockClear();
@@ -663,7 +663,8 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("updates the bill already created when a later save step fails", async () => {
-      const { createBill, createProfile, updateBill, updateProfile } = await import("../api/client");
+      const { createBill, createProfile, updateBill, updateProfile } =
+        await import("../api/client");
       const custom = await import("../../RecordCustomFields");
       vi.mocked(createProfile).mockClear();
       vi.mocked(createBill).mockClear();

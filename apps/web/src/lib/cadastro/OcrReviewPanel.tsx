@@ -19,6 +19,7 @@ import {
 import { listAttachments, type AttachmentOwner } from "../api/attachments";
 import { APIRequestError } from "../api/client";
 import { queryKeys } from "../api/queryKeys";
+import { formatOCRConfidence, ocrJobStateLabel } from "./ocrDisplay";
 
 export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
   const { messages } = useI18n();
@@ -152,10 +153,11 @@ export function OcrReviewPanel({ owner }: { owner: AttachmentOwner }) {
 
 function OcrJobStatus({ job }: { job: OCRJob }) {
   const { messages } = useI18n();
+  const copy = messages.cadastro.ocrReview;
   return (
     <Flex align="center" aria-live="polite" className="ocr-review-panel__status" gap="0.5rem">
-      <Tag>{job.state}</Tag>
-      <span>{job.error_code ?? messages.cadastro.ocrReview.processing}</span>
+      <Tag>{ocrJobStateLabel(job.state, copy.states)}</Tag>
+      <span>{job.error_code ?? copy.processing}</span>
     </Flex>
   );
 }
@@ -263,10 +265,7 @@ function OcrSuggestionList({
   );
 }
 
-export function formatOCRConfidence(value: number | null | undefined): string {
-  if (value == null) return "—";
-  return `${Math.round(value / 100)}%`;
-}
+export { formatOCRConfidence } from "./ocrDisplay";
 
 function ocrError(error: unknown, fallback = "Erro inesperado.") {
   if (error instanceof APIRequestError) return error.message;

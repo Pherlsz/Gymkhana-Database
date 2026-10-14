@@ -24,7 +24,6 @@ type ObjectStore interface {
 type Jobs interface {
 	EnqueueParse(context.Context, Identifier) (int64, error)
 	EnqueueExecute(context.Context, Identifier) (int64, error)
-	EnqueueExport(context.Context, Identifier) (int64, error)
 	EnqueueCleanup(context.Context, time.Time) (int64, error)
 	Cancel(context.Context, int64) error
 }
@@ -58,11 +57,6 @@ type MappedRow struct {
 	Values map[string]string
 }
 
-type ExportDataset struct {
-	Headers []string
-	Rows    [][]string
-}
-
 type CleanupCandidate struct {
 	Kind                   string
 	ID                     Identifier
@@ -75,30 +69,23 @@ type CleanupCandidate struct {
 type AuditEventType string
 
 const (
-	AuditImportCreated    AuditEventType = "IMPORT_CREATED"
-	AuditImportConfirmed  AuditEventType = "IMPORT_CONFIRMED"
-	AuditImportParsed     AuditEventType = "IMPORT_PARSED"
-	AuditImportMapped     AuditEventType = "IMPORT_MAPPED"
-	AuditImportPreviewed  AuditEventType = "IMPORT_PREVIEWED"
-	AuditImportDecided    AuditEventType = "IMPORT_DECIDED"
-	AuditImportStarted    AuditEventType = "IMPORT_STARTED"
-	AuditImportCancelled  AuditEventType = "IMPORT_CANCELLED"
-	AuditImportCompleted  AuditEventType = "IMPORT_COMPLETED"
-	AuditImportFailed     AuditEventType = "IMPORT_FAILED"
-	AuditImportExpired    AuditEventType = "IMPORT_EXPIRED"
-	AuditExportCreated    AuditEventType = "EXPORT_CREATED"
-	AuditExportCompleted  AuditEventType = "EXPORT_COMPLETED"
-	AuditExportDownloaded AuditEventType = "EXPORT_DOWNLOADED"
-	AuditExportFailed     AuditEventType = "EXPORT_FAILED"
-	AuditExportExpired    AuditEventType = "EXPORT_EXPIRED"
-	AuditBulkDelete       AuditEventType = "BULK_DELETE"
+	AuditImportCreated   AuditEventType = "IMPORT_CREATED"
+	AuditImportConfirmed AuditEventType = "IMPORT_CONFIRMED"
+	AuditImportParsed    AuditEventType = "IMPORT_PARSED"
+	AuditImportMapped    AuditEventType = "IMPORT_MAPPED"
+	AuditImportPreviewed AuditEventType = "IMPORT_PREVIEWED"
+	AuditImportDecided   AuditEventType = "IMPORT_DECIDED"
+	AuditImportStarted   AuditEventType = "IMPORT_STARTED"
+	AuditImportCancelled AuditEventType = "IMPORT_CANCELLED"
+	AuditImportCompleted AuditEventType = "IMPORT_COMPLETED"
+	AuditImportFailed    AuditEventType = "IMPORT_FAILED"
+	AuditImportExpired   AuditEventType = "IMPORT_EXPIRED"
 )
 
 type AuditEvent struct {
 	ID            Identifier
 	ActorUserID   *auth.Identifier
 	ImportID      *Identifier
-	ExportID      *Identifier
 	Module        Module
 	EventType     AuditEventType
 	Outcome       auth.AuditOutcome
@@ -130,18 +117,9 @@ type Store interface {
 	FailImport(context.Context, Identifier, ImportState, string, time.Time) (bool, error)
 	CancelImport(context.Context, Identifier, auth.Identifier, int64, time.Time) (Import, error)
 	DeleteImport(context.Context, Identifier, auth.Identifier) error
-	CreateExport(context.Context, Export, Limits) (Export, error)
-	GetExport(context.Context, Identifier, auth.Identifier) (Export, error)
-	GetExportForWorker(context.Context, Identifier) (Export, error)
-	ListExports(context.Context, auth.Identifier, ListOptions) (ExportPage, error)
-	BeginExport(context.Context, Identifier, time.Time) (Export, error)
-	ExportDataset(context.Context, Module) (ExportDataset, error)
-	CompleteExport(context.Context, Identifier, int, int64, [32]byte, time.Time) (Export, error)
-	FailExport(context.Context, Identifier, ExportState, string, time.Time) (bool, error)
 	ClaimCleanupCandidates(context.Context, time.Time, int) ([]CleanupCandidate, error)
 	MarkObjectDeleted(context.Context, CleanupCandidate, time.Time) error
 	ReleaseCleanupCandidate(context.Context, CleanupCandidate) error
-	BulkDelete(context.Context, auth.Identifier, Module, []BulkItem, string, time.Time) (int, error)
 	CustomFields(context.Context, Module) ([]CustomFieldDefinition, error)
 	CanonicalValues(context.Context, Module, Identifier) (map[string]string, error)
 	FindProfileIDsByCPF(context.Context, string) ([]Identifier, error)

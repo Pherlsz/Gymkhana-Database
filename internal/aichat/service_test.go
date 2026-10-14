@@ -268,7 +268,6 @@ func TestTerminalEventHistoryRemainsPagedUntilEveryEventIsReadable(t *testing.T)
 	}
 }
 
-
 func mustAuthorize(t *testing.T, service *Service, actor auth.Session) auth.User {
 	t.Helper()
 	user, err := service.authorize(context.Background(), actor)

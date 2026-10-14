@@ -302,9 +302,9 @@ func (adapter *GoogleAdapter) ClassifyFailure(err error) assistant.FailureClass 
 			// Gemini returns 402 RESOURCE_EXHAUSTED when AI Studio prepay credits are depleted.
 			return assistant.FailureQuota
 		case http.StatusTooManyRequests:
-			if strings.Contains(strings.ToLower(httpErr.Message), "quota") {
-				return assistant.FailureQuota
-			}
+			// Gemini uses 429 RESOURCE_EXHAUSTED for per-minute rate limits and
+			// often says "quota" in the body. That is not a spent daily/prepay
+			// balance. True credit exhaustion is 402.
 			return assistant.FailureRateLimit
 		case http.StatusBadRequest, http.StatusNotFound, http.StatusConflict, http.StatusUnprocessableEntity:
 			return assistant.FailureInvalid

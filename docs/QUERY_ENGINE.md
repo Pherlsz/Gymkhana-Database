@@ -8,7 +8,7 @@ Gymkhana tasks that consume Query results are documented in [`TASKS.md`](TASKS.m
 
 ## Supported v1 plan
 
-`QueryPlan` v1 contains one root entity, up to 20 projections, nested `AND`/`OR`/`NOT` filters, allowlisted relation filters, up to three deterministic sorts, and a maximum of 500 rows. Logical identifiers must be present in the freshly loaded server catalog. Predicate values are always PostgreSQL parameters; only server-owned expressions and relation fragments can become SQL.
+`QueryPlan` v1 contains one root entity, up to 20 projections, nested `AND`/`OR`/`NOT` filters, allowlisted relation filters, up to three deterministic sorts, and a maximum of 500 rows. Two filterable fields on the same row may be compared with `other_field`. On civil dates and timestamps, `part` (`year`, `month`, `day`, `month_day`) compares only that component — `month_day` is the anniversary (day and month, year ignored). Without `part`, equality is the full value. Logical identifiers must be present in the freshly loaded server catalog. Predicate values are always PostgreSQL parameters; only server-owned expressions and relation fragments can become SQL.
 
 The public catalog is rebuilt from current authorization and active custom definitions on every service operation. Its SHA-256 version lets the backend reject stale plans. There is no Query editor. An Assistente recorte may enter a table link as a compiled plan (Orchestration §12.1), not as text for the model to reinterpret and not as result rows in the URL. Clients must not place result rows in local storage or session storage.
 
@@ -23,14 +23,9 @@ The public catalog is rebuilt from current authorization and active custom defin
 - Typed cells and logical entity provenance are retained for one hour by default. Expired results return a stable safe code and are deleted in bounded batches; owner activity can also remove expired records opportunistically.
 - Failed and cancelled executions transition atomically and expose no partial result rows. Audits contain only logical event types, IDs, counts, request IDs, outcomes, and plan fingerprints—not predicate values or result cells.
 
-## HTTP surface
+## Product surface
 
-- `GET /api/v1/query/catalog`
-- `POST /api/v1/query/validate`
-- `POST /api/v1/query/executions`
-- `GET /api/v1/query/executions/{execution_id}/result`
-
-All endpoints require the existing application session. Error responses use the shared request-ID envelope and stable codes for invalid plans, validation, stale catalogs, authorization, cost, rate, conflict, cancellation, timeout, expiry, and absence. Internal compiler/database details are logged only on unexpected failures and are never returned to the client.
+There is no public Query HTTP API. The Assistente is the only caller and uses the Query Engine as an internal library.
 
 ## Operations and rollback
 

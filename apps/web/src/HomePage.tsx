@@ -248,18 +248,14 @@ export function HomePage() {
                   icon: <Receipt aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
                   label: copy.quickActions.newBill,
                 },
-                ...(admin
-                  ? [
-                      {
-                        type: "divider" as const,
-                      },
-                      {
-                        key: "batch",
-                        icon: <Download aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
-                        label: copy.quickActions.batch,
-                      },
-                    ]
-                  : []),
+                {
+                  type: "divider" as const,
+                },
+                {
+                  key: "batch",
+                  icon: <Download aria-hidden size={ICON.md} strokeWidth={ICON_STROKE} />,
+                  label: copy.quickActions.batch,
+                },
               ],
             }}
             trigger={["click"]}

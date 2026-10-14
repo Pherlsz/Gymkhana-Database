@@ -1,18 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import { Skeleton } from "antd";
 import { ChevronRight } from "lucide-react";
-import { isCanonicalContextSlug, type HomeCatalogItem } from "./catalogTaxonomy";
+import { catalogRowNavigable, type HomeCatalogItem } from "./catalogTaxonomy";
 import { catalogSubIcon } from "./catalogIcons";
 import { normalizeProfileSearch } from "../../ProfilePanel";
 import { tableLinkProps } from "../tables/tableRoutes";
 import { ICON, ICON_STROKE } from "../../components/icons";
 
 export function CatalogRow({ item }: { item: HomeCatalogItem }) {
-  const typedFilter = isCanonicalContextSlug(item.id)
-    ? {}
-    : item.kind === "document"
+  const typedFilter = catalogRowNavigable(item)
+    ? item.kind === "document"
       ? { document_type: item.id }
-      : { bill_type: item.id };
+      : { bill_type: item.id }
+    : {};
   const search =
     item.kind === "people"
       ? normalizeProfileSearch({})
@@ -20,9 +20,8 @@ export function CatalogRow({ item }: { item: HomeCatalogItem }) {
         ? normalizeProfileSearch({ section: "documents", ...typedFilter })
         : normalizeProfileSearch({ section: "bills", ...typedFilter });
   const Icon = catalogSubIcon(item);
-
-  return (
-    <Link className="home-catalog__row" {...tableLinkProps(search)}>
+  const content = (
+    <>
       <span className="home-catalog__row-icon">
         <Icon aria-hidden size={15} strokeWidth={ICON_STROKE} />
       </span>
@@ -36,6 +35,16 @@ export function CatalogRow({ item }: { item: HomeCatalogItem }) {
       ) : item.count > 0 ? (
         <span className="home-catalog__row-count">{item.count.toLocaleString("pt-BR")}</span>
       ) : null}
+    </>
+  );
+
+  if (item.kind !== "people" && !catalogRowNavigable(item)) {
+    return <div className="home-catalog__row home-catalog__row--placeholder">{content}</div>;
+  }
+
+  return (
+    <Link className="home-catalog__row" {...tableLinkProps(search)}>
+      {content}
       <ChevronRight
         aria-hidden
         className="home-catalog__row-open"

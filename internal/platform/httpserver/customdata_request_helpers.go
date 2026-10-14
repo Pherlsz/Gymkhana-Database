@@ -30,17 +30,6 @@ func parseCustomID(value string) (customdata.Identifier, *Problem) {
 	return id, nil
 }
 
-func parseOptionalCustomID(value string) (*customdata.Identifier, *Problem) {
-	if strings.TrimSpace(value) == "" {
-		return nil, nil
-	}
-	id, problem := parseCustomID(value)
-	if problem != nil {
-		return nil, problem
-	}
-	return &id, nil
-}
-
 func parseOptionalTargetID(kind customdata.TargetKind, value string) (customdata.Identifier, *Problem) {
 	if kind == customdata.TargetProfile && strings.TrimSpace(value) == "" {
 		return customdata.Identifier{}, nil
@@ -77,22 +66,6 @@ func defaultString(value, fallback string) string {
 		return fallback
 	}
 	return value
-}
-
-func (request customEntityTypeRequest) domain() customdata.EntityTypeValues {
-	return customdata.EntityTypeValues{TechnicalKey: request.TechnicalKey, Label: request.Label, Active: request.Active, ProfileCardinality: request.ProfileCardinality}
-}
-
-func (request customFieldRequest) domain() (customdata.FieldDefinitionValues, *Problem) {
-	targetID, problem := parseOptionalTargetID(request.TargetKind, request.TargetID)
-	if problem != nil {
-		return customdata.FieldDefinitionValues{}, problem
-	}
-	return customdata.FieldDefinitionValues{TargetKind: request.TargetKind, TargetID: targetID, TechnicalKey: request.TechnicalKey, Label: request.Label, Kind: request.FieldKind, Required: request.Required, Active: request.Active, MinimumLength: request.MinimumLength, MaximumLength: request.MaximumLength, ValidationRegex: request.ValidationRegex, MinimumDecimal: request.MinimumDecimal, MaximumDecimal: request.MaximumDecimal}, nil
-}
-
-func (request customOptionRequest) domain() customdata.OptionValues {
-	return customdata.OptionValues{TechnicalKey: request.TechnicalKey, Label: request.Label, Active: request.Active, SortOrder: request.SortOrder}
 }
 
 func customValueInputs(values []customValueRequest) ([]customdata.ValueInput, *Problem) {

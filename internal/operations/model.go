@@ -11,19 +11,18 @@ import (
 )
 
 const (
-	BulkDeleteConfirmation = "Confirmar"
-	MaximumFileSize        = int64(25 << 20)
-	MaximumRows            = 100_000
-	MaximumExportRows      = 1_048_575 // One header row plus Excel's worksheet row limit.
-	MaximumColumns         = 256
-	MaximumCells           = 6_000_000
-	headerRowSlack         = 8 // Title rows plus header before data, as in TNC/Forms dumps.
-	MaximumCellBytes       = 32_768
-	MaximumPreviewRows     = 200
-	MaximumReportRows      = 500
-	MaximumBatchSize       = 100
-	MaximumBulkSelection   = 500
-	CleanupClaimTTL        = 30 * time.Minute
+	MaximumFileSize      = int64(25 << 20)
+	MaximumRows          = 100_000
+	MaximumExportRows    = 1_048_575 // One header row plus Excel's worksheet row limit.
+	MaximumColumns       = 256
+	MaximumCells         = 6_000_000
+	headerRowSlack       = 8 // Title rows plus header before data, as in TNC/Forms dumps.
+	MaximumCellBytes     = 32_768
+	MaximumPreviewRows   = 200
+	MaximumReportRows    = 500
+	MaximumBatchSize     = 100
+	MaximumBulkSelection = 500
+	CleanupClaimTTL      = 30 * time.Minute
 )
 
 var ErrInvalidIdentifier = errors.New("invalid operation identifier")
@@ -241,37 +240,6 @@ type Outcome struct {
 	CommittedAt time.Time
 }
 
-type ExportState string
-
-const (
-	ExportQueued    ExportState = "QUEUED"
-	ExportRunning   ExportState = "RUNNING"
-	ExportCompleted ExportState = "COMPLETED"
-	ExportFailed    ExportState = "FAILED"
-	ExportCancelled ExportState = "CANCELLED"
-	ExportExpired   ExportState = "EXPIRED"
-)
-
-type Export struct {
-	ID             Identifier
-	ActorUserID    auth.Identifier
-	Module         Module
-	IdempotencyKey string
-	State          ExportState
-	ObjectKey      string
-	Filename       string
-	RowCount       int
-	ByteSize       int64
-	ContentSHA256  [32]byte
-	RiverJobID     int64
-	ErrorCode      string
-	ExpiresAt      time.Time
-	CompletedAt    *time.Time
-	Version        int64
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-}
-
 type CreateImportInput struct {
 	Module           Module
 	OriginalFilename string
@@ -291,16 +259,6 @@ type DecisionInput struct {
 	Version   int64
 }
 
-type BulkItem struct {
-	ID      Identifier
-	Version int64
-}
-
-type BulkDeleteResult struct {
-	Module  Module
-	Deleted int
-}
-
 type ListOptions struct {
 	Limit  int
 	Offset int
@@ -308,13 +266,6 @@ type ListOptions struct {
 
 type ImportPage struct {
 	Imports []Import
-	Total   int64
-	Limit   int
-	Offset  int
-}
-
-type ExportPage struct {
-	Exports []Export
 	Total   int64
 	Limit   int
 	Offset  int

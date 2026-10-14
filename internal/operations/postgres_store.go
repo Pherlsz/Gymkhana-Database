@@ -30,11 +30,6 @@ const importSelect = `SELECT id, actor_user_id, module, source_kind, original_fi
        cancelled_at, completed_at, version, created_at, updated_at
   FROM operation_imports`
 
-const exportSelect = `SELECT id, actor_user_id, module, idempotency_key, state, object_key,
-       filename, row_count, byte_size, content_sha256, river_job_id, error_code,
-       expires_at, completed_at, version, created_at, updated_at
-  FROM operation_exports`
-
 type rowScanner interface {
 	Scan(...any) error
 }
@@ -85,38 +80,6 @@ func scanImport(row rowScanner) (Import, error) {
 	}
 	if cancelledAt.Valid {
 		value.CancelledAt = &cancelledAt.Time
-	}
-	if completedAt.Valid {
-		value.CompletedAt = &completedAt.Time
-	}
-	return value, nil
-}
-
-func scanExport(row rowScanner) (Export, error) {
-	var value Export
-	var id, actorID pgtype.UUID
-	var byteSize, riverJobID pgtype.Int8
-	var sha []byte
-	var errorCode pgtype.Text
-	var completedAt pgtype.Timestamptz
-	if err := row.Scan(
-		&id, &actorID, &value.Module, &value.IdempotencyKey, &value.State, &value.ObjectKey,
-		&value.Filename, &value.RowCount, &byteSize, &sha, &riverJobID, &errorCode,
-		&value.ExpiresAt, &completedAt, &value.Version, &value.CreatedAt, &value.UpdatedAt,
-	); err != nil {
-		return Export{}, err
-	}
-	value.ID = identifierFromUUID(id)
-	value.ActorUserID = authIdentifierFromUUID(actorID)
-	if byteSize.Valid {
-		value.ByteSize = byteSize.Int64
-	}
-	copy(value.ContentSHA256[:], sha)
-	if riverJobID.Valid {
-		value.RiverJobID = riverJobID.Int64
-	}
-	if errorCode.Valid {
-		value.ErrorCode = errorCode.String
 	}
 	if completedAt.Valid {
 		value.CompletedAt = &completedAt.Time
@@ -189,9 +152,8 @@ RETURNING request_count`, actorID, limits.WindowStart).Scan(&count); err != nil 
 		return ErrRateLimited
 	}
 	var active int
-	if err := tx.QueryRow(ctx, `SELECT
-  (SELECT count(*) FROM operation_imports WHERE actor_user_id=$1 AND state IN ('UPLOADING','UPLOADED','PARSING','MAPPING','PREVIEW_READY','DECISIONS_REQUIRED','READY','QUEUED','RUNNING')) +
-  (SELECT count(*) FROM operation_exports WHERE actor_user_id=$1 AND state IN ('QUEUED','RUNNING'))`, actorID).Scan(&active); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM operation_imports
+ WHERE actor_user_id=$1 AND state IN ('UPLOADING','UPLOADED','PARSING','MAPPING','PREVIEW_READY','DECISIONS_REQUIRED','READY','QUEUED','RUNNING')`, actorID).Scan(&active); err != nil {
 		return fmt.Errorf("count active operations: %w", err)
 	}
 	if active >= limits.MaximumActive {

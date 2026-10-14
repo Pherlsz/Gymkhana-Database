@@ -18,8 +18,6 @@ type AuditFailureHandler func(context.Context, AuditEvent, error)
 type ServiceOptions struct {
 	UploadTTL       time.Duration
 	ImportRetention time.Duration
-	ExportRetention time.Duration
-	DownloadTTL     time.Duration
 	RateLimit       int
 	MaximumActive   int
 	CleanupBatch    int
@@ -33,8 +31,6 @@ type Service struct {
 	jobs            Jobs
 	uploadTTL       time.Duration
 	importRetention time.Duration
-	exportRetention time.Duration
-	downloadTTL     time.Duration
 	rateLimit       int
 	maximumActive   int
 	cleanupBatch    int
@@ -51,12 +47,6 @@ func NewService(store Store, objects ObjectStore, jobs Jobs, options ServiceOpti
 	}
 	if options.ImportRetention == 0 {
 		options.ImportRetention = 24 * time.Hour
-	}
-	if options.ExportRetention == 0 {
-		options.ExportRetention = 30 * time.Minute
-	}
-	if options.DownloadTTL == 0 {
-		options.DownloadTTL = 5 * time.Minute
 	}
 	if options.RateLimit <= 0 {
 		options.RateLimit = 10
@@ -77,8 +67,6 @@ func NewService(store Store, objects ObjectStore, jobs Jobs, options ServiceOpti
 		jobs:            jobs,
 		uploadTTL:       options.UploadTTL,
 		importRetention: options.ImportRetention,
-		exportRetention: options.ExportRetention,
-		downloadTTL:     options.DownloadTTL,
 		rateLimit:       options.RateLimit,
 		maximumActive:   options.MaximumActive,
 		cleanupBatch:    options.CleanupBatch,
@@ -170,13 +158,13 @@ func workbookErrorCode(err error) string {
 
 func workerRequestID(kind string, id Identifier) string { return "worker-" + kind + "-" + id.String() }
 
-func (service *Service) audit(ctx context.Context, actorID *auth.Identifier, importID, exportID *Identifier, module Module, eventType AuditEventType, outcome auth.AuditOutcome, affected *int, requestID string) {
+func (service *Service) audit(ctx context.Context, actorID *auth.Identifier, importID, _ *Identifier, module Module, eventType AuditEventType, outcome auth.AuditOutcome, affected *int, requestID string) {
 	id, err := NewIdentifier()
 	if err != nil {
 		service.reportAuditFailure(ctx, AuditEvent{EventType: eventType}, err)
 		return
 	}
-	event := AuditEvent{ID: id, ActorUserID: actorID, ImportID: importID, ExportID: exportID, Module: module,
+	event := AuditEvent{ID: id, ActorUserID: actorID, ImportID: importID, Module: module,
 		EventType: eventType, Outcome: outcome, AffectedCount: affected, RequestID: requestID, CreatedAt: service.now().UTC()}
 	if err := service.store.RecordAuditEvent(ctx, event); err != nil {
 		service.reportAuditFailure(ctx, event, err)

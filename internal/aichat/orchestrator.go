@@ -125,7 +125,11 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 	if maximumCalls <= 0 {
 		maximumCalls = MaximumToolCalls
 	}
-	for round := 0; round <= maximumCalls; round++ {
+	askedToFinish := false
+	for round := 0; ; round++ {
+		if round > maximumCalls+1 {
+			return ErrToolLimit
+		}
 		if err := revalidate(false); err != nil {
 			return err
 		}
@@ -216,8 +220,25 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 			_, _, err := orchestrator.service.completeRun(runContext, user, runID, content, inputUsage, outputUsage, requestID)
 			return err
 		}
-		if round == maximumCalls {
-			return ErrQuotaExceeded
+		if askedToFinish {
+			return ErrToolLimit
+		}
+		if round >= maximumCalls {
+			call := *response.ToolCall
+			if !validProviderCallID(call.ID) {
+				return ErrMalformedProvider
+			}
+			request.Tools = nil
+			request.ToolResults = append(request.ToolResults, ModelToolResult{
+				CallID: call.ID, ToolName: call.Name, Arguments: append([]byte(nil), call.Arguments...),
+				Data: json.RawMessage(`{"error":"tool_limit"}`), Untrusted: true,
+			})
+			if roundAssistant.Len() > 0 {
+				request.Messages = append(request.Messages, ModelMessage{Role: MessageAssistant, Content: roundAssistant.String(), Untrusted: true})
+				roundAssistant.Reset()
+			}
+			askedToFinish = true
+			continue
 		}
 		call := *response.ToolCall
 		if !validProviderCallID(call.ID) {
@@ -283,7 +304,6 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 			roundAssistant.Reset()
 		}
 	}
-	return ErrQuotaExceeded
 }
 
 func (orchestrator *Orchestrator) failPanickedRun(ctx context.Context, actor auth.Session, runID Identifier, requestID string) {
@@ -538,6 +558,8 @@ func normalizeProviderError(ctx context.Context, err error) error {
 		return ErrRateLimited
 	case errors.Is(err, ErrQuotaExceeded):
 		return ErrQuotaExceeded
+	case errors.Is(err, ErrToolLimit):
+		return ErrToolLimit
 	case errors.Is(err, ErrMalformedProvider), errors.Is(err, ErrInvalidInput):
 		return ErrMalformedProvider
 	case errors.Is(err, ErrForbidden), errors.Is(err, ErrNotFound), errors.Is(err, ErrStaleContext):

@@ -28,11 +28,6 @@ type operationsService interface {
 	Execute(context.Context, auth.Session, operations.Identifier, int64, string) (operations.Import, error)
 	CancelImport(context.Context, auth.Session, operations.Identifier, int64, string) (operations.Import, error)
 	DeleteImport(context.Context, auth.Session, operations.Identifier, string) error
-	CreateExport(context.Context, auth.Session, operations.Module, string, string) (operations.Export, error)
-	GetExport(context.Context, auth.Session, operations.Identifier) (operations.Export, error)
-	ListExports(context.Context, auth.Session, operations.ListOptions) (operations.ExportPage, error)
-	DownloadExport(context.Context, auth.Session, operations.Identifier, string) (operations.DownloadGrant, error)
-	BulkDelete(context.Context, auth.Session, operations.Module, []operations.BulkItem, string, string) (operations.BulkDeleteResult, error)
 }
 
 type operationCreateImportRequest struct {
@@ -66,22 +61,6 @@ type operationDecisionPayload struct {
 	Action    operations.Action `json:"action"`
 	TargetID  string            `json:"target_id,omitempty"`
 	Version   int64             `json:"target_version,omitempty"`
-}
-
-type operationCreateExportRequest struct {
-	Module         operations.Module `json:"module"`
-	IdempotencyKey string            `json:"idempotency_key"`
-}
-
-type operationBulkDeleteRequest struct {
-	Module       operations.Module      `json:"module"`
-	Items        []operationBulkPayload `json:"items"`
-	Confirmation string                 `json:"confirmation"`
-}
-
-type operationBulkPayload struct {
-	ID      string `json:"id"`
-	Version int64  `json:"version"`
 }
 
 type operationCatalogResponse struct {
@@ -226,39 +205,6 @@ type operationReportRow struct {
 	RowNumber  int                    `json:"row_number"`
 	Outcome    operations.OutcomeKind `json:"outcome,omitempty"`
 	ErrorCode  string                 `json:"error_code,omitempty"`
-}
-
-type operationExportResponse struct {
-	ID          string                 `json:"id"`
-	Module      operations.Module      `json:"module"`
-	State       operations.ExportState `json:"state"`
-	Filename    string                 `json:"filename"`
-	RowCount    int                    `json:"row_count"`
-	ByteSize    int64                  `json:"byte_size"`
-	ErrorCode   string                 `json:"error_code,omitempty"`
-	ExpiresAt   time.Time              `json:"expires_at"`
-	CompletedAt *time.Time             `json:"completed_at,omitempty"`
-	Version     int64                  `json:"version"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
-}
-
-type operationExportPageResponse struct {
-	Exports []operationExportResponse `json:"exports"`
-	Total   int64                     `json:"total"`
-	Limit   int                       `json:"limit"`
-	Offset  int                       `json:"offset"`
-}
-
-type operationDownloadResponse struct {
-	URL       string    `json:"url"`
-	Method    string    `json:"method"`
-	ExpiresAt time.Time `json:"expires_at"`
-}
-
-type operationBulkDeleteResponse struct {
-	Module  operations.Module `json:"module"`
-	Deleted int               `json:"deleted"`
 }
 
 func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service operationsService) {
@@ -467,97 +413,6 @@ func registerOperationsRoutes(mux *http.ServeMux, logger *slog.Logger, authentic
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}))
-
-	registerOperationExportRoutes(mux, logger, authentication, checker, service)
-}
-
-func registerOperationExportRoutes(mux *http.ServeMux, logger *slog.Logger, authentication authenticationService, checker capabilityChecker, service operationsService) {
-	mux.HandleFunc("POST /api/v1/operations/exports", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := operationsActor(w, r, authentication, service)
-		if !ok {
-			return
-		}
-		var request operationCreateExportRequest
-		if !decodeOperationRequest(w, r, &request) {
-			return
-		}
-		value, err := service.CreateExport(r.Context(), actor, request.Module, request.IdempotencyKey, requestIDFromContext(r.Context()))
-		if err != nil {
-			writeOperationsError(w, r, logger, "create operation export", err)
-			return
-		}
-		writeJSON(w, http.StatusAccepted, operationExportFromDomain(value))
-	}))
-
-	mux.HandleFunc("GET /api/v1/operations/exports", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := operationsActor(w, r, authentication, service)
-		if !ok {
-			return
-		}
-		options, problem := operationListOptions(r)
-		if problem != nil {
-			writeProblem(w, r, *problem)
-			return
-		}
-		page, err := service.ListExports(r.Context(), actor, options)
-		if err != nil {
-			writeOperationsError(w, r, logger, "list operation exports", err)
-			return
-		}
-		response := operationExportPageResponse{Total: page.Total, Limit: page.Limit, Offset: page.Offset, Exports: make([]operationExportResponse, 0, len(page.Exports))}
-		for _, value := range page.Exports {
-			response.Exports = append(response.Exports, operationExportFromDomain(value))
-		}
-		writeJSON(w, http.StatusOK, response)
-	}))
-
-	mux.HandleFunc("GET /api/v1/operations/exports/{export_id}", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, id, ok := operationExportActor(w, r, authentication, service)
-		if !ok {
-			return
-		}
-		value, err := service.GetExport(r.Context(), actor, id)
-		if err != nil {
-			writeOperationsError(w, r, logger, "get operation export", err)
-			return
-		}
-		writeJSON(w, http.StatusOK, operationExportFromDomain(value))
-	}))
-
-	mux.HandleFunc("POST /api/v1/operations/exports/{export_id}/download", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, id, ok := operationExportActor(w, r, authentication, service)
-		if !ok {
-			return
-		}
-		grant, err := service.DownloadExport(r.Context(), actor, id, requestIDFromContext(r.Context()))
-		if err != nil {
-			writeOperationsError(w, r, logger, "download operation export", err)
-			return
-		}
-		writeJSON(w, http.StatusOK, operationDownloadResponse{URL: grant.URL, Method: grant.Method, ExpiresAt: grant.ExpiresAt})
-	}))
-
-	mux.HandleFunc("POST /api/v1/operations/bulk-delete", requireCapability(auth.CapOperations, checker, authentication, func(w http.ResponseWriter, r *http.Request) {
-		actor, ok := operationsActor(w, r, authentication, service)
-		if !ok {
-			return
-		}
-		var request operationBulkDeleteRequest
-		if !decodeOperationRequest(w, r, &request) {
-			return
-		}
-		items, problem := operationBulkItems(request.Items)
-		if problem != nil {
-			writeProblem(w, r, *problem)
-			return
-		}
-		value, err := service.BulkDelete(r.Context(), actor, request.Module, items, request.Confirmation, requestIDFromContext(r.Context()))
-		if err != nil {
-			writeOperationsError(w, r, logger, "bulk delete operation records", err)
-			return
-		}
-		writeJSON(w, http.StatusOK, operationBulkDeleteResponse{Module: value.Module, Deleted: value.Deleted})
-	}))
 }
 
 func operationsUnavailable(service operationsService) bool {
@@ -589,19 +444,6 @@ func operationImportActor(w http.ResponseWriter, r *http.Request, authentication
 	id, err := operations.ParseIdentifier(r.PathValue("import_id"))
 	if err != nil {
 		writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Identificador de importação inválido"})
-		return auth.Session{}, operations.Identifier{}, false
-	}
-	return actor, id, true
-}
-
-func operationExportActor(w http.ResponseWriter, r *http.Request, authentication authenticationService, service operationsService) (auth.Session, operations.Identifier, bool) {
-	actor, ok := operationsActor(w, r, authentication, service)
-	if !ok {
-		return auth.Session{}, operations.Identifier{}, false
-	}
-	id, err := operations.ParseIdentifier(r.PathValue("export_id"))
-	if err != nil {
-		writeProblem(w, r, Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Identificador de exportação inválido"})
 		return auth.Session{}, operations.Identifier{}, false
 	}
 	return actor, id, true
@@ -646,18 +488,6 @@ func operationDecisions(payload []operationDecisionPayload) ([]operations.Decisi
 			decision.TargetID = &id
 		}
 		result = append(result, decision)
-	}
-	return result, nil
-}
-
-func operationBulkItems(payload []operationBulkPayload) ([]operations.BulkItem, *Problem) {
-	result := make([]operations.BulkItem, 0, len(payload))
-	for _, value := range payload {
-		id, err := operations.ParseIdentifier(value.ID)
-		if err != nil {
-			return nil, &Problem{Status: http.StatusBadRequest, Code: ErrorCodeBadRequest, Message: "Seleção contém identificador inválido"}
-		}
-		result = append(result, operations.BulkItem{ID: id, Version: value.Version})
 	}
 	return result, nil
 }
@@ -720,15 +550,6 @@ func operationImportFromDomain(value operations.Import) operationImportResponse 
 		response.Preview = append(response.Preview, converted)
 	}
 	return response
-}
-
-func operationExportFromDomain(value operations.Export) operationExportResponse {
-	return operationExportResponse{
-		ID: value.ID.String(), Module: value.Module, State: value.State, Filename: value.Filename,
-		RowCount: value.RowCount, ByteSize: value.ByteSize, ErrorCode: value.ErrorCode,
-		ExpiresAt: value.ExpiresAt, CompletedAt: value.CompletedAt, Version: value.Version,
-		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
-	}
 }
 
 func writeOperationImportResult(w http.ResponseWriter, r *http.Request, logger *slog.Logger, action string, value operations.Import, err error) {

@@ -16,7 +16,7 @@ import {
 import { APIRequestError } from "./lib/api/client";
 import { queryKeys } from "./lib/api/queryKeys";
 import { formatBytes, formatDateTime as formatDate } from "./lib/formatters";
-import { useI18n } from "./i18n";
+import { useI18n, type AppMessages } from "./i18n";
 
 const acceptedMIMEs = [
   "application/pdf",
@@ -38,14 +38,14 @@ const maximumClientBytes = 50 * 1024 * 1024;
 
 export function AttachmentsPanel({
   owner,
-  title = "Anexos privados",
-  description = "Arquivos são enviados diretamente ao armazenamento privado e verificados antes de serem registrados.",
+  title,
+  description,
 }: {
   owner: AttachmentOwner;
   title?: string;
   description?: string;
 }) {
-  const { messages } = useI18n();
+  const { messages, t } = useI18n();
   const copy = messages.attachments;
   const queryClient = useQueryClient();
   const inputID = useId();
@@ -67,7 +67,7 @@ export function AttachmentsPanel({
       setNotice(null);
     },
     onSuccess: async () => {
-      setNotice("Arquivo verificado e anexado.");
+      setNotice(copy.uploaded);
       await refresh();
     },
     onSettled: () => setProgress(null),
@@ -76,14 +76,14 @@ export function AttachmentsPanel({
   const trash = useMutation({
     mutationFn: trashAttachment,
     onSuccess: async () => {
-      setNotice("Anexo movido para a lixeira por sete dias.");
+      setNotice(copy.trashed);
       await refresh();
     },
   });
   const restore = useMutation({
     mutationFn: restoreAttachment,
     onSuccess: async () => {
-      setNotice("Anexo restaurado.");
+      setNotice(copy.restored);
       await refresh();
     },
   });
@@ -94,15 +94,15 @@ export function AttachmentsPanel({
     if (!file) return;
     setNotice(null);
     if (file.size <= 0) {
-      setNotice("Selecione um arquivo que não esteja vazio.");
+      setNotice(copy.emptyFile);
       return;
     }
     if (file.size > maximumClientBytes) {
-      setNotice("O arquivo ultrapassa o limite de 50 MB.");
+      setNotice(copy.tooLarge);
       return;
     }
     if (!acceptedMIMEs.split(",").includes(file.type)) {
-      setNotice("O formato deste arquivo ainda não é aceito.");
+      setNotice(copy.unsupportedType);
       return;
     }
     upload.mutate(file);
@@ -113,15 +113,15 @@ export function AttachmentsPanel({
       <Flex vertical gap="1rem">
         <div className="attachments-panel__header">
           <div>
-            <h3>{title}</h3>
-            <p>{description}</p>
+            <h3>{title ?? copy.title}</h3>
+            <p>{description ?? copy.description}</p>
           </div>
           <Checkbox
             checked={showTrash}
             className="attachments-panel__trash-toggle"
             onChange={(event) => setShowTrash(event.target.checked)}
           >
-            Mostrar lixeira
+            {copy.showTrash}
           </Checkbox>
         </div>
         {notice ? (
@@ -129,13 +129,13 @@ export function AttachmentsPanel({
         ) : null}
         {error ? (
           <StatusBanner
-            description={attachmentError(error)}
+            description={attachmentError(error, copy)}
             title={copy.operationError}
             tone="error"
           />
         ) : null}
         <div className="attachments-panel__upload">
-          <label htmlFor={inputID}>Adicionar arquivo</label>
+          <label htmlFor={inputID}>{copy.addFile}</label>
           <input
             id={inputID}
             accept={acceptedMIMEs}
@@ -146,11 +146,11 @@ export function AttachmentsPanel({
               event.currentTarget.value = "";
             }}
           />
-          <small>PDF, imagens, texto/CSV, DOCX, XLSX, áudio e vídeo. Limite: 50 MB.</small>
+          <small>{copy.acceptedHint}</small>
           {progress !== null ? (
             <div aria-live="polite" className="attachments-panel__progress">
               <progress max={100} value={progress} />
-              <span>{progress < 100 ? `Enviando ${progress}%` : "Verificando arquivo"}</span>
+              <span>{progress < 100 ? t(copy.sending, { progress }) : copy.verifying}</span>
             </div>
           ) : null}
         </div>
@@ -162,7 +162,9 @@ export function AttachmentsPanel({
           {query.data?.map((value) => (
             <AttachmentCard
               key={value.id}
+              copy={copy}
               pending={pending}
+              t={t}
               value={value}
               onDownload={() => download.mutate(value)}
               onRestore={() => restore.mutate(value)}
@@ -178,12 +180,16 @@ export function AttachmentsPanel({
 function AttachmentCard({
   value,
   pending,
+  copy,
+  t,
   onDownload,
   onTrash,
   onRestore,
 }: {
   value: AttachmentRecord;
   pending: boolean;
+  copy: AppMessages["attachments"];
+  t: (template: string, params?: Record<string, string | number>) => string;
   onDownload: () => void;
   onTrash: () => void;
   onRestore: () => void;
@@ -195,27 +201,27 @@ function AttachmentCard({
         <span>
           {formatBytes(value.byte_size)} · {value.detected_mime}
         </span>
-        <span>Adicionado em {formatDate(value.created_at)}</span>
+        <span>{t(copy.addedAt, { date: formatDate(value.created_at) })}</span>
         {value.purge_after ? (
-          <span>Exclusão definitiva em {formatDate(value.purge_after)}</span>
+          <span>{t(copy.purgeAt, { date: formatDate(value.purge_after) })}</span>
         ) : null}
       </div>
       <Flex align="center" className="attachment-card__actions">
         <Tag color={value.lifecycle_state === "ACTIVE" ? "success" : "warning"}>
-          {value.lifecycle_state === "ACTIVE" ? "Ativo" : "Na lixeira"}
+          {value.lifecycle_state === "ACTIVE" ? copy.active : copy.inTrash}
         </Tag>
         {value.lifecycle_state === "ACTIVE" ? (
           <>
             <Button disabled={pending} onClick={onDownload}>
-              Baixar
+              {copy.download}
             </Button>
             <Button disabled={pending} onClick={onTrash}>
-              Mover para lixeira
+              {copy.moveToTrash}
             </Button>
           </>
         ) : (
           <Button disabled={pending} onClick={onRestore}>
-            Restaurar
+            {copy.restore}
           </Button>
         )}
       </Flex>
@@ -223,13 +229,15 @@ function AttachmentCard({
   );
 }
 
-function attachmentError(error: unknown): string {
+function attachmentError(
+  error: unknown,
+  copy: { conflict: string; expired: string; storageUnavailable: string; unexpected: string },
+): string {
   if (error instanceof APIRequestError) {
-    if (error.status === 409)
-      return "O anexo foi alterado por outra pessoa. Atualize e tente novamente.";
-    if (error.status === 410) return "O envio expirou. Selecione o arquivo novamente.";
-    if (error.status === 503) return "O armazenamento privado está indisponível no momento.";
+    if (error.status === 409) return copy.conflict;
+    if (error.status === 410) return copy.expired;
+    if (error.status === 503) return copy.storageUnavailable;
     return error.message;
   }
-  return error instanceof Error ? error.message : "Erro inesperado ao processar o anexo.";
+  return error instanceof Error ? error.message : copy.unexpected;
 }

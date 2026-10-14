@@ -596,9 +596,6 @@ func (jobs *integrationOperationJobs) EnqueueParse(context.Context, operations.I
 func (jobs *integrationOperationJobs) EnqueueExecute(context.Context, operations.Identifier) (int64, error) {
 	return jobs.enqueue()
 }
-func (jobs *integrationOperationJobs) EnqueueExport(context.Context, operations.Identifier) (int64, error) {
-	return jobs.enqueue()
-}
 func (jobs *integrationOperationJobs) EnqueueCleanup(context.Context, time.Time) (int64, error) {
 	return jobs.enqueue()
 }

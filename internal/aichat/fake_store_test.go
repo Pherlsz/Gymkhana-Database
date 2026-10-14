@@ -40,7 +40,6 @@ func newMemoryStore(users ...auth.User) *memoryStore {
 	return store
 }
 
-
 func (store *memoryStore) recordQuery(name string) {
 	if store.queryCounts == nil {
 		store.queryCounts = make(map[string]int)
@@ -347,7 +346,7 @@ func (store *memoryStore) BeginTool(_ context.Context, input BeginToolInput) (To
 		return ToolStep{}, ErrInvalidState
 	}
 	if run.ToolCallCount >= MaximumToolCalls {
-		return ToolStep{}, ErrQuotaExceeded
+		return ToolStep{}, ErrToolLimit
 	}
 	step := ToolStep{ID: input.ID, RunID: input.RunID, Sequence: run.ToolCallCount + 1, Kind: input.Kind, State: ToolStepRunning,
 		ArgumentsFingerprint: input.ArgumentsFingerprint, StartedAt: input.Now}

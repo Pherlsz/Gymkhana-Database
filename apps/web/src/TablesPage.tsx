@@ -220,7 +220,7 @@ export function TablesPage() {
     staleTime: 30_000,
   });
   // Warm Assistente capability so opening the float does not wait on the first fetch.
-  useQuery({
+  const assistantCapability = useQuery({
     queryKey: ASSISTANT_CAPABILITY_KEY,
     queryFn: ({ signal }) => getChatCapability(signal),
     staleTime: ASSISTANT_CAPABILITY_STALE_MS,
@@ -765,11 +765,15 @@ export function TablesPage() {
                 onReset: handleColumnReset,
               }
         }
-        assistant={{
-          active: assistantSize !== "min",
-          label: copy.assistant.assistant,
-          onClick: () => setAssistantSize("float"),
-        }}
+        assistant={
+          assistantCapability.data?.enabled
+            ? {
+                active: assistantSize !== "min",
+                label: copy.assistant.assistant,
+                onClick: () => setAssistantSize("float"),
+              }
+            : undefined
+        }
       />
 
       {search.result ? (

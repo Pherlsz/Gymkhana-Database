@@ -1,18 +1,9 @@
 import { Tag } from "antd";
 import { useI18n } from "../../i18n";
 import type { TranslationKeys } from "../../i18n/v1/pt-BR";
-import type {
-  ImportReportRow,
-  ImportRow,
-  OperationExport,
-  OperationImport,
-} from "../api/operations";
+import type { ImportReportRow, ImportRow, OperationImport } from "../api/operations";
 
-export function OperationStatus({
-  value,
-}: {
-  value: OperationImport["state"] | OperationExport["state"];
-}) {
+export function OperationStatus({ value }: { value: OperationImport["state"] }) {
   const { messages } = useI18n();
   return <Tag color={statusTone(value)}>{stateLabel(value, messages)}</Tag>;
 }
@@ -26,7 +17,7 @@ export function operationTerminal(state: OperationImport["state"]): boolean {
 }
 
 export function statusTone(
-  state: OperationImport["state"] | OperationExport["state"],
+  state: OperationImport["state"],
 ): "neutral" | "success" | "warning" | "info" {
   if (state === "COMPLETED") return "success";
   if (state === "FAILED" || state === "CANCELLED" || state === "EXPIRED") return "warning";
@@ -47,10 +38,7 @@ function dictLabel(
   );
 }
 
-export function stateLabel(
-  state: OperationImport["state"] | OperationExport["state"],
-  messages: TranslationKeys,
-): string {
+export function stateLabel(state: OperationImport["state"], messages: TranslationKeys): string {
   return dictLabel("states", state, messages, state);
 }
 

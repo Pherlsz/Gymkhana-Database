@@ -315,7 +315,7 @@ function inputFromDraft(field: CustomField, value: CustomDraftValue): CustomValu
   switch (field.field_kind) {
     case "INTEGER": {
       const integer = Number(text);
-      return Number.isSafeInteger(integer) ? [{ ...base, integer }] : [{ ...base, text }];
+      return Number.isSafeInteger(integer) ? [{ ...base, integer }] : [];
     }
     case "DECIMAL":
       return [{ ...base, decimal: text }];

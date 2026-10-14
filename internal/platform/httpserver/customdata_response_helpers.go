@@ -2,10 +2,6 @@ package httpserver
 
 import "github.com/Pherlsz/Gymkhana-Database/internal/customdata"
 
-func customEntityTypeFromDomain(value customdata.EntityType) customEntityTypeResponse {
-	return customEntityTypeResponse{ID: value.ID.String(), TechnicalKey: value.Values.TechnicalKey, Label: value.Values.Label, Active: value.Values.Active, ProfileCardinality: value.Values.ProfileCardinality, Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
-}
-
 func customFieldFromDomain(value customdata.FieldDefinition) customFieldResponse {
 	targetID := ""
 	if !value.Values.TargetID.IsZero() {
@@ -28,17 +24,6 @@ func customStoredValueFromDomain(value customdata.StoredValue) customStoredValue
 
 func customValueSetFromDomain(value customdata.ValueSet) customValueSetResponse {
 	response := customValueSetResponse{TargetKind: value.Target.Kind, TargetID: value.Target.ID.String(), Version: value.Version}
-	for _, item := range value.Values {
-		response.Values = append(response.Values, customStoredValueFromDomain(item))
-	}
-	return response
-}
-
-func customEntityFromDomain(value customdata.Entity) customEntityResponse {
-	response := customEntityResponse{ID: value.ID.String(), EntityTypeID: value.TypeID.String(), ProfileCardinality: value.ProfileCardinality, Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
-	if value.OwnerProfileID != nil {
-		response.OwnerProfileID = value.OwnerProfileID.String()
-	}
 	for _, item := range value.Values {
 		response.Values = append(response.Values, customStoredValueFromDomain(item))
 	}

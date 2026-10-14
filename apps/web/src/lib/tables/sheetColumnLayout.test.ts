@@ -69,10 +69,6 @@ describe("columnHasResizeHandle", () => {
   });
 
   it("drops the right edge and keeps every internal divider", () => {
-    expect([0, 1, 2].map((index) => columnHasResizeHandle(index, 3))).toEqual([
-      true,
-      true,
-      false,
-    ]);
+    expect([0, 1, 2].map((index) => columnHasResizeHandle(index, 3))).toEqual([true, true, false]);
   });
 });

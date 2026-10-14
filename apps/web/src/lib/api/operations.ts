@@ -10,10 +10,6 @@ export type OperationImportPage =
   paths["/api/v1/operations/imports"]["get"]["responses"][200]["content"]["application/json"];
 export type OperationReport =
   paths["/api/v1/operations/imports/{import_id}/report"]["get"]["responses"][200]["content"]["application/json"];
-export type OperationExport =
-  paths["/api/v1/operations/exports/{export_id}"]["get"]["responses"][200]["content"]["application/json"];
-export type OperationExportPage =
-  paths["/api/v1/operations/exports"]["get"]["responses"][200]["content"]["application/json"];
 export type OperationMapping =
   paths["/api/v1/operations/imports/{import_id}/mapping"]["put"]["requestBody"]["content"]["application/json"]["mapping"];
 export type OperationDecision =
@@ -210,39 +206,4 @@ export function deleteOperationImport(id: string): Promise<void> {
   return requestNoContent(`/api/v1/operations/imports/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
-}
-
-export function listOperationExports(signal?: AbortSignal): Promise<OperationExportPage> {
-  return requestJSON("/api/v1/operations/exports?limit=100&offset=0", signal ? { signal } : {});
-}
-
-export function createOperationExport(module: OperationModule): Promise<OperationExport> {
-  return requestJSON(
-    "/api/v1/operations/exports",
-    jsonRequest("POST", { module, idempotency_key: crypto.randomUUID() }),
-  );
-}
-
-export async function downloadOperationExport(value: OperationExport): Promise<void> {
-  const grant = await requestJSON<{ url: string; method: "GET"; expires_at: string }>(
-    `/api/v1/operations/exports/${encodeURIComponent(value.id)}/download`,
-    { method: "POST" },
-  );
-  const anchor = document.createElement("a");
-  anchor.href = grant.url;
-  anchor.rel = "noreferrer";
-  anchor.download = value.filename;
-  anchor.click();
-  anchor.remove();
-}
-
-export function bulkDeleteOperationRecords(
-  module: OperationModule,
-  items: Array<{ id: string; version: number }>,
-  confirmation: string,
-): Promise<{ module: OperationModule; deleted: number }> {
-  return requestJSON(
-    "/api/v1/operations/bulk-delete",
-    jsonRequest("POST", { module, items, confirmation }),
-  );
 }

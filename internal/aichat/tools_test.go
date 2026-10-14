@@ -128,6 +128,12 @@ func TestToolRegistryIsFixedTypedAndReadOnly(t *testing.T) {
 		if utf8.RuneCountInString(schema.Description) > 1024 {
 			t.Fatalf("schema %q description is %d runes, Gemini caps function descriptions at 1024", schema.Name, utf8.RuneCountInString(schema.Description))
 		}
+		if schema.Name == "query" && (!strings.Contains(string(schema.InputSchema), `"month_day"`) || !strings.Contains(schema.Description, "month_day") || !strings.Contains(schema.Description, "club_membership")) {
+			t.Fatalf("query schema missing month_day or club field: %#v", schema)
+		}
+		if schema.Name == "search" && !strings.Contains(schema.Description, "Não use search") {
+			t.Fatalf("search schema missing pairing guard: %s", schema.Description)
+		}
 		lower := strings.ToLower(schema.Name)
 		if strings.Contains(lower, "create") || strings.Contains(lower, "update") || strings.Contains(lower, "delete") || strings.Contains(lower, "merge") || strings.Contains(lower, "http") || strings.Contains(lower, "code") {
 			t.Fatalf("mutation/generic tool exposed: %q", schema.Name)
@@ -264,6 +270,42 @@ func TestQueryToolKeepsNameAndLeavesOtherProjectionsToThePlan(t *testing.T) {
 	got := strings.Join(query.plan.Projections, ",")
 	if got != "profile.full_name,profile.address_street,profile.cpf" {
 		t.Fatalf("projections = %s", got)
+	}
+}
+
+func TestQueryToolRewritesTeamClubFilterAndHintsEmptyPairing(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	now := time.Date(2026, time.October, 11, 8, 0, 0, 0, time.UTC)
+	executionID := querydomain.Identifier{61}
+	query := &fakeToolQuery{
+		matchCount: 0,
+		execution:  querydomain.Execution{ID: executionID, RootEntity: "profiles", ExpiresAt: now.Add(time.Hour)},
+		page: querydomain.ResultPage{
+			Columns: []querydomain.ResultColumn{{Position: 0, FieldKey: "profile.full_name", Label: "Nome", Kind: querydomain.ValueText}},
+		},
+	}
+	gateway, err := NewToolGateway(&fakeToolSearch{}, query, &fakeToolReferences{}, func() time.Time { return now })
+	if err != nil {
+		t.Fatalf("NewToolGateway() error = %v", err)
+	}
+	filter := `{"kind":"group","conjunction":"AND","children":[` +
+		`{"kind":"predicate","field":"profile.full_name","operator":"starts_with","values":["Alessandro"]},` +
+		`{"kind":"predicate","field":"profile.team","operator":"contains","values":["gremio"]}` +
+		`]}`
+	arguments := `{"plan":{"version":"v1","catalog_version":"` + strings.Repeat("d", 64) + `","root_entity":"profiles","projections":["profile.team"],"filter":` + filter + `,"maximum_rows":10}}`
+	output, err := gateway.Execute(context.Background(), actor, nil, Identifier{62}, 1,
+		ToolCall{ID: "query-club", Name: "query", Arguments: json.RawMessage(arguments)}, now.Add(time.Hour), "request")
+	if err != nil {
+		t.Fatalf("Execute(query) error = %v", err)
+	}
+	if query.plan.Filter == nil || len(query.plan.Filter.Children) != 2 || query.plan.Filter.Children[1].Field != clubFieldKey {
+		t.Fatalf("rewritten filter = %#v", query.plan.Filter)
+	}
+	if strings.Join(query.plan.Projections, ",") != "profile.full_name,profile.club_membership" {
+		t.Fatalf("projections = %s", strings.Join(query.plan.Projections, ","))
+	}
+	if !strings.Contains(string(output.Payload), emptyPairingNote) {
+		t.Fatalf("empty pairing payload = %s", output.Payload)
 	}
 }
 
@@ -415,8 +457,9 @@ func TestToolErrorNormalizationNeverLeaksSourceDetails(t *testing.T) {
 	if !errors.Is(validation, ErrInvalidInput) || !ok || !strings.Contains(string(payload), `"catalog_version"`) || strings.Contains(string(payload), "SELECT") {
 		t.Fatalf("correctableToolPayload() = %s ok=%v err=%v", payload, ok, validation)
 	}
-	if _, ok := correctableToolPayload(ErrInvalidInput); ok {
-		t.Fatal("bare invalid input must stay fatal")
+	payload, ok = correctableToolPayload(ErrInvalidInput)
+	if !ok || string(payload) != `{"error":"invalid_input"}` || strings.Contains(string(payload), "SELECT") {
+		t.Fatalf("bare invalid input payload = %s ok=%v", payload, ok)
 	}
 	if _, err := toolArgumentsFingerprint(json.RawMessage(`{"b":2,"a":1}`)); err != nil {
 		t.Fatalf("toolArgumentsFingerprint() error = %v", err)
@@ -578,7 +621,6 @@ func testToolGateway(t *testing.T, search SearchPort, query QueryPort, reference
 	}
 	return gateway
 }
-
 
 type countingToolQuery struct {
 	fakeToolQuery

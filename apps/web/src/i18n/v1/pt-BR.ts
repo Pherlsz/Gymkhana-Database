@@ -256,6 +256,10 @@ export const auth = {
     accessDenied: "Seu e-mail não está autorizado. Contate o administrador.",
     oauthError: "Erro de autenticação. Tente novamente.",
     signingIn: "Entrando…",
+    disabledTitle: "Acesso indisponível",
+    disabledBody: "O login está desativado neste ambiente. Contate o administrador.",
+    unavailableTitle: "Sistema indisponível",
+    unavailableBody: "Não foi possível verificar a sessão agora. Tente de novo em instantes.",
   },
 } as const;
 
@@ -268,13 +272,9 @@ export const shell = {
     collapseMenu: "Recolher menu",
     expandMenu: "Expandir menu",
   },
-  comingSoon: "Em desenvolvimento",
-  roles: {},
   account: {
     openMenu: "Abrir menu da conta",
-    settings: "Configurações",
     appearance: "Aparência",
-    modelKey: "Chave do Assistente",
   },
   signOut: "Sair",
   signingOut: "Saindo",
@@ -537,6 +537,13 @@ export const cadastro = {
     applySuccess: "Valores aceitos foram aplicados ao registro.",
     applyError: "Não foi possível aplicar",
     unexpectedError: "Erro inesperado.",
+    states: {
+      QUEUED: "Na fila",
+      RUNNING: "Processando",
+      COMPLETED: "Concluído",
+      FAILED: "Falhou",
+      CANCELLED: "Cancelado",
+    },
   },
 } as const;
 
@@ -638,7 +645,7 @@ export const tables = {
       is_null: "vazio",
       not_null: "preenchido",
     },
-    localOnly: "Filtro só nesta página",
+    localOnly: "Só nas linhas já carregadas nesta página — não busca no acervo inteiro.",
     localScopeBadge: "página",
   },
   boolean: {
@@ -723,6 +730,8 @@ export const tables = {
       busy: "Esta sessão ainda está respondendo. Aguarde ou pare a resposta atual.",
       rate_limited: "O Gemini recusou por excesso de pedidos. Espere um pouco e tente de novo.",
       quota_exceeded: "A cota do Gemini esgotou. Verifique o plano em Google AI Studio.",
+      tool_limit:
+        "A consulta usou o máximo de passos. Tente um pedido mais específico ou continue em outra mensagem.",
       timeout:
         "A resposta demorou demais (consultas longas ou o Gemini lento). Simplifique a pergunta ou tente de novo.",
       cancelled: "Resposta interrompida.",
@@ -776,6 +785,7 @@ export const tables = {
     deleteTitle: common.labels.permanentDeletion,
     deleteHint: "Digite Confirmar para excluir esta pessoa.",
     deleteConfirm: "Excluir permanentemente",
+    deletePersonDesc: "Esta ação exclui a pessoa permanentemente e não pode ser desfeita.",
     confirmPlaceholder: common.actions.confirm,
     loading: "Carregando perfil",
     notFound: common.labels.personNotFound,
@@ -983,22 +993,6 @@ export const records = {
 } as const;
 
 export const operations = {
-  eyebrow: "M8 · Operações",
-  titleWithImports: "Importações e exportações XLSX",
-  titleWithoutImports: "Exportações e exclusão em massa",
-  descWithImports:
-    "Envie planilhas privadas, revise o mapeamento e as alterações antes da execução e gere exportações completas conforme suas permissões.",
-  descWithoutImports:
-    "Gere exportações completas e execute exclusões em massa conforme suas permissões. Importações ficam em Cadastro.",
-  unavailable: "Operações indisponíveis",
-  loadError: "Não foi possível carregar importações",
-  emptyImports: "Nenhuma importação criada.",
-  loadingImports: "Carregando importações…",
-  openImport: "Abrir importação",
-  sectionImports: "Importações",
-  sectionImportsDesc:
-    "Cada upload é validado e processado em segundo plano. Somente suas operações aparecem aqui.",
-  sourceFallback: "Google Forms",
   creator: {
     title: "Nova importação",
     description: "com cabeçalhos na primeira linha e sem macros ou vínculos externos.",
@@ -1023,6 +1017,7 @@ export const operations = {
     loadError: "Não foi possível carregar a importação",
     stepSheet: "Aba",
     sheetSelected: "selecionada",
+    linesCount: "linha(s)",
     mappingPreservedTitle: "Mapeamento preservado",
     mappingPreservedDesc:
       "Há linhas já confirmadas. A aba e o mapeamento ficam bloqueados para que esses resultados nunca sejam apagados ou repetidos; revalide o preview para continuar.",
@@ -1075,36 +1070,6 @@ export const operations = {
     reportSheet: "Aba",
     noValues: "Sem valores visíveis",
     outcome: "Resultado",
-  },
-  export: {
-    title: "Exportações",
-    description:
-      "A exportação consulta a tabela completa no servidor e gera um XLSX privado com validade curta.",
-    btnExport: "Exportar",
-    error: "Não foi possível concluir a exportação",
-    caption: "Exportações XLSX",
-    empty: "Nenhuma exportação criada.",
-    loading: "Carregando exportações…",
-    btnDownload: common.actions.download,
-    btnDownloadExport: "Baixar exportação",
-    expires: "Expira",
-    secureCode: "Código seguro:",
-    linesCount: "linha(s)",
-  },
-  bulkDelete: {
-    title: "Exclusão em lote",
-    description:
-      "A exclusão exige IDs e versões atuais, confirmação literal e permissão administrativa. Toda a seleção é transacional.",
-    recordsLabel: "Registros — um por linha no formato UUID,versão",
-    helpText:
-      "Selecionar não altera dados. A exclusão ocorre somente após enviar este formulário com a confirmação exata.",
-    reviewWarning: "Revise a seleção",
-    noneDeleted: "Nenhum registro foi excluído",
-    completed: "Exclusão concluída",
-    completedCount: "registro(s) excluído(s).",
-    btnSubmit: "Excluir seleção",
-    formatError: "Use uma linha UUID,versão para cada registro.",
-    rangeError: "Selecione entre 1 e 500 registros.",
   },
   states: {
     UPLOADING: "Aguardando envio",
@@ -1420,6 +1385,31 @@ export const attachments = {
   emptyWithTrash: "Nenhum anexo ativo ou recuperável.",
   operationError: "Não foi possível concluir a operação",
   noticeTitle: "Anexos",
+  title: "Anexos privados",
+  description:
+    "Arquivos são enviados diretamente ao armazenamento privado e verificados antes de serem registrados.",
+  uploaded: "Arquivo verificado e anexado.",
+  trashed: "Anexo movido para a lixeira por sete dias.",
+  restored: "Anexo restaurado.",
+  emptyFile: "Selecione um arquivo que não esteja vazio.",
+  tooLarge: "O arquivo ultrapassa o limite de 50 MB.",
+  unsupportedType: "O formato deste arquivo ainda não é aceito.",
+  showTrash: "Mostrar lixeira",
+  addFile: "Adicionar arquivo",
+  acceptedHint: "PDF, imagens, texto/CSV, DOCX, XLSX, áudio e vídeo. Limite: 50 MB.",
+  sending: "Enviando {progress}%",
+  verifying: "Verificando arquivo",
+  addedAt: "Adicionado em {date}",
+  purgeAt: "Exclusão definitiva em {date}",
+  active: "Ativo",
+  inTrash: "Na lixeira",
+  download: "Baixar",
+  moveToTrash: "Mover para lixeira",
+  restore: "Restaurar",
+  conflict: "O anexo foi alterado por outra pessoa. Atualize e tente novamente.",
+  expired: "O envio expirou. Selecione o arquivo novamente.",
+  storageUnavailable: "O armazenamento privado está indisponível no momento.",
+  unexpected: "Erro inesperado ao processar o anexo.",
 } as const;
 
 export const ptBR = {
