@@ -304,7 +304,6 @@ func (orchestrator *Orchestrator) RunTurn(ctx context.Context, actor auth.Sessio
 			roundAssistant.Reset()
 		}
 	}
-	return ErrToolLimit
 }
 
 func (orchestrator *Orchestrator) failPanickedRun(ctx context.Context, actor auth.Session, runID Identifier, requestID string) {

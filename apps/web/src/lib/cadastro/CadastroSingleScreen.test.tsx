@@ -1,6 +1,6 @@
 import { message } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../../i18n";
 import { CadastroSingleScreen } from "./CadastroSingleScreen";
@@ -8,11 +8,14 @@ import { createBill, createDocument, createProfile } from "../api/client";
 
 let activeClient: QueryClient | null = null;
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   message.destroy();
   activeClient?.clear();
   activeClient = null;
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 });
 
 vi.mock("./useAttachmentsEnabled", () => ({
