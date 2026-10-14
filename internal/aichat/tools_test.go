@@ -128,6 +128,9 @@ func TestToolRegistryIsFixedTypedAndReadOnly(t *testing.T) {
 		if utf8.RuneCountInString(schema.Description) > 1024 {
 			t.Fatalf("schema %q description is %d runes, Gemini caps function descriptions at 1024", schema.Name, utf8.RuneCountInString(schema.Description))
 		}
+		if schema.Name == "query" && (!strings.Contains(string(schema.InputSchema), `"month_day"`) || !strings.Contains(schema.Description, "month_day")) {
+			t.Fatalf("query schema missing month_day part: %#v", schema)
+		}
 		lower := strings.ToLower(schema.Name)
 		if strings.Contains(lower, "create") || strings.Contains(lower, "update") || strings.Contains(lower, "delete") || strings.Contains(lower, "merge") || strings.Contains(lower, "http") || strings.Contains(lower, "code") {
 			t.Fatalf("mutation/generic tool exposed: %q", schema.Name)

@@ -276,11 +276,21 @@ const (
 	ConjunctionOr  Conjunction = "OR"
 )
 
+type DatePart string
+
+const (
+	DatePartYear     DatePart = "year"
+	DatePartMonth    DatePart = "month"
+	DatePartDay      DatePart = "day"
+	DatePartMonthDay DatePart = "month_day"
+)
+
 type FilterNode struct {
 	Kind        FilterKind   `json:"kind"`
 	Conjunction Conjunction  `json:"conjunction,omitempty"`
 	Field       string       `json:"field,omitempty"`
 	OtherField  string       `json:"other_field,omitempty"`
+	Part        DatePart     `json:"part,omitempty"`
 	Operator    Operator     `json:"operator,omitempty"`
 	Values      []string     `json:"values,omitempty"`
 	Relation    string       `json:"relation,omitempty"`
@@ -293,6 +303,8 @@ func (node *FilterNode) UnmarshalJSON(data []byte) error {
 		Conjunction Conjunction     `json:"conjunction,omitempty"`
 		Field       string          `json:"field,omitempty"`
 		OtherField  string          `json:"other_field,omitempty"`
+		Part        DatePart        `json:"part,omitempty"`
+		Which       DatePart        `json:"which,omitempty"`
 		Operator    Operator        `json:"operator,omitempty"`
 		Values      json.RawMessage `json:"values,omitempty"`
 		Relation    string          `json:"relation,omitempty"`
@@ -306,6 +318,10 @@ func (node *FilterNode) UnmarshalJSON(data []byte) error {
 	node.Conjunction = raw.Conjunction
 	node.Field = raw.Field
 	node.OtherField = raw.OtherField
+	node.Part = raw.Part
+	if node.Part == "" {
+		node.Part = raw.Which
+	}
 	node.Operator = raw.Operator
 	node.Relation = raw.Relation
 

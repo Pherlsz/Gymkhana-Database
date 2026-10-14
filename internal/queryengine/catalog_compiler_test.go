@@ -563,3 +563,92 @@ func TestCompileUserQueryComplexFilterTree(t *testing.T) {
 		t.Errorf("compiled SQL missing NOT (: %s", compiled.SQL)
 	}
 }
+
+func TestCompileDatePartCompareAndValues(t *testing.T) {
+	store := newFakeQueryStore()
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
+	if err != nil {
+		t.Fatalf("loadCatalog() error = %v", err)
+	}
+	anniversary := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "profiles",
+		Projections: []string{"profile.full_name", "profile.birth_date", "profile.father_birth_date", "profile.mother_birth_date"},
+		MaximumRows: 20,
+		Filter: &FilterNode{Kind: FilterGroup, Conjunction: ConjunctionOr, Children: []FilterNode{
+			{Kind: FilterPredicate, Field: "profile.birth_date", OtherField: "profile.father_birth_date", Operator: OperatorEqual, Part: DatePartMonthDay},
+			{Kind: FilterPredicate, Field: "profile.birth_date", OtherField: "profile.mother_birth_date", Operator: OperatorEqual, Part: DatePartMonthDay},
+		}},
+	}
+	compiled, _, err := compilePlan(anniversary, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("anniversary: %v", err)
+	}
+	if !strings.Contains(compiled.SQL, "to_char(") || !strings.Contains(compiled.SQL, "MM-DD") ||
+		strings.Contains(compiled.SQL, "EXTRACT") {
+		t.Fatalf("anniversary SQL = %s", compiled.SQL)
+	}
+	october := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "profiles",
+		Projections: []string{"profile.full_name"}, MaximumRows: 10,
+		Filter: &FilterNode{Kind: FilterPredicate, Field: "profile.birth_date", Operator: OperatorEqual, Part: DatePartMonth, Values: []string{"10"}},
+	}
+	compiled, _, err = compilePlan(october, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("month: %v", err)
+	}
+	if !strings.Contains(compiled.SQL, "EXTRACT(MONTH") || len(compiled.Arguments) != 2 {
+		t.Fatalf("month SQL = %s args=%#v", compiled.SQL, compiled.Arguments)
+	}
+	if compiled.Arguments[0] != int64(10) {
+		t.Fatalf("month arg = %#v", compiled.Arguments[0])
+	}
+	slash := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "profiles",
+		Projections: []string{"profile.full_name"}, MaximumRows: 10,
+		Filter: &FilterNode{Kind: FilterPredicate, Field: "profile.birth_date", Operator: OperatorEqual, Part: DatePartMonthDay, Values: []string{"02/10"}},
+	}
+	compiled, _, err = compilePlan(slash, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("month_day value: %v", err)
+	}
+	if compiled.Arguments[0] != "10-02" {
+		t.Fatalf("02/10 should normalize to 10-02, got %#v", compiled.Arguments[0])
+	}
+	unsupported := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "profiles",
+		Projections: []string{"profile.full_name"}, MaximumRows: 10,
+		Filter: &FilterNode{Kind: FilterPredicate, Field: "profile.full_name", OtherField: "profile.father_name", Operator: OperatorEqual, Part: DatePartMonthDay},
+	}
+	if _, _, err = compilePlan(unsupported, catalog, defaultMaximumCost); err == nil {
+		t.Fatal("part on text fields should fail")
+	}
+	fullDate := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "profiles",
+		Projections: []string{"profile.full_name"}, MaximumRows: 10,
+		Filter: &FilterNode{Kind: FilterPredicate, Field: "profile.birth_date", OtherField: "profile.father_birth_date", Operator: OperatorEqual},
+	}
+	compiled, _, err = compilePlan(fullDate, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("full date: %v", err)
+	}
+	if strings.Contains(compiled.SQL, "to_char(") || strings.Contains(compiled.SQL, "EXTRACT") {
+		t.Fatalf("eq without part should compare the whole date: %s", compiled.SQL)
+	}
+}
+
+func TestFilterNodeUnmarshalsPartAndWhichAlias(t *testing.T) {
+	var partNode FilterNode
+	if err := json.Unmarshal([]byte(`{"field":"profile.birth_date","operator":"eq","other_field":"profile.father_birth_date","part":"month_day"}`), &partNode); err != nil {
+		t.Fatalf("part: %v", err)
+	}
+	if partNode.Part != DatePartMonthDay || partNode.OtherField != "profile.father_birth_date" {
+		t.Fatalf("part node = %#v", partNode)
+	}
+	var whichNode FilterNode
+	if err := json.Unmarshal([]byte(`{"field":"profile.birth_date","operator":"eq","which":"month","values":[8]}`), &whichNode); err != nil {
+		t.Fatalf("which: %v", err)
+	}
+	if whichNode.Part != DatePartMonth || whichNode.Values[0] != "8" {
+		t.Fatalf("which node = %#v", whichNode)
+	}
+}
