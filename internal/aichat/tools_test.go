@@ -415,8 +415,9 @@ func TestToolErrorNormalizationNeverLeaksSourceDetails(t *testing.T) {
 	if !errors.Is(validation, ErrInvalidInput) || !ok || !strings.Contains(string(payload), `"catalog_version"`) || strings.Contains(string(payload), "SELECT") {
 		t.Fatalf("correctableToolPayload() = %s ok=%v err=%v", payload, ok, validation)
 	}
-	if _, ok := correctableToolPayload(ErrInvalidInput); ok {
-		t.Fatal("bare invalid input must stay fatal")
+	payload, ok = correctableToolPayload(ErrInvalidInput)
+	if !ok || string(payload) != `{"error":"invalid_input"}` || strings.Contains(string(payload), "SELECT") {
+		t.Fatalf("bare invalid input payload = %s ok=%v", payload, ok)
 	}
 	if _, err := toolArgumentsFingerprint(json.RawMessage(`{"b":2,"a":1}`)); err != nil {
 		t.Fatalf("toolArgumentsFingerprint() error = %v", err)
@@ -578,7 +579,6 @@ func testToolGateway(t *testing.T, search SearchPort, query QueryPort, reference
 	}
 	return gateway
 }
-
 
 type countingToolQuery struct {
 	fakeToolQuery

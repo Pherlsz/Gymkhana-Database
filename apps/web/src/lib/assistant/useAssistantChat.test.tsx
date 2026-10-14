@@ -166,6 +166,27 @@ describe("useAssistantChat stream contract", () => {
     expect(assistants(client)).toHaveLength(0);
   });
 
+  it("keeps the last result on the thread when the run fails after a reference", async () => {
+    const { client, hook } = await startTurn();
+    act(() => {
+      const { onEvent } = streams[0]!;
+      onEvent({
+        kind: "RESULT_REFERENCE",
+        sequence: 1,
+        created_at: "2026-01-01T00:00:00.000Z",
+        result_reference_id: "ref-7",
+      });
+      onEvent(event("RUN_FAILED", 2, { error_code: "malformed_provider" }));
+    });
+    expect(hook.result.current.pending?.errorCode).toBe("malformed_provider");
+    expect(hook.result.current.pending?.resultReferenceIds).toEqual(["ref-7"]);
+    const page = client.getQueryData<{ threads: { active_result_reference_id?: string }[] }>([
+      "assistant",
+      "threads",
+    ]);
+    expect(page?.threads[0]?.active_result_reference_id).toBe("ref-7");
+  });
+
   it("treats FAILED with code cancelled as a failure, not the cancel flow", async () => {
     const { hook } = await startTurn();
     act(() => {
