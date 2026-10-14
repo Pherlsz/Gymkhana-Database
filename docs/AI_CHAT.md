@@ -60,7 +60,7 @@ All user messages, prior assistant messages, and database/tool values are marked
 
 ## What the plan can say
 
-A pasted proof is still a question. The model composes one plan. Same-row date fields compare with `other_field`; an anniversary (day and month, years may differ) uses `part: month_day`, not full-date equality. A requirement the catalog does not store, such as a clip or a placement, is answered in the chat and does not replace the grid. If a branch of the plan is refused, the model must say so instead of publishing a weaker or stricter substitute. Operational detail for the older task runner lives in [`TASKS.md`](TASKS.md).
+A pasted proof is still a question. The model composes one plan. Same-row date fields compare with `other_field`; an anniversary (day and month, years may differ) uses `part: month_day`, not full-date equality. Football-club membership is `profile.club_membership` (Sócio de clube de futebol), not gymkhana `profile.team` (Equipe). A name-to-club pairing is one or two query plans, not a search per name. A requirement the catalog does not store, such as a clip or a placement, is answered in the chat and does not replace the grid. If a branch of the plan is refused, the model must say so instead of publishing a weaker or stricter substitute. Operational detail for the older task runner lives in [`TASKS.md`](TASKS.md).
 
 ## Persistent data and privacy
 

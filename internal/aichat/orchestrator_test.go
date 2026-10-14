@@ -93,6 +93,7 @@ func TestOrchestratorExecutesReadOnlyToolAndPersistsOnlyTheLastAssistantRound(t 
 		!strings.Contains(requests[1].Policy, "conferir") || !strings.Contains(requests[1].Policy, "replaces") ||
 		!strings.Contains(requests[1].Policy, "tool_limit") ||
 		!strings.Contains(requests[1].Policy, "month_day") || !strings.Contains(requests[1].Policy, "mais frouxo") ||
+		!strings.Contains(requests[1].Policy, "club_membership") ||
 		strings.Contains(requests[1].Policy, "UPDATE profiles") {
 		t.Fatalf("provider policy = %q", requests[1].Policy)
 	}

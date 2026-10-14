@@ -455,10 +455,10 @@ func (state *compileState) compilePredicate(node FilterNode, entityKey, prefix, 
 		return "(" + expression + ") IS NOT NULL"
 	case OperatorContains:
 		position := state.bind(literalPattern(values[0], true))
-		return fmt.Sprintf("lower((%s)::text) LIKE $%d::text ESCAPE '\\'", expression, position)
+		return fmt.Sprintf("%s LIKE $%d::text ESCAPE '\\'", foldPortugueseSQL(expression), position)
 	case OperatorStartsWith:
 		position := state.bind(literalPattern(values[0], false))
-		return fmt.Sprintf("lower((%s)::text) LIKE $%d::text ESCAPE '\\'", expression, position)
+		return fmt.Sprintf("%s LIKE $%d::text ESCAPE '\\'", foldPortugueseSQL(expression), position)
 	case OperatorIn:
 		parts := make([]string, 0, len(values))
 		for _, value := range values {
@@ -469,7 +469,11 @@ func (state *compileState) compilePredicate(node FilterNode, entityKey, prefix, 
 			parts = append(parts, state.placeholder(value, definition.Public.Kind))
 		}
 		if node.Part == "" && isTextKind(definition.Public.Kind) {
-			return fmt.Sprintf("lower((%s)::text) IN (%s)", expression, strings.Join(lowerPlaceholders(parts), ","))
+			folded := make([]string, 0, len(parts))
+			for _, part := range parts {
+				folded = append(folded, foldPortugueseSQL(part))
+			}
+			return fmt.Sprintf("%s IN (%s)", foldPortugueseSQL(expression), strings.Join(folded, ","))
 		}
 		return fmt.Sprintf("(%s) IN (%s)", expression, strings.Join(parts, ","))
 	case OperatorBetween:
@@ -486,7 +490,7 @@ func (state *compileState) compilePredicate(node FilterNode, entityKey, prefix, 
 		}
 		placeholder := state.placeholder(values[0], definition.Public.Kind)
 		if isTextKind(definition.Public.Kind) {
-			return fmt.Sprintf("lower((%s)::text) %s lower(%s::text)", expression, operator, placeholder)
+			return fmt.Sprintf("%s %s %s", foldPortugueseSQL(expression), operator, foldPortugueseSQL(placeholder))
 		}
 		return fmt.Sprintf("(%s) %s %s", expression, operator, placeholder)
 	}
@@ -523,7 +527,7 @@ func (state *compileState) compileFieldCompare(node FilterNode, definition sqlFi
 		return fmt.Sprintf("(%s) %s (%s)", datePartSQL(left, node.Part), operator, datePartSQL(right, node.Part))
 	}
 	if isTextKind(definition.Public.Kind) || isTextKind(other.Public.Kind) {
-		return fmt.Sprintf("lower((%s)::text) %s lower((%s)::text)", left, operator, right)
+		return fmt.Sprintf("%s %s %s", foldPortugueseSQL(left), operator, foldPortugueseSQL(right))
 	}
 	return fmt.Sprintf("(%s) %s (%s)", left, operator, right)
 }
@@ -739,7 +743,7 @@ func validPredicateValue(value string, kind ValueKind) bool {
 }
 
 func literalPattern(value string, contains bool) string {
-	value = strings.ToLower(value)
+	value = foldPortugueseText(value)
 	value = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(value)
 	if contains {
 		return "%" + value + "%"
@@ -754,14 +758,6 @@ func isTextKind(kind ValueKind) bool {
 	default:
 		return false
 	}
-}
-
-func lowerPlaceholders(values []string) []string {
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		result = append(result, "lower("+value+")")
-	}
-	return result
 }
 
 func estimateCost(plan QueryPlan, nodes, relations int) int {

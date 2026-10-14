@@ -142,8 +142,8 @@ const queryToolSchema = `{"type":"object","additionalProperties":false,"required
 func (gateway *ToolGateway) Schemas() []ToolSchema {
 	return []ToolSchema{
 		{Name: "catalog", Description: "Cadastro lógico extra. Só chame se faltar um campo no bloco da política.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false}`)},
-		{Name: "search", Description: "Busca textual no cadastro. Use para encontrar registros por nome, CPF, endereço ou qualquer texto. Suporta q (texto livre), terms (lista de palavras exatas) e modules para filtrar por tipo (people, documents, bills). Retorna lista de resultados com score de relevância.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"properties":{"q":{"type":"string","description":"Texto livre de busca"},"terms":{"type":"array","items":{"type":"string"},"description":"Palavras exatas a buscar"},"modules":{"type":"array","items":{"type":"string"},"description":"Filtrar por módulo: people, documents, bills"},"fields":{"type":"array","items":{"type":"string"},"description":"Campos específicos para buscar"},"limit":{"type":"integer","minimum":1,"maximum":100},"offset":{"type":"integer","minimum":0}}}`)},
-		{Name: "query", Description: "Consulta o cadastro. catalog_version está na política. Inicial: profile.name_initial (A-Z). Número da casa: profile.address_house_number (inteiro; 3/3=3; s/n vazio). Não use between em profile.address_number. Faixas por letra: OR de AND. Aniversário (dia e mês, anos diferentes) é other_field com part month_day, não eq da data inteira. Se a tool recusar um ramo, não publique a grade nem troque o critério. Projeções deste passo: sempre o nome numa lista de pessoas, mais o que o passo pede para ver ou conferir. Campo com replaces: não projete também o src. match_count é o total. Listas A-Z; omita sort. context_reference_id refina o resultado ativo.", InputSchema: json.RawMessage(queryToolSchema)},
+		{Name: "search", Description: "Busca textual no cadastro. Use para encontrar alguém por texto livre (nome, CPF, endereço). Não use search para percorrer uma lista de nomes casada com clube, veículo ou outro campo: isso é query.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"properties":{"q":{"type":"string","description":"Texto livre de busca"},"terms":{"type":"array","items":{"type":"string"},"description":"Palavras exatas a buscar"},"modules":{"type":"array","items":{"type":"string"},"description":"Filtrar por módulo: people, documents, bills"},"fields":{"type":"array","items":{"type":"string"},"description":"Campos específicos para buscar"},"limit":{"type":"integer","minimum":1,"maximum":100},"offset":{"type":"integer","minimum":0}}}`)},
+		{Name: "query", Description: "Consulta o cadastro. catalog_version está na política. Sócio de time: profile.club_membership, não profile.team. Arranjo nome=clube: um ou dois planos, não search por nome. Inicial: profile.name_initial. Número da casa: profile.address_house_number. Aniversário é other_field com part month_day, não eq da data inteira. Se a tool recusar um ramo, não publique a grade nem troque o critério. Projeções: nome e o que o passo pede. Campo com replaces: não projete o src. match_count é o total. Listas A-Z; omita sort.", InputSchema: json.RawMessage(queryToolSchema)},
 		{Name: "result", Description: "Reabre uma referência de resultado da própria conversa com reautorização.", InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["reference_id"],"properties":{"reference_id":{"type":"string","format":"uuid"},"limit":{"type":"integer","minimum":1,"maximum":100},"offset":{"type":"integer","minimum":0,"maximum":10000}}}`)},
 	}
 }
@@ -448,6 +448,7 @@ func (gateway *ToolGateway) queryData(ctx context.Context, actor auth.Session, a
 			return ToolOutput{}, err
 		}
 	}
+	rewriteClubMembershipFields(&request.Plan)
 	if request.Plan.MaximumRows == 0 || request.Plan.MaximumRows > MaximumToolRows {
 		request.Plan.MaximumRows = MaximumToolRows
 	}
@@ -489,6 +490,9 @@ func (gateway *ToolGateway) queryData(ctx context.Context, actor auth.Session, a
 		if err != nil {
 			return ToolOutput{}, normalizeToolError(err)
 		}
+	}
+	if matchCount == 0 && pairingEmptyHint(request.Plan) {
+		note = emptyPairingNote
 	}
 	payload, err := queryResultPayload(page, matchCount, note)
 	if err != nil {

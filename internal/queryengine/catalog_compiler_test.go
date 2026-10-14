@@ -375,6 +375,36 @@ func TestCompilerLetterRangeQueryUsesIntegerHouseNumber(t *testing.T) {
 	}
 }
 
+func TestCompilerFoldsPortugueseAccentsOnTextFilters(t *testing.T) {
+	store := newFakeQueryStore()
+	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
+	if err != nil {
+		t.Fatalf("loadCatalog() error = %v", err)
+	}
+	club := catalog.Fields["profile.club_membership"].Public
+	if club.Label != "Sócio de clube de futebol" || len(club.Options) != 2 {
+		t.Fatalf("club field = %#v", club)
+	}
+	if catalog.Fields["profile.team"].Public.Label != "Equipe da gincana" {
+		t.Fatalf("team label = %q", catalog.Fields["profile.team"].Public.Label)
+	}
+	plan := QueryPlan{
+		Version: PlanVersionV1, CatalogVersion: catalog.Public.Version, RootEntity: "profiles",
+		Projections: []string{"profile.full_name", "profile.club_membership"}, MaximumRows: 25,
+		Filter: &FilterNode{Kind: FilterPredicate, Field: "profile.club_membership", Operator: OperatorContains, Values: []string{"Gremio"}},
+	}
+	compiled, _, err := compilePlan(plan, catalog, defaultMaximumCost)
+	if err != nil {
+		t.Fatalf("compilePlan() error = %v", err)
+	}
+	if len(compiled.Arguments) == 0 || compiled.Arguments[0] != "%gremio%" {
+		t.Fatalf("folded club argument = %#v", compiled.Arguments)
+	}
+	if !strings.Contains(compiled.SQL, "translate(") || strings.Contains(compiled.SQL, "lower((q0.club_membership)::text) LIKE") {
+		t.Fatalf("compiled SQL missing accent fold:\n%s", compiled.SQL)
+	}
+}
+
 func TestShapeScanFoldsRepeatedInitialLikeExecute(t *testing.T) {
 	store := newFakeQueryStore()
 	catalog, err := loadCatalog(context.Background(), store, auth.RoleExternal)
