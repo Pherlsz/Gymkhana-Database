@@ -288,7 +288,7 @@ func (cfg Config) validate() error {
 	}
 	if !cfg.Auth.Enabled {
 		if cfg.GoogleForms.Enabled {
-			return errors.New("Google Forms OAuth credentials require authentication")
+			return errors.New("google forms OAuth credentials require authentication")
 		}
 		if cfg.AIChat.Enabled {
 			return errors.New("AI_CHAT_PROVIDER requires authentication")
@@ -386,7 +386,7 @@ func (cfg Config) validate() error {
 		return nil
 	}
 	if !cfg.Auth.Enabled {
-		return errors.New("Google Forms OAuth credentials require authentication")
+		return errors.New("google forms OAuth credentials require authentication")
 	}
 	if cfg.GoogleForms.ClientID == "" || cfg.GoogleForms.ClientSecret == "" {
 		return errors.New("google forms OAuth client credentials are incomplete")
