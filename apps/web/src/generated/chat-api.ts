@@ -298,8 +298,17 @@ export interface components {
       role: components["schemas"]["ChatMessageRole"];
       content: string;
       result_reference_ids: string[];
+      /** @description The references from result_reference_ids worth opening on the grid, in order. Results without rows and queries without any criterion are left out. */
+      result_references: components["schemas"]["ChatMessageReference"][];
       /** Format: date-time */
       created_at: string;
+    };
+    ChatMessageReference: {
+      /** Format: uuid */
+      id: string;
+      kind: components["schemas"]["ChatResultReferenceKind"];
+      label: string;
+      row_count: number;
     };
     ChatMessagePage: {
       messages: components["schemas"]["ChatMessage"][];

@@ -187,7 +187,9 @@ func TestChatRoutesExposeProtectedStrictLifecycleAndTypedReferences(t *testing.T
 	var messagePage chatMessagePageResponse
 	decodeErr := json.Unmarshal(response.Body.Bytes(), &messagePage)
 	if response.Code != http.StatusOK || service.limit != 25 || decodeErr != nil || len(messagePage.Messages) != 1 || messagePage.Messages[0].Content != "<script>alert(1)</script>" ||
-		len(messagePage.Messages[0].ResultReferenceIDs) != 1 || messagePage.Messages[0].ResultReferenceIDs[0] != referenceID.String() {
+		len(messagePage.Messages[0].ResultReferenceIDs) != 1 || messagePage.Messages[0].ResultReferenceIDs[0] != referenceID.String() ||
+		len(messagePage.Messages[0].ResultReferences) != 1 || messagePage.Messages[0].ResultReferences[0].Label != "Busca: primo" ||
+		messagePage.Messages[0].ResultReferences[0].RowCount != 27 || messagePage.Messages[0].ResultReferences[0].Kind != chatdomain.ResultReferenceSearch {
 		t.Fatalf("messages response = %d %s", response.Code, response.Body.String())
 	}
 
@@ -354,6 +356,11 @@ func chatHTTPFixture(t *testing.T, logger *slog.Logger, applicationURL string) (
 	historyMessage := message
 	historyMessage.Role = chatdomain.MessageAssistant
 	historyMessage.ResultReferenceIDs = []chatdomain.Identifier{referenceID}
+	historyMessage.ResultReferences = []chatdomain.MessageReference{
+		{ID: chatdomain.Identifier{91}, Kind: chatdomain.ResultReferenceSearch, Label: "Busca: ,73", RowCount: 0},
+		{ID: referenceID, Kind: chatdomain.ResultReferenceSearch, Label: "Busca: primo", RowCount: 27},
+		{ID: chatdomain.Identifier{92}, Kind: chatdomain.ResultReferenceQuery, Label: "Consulta: profiles", RowCount: 10, Sample: true},
+	}
 	run := chatdomain.Run{ID: runID, ThreadID: threadID, State: chatdomain.RunQueued, Version: 1, CreatedAt: now, UpdatedAt: now}
 	service := &fakeChatHTTPService{
 		capability: chatdomain.Capability{Enabled: true, MaximumToolCalls: 8, MaximumRows: 100, MaximumBytes: 262144, MaximumUsage: 1000,

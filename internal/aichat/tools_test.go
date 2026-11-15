@@ -731,3 +731,14 @@ func TestSearchToolPublishesNoReferenceWithoutHits(t *testing.T) {
 		t.Fatalf("empty search output = %#v %v", output, err)
 	}
 }
+
+func TestReferenceIsSampleOnlyForQueriesWithoutCriterion(t *testing.T) {
+	plain := []byte(`{"plan":{"version":"v1","root_entity":"profiles","projections":["profile.full_name"],"maximum_rows":10}}`)
+	filtered := []byte(`{"plan":{"version":"v1","root_entity":"profiles","projections":["profile.full_name"],"filter":{"kind":"predicate","field":"profile.cpf","operator":"contains","values":["73"]},"maximum_rows":10}}`)
+	if !referenceIsSample(ResultReferenceQuery, plain) || referenceIsSample(ResultReferenceQuery, filtered) || referenceIsSample(ResultReferenceSearch, plain) {
+		t.Fatal("referenceIsSample must flag only unfiltered plain queries")
+	}
+	if (MessageReference{RowCount: 0}).OnGrid() || (MessageReference{RowCount: 10, Sample: true}).OnGrid() || !(MessageReference{RowCount: 27}).OnGrid() {
+		t.Fatal("OnGrid must keep only references with rows and a criterion")
+	}
+}

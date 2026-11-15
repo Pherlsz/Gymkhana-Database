@@ -153,7 +153,7 @@ func (store *PostgresStore) DeleteThread(ctx context.Context, id Identifier, own
 
 func (store *PostgresStore) ListMessages(ctx context.Context, threadID Identifier, owner auth.Identifier, limit, offset int) (MessagePage, error) {
 	rows, err := store.pool.Query(ctx, `SELECT message.id,message.thread_id,message.run_id,message.sequence,message.role,message.content,message.created_at,
-COALESCE((SELECT jsonb_agg(reference.id ORDER BY reference.created_at,reference.id)
+COALESCE((SELECT jsonb_agg(jsonb_build_object('id',reference.id,'kind',reference.reference_kind,'label',reference.label,'row_count',reference.row_count,'logical',reference.logical_request) ORDER BY reference.created_at,reference.id)
   FROM ai_chat_result_references reference
   WHERE reference.run_id=message.run_id AND message.role='ASSISTANT'),'[]'::jsonb),
 count(*) OVER () AS total_count
@@ -887,17 +887,26 @@ func scanMessageWithTotal(row rowScanner, total *int) (Message, error) {
 		return Message{}, err
 	}
 	value.ID, value.ThreadID, value.RunID = chatIdentifier(id), chatIdentifier(thread), chatIdentifier(run)
-	var references []string
+	var references []struct {
+		ID       string              `json:"id"`
+		Kind     ResultReferenceKind `json:"kind"`
+		Label    string              `json:"label"`
+		RowCount int                 `json:"row_count"`
+		Logical  json.RawMessage     `json:"logical"`
+	}
 	if err := json.Unmarshal(encodedReferences, &references); err != nil || len(references) > MaximumToolCalls {
 		return Message{}, ErrInvalidState
 	}
 	value.ResultReferenceIDs = make([]Identifier, 0, len(references))
+	value.ResultReferences = make([]MessageReference, 0, len(references))
 	for _, raw := range references {
-		reference, err := ParseIdentifier(raw)
+		reference, err := ParseIdentifier(raw.ID)
 		if err != nil {
 			return Message{}, ErrInvalidState
 		}
 		value.ResultReferenceIDs = append(value.ResultReferenceIDs, reference)
+		value.ResultReferences = append(value.ResultReferences, MessageReference{ID: reference, Kind: raw.Kind, Label: raw.Label, RowCount: raw.RowCount,
+			Sample: referenceIsSample(raw.Kind, raw.Logical)})
 	}
 	return value, nil
 }

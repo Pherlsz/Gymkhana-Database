@@ -146,7 +146,25 @@ type Message struct {
 	Role               MessageRole
 	Content            string
 	ResultReferenceIDs []Identifier
+	ResultReferences   []MessageReference
 	CreatedAt          time.Time
+}
+
+// MessageReference is what the client needs to offer a result on the grid
+// without reopening it.
+type MessageReference struct {
+	ID       Identifier
+	Kind     ResultReferenceKind
+	Label    string
+	RowCount int
+	// Sample marks a query with no criterion: a slice of a whole table that
+	// answers nothing on its own.
+	Sample bool
+}
+
+// OnGrid reports whether the reference is worth opening on the grid.
+func (reference MessageReference) OnGrid() bool {
+	return reference.RowCount > 0 && !reference.Sample
 }
 
 type MessagePage struct {

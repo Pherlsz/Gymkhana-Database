@@ -525,6 +525,17 @@ func (gateway *ToolGateway) queryData(ctx context.Context, actor auth.Session, a
 	return output, nil
 }
 
+func referenceIsSample(kind ResultReferenceKind, logical []byte) bool {
+	if kind != ResultReferenceQuery {
+		return false
+	}
+	var stored storedQueryRequest
+	if err := json.Unmarshal(logical, &stored); err != nil {
+		return false
+	}
+	return plainListPlan(stored.Plan)
+}
+
 // plainListPlan is a query with no criterion at all: a sample of a whole
 // table. It answers nothing on its own, so it never becomes the grid result.
 func plainListPlan(plan querydomain.QueryPlan) bool {
