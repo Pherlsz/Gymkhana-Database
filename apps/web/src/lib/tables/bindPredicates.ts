@@ -36,6 +36,41 @@ export function fieldFilterActive(field: ToolbarFilterField): boolean {
   return predicateActive(fieldPredicate(field));
 }
 
+/**
+ * List endpoints only understand contains, `^` (starts with) and `=` (equals)
+ * on text params, and an exact value on select params. Anything else is
+ * evaluated in the browser on the loaded page.
+ */
+export function serverAppliesPredicate(
+  field: ToolbarFilterField,
+  predicate: ColumnPredicate = fieldPredicate(field),
+): boolean {
+  if (field.local) return false;
+  if (!predicateActive(predicate)) return true;
+  if (field.kind === "select") return predicate.op === "eq";
+  if (field.kind === "text") {
+    return predicate.op === "contains" || predicate.op === "starts_with" || predicate.op === "eq";
+  }
+  return false;
+}
+
+export function filterAppliesLocally(field: ToolbarFilterField): boolean {
+  return !serverAppliesPredicate(field);
+}
+
+/** Cells show option labels (Sim, Disponível, type names), not the stored values. */
+export function clientPredicate(field: ToolbarFilterField): ColumnPredicate {
+  const predicate = fieldPredicate(field);
+  if (field.kind !== "select") return predicate;
+  const options = [...field.options, ...(field.groups ?? []).flatMap((group) => group.options)];
+  return {
+    ...predicate,
+    values: predicate.values.map(
+      (value) => options.find((option) => option.value === value)?.label ?? value,
+    ),
+  };
+}
+
 export function bindPredicates(
   fields: ToolbarFilterField[],
   extra: Record<string, ColumnPredicate>,
@@ -61,52 +96,13 @@ export function bindPredicates(
           field.onChange("");
         } else {
           setExtra((current) => ({ ...current, [field.key]: next }));
-          field.onChange(encodePredicateValue(next, field.kind));
+          field.onChange(
+            serverAppliesPredicate(field, next) || field.local
+              ? encodePredicateValue(next, field.kind)
+              : "",
+          );
         }
       },
     };
-  });
-}
-
-/**
- * Like bindPredicates but caches `onPredicate` handlers by field key so that
- * callers using this inside a useMemo don't produce new object references
- * for every field on every render when only `extra` or `value` changed.
- */
-export function bindPredicatesStable(
-  fields: ToolbarFilterField[],
-  extra: Record<string, ColumnPredicate>,
-  setExtra: (
-    updater: (current: Record<string, ColumnPredicate>) => Record<string, ColumnPredicate>,
-  ) => void,
-  handlerCache: Map<string, (next: ColumnPredicate) => void>,
-): ToolbarFilterField[] {
-  return fields.map((field) => {
-    const kind = resolveFunnelKind(field);
-    const predicate = extra[field.key] ?? decodeFieldValue(field.value, defaultOp(kind));
-
-    // Reuse the same handler reference if it already exists for this key.
-    // This prevents sheetColumns (which reads sheetFilters) from recalculating
-    // just because bindPredicates ran again.
-    let onPredicate = handlerCache.get(field.key);
-    if (!onPredicate) {
-      onPredicate = (next: ColumnPredicate) => {
-        const isActive = predicateActive(next);
-        if (!isActive) {
-          setExtra((current) => {
-            const copy = { ...current };
-            delete copy[field.key];
-            return copy;
-          });
-          field.onChange("");
-        } else {
-          setExtra((current) => ({ ...current, [field.key]: next }));
-          field.onChange(encodePredicateValue(next, field.kind));
-        }
-      };
-      handlerCache.set(field.key, onPredicate);
-    }
-
-    return { ...field, funnelKind: kind, predicate, onPredicate };
   });
 }

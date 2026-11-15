@@ -8,6 +8,7 @@ import (
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
 	querydomain "github.com/Pherlsz/Gymkhana-Database/internal/queryengine"
+	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
 )
 
 // ResultGrid is one page of an assistant result, ready for the open sheet.
@@ -44,6 +45,9 @@ func (gateway *ToolGateway) ReadPage(ctx context.Context, actor auth.Session, re
 	if err != nil {
 		return ResultGrid{}, normalizeToolError(err)
 	}
+	if reference.Kind == ResultReferenceSearch {
+		return gateway.readSearchGrid(ctx, actor, reference, limit, offset)
+	}
 	if reference.Kind != ResultReferenceQuery {
 		return ResultGrid{}, ErrInvalidInput
 	}
@@ -55,6 +59,82 @@ func (gateway *ToolGateway) ReadPage(ctx context.Context, actor auth.Session, re
 		return gateway.readSQLGrid(ctx, actor, reference, stored.Plan, limit, offset, requestID)
 	}
 	return gateway.readShapeGrid(ctx, actor, stored.Plan, limit, offset, requestID)
+}
+
+const (
+	searchGridNameKey    = "nome"
+	searchGridFieldKey   = "onde"
+	searchGridPreviewKey = "trecho"
+)
+
+// readSearchGrid reruns a stored assistant search and lays its hits out as
+// grid rows. Each row points at the record the hit belongs to, so opening it
+// lands on the person, document, or bill.
+func (gateway *ToolGateway) readSearchGrid(ctx context.Context, actor auth.Session, reference ResultReference, limit, offset int) (ResultGrid, error) {
+	var stored storedSearchRequest
+	if err := json.Unmarshal(reference.LogicalRequest, &stored); err != nil {
+		return ResultGrid{}, ErrStaleContext
+	}
+	if gateway.search == nil {
+		return ResultGrid{}, ErrUnavailable
+	}
+	grid := ResultGrid{
+		Columns: []querydomain.ShapeColumn{
+			{Key: searchGridNameKey, Label: "Nome"},
+			{Key: searchGridFieldKey, Label: "Onde"},
+			{Key: searchGridPreviewKey, Label: "Trecho"},
+		},
+		Rows:   []querydomain.ShapeGridRow{},
+		Limit:  limit,
+		Offset: offset,
+	}
+	seen := map[string]int{}
+	next := offset
+	for len(grid.Rows) < limit && next <= searchdomain.MaxOffset {
+		size := limit - len(grid.Rows)
+		if size > searchdomain.MaxPageSize {
+			size = searchdomain.MaxPageSize
+		}
+		page, err := gateway.search.Search(ctx, actor, searchdomain.Query{Q: stored.Q, Terms: stored.Terms, Modules: stored.Modules, Fields: stored.Fields,
+			Limit: int32(size), Offset: int32(next), Sort: stored.Sort, Order: stored.Order})
+		if err != nil {
+			return ResultGrid{}, normalizeToolError(err)
+		}
+		grid.Total = int(page.Total)
+		for _, value := range page.Results {
+			grid.Rows = append(grid.Rows, searchGridRow(value, seen))
+		}
+		next += len(page.Results)
+		if len(page.Results) < size || int64(next) >= page.Total {
+			break
+		}
+	}
+	return grid, nil
+}
+
+func searchGridRow(value searchdomain.Result, seen map[string]int) querydomain.ShapeGridRow {
+	kind, id := value.TargetKind, value.TargetID
+	if kind != "document" && kind != "bill" {
+		kind, id = "profile", value.ProfileID
+		if id == "" {
+			id = value.TargetID
+		}
+	}
+	rowID := kind + ":" + id + ":" + value.FieldKey
+	if count := seen[rowID]; count > 0 {
+		seen[rowID] = count + 1
+		rowID += ":" + strconv.Itoa(count+1)
+	} else {
+		seen[rowID] = 1
+	}
+	return querydomain.ShapeGridRow{
+		ID: rowID, EntityKind: kind, EntityID: id, Label: value.EntityLabel,
+		Cells: map[string]string{
+			searchGridNameKey:    value.EntityLabel,
+			searchGridFieldKey:   value.FieldLabel,
+			searchGridPreviewKey: value.Preview,
+		},
+	}
 }
 
 func (gateway *ToolGateway) queryShape(ctx context.Context, actor auth.Session, plan querydomain.QueryPlan, expiresAt time.Time, requestID string) (ToolOutput, error) {

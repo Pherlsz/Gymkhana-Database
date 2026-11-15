@@ -217,7 +217,7 @@ export interface paths {
     };
     /**
      * Reauthorize and page one assistant result into the open grid
-     * @description Recomputes the stored plan with the caller's permission. The page size follows the open sheet, up to 500 rows. Rows may mix people, documents, and bills.
+     * @description Recomputes the stored plan or search with the caller's permission. The page size follows the open sheet, up to 500 rows. Rows may mix people, documents, and bills. A search reference returns one row per hit with the columns nome, onde, and trecho.
      */
     get: operations["getChatResultPage"];
     put?: never;

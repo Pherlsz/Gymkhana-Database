@@ -1,7 +1,7 @@
 import { Input } from "antd";
 import type { InputRef } from "antd/es/input";
 import { Search } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
+import { useEffect, useId, useMemo, useState, type KeyboardEvent, type Ref } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ICON, ICON_STROKE } from "./icons";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -142,7 +142,6 @@ function RemoteSearchField({
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const committed = useRef(value);
 
   const token = currentToken(value);
   const slashOpen = !lookup && token.startsWith("/");
@@ -207,9 +206,9 @@ function RemoteSearchField({
     setActive(0);
   }, [items.length, token]);
 
+  // Callers compare against the applied query (URL); a local "last committed"
+  // copy goes stale when the query is cleared from outside the field.
   const commit = (next = value) => {
-    if (next === committed.current) return;
-    committed.current = next;
     onSubmit?.(next);
   };
 

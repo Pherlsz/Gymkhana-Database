@@ -38,6 +38,15 @@
   z-index: 2;
 }
 
+.tables-page__workspace > .tables-page__state {
+  grid-area: 1 / 1;
+  align-self: stretch;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--gym-color-border);
+  border-radius: var(--gym-radius-lg, 12px);
+}
+
 /* Keep in sync with SHEET_INSPECTOR_MAX_WIDTH_PX (drawer below this width). */
 @media (min-width: 840px) {
   .tables-page__workspace:has(> .profile-panel),
@@ -67,6 +76,7 @@
 .tables-page > .page-header,
 .tables-toolbar,
 .tables-page > .assistant-banner,
+.tables-page > .state-card,
 .tables-page > .ant-alert,
 .tables-page > .ant-typography {
   flex: none;
@@ -1067,19 +1077,18 @@
   transform: none !important;
 }
 
-.spreadsheet-table-card--empty .ant-card-body {
-  grid-template-rows: minmax(0, 1fr);
-}
-
 .spreadsheet-table__empty {
   display: grid;
   place-items: center;
-  min-height: 0;
-  height: 100%;
+  min-height: 10rem;
   width: 100%;
   padding: 1.5rem 0.75rem;
-  background: var(--md-surface);
   color: var(--md-on-surface);
+}
+
+.spreadsheet-table-card.is-empty .ant-table-placeholder > .ant-table-cell {
+  border-bottom: 0;
+  background: var(--md-surface);
 }
 
 .spreadsheet-table__empty .ant-empty-description {

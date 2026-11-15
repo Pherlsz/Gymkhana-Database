@@ -692,41 +692,17 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onRowClick, rows, selectedRowId]);
 
-  if (showEmpty) {
-    return (
-      <Card
-        className="spreadsheet-table-card spreadsheet-table-card--empty"
-        size="small"
-        styles={{
-          body: {
-            display: "grid",
-            height: "100%",
-            minHeight: 0,
-            minWidth: 0,
-            padding: 0,
-          },
-          root: {
-            display: "grid",
-            gridTemplateRows: "minmax(0, 1fr)",
-            height: "100%",
-            width: "100%",
-            minHeight: 0,
-            minWidth: 0,
-            overflow: "hidden",
-          },
-        }}
-      >
-        <div className="spreadsheet-table__empty" role="status">
-          <span className="visually-hidden">{caption}</span>
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyLabel} />
-        </div>
-      </Card>
-    );
-  }
+  // Headers stay on an empty sheet: their funnels are how the reader undoes
+  // the filter that emptied it.
+  const emptyText = (
+    <div className="spreadsheet-table__empty" role="status">
+      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyLabel} />
+    </div>
+  );
 
   return (
     <Card
-      className="spreadsheet-table-card"
+      className={showEmpty ? "spreadsheet-table-card is-empty" : "spreadsheet-table-card"}
       size="small"
       styles={{
         body: {
@@ -757,7 +733,7 @@ export function SpreadsheetTable<T extends SpreadsheetRow>({
           columns={antdColumns}
           dataSource={loading && rows.length === 0 ? undefined : rows}
           loading={tableLoading}
-          locale={{ emptyText: emptyLabel }}
+          locale={{ emptyText }}
           pagination={false}
           ref={tableRef}
           rowClassName={(row) => (row.id === selectedRowId ? "spreadsheet-table__row--active" : "")}

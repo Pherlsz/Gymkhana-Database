@@ -21,7 +21,12 @@ import "./tables.css";
 import { SpreadsheetTable } from "./lib/tables/SpreadsheetTable";
 import { TablesToolbar } from "./lib/tables/TablesToolbar";
 import { cellKeyForFilter, textFilter } from "./lib/tables/tableFilters";
-import { bindPredicates, fieldFilterActive, fieldPredicate } from "./lib/tables/bindPredicates";
+import {
+  bindPredicates,
+  clientPredicate,
+  fieldFilterActive,
+  serverAppliesPredicate,
+} from "./lib/tables/bindPredicates";
 import { cellMatches, formulaColumnKey } from "./lib/tables/columnPredicate";
 import type { ColumnPredicate } from "./lib/tables/columnPredicate";
 import { matchFormula } from "./lib/tables/formulas/catalog";
@@ -29,7 +34,7 @@ import { evalFormula } from "./lib/tables/formulas/eval";
 import { useSheetFormulas } from "./lib/tables/useSheetFormulas";
 import { useSheetColumnWidths } from "./lib/tables/useSheetColumnWidths";
 import { useSheetColumnVisibility } from "./lib/tables/useSheetColumnVisibility";
-import { resultColumnWidth } from "./lib/tables/resultColumnWidth";
+import { useAssistantResultSheet } from "./lib/tables/useAssistantResultSheet";
 import {
   columnGroup,
   columnLabel,
@@ -63,18 +68,12 @@ import {
   AssistantSessionFloat,
   type AssistantWindowSize,
 } from "./lib/assistant/AssistantSessionFloat";
-import { getChatCapability, getChatResultPage } from "./lib/assistant/assistantApi";
+import { getChatCapability } from "./lib/assistant/assistantApi";
 import {
   ASSISTANT_CAPABILITY_KEY,
   ASSISTANT_CAPABILITY_STALE_MS,
 } from "./lib/assistant/useAssistantChat";
-import { downloadChatResultXlsx } from "./lib/assistant/recorteExport";
-import {
-  RECORTE_GRID_LIMIT,
-  filterRecorteRows,
-  pageRecorteRows,
-  sortRecorteRows,
-} from "./lib/assistant/recorteSheet";
+import { pageRecorteRows } from "./lib/assistant/recorteSheet";
 import { clearRecortePatch, recorteFilterParts } from "./lib/assistant/tableRecorte";
 
 const tablesRoute = getRouteApi("/tables/$table");
@@ -98,12 +97,6 @@ export function TablesPage() {
   const { formulas, setFormula } = useSheetFormulas(scope);
   const widthScope = search.result ? `${scope}:recorte` : scope;
   const { widths: columnWidths, setWidth: setColumnWidth } = useSheetColumnWidths(widthScope);
-  const [recorteQuery, setRecorteQuery] = useState("");
-  const [recorteFilters, setRecorteFilters] = useState<Record<string, string>>({});
-  const [recorteSort, setRecorteSort] = useState<{ field: string; order: "asc" | "desc" }>({
-    field: "",
-    order: "asc",
-  });
   const [notice, setNotice] = useState<string | null>(null);
   const [assistantSize, setAssistantSize] = useState<AssistantWindowSize>("min");
   const [resultRowId, setResultRowId] = useState<string | undefined>();
@@ -144,12 +137,15 @@ export function TablesPage() {
     setPrevSearchQ(search.q);
     setSearchInput(search.q);
   }
-  const [prevResult, setPrevResult] = useState(search.result);
-  if (search.result !== prevResult) {
-    setPrevResult(search.result);
-    setRecorteQuery("");
-    setRecorteFilters({});
-    setRecorteSort({ field: "", order: "asc" });
+  // Funnel and page-only filters belong to one grid. Keys repeat across tables
+  // and assistant results (owner, notes, full_name…), so a leftover predicate
+  // would silently narrow the next grid, often to nothing.
+  const filterScope = `${section}|${search.result}`;
+  const [prevFilterScope, setPrevFilterScope] = useState(filterScope);
+  if (filterScope !== prevFilterScope) {
+    setPrevFilterScope(filterScope);
+    setLocalFilters({});
+    setExtraPredicates({});
   }
 
   const setLocal = useCallback(
@@ -213,12 +209,16 @@ export function TablesPage() {
     updateSearch,
   });
 
-  const resultQuery = useQuery({
-    queryKey: ["chat-result-grid", search.result],
-    queryFn: ({ signal }) => getChatResultPage(search.result, RECORTE_GRID_LIMIT, 0, signal),
-    enabled: Boolean(search.result),
-    staleTime: 30_000,
+  const resetSectionPage = useCallback(
+    () => updateSearch(resetPage(section)),
+    [section, updateSearch],
+  );
+  const result = useAssistantResultSheet({
+    resultId: search.result,
+    scope,
+    onFilterChange: resetSectionPage,
   });
+  const { setQuery: setResultQuery, setSort: setResultSort, reset: resetResult } = result;
   // Warm Assistente capability so opening the float does not wait on the first fetch.
   const assistantCapability = useQuery({
     queryKey: ASSISTANT_CAPABILITY_KEY,
@@ -226,38 +226,8 @@ export function TablesPage() {
     staleTime: ASSISTANT_CAPABILITY_STALE_MS,
     retry: 1,
   });
-  const exportRecorte = useMutation({
-    mutationFn: () => downloadChatResultXlsx(search.result),
-  });
-  const resultRows = useMemo<TableRow[]>(() => {
-    return (resultQuery.data?.rows ?? []).map((row) => ({
-      id: row.id,
-      cells: {
-        ...row.cells,
-        entityKind: row.entity_kind,
-        entityId: row.entity_id,
-        entityLabel: row.entity_label,
-      },
-    }));
-  }, [resultQuery.data]);
-  const resultColumns = useMemo(
-    () =>
-      (resultQuery.data?.columns ?? []).map((column) =>
-        withColumnLayout(
-          {
-            key: column.key,
-            title: column.label,
-            label: column.label,
-            sortField: column.key,
-            width: resultColumnWidth(column.key, column.label),
-            defaultVisible: true,
-            locked: true,
-          },
-          scope,
-        ),
-      ),
-    [resultQuery.data, scope],
-  );
+  const resultRows = result.rows;
+  const resultColumns = result.columns;
 
   const onTablePage = useCallback(
     (nextPage: number, nextSize: number) => {
@@ -269,7 +239,7 @@ export function TablesPage() {
   const onTableSort = useCallback(
     (field: string, order: "asc" | "desc") => {
       if (search.result) {
-        setRecorteSort({ field, order });
+        setResultSort({ field, order });
         return;
       }
       if (section === "documents") {
@@ -288,7 +258,7 @@ export function TablesPage() {
       }
       updateSearch({ sort: field as ProfileListSearch["sort"], order });
     },
-    [search.result, section, updateSearch],
+    [search.result, section, setResultSort, updateSearch],
   );
 
   const closeInspector = useCallback(() => {
@@ -382,25 +352,7 @@ export function TablesPage() {
   );
   const canDelete = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN";
 
-  const patchRecorteFilter = useCallback(
-    (key: string, value: string) => {
-      setRecorteFilters((current) => ({ ...current, [key]: value }));
-      updateSearch(resetPage(section));
-    },
-    [section, updateSearch],
-  );
-  const recorteToolbarFilters = useMemo(
-    () =>
-      resultColumns.map((column) =>
-        textFilter(
-          column.key,
-          column.label ?? String(column.title ?? column.key),
-          recorteFilters[column.key] ?? "",
-          (value) => patchRecorteFilter(column.key, value),
-        ),
-      ),
-    [patchRecorteFilter, recorteFilters, resultColumns],
-  );
+  const recorteToolbarFilters = result.toolbarFilters;
   const formulaFields = useMemo(
     () =>
       Object.entries(formulas).map(([sourceKey, expression]) =>
@@ -469,12 +421,8 @@ export function TablesPage() {
     [resultColumns, search.result, visibleColumns],
   );
 
-  const recorteWorkingRows = useMemo(() => {
-    const filtered = filterRecorteRows(resultRows, recorteFilters, recorteQuery);
-    return sortRecorteRows(filtered, recorteSort.field, recorteSort.order);
-  }, [recorteFilters, recorteQuery, recorteSort.field, recorteSort.order, resultRows]);
   const matchedRows = useMemo(() => {
-    const source = search.result ? recorteWorkingRows : baseRows;
+    const source = search.result ? result.workingRows : baseRows;
     const withFx =
       Object.keys(formulas).length === 0
         ? source
@@ -489,21 +437,31 @@ export function TablesPage() {
             }
             return { ...row, cells };
           });
+    const browserFilters = sheetFilters
+      .filter(
+        (field) => fieldFilterActive(field) && (search.result || !serverAppliesPredicate(field)),
+      )
+      .map((field) => ({ key: cellKeyForFilter(field), predicate: clientPredicate(field) }));
+    if (browserFilters.length === 0) return withFx;
     return withFx.filter((row) =>
-      sheetFilters.every((field) => {
-        if (!fieldFilterActive(field)) return true;
-        if (search.result || field.local) {
-          return cellMatches(row.cells[cellKeyForFilter(field)], fieldPredicate(field));
-        }
-        return true;
-      }),
+      browserFilters.every(({ key, predicate }) => cellMatches(row.cells[key], predicate)),
     );
-  }, [baseRows, formulaColumns, formulas, recorteWorkingRows, search.result, sheetFilters]);
+  }, [baseRows, formulaColumns, formulas, result.workingRows, search.result, sheetFilters]);
   const rows = useMemo(() => {
     if (search.result) return pageRecorteRows(matchedRows, page, pageSize);
     return matchedRows;
   }, [matchedRows, page, pageSize, search.result]);
   const activeChips = [
+    ...(!search.result && search.q.trim()
+      ? [
+          {
+            key: "q",
+            field: copy.filters.searchChip,
+            value: search.q.trim(),
+            onClear: () => updateSearch({ q: "", ...resetPage(section) }),
+          },
+        ]
+      : []),
     ...(!search.result && search.records_owner
       ? [
           {
@@ -515,7 +473,10 @@ export function TablesPage() {
           },
         ]
       : []),
-    ...activeFilterChips(sheetFilters),
+    ...activeFilterChips(sheetFilters, {
+      markLocal: !search.result,
+      opLabels: copy.filters.ops,
+    }),
   ];
 
   const refreshPeople = async () => {
@@ -556,12 +517,12 @@ export function TablesPage() {
     return {
       kind: kind as "document" | "bill",
       row,
-      columns: (resultQuery.data?.columns ?? []).map((column) => ({
+      columns: (result.data?.columns ?? []).map((column) => ({
         key: column.key,
         label: column.label,
       })),
     };
-  }, [resultQuery.data, resultRowId, resultRows, search.result]);
+  }, [result.data, resultRowId, resultRows, search.result]);
   const closeRecord = useCallback(() => {
     setResultRowId(undefined);
     updateSearch({
@@ -679,6 +640,41 @@ export function TablesPage() {
     [copy.filters, formulaColumns],
   );
 
+  const exportRecorte = result.exportResult;
+  const leaveResult = () => {
+    setResultRowId(undefined);
+    updateSearch({ result: "" });
+  };
+  const sheetError = search.result
+    ? result.errorKind
+      ? {
+          title: copy.assistant.resultError,
+          description:
+            result.errorKind === "expired"
+              ? copy.assistant.resultExpired
+              : result.errorKind === "missing"
+                ? copy.assistant.resultMissing
+                : copy.assistant.errors.tool_failed,
+          retry: result.errorKind === "failed" ? () => void result.refetch() : undefined,
+        }
+      : undefined
+    : errorDescription
+      ? {
+          title: copy.error,
+          description: errorDescription,
+          retry: () => void queryClient.invalidateQueries({ queryKey: queryKeys.tables.all }),
+        }
+      : undefined;
+  const narrowed = search.result
+    ? Boolean(result.query.trim()) || activeChips.length > 0
+    : activeChips.length > 0;
+  const emptyLabel =
+    search.result && result.rows.length === 0
+      ? copy.assistant.resultEmpty
+      : narrowed
+        ? copy.filters.noMatches
+        : sectionCopy.empty;
+
   return (
     <PageShell
       className={assistantSize === "min" ? "tables-page" : "tables-page is-assistant-open"}
@@ -686,20 +682,11 @@ export function TablesPage() {
       title={sectionCopy.title}
     >
       {notice ? <StatusBanner title={notice} tone="success" /> : null}
-      {search.result && resultQuery.isError ? (
-        <StateCard
-          description={copy.assistant.errors.tool_failed}
-          kind="error"
-          title={copy.error}
-        />
-      ) : errorDescription && !search.result ? (
-        <StateCard description={errorDescription} kind="error" title={copy.error} />
-      ) : null}
 
       <TablesToolbar
         searchLabel={copy.filters.search}
         searchPlaceholder={search.result ? copy.filters.searchRecorte : copy.filters.searchAll}
-        searchValue={search.result ? recorteQuery : searchInput}
+        searchValue={search.result ? result.query : searchInput}
         searchGrain={
           section === "documents" ? "documents" : section === "bills" ? "bills" : "profiles"
         }
@@ -707,20 +694,22 @@ export function TablesPage() {
         onSearchChange={
           search.result
             ? (value) => {
-                setRecorteQuery(value);
-                updateSearch(resetPage(section));
+                setResultQuery(value);
+                resetSectionPage();
               }
             : setSearchInput
         }
         onSearchSubmit={
           search.result
             ? (value) => {
-                setRecorteQuery(value);
-                updateSearch(resetPage(section));
+                if (value === result.query) return;
+                setResultQuery(value);
+                resetSectionPage();
               }
             : (value) => {
-                if (value === search.q) return;
-                updateSearch({ q: value, ...resetPage(section) });
+                const next = value.trim();
+                if (next === search.q.trim()) return;
+                updateSearch({ q: next, ...resetPage(section) });
               }
         }
         appliedFiltersLabel={copy.filters.appliedFilters}
@@ -730,11 +719,9 @@ export function TablesPage() {
         clearLabel={copy.filters.clear}
         onClearAll={() => {
           if (search.result) {
-            setRecorteQuery("");
-            setRecorteFilters({});
+            resetResult();
             setExtraPredicates({});
-            setRecorteSort({ field: "", order: "asc" });
-            updateSearch(resetPage(section));
+            resetSectionPage();
             return;
           }
           setLocalFilters({});
@@ -786,12 +773,12 @@ export function TablesPage() {
           />
           <span className="assistant-banner__text">
             {copy.assistant.showingResult}
-            {resultQuery.data?.summary ? ` ${resultQuery.data.summary}` : ""}
+            {result.data?.summary ? ` ${result.data.summary}` : ""}
           </span>
           <div className="assistant-banner__actions">
             <button
               className="assistant-banner__export"
-              disabled={exportRecorte.isPending}
+              disabled={exportRecorte.isPending || !result.data || result.rows.length === 0}
               type="button"
               onClick={() => exportRecorte.mutate()}
             >
@@ -799,14 +786,7 @@ export function TablesPage() {
                 ? copy.assistant.exportingRecorte
                 : copy.assistant.exportRecorte}
             </button>
-            <button
-              className="assistant-banner__clear"
-              type="button"
-              onClick={() => {
-                setResultRowId(undefined);
-                updateSearch({ result: "" });
-              }}
-            >
+            <button className="assistant-banner__clear" type="button" onClick={leaveResult}>
               {copy.assistant.clearResult}
             </button>
             {exportRecorte.isError ? (
@@ -839,44 +819,58 @@ export function TablesPage() {
       ) : null}
 
       <div className="tables-page__workspace">
-        <MemoSpreadsheetTable
-          caption={sectionCopy.caption}
-          columns={sheetColumns}
-          emptyLabel={sectionCopy.empty}
-          loading={search.result ? resultQuery.isFetching : loading || sheetPlaceholder}
-          loadingLabel={sectionCopy.loading}
-          page={page}
-          pageSize={pageSize}
-          rangeLabel={paginationRange(
-            page,
-            pageSize,
-            search.result ? matchedRows.length : total,
-            copy.pagination.range,
-          )}
-          pageSizeAriaLabel={copy.pagination.pageSizeAria}
-          pageSizeOptionLabel={copy.pagination.pageSize}
-          rows={rows}
-          selectedRowId={
-            search.result
-              ? resultRowId
-              : section === "documents"
-                ? search.document_selected
-                : section === "bills"
-                  ? search.bill_selected
-                  : search.selected
-          }
-          sortField={search.result ? recorteSort.field : search.q.trim() ? "" : sortField}
-          sortOrder={search.result ? recorteSort.order : search.q.trim() ? "asc" : sortOrder}
-          total={search.result ? matchedRows.length : total}
-          onPage={onTablePage}
-          onRowClick={onTableRowClick}
-          onSort={onTableSort}
-          rowActions={search.result ? undefined : rowActions}
-          getRowLabel={getRowLabel}
-          funnel={funnel}
-          columnWidths={columnWidths}
-          onColumnWidth={setColumnWidth}
-        />
+        {sheetError ? (
+          <StateCard
+            className="tables-page__state"
+            compact
+            description={sheetError.description}
+            kind="error"
+            title={sheetError.title}
+            onRetry={sheetError.retry}
+            {...(search.result
+              ? { onBack: leaveResult, backLabel: copy.assistant.clearResult }
+              : {})}
+          />
+        ) : (
+          <MemoSpreadsheetTable
+            caption={sectionCopy.caption}
+            columns={sheetColumns}
+            emptyLabel={emptyLabel}
+            loading={search.result ? result.fetching : loading || sheetPlaceholder}
+            loadingLabel={sectionCopy.loading}
+            page={page}
+            pageSize={pageSize}
+            rangeLabel={paginationRange(
+              page,
+              pageSize,
+              search.result ? matchedRows.length : total,
+              copy.pagination.range,
+            )}
+            pageSizeAriaLabel={copy.pagination.pageSizeAria}
+            pageSizeOptionLabel={copy.pagination.pageSize}
+            rows={rows}
+            selectedRowId={
+              search.result
+                ? resultRowId
+                : section === "documents"
+                  ? search.document_selected
+                  : section === "bills"
+                    ? search.bill_selected
+                    : search.selected
+            }
+            sortField={search.result ? result.sort.field : search.q.trim() ? "" : sortField}
+            sortOrder={search.result ? result.sort.order : search.q.trim() ? "asc" : sortOrder}
+            total={search.result ? matchedRows.length : total}
+            onPage={onTablePage}
+            onRowClick={onTableRowClick}
+            onSort={onTableSort}
+            rowActions={search.result ? undefined : rowActions}
+            getRowLabel={getRowLabel}
+            funnel={funnel}
+            columnWidths={columnWidths}
+            onColumnWidth={setColumnWidth}
+          />
+        )}
 
         <TableInspectorDrawer
           canDelete={canDelete}
