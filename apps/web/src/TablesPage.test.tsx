@@ -1322,6 +1322,61 @@ describe("TablesPage", () => {
     expect(screen.getByText("Zélia Costa")).toBeInTheDocument();
   });
 
+  it("applies a funnel typed on an empty grid even though its header is rendered twice", async () => {
+    window.history.replaceState(null, "", "/tables/people");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/v1/profiles?")) {
+          return Promise.resolve(
+            jsonResponse({
+              profiles: [],
+              page: { total: 0, limit: 100, offset: 0, sort_field: "full_name", sort_order: "asc" },
+            }),
+          );
+        }
+        return Promise.resolve(apiResponse(url));
+      }),
+    );
+    render(<App />);
+    await screen.findAllByRole("button", { name: "Filtrar Nome" });
+    fireEvent.click(screen.getAllByRole("button", { name: "Filtrar Nome" })[0]!);
+    const value = await screen.findByRole("textbox", { name: "Valor" });
+    fireEvent.change(value, { target: { value: "abc" } });
+    fireEvent.keyDown(value, { key: "Enter" });
+    await waitFor(() => expect(window.location.search).toContain("full_name=abc"));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(window.location.search).toContain("full_name=abc");
+  });
+
+  it("applies a not-equal funnel on the loaded page and marks it as page-only", async () => {
+    window.history.replaceState(null, "", "/tables/people");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Filtrar Nome" }));
+    const operator = await screen.findByRole("combobox", { name: "Operador" });
+    fireEvent.mouseDown(operator);
+    fireEvent.click(await screen.findByText("≠", { selector: ".ant-select-item-option-content" }));
+    const value = await screen.findByRole("textbox", { name: "Valor" });
+    fireEvent.change(value, { target: { value: "Ana da Silva" } });
+    fireEvent.keyDown(value, { key: "Enter" });
+
+    await waitFor(() => expect(screen.queryByText("Ana da Silva")).not.toBeInTheDocument());
+    expect(window.location.search).not.toContain("name=");
+    const chip = document.querySelector(".tables-toolbar__chip");
+    expect(chip).toHaveTextContent("≠");
+  });
+
   it("does not carry an assistant result funnel back to the grid", async () => {
     window.history.replaceState(
       null,

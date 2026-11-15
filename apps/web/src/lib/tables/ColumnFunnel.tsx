@@ -94,6 +94,11 @@ export const ColumnFunnel = memo(function ColumnFunnel({
   const surfaceId = useId();
   const draftRef = useRef(current);
   const fxRef = useRef(formula?.expression ?? "");
+  // An empty Ant table renders its header twice, so two funnels for one column
+  // can be open at once. Closing commits only what this copy edited; the idle
+  // copy would otherwise write back the stale value and undo the filter.
+  const openedKeyRef = useRef(predicateKey(current));
+  const openedFxRef = useRef(formula?.expression ?? "");
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -132,6 +137,7 @@ export const ColumnFunnel = memo(function ColumnFunnel({
 
   const commitPredicate = useCallback(
     (next: ColumnPredicate) => {
+      openedKeyRef.current = predicateKey(next);
       if (predicateKey(next) === predicateKey(fieldPredicate(field))) return;
       field.onPredicate?.(next);
     },
@@ -142,6 +148,7 @@ export const ColumnFunnel = memo(function ColumnFunnel({
     (expression: string) => {
       if (!formula) return;
       const next = expression.trim();
+      openedFxRef.current = next;
       if (next === (formula.expression ?? "").trim()) return;
       try {
         if (!next) formula.onRemove();
@@ -169,6 +176,8 @@ export const ColumnFunnel = memo(function ColumnFunnel({
     if (open && !prevOpenForSyncRef.current) {
       const next = fieldPredicate(field);
       draftRef.current = next;
+      openedKeyRef.current = predicateKey(next);
+      openedFxRef.current = (formula?.expression ?? "").trim();
       setDraft(next);
       fxRef.current = formula?.expression ?? "";
       setFx(formula?.expression ?? "");
@@ -177,20 +186,23 @@ export const ColumnFunnel = memo(function ColumnFunnel({
     prevOpenForSyncRef.current = open;
   }, [field, formula?.expression, open]);
 
+  const commitEdits = useCallback(() => {
+    if (predicateKey(draftRef.current) !== openedKeyRef.current) {
+      commitPredicate(draftRef.current);
+    }
+    if (formula && fxRef.current.trim() !== openedFxRef.current) commitFx(fxRef.current);
+  }, [commitFx, commitPredicate, formula]);
+
   const prevOpenRef = useRef(open);
   useEffect(() => {
-    if (prevOpenRef.current && !open) {
-      commitPredicate(draftRef.current);
-      if (formula) commitFx(fxRef.current);
-    }
+    if (prevOpenRef.current && !open) commitEdits();
     prevOpenRef.current = open;
-  }, [commitFx, commitPredicate, formula, open]);
+  }, [commitEdits, open]);
 
   const close = useCallback(() => {
-    commitPredicate(draftRef.current);
-    if (formula) commitFx(fxRef.current);
+    commitEdits();
     setOpen(false);
-  }, [commitFx, commitPredicate, formula, setOpen]);
+  }, [commitEdits, setOpen]);
 
   useEffect(() => {
     if (!open) return;
