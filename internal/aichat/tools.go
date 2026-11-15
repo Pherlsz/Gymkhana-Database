@@ -525,6 +525,24 @@ func (gateway *ToolGateway) queryData(ctx context.Context, actor auth.Session, a
 	return output, nil
 }
 
+func newMessageReference(id Identifier, kind ResultReferenceKind, label string, rowCount int, logical []byte) MessageReference {
+	return MessageReference{ID: id, Kind: kind, Label: label, RowCount: rowCount,
+		MoreRows: referenceHasMoreRows(kind, logical, rowCount), Sample: referenceIsSample(kind, logical)}
+}
+
+// referenceHasMoreRows reports a search that filled its page: the grid lists
+// every hit, so the stored count is only a lower bound.
+func referenceHasMoreRows(kind ResultReferenceKind, logical []byte, rowCount int) bool {
+	if kind != ResultReferenceSearch {
+		return false
+	}
+	var stored storedSearchRequest
+	if err := json.Unmarshal(logical, &stored); err != nil {
+		return false
+	}
+	return stored.Limit > 0 && rowCount >= int(stored.Limit)
+}
+
 func referenceIsSample(kind ResultReferenceKind, logical []byte) bool {
 	if kind != ResultReferenceQuery {
 		return false

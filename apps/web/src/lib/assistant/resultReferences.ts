@@ -21,13 +21,15 @@ const QUERY_PREFIX = "Consulta: ";
 
 export function referenceOptionLabel(
   reference: ChatMessageReference,
-  copy: { entities: Record<string, string>; rowsOne: string; rowsOther: string },
+  copy: { entities: Record<string, string>; rowsOne: string; rowsOther: string; rowsMore: string },
 ): string {
   let label = reference.label;
   if (label.startsWith(QUERY_PREFIX)) {
     const entity = label.slice(QUERY_PREFIX.length);
     label = QUERY_PREFIX + (copy.entities[entity] ?? entity);
   }
-  const rows = plural(reference.row_count, copy.rowsOne, copy.rowsOther);
+  const rows = reference.more_rows
+    ? copy.rowsMore
+    : plural(reference.row_count, copy.rowsOne, copy.rowsOther);
   return `${label} · ${formatMessage(rows, { count: reference.row_count })}`;
 }

@@ -91,6 +91,7 @@ type chatMessageReference struct {
 	Kind     chatdomain.ResultReferenceKind `json:"kind"`
 	Label    string                         `json:"label"`
 	RowCount int                            `json:"row_count"`
+	MoreRows bool                           `json:"more_rows"`
 }
 
 type chatMessagePageResponse struct {
@@ -682,6 +683,7 @@ func chatMessageFromDomain(value chatdomain.Message) chatMessageResponse {
 		}
 		response.ResultReferences = append(response.ResultReferences, chatMessageReference{
 			ID: reference.ID.String(), Kind: reference.Kind, Label: reference.Label, RowCount: reference.RowCount,
+			MoreRows: reference.MoreRows,
 		})
 	}
 	return response

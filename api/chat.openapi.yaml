@@ -759,7 +759,7 @@ components:
     ChatMessageReference:
       type: object
       additionalProperties: false
-      required: [id, kind, label, row_count]
+      required: [id, kind, label, row_count, more_rows]
       properties:
         id:
           type: string
@@ -773,6 +773,9 @@ components:
         row_count:
           type: integer
           minimum: 0
+        more_rows:
+          type: boolean
+          description: The grid holds more rows than row_count, which then is only a lower bound.
     ChatMessagePage:
       type: object
       additionalProperties: false

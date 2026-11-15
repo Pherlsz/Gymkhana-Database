@@ -705,6 +705,7 @@ export const tables = {
     resultOptions: "Resultados desta resposta",
     resultRowsOne: "{count} linha",
     resultRowsOther: "{count} linhas",
+    resultRowsMore: "{count}+ linhas",
     resultEntities: { profiles: "Pessoas", documents: "Documentos", bills: "Contas" },
     placeholder: "Continuar nesta sessão",
     placeholderNew: "Pergunte sobre qualquer tabela",

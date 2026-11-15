@@ -309,6 +309,8 @@ export interface components {
       kind: components["schemas"]["ChatResultReferenceKind"];
       label: string;
       row_count: number;
+      /** @description The grid holds more rows than row_count, which then is only a lower bound. */
+      more_rows: boolean;
     };
     ChatMessagePage: {
       messages: components["schemas"]["ChatMessage"][];

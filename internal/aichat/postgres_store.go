@@ -905,8 +905,7 @@ func scanMessageWithTotal(row rowScanner, total *int) (Message, error) {
 			return Message{}, ErrInvalidState
 		}
 		value.ResultReferenceIDs = append(value.ResultReferenceIDs, reference)
-		value.ResultReferences = append(value.ResultReferences, MessageReference{ID: reference, Kind: raw.Kind, Label: raw.Label, RowCount: raw.RowCount,
-			Sample: referenceIsSample(raw.Kind, raw.Logical)})
+		value.ResultReferences = append(value.ResultReferences, newMessageReference(reference, raw.Kind, raw.Label, raw.RowCount, raw.Logical))
 	}
 	return value, nil
 }

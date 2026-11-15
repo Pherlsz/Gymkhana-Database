@@ -186,8 +186,8 @@ func (store *memoryStore) ListMessages(_ context.Context, threadID Identifier, o
 		values[index].ResultReferences = make([]MessageReference, 0, len(references))
 		for _, reference := range references {
 			values[index].ResultReferenceIDs = append(values[index].ResultReferenceIDs, reference.ID)
-			values[index].ResultReferences = append(values[index].ResultReferences, MessageReference{ID: reference.ID, Kind: reference.Kind, Label: reference.Label, RowCount: reference.RowCount,
-				Sample: referenceIsSample(reference.Kind, reference.LogicalRequest)})
+			values[index].ResultReferences = append(values[index].ResultReferences,
+				newMessageReference(reference.ID, reference.Kind, reference.Label, reference.RowCount, reference.LogicalRequest))
 		}
 	}
 	return MessagePage{Messages: pageSlice(values, limit, offset), Total: len(values), Limit: limit, Offset: offset}, nil

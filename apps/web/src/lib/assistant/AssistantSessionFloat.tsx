@@ -98,6 +98,7 @@ function ResultOnTableAction({
     entities: copy.resultEntities,
     rowsOne: copy.resultRowsOne,
     rowsOther: copy.resultRowsOther,
+    rowsMore: copy.resultRowsMore,
   };
   return (
     <ul aria-label={copy.resultOptions} className="assistant-msg__results">

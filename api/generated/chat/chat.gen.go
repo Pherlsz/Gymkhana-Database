@@ -352,10 +352,13 @@ type ChatMessagePage struct {
 
 // ChatMessageReference defines model for ChatMessageReference.
 type ChatMessageReference struct {
-	Id       openapi_types.UUID      `json:"id"`
-	Kind     ChatResultReferenceKind `json:"kind"`
-	Label    string                  `json:"label"`
-	RowCount int                     `json:"row_count"`
+	Id    openapi_types.UUID      `json:"id"`
+	Kind  ChatResultReferenceKind `json:"kind"`
+	Label string                  `json:"label"`
+
+	// MoreRows The grid holds more rows than row_count, which then is only a lower bound.
+	MoreRows bool `json:"more_rows"`
+	RowCount int  `json:"row_count"`
 }
 
 // ChatMessageRole defines model for ChatMessageRole.

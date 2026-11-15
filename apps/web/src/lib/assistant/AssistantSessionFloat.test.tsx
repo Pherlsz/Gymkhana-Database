@@ -49,6 +49,7 @@ function chatStub(overrides: Partial<ReturnType<typeof useAssistantChat>> = {}) 
           kind: "SEARCH" | "QUERY";
           label: string;
           row_count: number;
+          more_rows: boolean;
         }[],
         created_at: "2026-01-01T00:00:00.000Z",
       },
@@ -191,7 +192,7 @@ describe("AssistantSessionFloat", () => {
           role: "ASSISTANT" as const,
           content: "Encontrei 27 registros que citam primo.",
           result_reference_ids: ["ref-gravatai", "ref-73", "ref-primo", "ref-sample"],
-          result_references: references,
+          result_references: references.map((reference) => ({ ...reference, more_rows: false })),
           created_at: "2026-01-01T00:00:01.000Z",
         },
       ],

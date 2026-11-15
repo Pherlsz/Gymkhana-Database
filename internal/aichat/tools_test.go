@@ -742,3 +742,17 @@ func TestReferenceIsSampleOnlyForQueriesWithoutCriterion(t *testing.T) {
 		t.Fatal("OnGrid must keep only references with rows and a criterion")
 	}
 }
+
+func TestReferenceHasMoreRowsOnlyForASearchThatFilledItsPage(t *testing.T) {
+	search := []byte(`{"terms":["Gravataí"],"limit":50,"offset":0,"sort":"relevance","order":"desc"}`)
+	query := []byte(`{"plan":{"version":"v1","root_entity":"profiles","projections":["profile.full_name"],"maximum_rows":50}}`)
+	if !referenceHasMoreRows(ResultReferenceSearch, search, 50) {
+		t.Fatal("a search that filled its page must report more rows on the grid")
+	}
+	if referenceHasMoreRows(ResultReferenceSearch, search, 27) || referenceHasMoreRows(ResultReferenceQuery, query, 50) {
+		t.Fatal("only a full search page is a lower bound")
+	}
+	if reference := newMessageReference(Identifier{}, ResultReferenceSearch, "Busca: Gravataí", 50, search); !reference.MoreRows || reference.Sample {
+		t.Fatalf("newMessageReference = %+v", reference)
+	}
+}

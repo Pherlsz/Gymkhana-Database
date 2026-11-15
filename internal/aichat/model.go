@@ -157,6 +157,8 @@ type MessageReference struct {
 	Kind     ResultReferenceKind
 	Label    string
 	RowCount int
+	// MoreRows marks RowCount as a lower bound: the grid holds more rows.
+	MoreRows bool
 	// Sample marks a query with no criterion: a slice of a whole table that
 	// answers nothing on its own.
 	Sample bool
