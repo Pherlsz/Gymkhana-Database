@@ -204,6 +204,7 @@ export function useAssistantChat(open: boolean) {
                 role: "ASSISTANT",
                 content: persisted,
                 result_reference_ids: resultIds,
+                result_references: [],
                 created_at: new Date().toISOString(),
               });
             }
