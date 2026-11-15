@@ -8,6 +8,7 @@ import (
 	"time"
 
 	querydomain "github.com/Pherlsz/Gymkhana-Database/internal/queryengine"
+	searchdomain "github.com/Pherlsz/Gymkhana-Database/internal/search"
 )
 
 func TestRecorteWorkbookExportsEveryRowAndUniqueHeaders(t *testing.T) {
@@ -70,13 +71,72 @@ func TestExportRecorteIncludesEveryShapeRow(t *testing.T) {
 	}
 }
 
-func TestExportRecorteRejectsSearchReference(t *testing.T) {
-	actor, _ := chatTestActor(t, "member")
+func searchReferenceGateway(t *testing.T, search *fakeToolSearch, logical string) (*ToolGateway, Identifier) {
+	t.Helper()
 	id := Identifier{42}
-	gateway := testToolGateway(t, &fakeToolSearch{}, &fakeToolQuery{}, &fakeToolReferences{values: map[Identifier]ResultReference{
-		id: {ID: id, Kind: ResultReferenceSearch, LogicalRequest: []byte(`{}`)},
-	}})
-	if _, err := gateway.ExportRecorte(context.Background(), actor, id, "request"); !errors.Is(err, ErrInvalidInput) {
-		t.Fatalf("search recorte export = %v", err)
+	return testToolGateway(t, search, &fakeToolQuery{}, &fakeToolReferences{values: map[Identifier]ResultReference{
+		id: {ID: id, Kind: ResultReferenceSearch, LogicalRequest: []byte(logical)},
+	}}), id
+}
+
+func TestReadPageLaysOutSearchReferenceHits(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	search := &fakeToolSearch{page: searchdomain.Page{Total: 3, Results: []searchdomain.Result{
+		{Module: searchdomain.ModuleProfiles, EntityKind: "profile", EntityID: "p1", ProfileID: "p1", TargetKind: "profile", TargetID: "p1",
+			EntityLabel: "Ana Gravataí", FieldKey: "profile.birth_city", FieldLabel: "Naturalidade", Preview: "Gravataí"},
+		{Module: searchdomain.ModuleProfiles, EntityKind: "profile", EntityID: "p1", ProfileID: "p1", TargetKind: "profile", TargetID: "p1",
+			EntityLabel: "Ana Gravataí", FieldKey: "profile.birth_city", FieldLabel: "Naturalidade", Preview: "Gravataí"},
+		{Module: searchdomain.ModuleDocuments, EntityKind: "document", EntityID: "d1", ProfileID: "p2", TargetKind: "document", TargetID: "d1",
+			EntityLabel: "RG 123", FieldKey: "document.notes", FieldLabel: "Observações", Preview: "emitido em Gravataí"},
+	}}}
+	gateway, id := searchReferenceGateway(t, search, `{"q":"Gravataí","terms":["Gravataí"],"limit":100,"offset":0,"sort":"relevance","order":"desc"}`)
+	page, err := gateway.ReadPage(context.Background(), actor, id, 500, 0, "request")
+	if err != nil {
+		t.Fatalf("ReadPage(search) error = %v", err)
+	}
+	if search.query.Q != "Gravataí" || len(search.query.Terms) != 1 || search.query.Limit != searchdomain.MaxPageSize || search.query.Offset != 0 {
+		t.Fatalf("rerun search query = %#v", search.query)
+	}
+	if page.Total != 3 || len(page.Columns) != 3 || page.Columns[0].Label != "Nome" || len(page.Rows) != 3 {
+		t.Fatalf("search grid = %#v", page)
+	}
+	if page.Rows[0].ID == page.Rows[1].ID {
+		t.Fatalf("duplicate hits share row id %q", page.Rows[0].ID)
+	}
+	person, document := page.Rows[0], page.Rows[2]
+	if person.EntityKind != "profile" || person.EntityID != "p1" || person.Cells["nome"] != "Ana Gravataí" || person.Cells["onde"] != "Naturalidade" {
+		t.Fatalf("person row = %#v", person)
+	}
+	if document.EntityKind != "document" || document.EntityID != "d1" || document.Cells["trecho"] != "emitido em Gravataí" {
+		t.Fatalf("document row = %#v", document)
+	}
+}
+
+func TestReadPageEmptySearchReferenceKeepsColumns(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	gateway, id := searchReferenceGateway(t, &fakeToolSearch{}, `{"terms":["ninguém"]}`)
+	page, err := gateway.ReadPage(context.Background(), actor, id, 500, 0, "request")
+	if err != nil || page.Total != 0 || len(page.Rows) != 0 || page.Rows == nil || len(page.Columns) != 3 {
+		t.Fatalf("empty search grid = %#v %v", page, err)
+	}
+}
+
+func TestReadPageSearchReferenceWithBrokenLogicalIsStale(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	gateway, id := searchReferenceGateway(t, &fakeToolSearch{}, `not json`)
+	if _, err := gateway.ReadPage(context.Background(), actor, id, 10, 0, "request"); !errors.Is(err, ErrStaleContext) {
+		t.Fatalf("broken search reference = %v", err)
+	}
+}
+
+func TestExportRecorteIncludesSearchReferenceHits(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	search := &fakeToolSearch{page: searchdomain.Page{Total: 1, Results: []searchdomain.Result{
+		{TargetKind: "bill", TargetID: "b1", EntityLabel: "Conta 9", FieldLabel: "Referência", Preview: "9"},
+	}}}
+	gateway, id := searchReferenceGateway(t, search, `{"terms":["9"]}`)
+	workbook, err := gateway.ExportRecorte(context.Background(), actor, id, "request")
+	if err != nil || len(workbook.Headers) != 3 || len(workbook.Rows) != 1 || workbook.Rows[0][0] != "Conta 9" || workbook.Rows[0][1] != "Referência" {
+		t.Fatalf("search export = %#v %v", workbook, err)
 	}
 }

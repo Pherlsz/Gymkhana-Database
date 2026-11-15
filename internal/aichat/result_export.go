@@ -48,6 +48,9 @@ func (gateway *ToolGateway) readFullGrid(ctx context.Context, actor auth.Session
 	if err != nil {
 		return ResultGrid{}, normalizeToolError(err)
 	}
+	if reference.Kind == ResultReferenceSearch {
+		return gateway.readSearchGrid(ctx, actor, reference, MaximumResultPage, 0)
+	}
 	if reference.Kind != ResultReferenceQuery {
 		return ResultGrid{}, ErrInvalidInput
 	}
