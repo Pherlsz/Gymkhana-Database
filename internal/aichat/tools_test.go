@@ -671,3 +671,63 @@ func TestCompactCatalogNoteCachesByTTLAndVersion(t *testing.T) {
 		t.Fatalf("catalogCalls after refresh = %d", query.catalogCalls)
 	}
 }
+
+func TestQueryToolKeepsAnUnfilteredListOutOfTheGrid(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	now := time.Date(2026, time.November, 15, 3, 45, 0, 0, time.UTC)
+	name := "Adao Vieira de Freitas"
+	query := &fakeToolQuery{
+		matchCount: 4000,
+		execution:  querydomain.Execution{ID: querydomain.Identifier{60}, RootEntity: "profiles", ExpiresAt: now.Add(time.Hour)},
+		page: querydomain.ResultPage{
+			Columns: []querydomain.ResultColumn{{Position: 0, FieldKey: "profile.full_name", Label: "Nome", Kind: querydomain.ValueText}},
+			Rows: []querydomain.ResultRow{{Position: 0, EntityKind: "profile", EntityID: "p1", EntityLabel: name,
+				Cells: []querydomain.ResultCell{{ColumnPosition: 0, Kind: querydomain.ValueText, TextValue: &name}}}},
+			Total: 1,
+		},
+	}
+	gateway, _ := NewToolGateway(&fakeToolSearch{}, query, &fakeToolReferences{}, func() time.Time { return now })
+	arguments := `{"plan":{"version":"v1","catalog_version":"` + strings.Repeat("a", 64) + `","root_entity":"profiles","projections":["profile.full_name","profile.cpf"],"maximum_rows":10}}`
+	output, err := gateway.Execute(context.Background(), actor, nil, Identifier{61}, 6,
+		ToolCall{ID: "sample", Name: "query", Arguments: json.RawMessage(arguments)}, now.Add(time.Hour), "request")
+	if err != nil {
+		t.Fatalf("Execute(unfiltered query) error = %v", err)
+	}
+	if output.Reference != nil || output.RowCount != 1 {
+		t.Fatalf("unfiltered query output = %#v", output)
+	}
+	if !strings.Contains(string(output.Payload), "não vão para a grade") {
+		t.Fatalf("unfiltered query payload = %s", output.Payload)
+	}
+}
+
+func TestQueryToolPublishesNoReferenceForAnEmptyResult(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	now := time.Date(2026, time.November, 15, 3, 45, 0, 0, time.UTC)
+	query := &fakeToolQuery{
+		execution: querydomain.Execution{ID: querydomain.Identifier{62}, RootEntity: "documents", ExpiresAt: now.Add(time.Hour)},
+		page: querydomain.ResultPage{
+			Columns: []querydomain.ResultColumn{{Position: 0, FieldKey: "document.owner_name", Label: "Titular", Kind: querydomain.ValueText}},
+		},
+	}
+	gateway, _ := NewToolGateway(&fakeToolSearch{}, query, &fakeToolReferences{}, func() time.Time { return now })
+	arguments := `{"plan":{"version":"v1","catalog_version":"` + strings.Repeat("a", 64) + `","root_entity":"documents","projections":["document.owner_name"],` +
+		`"filter":{"kind":"predicate","field":"document.identifier","operator":"contains","values":["73"]},"maximum_rows":20}}`
+	output, err := gateway.Execute(context.Background(), actor, nil, Identifier{63}, 5,
+		ToolCall{ID: "empty", Name: "query", Arguments: json.RawMessage(arguments)}, now.Add(time.Hour), "request")
+	if err != nil || output.Reference != nil || output.RowCount != 0 {
+		t.Fatalf("empty query output = %#v %v", output, err)
+	}
+}
+
+func TestSearchToolPublishesNoReferenceWithoutHits(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	now := time.Date(2026, time.November, 15, 3, 45, 0, 0, time.UTC)
+	search := &fakeToolSearch{page: searchdomain.Page{Limit: MaximumToolRows, Sort: searchdomain.SortRelevance, Order: searchdomain.SortDescending}}
+	gateway, _ := NewToolGateway(search, &fakeToolQuery{}, &fakeToolReferences{}, func() time.Time { return now })
+	output, err := gateway.Execute(context.Background(), actor, nil, Identifier{64}, 1,
+		ToolCall{ID: "no-hits", Name: "search", Arguments: json.RawMessage(`{"q":",73","modules":["bills"]}`)}, now.Add(time.Hour), "request")
+	if err != nil || output.Reference != nil || output.RowCount != 0 {
+		t.Fatalf("empty search output = %#v %v", output, err)
+	}
+}

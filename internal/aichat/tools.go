@@ -31,6 +31,7 @@ type compactCatalogNoteCache struct {
 }
 
 const sampleNote = "total e match_count são a quantidade no cadastro inteiro. As linhas são só uma amostra para exemplos."
+const plainListNote = "Plano sem filtro: as linhas são só uma amostra do cadastro e não vão para a grade. Não as apresente como resposta."
 const advancedNote = "rows são o agrupamento, o padrão ou o conjunto, não uma amostra de cadastros. Numa contagem única, match_count é o total."
 
 type SearchPort interface {
@@ -423,8 +424,13 @@ func (gateway *ToolGateway) searchData(ctx context.Context, actor auth.Session, 
 	if label == "" {
 		label = strings.Join(query.Terms, " · ")
 	}
+	output := ToolOutput{Kind: ToolSearch, Payload: payload, RowCount: len(results), FieldCount: 1, ByteCount: len(payload)}
+	if len(results) == 0 {
+		return output, nil
+	}
 	draft := resultDraft(ResultReferenceSearch, nil, logical, fmt.Sprintf("Busca: %s", label), len(results), 1, expiresAt)
-	return ToolOutput{Kind: ToolSearch, Payload: payload, RowCount: len(results), FieldCount: 1, ByteCount: len(payload), Reference: &draft}, nil
+	output.Reference = &draft
+	return output, nil
 }
 
 func (gateway *ToolGateway) queryData(ctx context.Context, actor auth.Session, active *Identifier, runID Identifier, step int, raw json.RawMessage, referenceExpiresAt time.Time, requestID string) (ToolOutput, error) {
@@ -491,6 +497,10 @@ func (gateway *ToolGateway) queryData(ctx context.Context, actor auth.Session, a
 			return ToolOutput{}, normalizeToolError(err)
 		}
 	}
+	plainList := plainListPlan(request.Plan)
+	if plainList {
+		note = plainListNote
+	}
 	if matchCount == 0 && pairingEmptyHint(request.Plan) {
 		note = emptyPairingNote
 	}
@@ -506,8 +516,19 @@ func (gateway *ToolGateway) queryData(ctx context.Context, actor auth.Session, a
 	if execution.ExpiresAt.Before(referenceExpiresAt) {
 		referenceExpiresAt = execution.ExpiresAt
 	}
+	output := ToolOutput{Kind: ToolQuery, Payload: payload, RowCount: len(page.Rows), FieldCount: len(page.Columns), ByteCount: len(payload)}
+	if len(page.Rows) == 0 || plainList {
+		return output, nil
+	}
 	draft := resultDraft(ResultReferenceQuery, &executionID, logical, "Consulta: "+execution.RootEntity, len(page.Rows), len(page.Columns), referenceExpiresAt)
-	return ToolOutput{Kind: ToolQuery, Payload: payload, RowCount: len(page.Rows), FieldCount: len(page.Columns), ByteCount: len(payload), Reference: &draft}, nil
+	output.Reference = &draft
+	return output, nil
+}
+
+// plainListPlan is a query with no criterion at all: a sample of a whole
+// table. It answers nothing on its own, so it never becomes the grid result.
+func plainListPlan(plan querydomain.QueryPlan) bool {
+	return plan.Filter == nil && plan.Having == nil && !planMaterializesSQL(plan) && !querydomain.PlanNeedsShape(plan)
 }
 
 func planIsAdvanced(plan querydomain.QueryPlan) bool {
