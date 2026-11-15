@@ -370,7 +370,9 @@ function apiResponse(url: string): Response | undefined {
   return jsonResponse({ status: "ok" });
 }
 
-describe("TablesPage", () => {
+// Each case renders the whole app; the select-funnel flows take ~3.5s locally
+// and cross the 5s default on slower CI runners.
+describe("TablesPage", { timeout: 15_000 }, () => {
   afterEach(() => {
     cleanup();
     Modal.destroyAll();
