@@ -1195,4 +1195,158 @@ describe("TablesPage", () => {
     expect(document.querySelector(".tables-page.is-assistant-open")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Ampliar" })).toBeInTheDocument();
   });
+
+  it("searches the same text again after the search chip clears it", async () => {
+    window.history.replaceState(null, "", "/tables/people");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    const input = await screen.findByPlaceholderText("Buscar em todos os campos…");
+
+    fireEvent.change(input, { target: { value: "Ana" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(window.location.search).toContain("q=Ana"));
+    const chip = await screen.findByText("Busca:");
+    fireEvent.click(chip.closest(".ant-tag")!.querySelector(".ant-tag-close-icon")!);
+    await waitFor(() => expect(window.location.search).not.toContain("q=Ana"));
+
+    fireEvent.change(input, { target: { value: "Ana" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(window.location.search).toContain("q=Ana"));
+  });
+
+  it("keeps a failed assistant result inside the grid area with a way back", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/tables/people?result=11111111-1111-4111-8111-111111111111",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/v1/chat/result-references/")) {
+          return Promise.resolve(
+            jsonResponse(
+              { code: "chat_stale_context", message: "O contexto de resultado expirou" },
+              410,
+            ),
+          );
+        }
+        return Promise.resolve(apiResponse(url));
+      }),
+    );
+    render(<App />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Esse resultado expirou. Peça de novo ao assistente.");
+    expect(alert.closest(".tables-page__workspace")).not.toBeNull();
+    expect(document.querySelector(".tables-page > .state-card")).toBeNull();
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Voltar à grade" }));
+    await waitFor(() => expect(window.location.search).not.toContain("result="));
+    expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
+  });
+
+  it("keeps column headers when an assistant result has no rows", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/tables/people?result=11111111-1111-4111-8111-111111111111",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/v1/chat/result-references/")) {
+          return Promise.resolve(
+            jsonResponse({
+              columns: [
+                { key: "nome", label: "Nome" },
+                { key: "onde", label: "Onde" },
+                { key: "trecho", label: "Trecho" },
+              ],
+              rows: [],
+              total: 0,
+              limit: 500,
+              offset: 0,
+            }),
+          );
+        }
+        return Promise.resolve(apiResponse(url));
+      }),
+    );
+    render(<App />);
+    expect(
+      await screen.findByText("O assistente não encontrou linhas para esse pedido."),
+    ).toBeInTheDocument();
+    expect(headerTexts()).toEqual(["Nome", "Onde", "Trecho"]);
+    expect(screen.getByRole("button", { name: "Filtrar Nome" })).toBeInTheDocument();
+    expect(document.querySelector(".spreadsheet-table__footer")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Exportar recorte" })).toBeDisabled();
+  });
+
+  it("applies a starts-with funnel to the assistant result rows", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/tables/people?result=11111111-1111-4111-8111-111111111111",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    expect(await screen.findByText("Zélia Costa")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Filtrar Nome" }));
+    const operator = await screen.findByRole("combobox", { name: "Operador" });
+    fireEvent.mouseDown(operator);
+    fireEvent.click(
+      await screen.findByText("começa", { selector: ".ant-select-item-option-content" }),
+    );
+    const value = await screen.findByRole("textbox", { name: "Valor" });
+    fireEvent.change(value, { target: { value: "Zé" } });
+    fireEvent.keyDown(value, { key: "Enter" });
+
+    await waitFor(() => expect(screen.queryByText("Ana da Silva")).not.toBeInTheDocument());
+    expect(screen.getByText("Zélia Costa")).toBeInTheDocument();
+  });
+
+  it("does not carry an assistant result funnel back to the grid", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/tables/people?result=11111111-1111-4111-8111-111111111111",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((input: RequestInfo | URL) =>
+          Promise.resolve(apiResponse(String(input))),
+        ),
+    );
+    render(<App />);
+    expect(await screen.findByText("Zélia Costa")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Filtrar Cidade" }));
+    const value = await screen.findByRole("textbox", { name: "Valor" });
+    fireEvent.change(value, { target: { value: "Canoas" } });
+    fireEvent.keyDown(value, { key: "Enter" });
+    await waitFor(() => expect(screen.queryByText("Ana da Silva")).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Voltar à grade" }));
+    await waitFor(() => expect(window.location.search).not.toContain("result="));
+    expect(await screen.findByText("Ana da Silva")).toBeInTheDocument();
+    expect(document.querySelector(".tables-toolbar__chip")).toBeNull();
+  });
 });
