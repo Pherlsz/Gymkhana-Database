@@ -38,6 +38,10 @@ type ShapePage struct {
 	Truncated bool           `json:"truncated"`
 }
 
+// IncompleteScanNote is appended to a shape summary when the scan stopped at
+// MaximumSequenceScan before covering every record.
+const IncompleteScanNote = "A busca não cobriu o cadastro inteiro, então o resultado pode estar incompleto."
+
 func PlanNeedsShape(plan QueryPlan) bool {
 	return len(plan.Derive) > 0 || len(plan.Matches) > 0 || plan.Sequence != nil
 }
@@ -78,7 +82,7 @@ func ApplyShape(rows []ShapeRow, plan QueryPlan, truncated bool) ShapePage {
 		if summary != "" {
 			summary += " "
 		}
-		summary += "A busca não cobriu o cadastro inteiro, então o resultado pode estar incompleto."
+		summary += IncompleteScanNote
 	}
 	if len(showNotes) > 0 {
 		if summary != "" {

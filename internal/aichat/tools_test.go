@@ -49,12 +49,13 @@ type fakeToolQuery struct {
 	shape          []querydomain.ShapeRow
 	advanced       querydomain.AdvancedResult
 	usedV2         bool
+	truncated      bool
 }
 
 func (service *fakeToolQuery) ScanShape(_ context.Context, _ auth.Session, plan querydomain.QueryPlan, limit int, _ string) ([]querydomain.ShapeRow, bool, error) {
 	service.plan = plan
 	service.limit = limit
-	return service.shape, false, service.err
+	return service.shape, service.truncated, service.err
 }
 
 func (service *fakeToolQuery) ScanFields(_ context.Context, _ auth.Session, plan querydomain.QueryPlan, limit int, _ string) (querydomain.TextScan, error) {
