@@ -1,7 +1,12 @@
 import type { CustomField, ProfileListSearch } from "../api/client";
 import type { CatalogV1 } from "../../i18n/v1/pt-BR";
-import { defaultOp } from "./columnPredicate";
-import { fieldFilterActive, fieldPredicate, resolveFunnelKind } from "./bindPredicates";
+import { defaultOp, type ColumnOp } from "./columnPredicate";
+import {
+  clientPredicate,
+  fieldFilterActive,
+  filterAppliesLocally,
+  resolveFunnelKind,
+} from "./bindPredicates";
 import {
   brazilStateOptions,
   customFieldFilter,
@@ -312,33 +317,43 @@ export function buildSheetFilters({
   ];
 }
 
-export function activeFilterChips(fields: ToolbarFilterField[]): {
+export function activeFilterChips(
+  fields: ToolbarFilterField[],
+  options: { markLocal?: boolean; opLabels?: Partial<Record<ColumnOp, string>> } = {},
+): {
   key: string;
   field: string;
   value: string;
   local?: boolean;
   onClear: () => void;
 }[] {
+  const markLocal = options.markLocal ?? true;
   return fields
     .filter((field) => fieldFilterActive(field))
     .map((field) => {
-      const predicate = fieldPredicate(field);
+      const predicate = clientPredicate(field);
+      const opLabel = options.opLabels?.[predicate.op];
       const preview =
         predicate.op === "between"
           ? `${predicate.values[0] ?? ""}–${predicate.values[1] ?? ""}`
           : predicate.op === "in"
             ? predicate.values.join(", ")
             : predicate.op === "is_null" || predicate.op === "not_null"
-              ? predicate.op
+              ? (opLabel ?? predicate.op)
               : predicate.values[0] ||
                 (field.kind === "select" ? filterValuePreview(field) : field.value) ||
                 "";
+      const showOp =
+        opLabel && predicate.op !== "is_null" && predicate.op !== "not_null"
+          ? predicate.op !== defaultOp(resolveFunnelKind(field))
+          : false;
       const kind = resolveFunnelKind(field);
       const fallback = defaultOp(kind);
       return {
         key: field.key,
         field: field.label,
-        value: preview,
+        value: showOp ? `${opLabel} ${preview}` : preview,
+        local: markLocal && filterAppliesLocally(field),
         onClear: () => {
           field.onPredicate?.({ op: fallback, values: [] });
           field.onChange("");

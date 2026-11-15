@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { bindPredicates, decodeFieldValue, encodePredicateValue } from "./bindPredicates";
+import {
+  bindPredicates,
+  clientPredicate,
+  decodeFieldValue,
+  encodePredicateValue,
+  serverAppliesPredicate,
+} from "./bindPredicates";
 import type { ToolbarFilterField } from "./FilterControl";
 
 describe("bindPredicates", () => {
@@ -58,5 +64,89 @@ describe("bindPredicates", () => {
     cpfField.onPredicate?.({ op: "contains", values: [""] });
     expect(extraState.cpf).toBeUndefined();
     expect(onChangeSpy).toHaveBeenLastCalledWith("");
+  });
+
+  it("keeps operators the list API cannot apply out of the server param", () => {
+    let extraState: Record<string, any> = {};
+    const setExtra = (updater: any) => {
+      extraState = updater(extraState);
+    };
+    const onChange = vi.fn();
+    const [field] = bindPredicates(
+      [{ key: "full_name", label: "Nome", kind: "text", value: "", onChange }],
+      extraState,
+      setExtra,
+    );
+
+    field!.onPredicate?.({ op: "neq", values: ["Ana"] });
+    expect(extraState.full_name).toEqual({ op: "neq", values: ["Ana"] });
+    expect(onChange).toHaveBeenLastCalledWith("");
+
+    const [local] = bindPredicates(
+      [{ key: "notes", label: "Notas", kind: "text", value: "", local: true, onChange }],
+      {},
+      setExtra,
+    );
+    local!.onPredicate?.({ op: "neq", values: ["x"] });
+    expect(onChange).toHaveBeenLastCalledWith("x");
+  });
+});
+
+describe("serverAppliesPredicate", () => {
+  const text: ToolbarFilterField = {
+    key: "cpf",
+    label: "CPF",
+    kind: "text",
+    value: "",
+    onChange: () => undefined,
+  };
+  const select: ToolbarFilterField = {
+    key: "state",
+    label: "UF",
+    kind: "select",
+    value: "",
+    options: [{ value: "RS", label: "RS" }],
+    allLabel: "Todos",
+    onChange: () => undefined,
+  };
+
+  it("lets the server apply contains, starts with and equals on text params", () => {
+    for (const op of ["contains", "starts_with", "eq"] as const) {
+      expect(serverAppliesPredicate(text, { op, values: ["1"] })).toBe(true);
+    }
+    for (const op of ["neq", "gt", "between", "in", "is_null", "not_null"] as const) {
+      expect(serverAppliesPredicate(text, { op, values: ["1", "2"] })).toBe(false);
+    }
+  });
+
+  it("lets the server apply only an exact value on select params", () => {
+    expect(serverAppliesPredicate(select, { op: "eq", values: ["RS"] })).toBe(true);
+    expect(serverAppliesPredicate(select, { op: "in", values: ["RS", "SC"] })).toBe(false);
+    expect(serverAppliesPredicate(select, { op: "contains", values: ["R"] })).toBe(false);
+  });
+
+  it("never treats page-only fields as server filtered", () => {
+    expect(
+      serverAppliesPredicate({ ...text, local: true }, { op: "contains", values: ["1"] }),
+    ).toBe(false);
+  });
+});
+
+describe("clientPredicate", () => {
+  it("compares select values by the label the cell shows", () => {
+    const field: ToolbarFilterField = {
+      key: "custom:doador",
+      label: "Doador",
+      kind: "select",
+      value: "true",
+      local: true,
+      options: [
+        { value: "true", label: "Sim" },
+        { value: "false", label: "Não" },
+      ],
+      allLabel: "Todos",
+      onChange: () => undefined,
+    };
+    expect(clientPredicate(field)).toEqual({ op: "eq", values: ["Sim"] });
   });
 });
