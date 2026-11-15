@@ -333,10 +333,13 @@ type ChatMessage struct {
 	CreatedAt          time.Time            `json:"created_at"`
 	Id                 openapi_types.UUID   `json:"id"`
 	ResultReferenceIds []openapi_types.UUID `json:"result_reference_ids"`
-	Role               ChatMessageRole      `json:"role"`
-	RunId              openapi_types.UUID   `json:"run_id"`
-	Sequence           int64                `json:"sequence"`
-	ThreadId           openapi_types.UUID   `json:"thread_id"`
+
+	// ResultReferences The references from result_reference_ids worth opening on the grid, in order. Results without rows and queries without any criterion are left out.
+	ResultReferences []ChatMessageReference `json:"result_references"`
+	Role             ChatMessageRole        `json:"role"`
+	RunId            openapi_types.UUID     `json:"run_id"`
+	Sequence         int64                  `json:"sequence"`
+	ThreadId         openapi_types.UUID     `json:"thread_id"`
 }
 
 // ChatMessagePage defines model for ChatMessagePage.
@@ -345,6 +348,17 @@ type ChatMessagePage struct {
 	Messages []ChatMessage `json:"messages"`
 	Offset   int           `json:"offset"`
 	Total    int           `json:"total"`
+}
+
+// ChatMessageReference defines model for ChatMessageReference.
+type ChatMessageReference struct {
+	Id    openapi_types.UUID      `json:"id"`
+	Kind  ChatResultReferenceKind `json:"kind"`
+	Label string                  `json:"label"`
+
+	// MoreRows The grid holds more rows than row_count, which then is only a lower bound.
+	MoreRows bool `json:"more_rows"`
+	RowCount int  `json:"row_count"`
 }
 
 // ChatMessageRole defines model for ChatMessageRole.

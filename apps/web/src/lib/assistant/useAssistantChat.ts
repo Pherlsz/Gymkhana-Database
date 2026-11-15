@@ -172,6 +172,9 @@ export function useAssistantChat(open: boolean) {
           await queryClient.fetchQuery({
             queryKey: messagesKey(id),
             queryFn: ({ signal }) => listChatMessages(id, signal),
+            // The local reply was just written, so the cache looks fresh; the
+            // saved one carries the grid references.
+            staleTime: 0,
           });
         } catch {
           void queryClient.invalidateQueries({ queryKey: messagesKey(id) });
@@ -204,6 +207,7 @@ export function useAssistantChat(open: boolean) {
                 role: "ASSISTANT",
                 content: persisted,
                 result_reference_ids: resultIds,
+                result_references: [],
                 created_at: new Date().toISOString(),
               });
             }

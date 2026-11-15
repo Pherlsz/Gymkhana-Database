@@ -152,6 +152,54 @@ describe("useAssistantChat stream contract", () => {
     expect(saved[0]?.content).toBe("Ana.");
   });
 
+  it("replaces the local reply with the saved one even while messages are fresh", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 15_000 } },
+    });
+    const hook = renderHook(() => useAssistantChat(true), { wrapper: wrapperFor(client) });
+    await waitFor(() => expect(hook.result.current.thread?.id).toBe(thread.id));
+    act(() => {
+      hook.result.current.send("hello");
+    });
+    await waitFor(() => expect(streams.length).toBeGreaterThan(0));
+    const reference = {
+      id: "ref-primo",
+      kind: "SEARCH",
+      label: "Busca: primo",
+      row_count: 27,
+      more_rows: false,
+    };
+    vi.mocked(listChatMessages).mockResolvedValue({
+      messages: [
+        {
+          id: "saved-1",
+          thread_id: thread.id,
+          run_id: "run-1",
+          role: "ASSISTANT",
+          content: "Ana.",
+          result_reference_ids: ["ref-primo"],
+          result_references: [reference],
+          sequence: 2,
+          created_at: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      total: 1,
+      limit: 100,
+      offset: 0,
+    } as never);
+    act(() => {
+      const { onEvent } = streams[0]!;
+      onEvent(event("TEXT_DELTA", 1, { text_delta: "Ana." }));
+      onEvent(event("RUN_COMPLETED", 2));
+    });
+    await waitFor(() =>
+      expect(assistants(client)[0]).toMatchObject({
+        id: "saved-1",
+        result_references: [reference],
+      }),
+    );
+  });
+
   it("keeps partial text on RUN_CANCELLED and does not store a message", async () => {
     const { client, hook } = await startTurn();
     act(() => {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Pherlsz/Gymkhana-Database/internal/auth"
@@ -55,10 +56,51 @@ func (gateway *ToolGateway) ReadPage(ctx context.Context, actor auth.Session, re
 	if err := json.Unmarshal(reference.LogicalRequest, &stored); err != nil {
 		return ResultGrid{}, ErrStaleContext
 	}
-	if planMaterializesSQL(stored.Plan) {
+	if referenceReadsExecution(reference, stored.Plan) {
 		return gateway.readSQLGrid(ctx, actor, reference, stored.Plan, limit, offset, requestID)
 	}
-	return gateway.readShapeGrid(ctx, actor, stored.Plan, limit, offset, requestID)
+	return gateway.readShapeSheet(ctx, actor, stored.Plan, limit, offset, requestID)
+}
+
+// referenceReadsExecution reports whether the grid must page the execution the
+// assistant materialized. Only derive/match/sequence plans are recomputed; a
+// rescan of a plain list would ignore its sort and maximum_rows.
+func referenceReadsExecution(reference ResultReference, plan querydomain.QueryPlan) bool {
+	if querydomain.PlanNeedsShape(plan) && !planMaterializesSQL(plan) {
+		return false
+	}
+	return reference.QueryExecutionID != nil || planMaterializesSQL(plan)
+}
+
+// readShapeSheet is the grid view of a shape plan: the same rows the assistant
+// counted, cut at the plan's maximum_rows. Rows arrive in label order, so once
+// the cut is reached a short scan cannot have hidden an earlier row; the
+// incomplete note then no longer applies. A sequence reorders, so it keeps it.
+func (gateway *ToolGateway) readShapeSheet(ctx context.Context, actor auth.Session, plan querydomain.QueryPlan, limit, offset int, requestID string) (ResultGrid, error) {
+	rows, truncated, err := gateway.query.ScanShape(ctx, actor, plan, querydomain.MaximumSequenceScan, requestID)
+	if err != nil {
+		return ResultGrid{}, normalizeToolError(err)
+	}
+	shaped := capShapeRows(querydomain.ApplyShape(rows, plan, truncated), plan).Page(limit, offset)
+	gateway.labelColumns(ctx, actor, &shaped, requestID)
+	return ResultGrid{
+		Columns: shaped.Columns, Rows: shaped.Rows, Total: shaped.Total,
+		Limit: limit, Offset: offset, Summary: shaped.Summary, Truncated: shaped.Truncated,
+	}, nil
+}
+
+func capShapeRows(page querydomain.ShapePage, plan querydomain.QueryPlan) querydomain.ShapePage {
+	if plan.MaximumRows < 1 || plan.Sequence != nil || page.Total < plan.MaximumRows {
+		return page
+	}
+	page.Rows = append([]querydomain.ShapeGridRow(nil), page.Rows[:plan.MaximumRows]...)
+	page.Total = plan.MaximumRows
+	if page.Truncated {
+		page.Truncated = false
+		page.Summary = strings.TrimSpace(strings.Replace(page.Summary, querydomain.IncompleteScanNote, "", 1))
+		page.Summary = strings.Join(strings.Fields(page.Summary), " ")
+	}
+	return page
 }
 
 const (

@@ -20,10 +20,16 @@ import {
   type KeyboardEvent,
 } from "react";
 import { ICON, ICON_STROKE } from "../../components/icons";
-import { useI18n } from "../../i18n";
+import { useI18n, type AppMessages } from "../../i18n";
 import { below } from "../breakpoints";
 import { useMediaQuery } from "../useMediaQuery";
 import { AssistantMarkdown } from "./assistantMarkdown";
+import {
+  gridReferences,
+  preferredGridReference,
+  referenceOptionLabel,
+  type ChatMessageReference,
+} from "./resultReferences";
 import { useAssistantChat } from "./useAssistantChat";
 import "./assistant.css";
 
@@ -67,25 +73,56 @@ function CollapsedCopy({
 }
 
 function ResultOnTableAction({
-  referenceId,
+  references,
   activeResultId,
-  applyLabel,
-  onTableLabel,
+  copy,
   onShow,
 }: {
-  referenceId: string;
+  references: ChatMessageReference[];
   activeResultId?: string | undefined;
-  applyLabel: string;
-  onTableLabel: string;
+  copy: AppMessages["tables"]["assistant"];
   onShow: (id: string) => void;
 }) {
-  if (referenceId === activeResultId) {
-    return <p className="assistant-msg__on-table">{onTableLabel}</p>;
+  if (references.length === 1) {
+    const referenceId = references[0]!.id;
+    if (referenceId === activeResultId) {
+      return <p className="assistant-msg__on-table">{copy.onTable}</p>;
+    }
+    return (
+      <button className="assistant-msg__apply" type="button" onClick={() => onShow(referenceId)}>
+        {copy.applyToTable}
+      </button>
+    );
   }
+  const labelCopy = {
+    entities: copy.resultEntities,
+    rowsOne: copy.resultRowsOne,
+    rowsOther: copy.resultRowsOther,
+    rowsMore: copy.resultRowsMore,
+  };
   return (
-    <button className="assistant-msg__apply" type="button" onClick={() => onShow(referenceId)}>
-      {applyLabel}
-    </button>
+    <ul aria-label={copy.resultOptions} className="assistant-msg__results">
+      {references.map((reference) => {
+        const label = referenceOptionLabel(reference, labelCopy);
+        return (
+          <li key={reference.id}>
+            {reference.id === activeResultId ? (
+              <span aria-current="true" className="assistant-msg__on-table">
+                {label} · {copy.onTable}
+              </span>
+            ) : (
+              <button
+                className="assistant-msg__apply"
+                type="button"
+                onClick={() => onShow(reference.id)}
+              >
+                {label}
+              </button>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -126,8 +163,8 @@ export function AssistantSessionFloat({
     const threadId = chat.thread?.id ?? "";
     const latest = [...chat.messages]
       .toReversed()
-      .find((message) => message.role === "ASSISTANT" && message.result_reference_ids.length > 0);
-    const latestResult = latest?.result_reference_ids[latest.result_reference_ids.length - 1] ?? "";
+      .find((message) => message.role === "ASSISTANT" && gridReferences(message).length > 0);
+    const latestResult = latest ? preferredGridReference(latest) : "";
     if (seenThread.current !== threadId) {
       seenThread.current = threadId;
       seenResultReference.current = latestResult;
@@ -406,15 +443,12 @@ export function AssistantSessionFloat({
                     />
                     {message.role === "ASSISTANT" &&
                     onShowResult &&
-                    message.result_reference_ids.length > 0 ? (
+                    gridReferences(message).length > 0 ? (
                       <ResultOnTableAction
                         activeResultId={activeResultId}
-                        applyLabel={copy.applyToTable}
+                        copy={copy}
                         onShow={onShowResult}
-                        onTableLabel={copy.onTable}
-                        referenceId={
-                          message.result_reference_ids[message.result_reference_ids.length - 1]!
-                        }
+                        references={gridReferences(message)}
                       />
                     ) : null}
                   </div>

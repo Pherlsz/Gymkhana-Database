@@ -720,7 +720,7 @@ components:
     ChatMessage:
       type: object
       additionalProperties: false
-      required: [id, thread_id, run_id, sequence, role, content, result_reference_ids, created_at]
+      required: [id, thread_id, run_id, sequence, role, content, result_reference_ids, result_references, created_at]
       properties:
         id:
           type: string
@@ -747,9 +747,35 @@ components:
           items:
             type: string
             format: uuid
+        result_references:
+          description: The references from result_reference_ids worth opening on the grid, in order. Results without rows and queries without any criterion are left out.
+          type: array
+          maxItems: 8
+          items:
+            $ref: "#/components/schemas/ChatMessageReference"
         created_at:
           type: string
           format: date-time
+    ChatMessageReference:
+      type: object
+      additionalProperties: false
+      required: [id, kind, label, row_count, more_rows]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/ChatResultReferenceKind"
+        label:
+          type: string
+          minLength: 1
+          maxLength: 160
+        row_count:
+          type: integer
+          minimum: 0
+        more_rows:
+          type: boolean
+          description: The grid holds more rows than row_count, which then is only a lower bound.
     ChatMessagePage:
       type: object
       additionalProperties: false

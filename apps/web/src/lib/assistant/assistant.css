@@ -569,6 +569,21 @@
   color: var(--md-primary-text);
 }
 
+.assistant-msg__results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assistant-msg__results .assistant-msg__apply,
+.assistant-msg__results .assistant-msg__on-table {
+  margin: 0;
+  text-align: start;
+}
+
 .assistant-composer {
   display: grid;
   position: relative;

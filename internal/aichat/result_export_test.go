@@ -3,6 +3,7 @@ package aichat
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -138,5 +139,82 @@ func TestExportRecorteIncludesSearchReferenceHits(t *testing.T) {
 	workbook, err := gateway.ExportRecorte(context.Background(), actor, id, "request")
 	if err != nil || len(workbook.Headers) != 3 || len(workbook.Rows) != 1 || workbook.Rows[0][0] != "Conta 9" || workbook.Rows[0][1] != "Referência" {
 		t.Fatalf("search export = %#v %v", workbook, err)
+	}
+}
+
+func TestReadPagePagesTheAssistantExecutionForAPlainPlan(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	now := time.Date(2026, time.November, 15, 3, 0, 0, 0, time.UTC)
+	name := "Ana"
+	query := &fakeToolQuery{
+		page: querydomain.ResultPage{
+			Columns: []querydomain.ResultColumn{{Position: 0, FieldKey: "profile.full_name", Label: "Nome", Kind: querydomain.ValueText}},
+			Rows: []querydomain.ResultRow{{Position: 0, EntityKind: "profile", EntityID: "p1", EntityLabel: "Ana",
+				Cells: []querydomain.ResultCell{{ColumnPosition: 0, Kind: querydomain.ValueText, TextValue: &name}}}},
+			Total: 1, Limit: 500,
+		},
+		shape:     []querydomain.ShapeRow{{EntityID: "a1", EntityKind: "profile", Label: "Adao", Fields: map[string]string{"profile.full_name": "Adao"}}},
+		truncated: true,
+	}
+	executionID := Identifier{50}
+	id := Identifier{51}
+	logical := []byte(`{"plan":{"version":"v1","catalog_version":"` + strings.Repeat("a", 64) + `","root_entity":"profiles","projections":["profile.full_name"],` +
+		`"filter":{"kind":"predicate","field":"profile.cpf","operator":"contains","values":["73"]},"maximum_rows":10}}`)
+	references := &fakeToolReferences{values: map[Identifier]ResultReference{
+		id: {ID: id, Kind: ResultReferenceQuery, QueryExecutionID: &executionID, LogicalRequest: logical, ExpiresAt: now.Add(time.Hour)},
+	}}
+	gateway, err := NewToolGateway(&fakeToolSearch{}, query, references, func() time.Time { return now })
+	if err != nil {
+		t.Fatalf("NewToolGateway() error = %v", err)
+	}
+	page, err := gateway.ReadPage(context.Background(), actor, id, 500, 0, "request")
+	if err != nil || page.Total != 1 || len(page.Rows) != 1 || page.Rows[0].Cells["profile.full_name"] != "Ana" || page.Truncated {
+		t.Fatalf("plain plan page = %#v %v", page, err)
+	}
+	if query.limit != querydomain.MaximumPageSize {
+		t.Fatalf("execution page limit = %d", query.limit)
+	}
+	workbook, err := gateway.ExportRecorte(context.Background(), actor, id, "request")
+	if err != nil || len(workbook.Rows) != 1 || workbook.Rows[0][0] != "Ana" {
+		t.Fatalf("plain plan export = %#v %v", workbook, err)
+	}
+}
+
+func shapeSheetGateway(t *testing.T, query *fakeToolQuery, maximumRows int) (*ToolGateway, Identifier) {
+	t.Helper()
+	id := Identifier{52}
+	logical := []byte(`{"plan":{"version":"v1","catalog_version":"` + strings.Repeat("a", 64) + `","root_entity":"profiles","projections":["profile.full_name"],` +
+		`"derive":[{"as":"inicial","op":"first_letter","from":"profile.full_name"}],"maximum_rows":` + strconv.Itoa(maximumRows) + `}}`)
+	return testToolGateway(t, &fakeToolSearch{}, query, &fakeToolReferences{values: map[Identifier]ResultReference{
+		id: {ID: id, Kind: ResultReferenceQuery, LogicalRequest: logical},
+	}}), id
+}
+
+func threeShapeRows() []querydomain.ShapeRow {
+	return []querydomain.ShapeRow{
+		{EntityID: "p1", EntityKind: "profile", Label: "Ana", Fields: map[string]string{"profile.full_name": "Ana"}},
+		{EntityID: "p2", EntityKind: "profile", Label: "Bia", Fields: map[string]string{"profile.full_name": "Bia"}},
+		{EntityID: "p3", EntityKind: "profile", Label: "Caio", Fields: map[string]string{"profile.full_name": "Caio"}},
+	}
+}
+
+func TestReadPageShapeSheetStopsAtMaximumRowsWithoutIncompleteNote(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	gateway, id := shapeSheetGateway(t, &fakeToolQuery{shape: threeShapeRows(), truncated: true}, 2)
+	page, err := gateway.ReadPage(context.Background(), actor, id, 500, 0, "request")
+	if err != nil || page.Total != 2 || len(page.Rows) != 2 || page.Rows[1].Label != "Bia" {
+		t.Fatalf("capped shape sheet = %#v %v", page, err)
+	}
+	if page.Truncated || strings.Contains(page.Summary, querydomain.IncompleteScanNote) {
+		t.Fatalf("capped shape sheet kept the incomplete note: %#v", page)
+	}
+}
+
+func TestReadPageShapeSheetKeepsIncompleteNoteBelowMaximumRows(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	gateway, id := shapeSheetGateway(t, &fakeToolQuery{shape: threeShapeRows(), truncated: true}, 10)
+	page, err := gateway.ReadPage(context.Background(), actor, id, 500, 0, "request")
+	if err != nil || page.Total != 3 || !page.Truncated || !strings.Contains(page.Summary, querydomain.IncompleteScanNote) {
+		t.Fatalf("short shape sheet = %#v %v", page, err)
 	}
 }

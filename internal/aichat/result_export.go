@@ -58,10 +58,10 @@ func (gateway *ToolGateway) readFullGrid(ctx context.Context, actor auth.Session
 	if err := json.Unmarshal(reference.LogicalRequest, &stored); err != nil {
 		return ResultGrid{}, ErrStaleContext
 	}
-	if planMaterializesSQL(stored.Plan) {
+	if referenceReadsExecution(reference, stored.Plan) {
 		return gateway.readSQLGridAll(ctx, actor, reference, stored.Plan, requestID)
 	}
-	return gateway.readShapeGrid(ctx, actor, stored.Plan, querydomain.MaximumSequenceScan, 0, requestID)
+	return gateway.readShapeSheet(ctx, actor, stored.Plan, querydomain.MaximumSequenceScan, 0, requestID)
 }
 
 func (gateway *ToolGateway) readSQLGridAll(ctx context.Context, actor auth.Session, reference ResultReference, plan querydomain.QueryPlan, requestID string) (ResultGrid, error) {

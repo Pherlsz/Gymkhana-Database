@@ -82,7 +82,16 @@ type chatMessageResponse struct {
 	Role               chatdomain.MessageRole `json:"role"`
 	Content            string                 `json:"content"`
 	ResultReferenceIDs []string               `json:"result_reference_ids"`
+	ResultReferences   []chatMessageReference `json:"result_references"`
 	CreatedAt          time.Time              `json:"created_at"`
+}
+
+type chatMessageReference struct {
+	ID       string                         `json:"id"`
+	Kind     chatdomain.ResultReferenceKind `json:"kind"`
+	Label    string                         `json:"label"`
+	RowCount int                            `json:"row_count"`
+	MoreRows bool                           `json:"more_rows"`
 }
 
 type chatMessagePageResponse struct {
@@ -666,6 +675,16 @@ func chatMessageFromDomain(value chatdomain.Message) chatMessageResponse {
 		Role: value.Role, Content: value.Content, ResultReferenceIDs: make([]string, 0, len(value.ResultReferenceIDs)), CreatedAt: value.CreatedAt}
 	for _, referenceID := range value.ResultReferenceIDs {
 		response.ResultReferenceIDs = append(response.ResultReferenceIDs, referenceID.String())
+	}
+	response.ResultReferences = make([]chatMessageReference, 0, len(value.ResultReferences))
+	for _, reference := range value.ResultReferences {
+		if !reference.OnGrid() {
+			continue
+		}
+		response.ResultReferences = append(response.ResultReferences, chatMessageReference{
+			ID: reference.ID.String(), Kind: reference.Kind, Label: reference.Label, RowCount: reference.RowCount,
+			MoreRows: reference.MoreRows,
+		})
 	}
 	return response
 }

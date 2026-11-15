@@ -49,12 +49,13 @@ type fakeToolQuery struct {
 	shape          []querydomain.ShapeRow
 	advanced       querydomain.AdvancedResult
 	usedV2         bool
+	truncated      bool
 }
 
 func (service *fakeToolQuery) ScanShape(_ context.Context, _ auth.Session, plan querydomain.QueryPlan, limit int, _ string) ([]querydomain.ShapeRow, bool, error) {
 	service.plan = plan
 	service.limit = limit
-	return service.shape, false, service.err
+	return service.shape, service.truncated, service.err
 }
 
 func (service *fakeToolQuery) ScanFields(_ context.Context, _ auth.Session, plan querydomain.QueryPlan, limit int, _ string) (querydomain.TextScan, error) {
@@ -668,5 +669,90 @@ func TestCompactCatalogNoteCachesByTTLAndVersion(t *testing.T) {
 	}
 	if query.catalogCalls != 2 {
 		t.Fatalf("catalogCalls after refresh = %d", query.catalogCalls)
+	}
+}
+
+func TestQueryToolKeepsAnUnfilteredListOutOfTheGrid(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	now := time.Date(2026, time.November, 15, 3, 45, 0, 0, time.UTC)
+	name := "Adao Vieira de Freitas"
+	query := &fakeToolQuery{
+		matchCount: 4000,
+		execution:  querydomain.Execution{ID: querydomain.Identifier{60}, RootEntity: "profiles", ExpiresAt: now.Add(time.Hour)},
+		page: querydomain.ResultPage{
+			Columns: []querydomain.ResultColumn{{Position: 0, FieldKey: "profile.full_name", Label: "Nome", Kind: querydomain.ValueText}},
+			Rows: []querydomain.ResultRow{{Position: 0, EntityKind: "profile", EntityID: "p1", EntityLabel: name,
+				Cells: []querydomain.ResultCell{{ColumnPosition: 0, Kind: querydomain.ValueText, TextValue: &name}}}},
+			Total: 1,
+		},
+	}
+	gateway, _ := NewToolGateway(&fakeToolSearch{}, query, &fakeToolReferences{}, func() time.Time { return now })
+	arguments := `{"plan":{"version":"v1","catalog_version":"` + strings.Repeat("a", 64) + `","root_entity":"profiles","projections":["profile.full_name","profile.cpf"],"maximum_rows":10}}`
+	output, err := gateway.Execute(context.Background(), actor, nil, Identifier{61}, 6,
+		ToolCall{ID: "sample", Name: "query", Arguments: json.RawMessage(arguments)}, now.Add(time.Hour), "request")
+	if err != nil {
+		t.Fatalf("Execute(unfiltered query) error = %v", err)
+	}
+	if output.Reference != nil || output.RowCount != 1 {
+		t.Fatalf("unfiltered query output = %#v", output)
+	}
+	if !strings.Contains(string(output.Payload), "não vão para a grade") {
+		t.Fatalf("unfiltered query payload = %s", output.Payload)
+	}
+}
+
+func TestQueryToolPublishesNoReferenceForAnEmptyResult(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	now := time.Date(2026, time.November, 15, 3, 45, 0, 0, time.UTC)
+	query := &fakeToolQuery{
+		execution: querydomain.Execution{ID: querydomain.Identifier{62}, RootEntity: "documents", ExpiresAt: now.Add(time.Hour)},
+		page: querydomain.ResultPage{
+			Columns: []querydomain.ResultColumn{{Position: 0, FieldKey: "document.owner_name", Label: "Titular", Kind: querydomain.ValueText}},
+		},
+	}
+	gateway, _ := NewToolGateway(&fakeToolSearch{}, query, &fakeToolReferences{}, func() time.Time { return now })
+	arguments := `{"plan":{"version":"v1","catalog_version":"` + strings.Repeat("a", 64) + `","root_entity":"documents","projections":["document.owner_name"],` +
+		`"filter":{"kind":"predicate","field":"document.identifier","operator":"contains","values":["73"]},"maximum_rows":20}}`
+	output, err := gateway.Execute(context.Background(), actor, nil, Identifier{63}, 5,
+		ToolCall{ID: "empty", Name: "query", Arguments: json.RawMessage(arguments)}, now.Add(time.Hour), "request")
+	if err != nil || output.Reference != nil || output.RowCount != 0 {
+		t.Fatalf("empty query output = %#v %v", output, err)
+	}
+}
+
+func TestSearchToolPublishesNoReferenceWithoutHits(t *testing.T) {
+	actor, _ := chatTestActor(t, "member")
+	now := time.Date(2026, time.November, 15, 3, 45, 0, 0, time.UTC)
+	search := &fakeToolSearch{page: searchdomain.Page{Limit: MaximumToolRows, Sort: searchdomain.SortRelevance, Order: searchdomain.SortDescending}}
+	gateway, _ := NewToolGateway(search, &fakeToolQuery{}, &fakeToolReferences{}, func() time.Time { return now })
+	output, err := gateway.Execute(context.Background(), actor, nil, Identifier{64}, 1,
+		ToolCall{ID: "no-hits", Name: "search", Arguments: json.RawMessage(`{"q":",73","modules":["bills"]}`)}, now.Add(time.Hour), "request")
+	if err != nil || output.Reference != nil || output.RowCount != 0 {
+		t.Fatalf("empty search output = %#v %v", output, err)
+	}
+}
+
+func TestReferenceIsSampleOnlyForQueriesWithoutCriterion(t *testing.T) {
+	plain := []byte(`{"plan":{"version":"v1","root_entity":"profiles","projections":["profile.full_name"],"maximum_rows":10}}`)
+	filtered := []byte(`{"plan":{"version":"v1","root_entity":"profiles","projections":["profile.full_name"],"filter":{"kind":"predicate","field":"profile.cpf","operator":"contains","values":["73"]},"maximum_rows":10}}`)
+	if !referenceIsSample(ResultReferenceQuery, plain) || referenceIsSample(ResultReferenceQuery, filtered) || referenceIsSample(ResultReferenceSearch, plain) {
+		t.Fatal("referenceIsSample must flag only unfiltered plain queries")
+	}
+	if (MessageReference{RowCount: 0}).OnGrid() || (MessageReference{RowCount: 10, Sample: true}).OnGrid() || !(MessageReference{RowCount: 27}).OnGrid() {
+		t.Fatal("OnGrid must keep only references with rows and a criterion")
+	}
+}
+
+func TestReferenceHasMoreRowsOnlyForASearchThatFilledItsPage(t *testing.T) {
+	search := []byte(`{"terms":["Gravataí"],"limit":50,"offset":0,"sort":"relevance","order":"desc"}`)
+	query := []byte(`{"plan":{"version":"v1","root_entity":"profiles","projections":["profile.full_name"],"maximum_rows":50}}`)
+	if !referenceHasMoreRows(ResultReferenceSearch, search, 50) {
+		t.Fatal("a search that filled its page must report more rows on the grid")
+	}
+	if referenceHasMoreRows(ResultReferenceSearch, search, 27) || referenceHasMoreRows(ResultReferenceQuery, query, 50) {
+		t.Fatal("only a full search page is a lower bound")
+	}
+	if reference := newMessageReference(Identifier{}, ResultReferenceSearch, "Busca: Gravataí", 50, search); !reference.MoreRows || reference.Sample {
+		t.Fatalf("newMessageReference = %+v", reference)
 	}
 }
