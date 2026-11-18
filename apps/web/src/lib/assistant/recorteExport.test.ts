@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { apiURL } from "../api/client";
 import {
   RECORTE_XLSX_FALLBACK,
   downloadChatResultXlsx,
@@ -41,7 +42,7 @@ describe("recorte xlsx export", () => {
     await downloadChatResultXlsx("11111111-1111-4111-8111-111111111111");
 
     expect(fetch).toHaveBeenCalledWith(
-      "/api/v1/chat/result-references/11111111-1111-4111-8111-111111111111/xlsx",
+      apiURL("/api/v1/chat/result-references/11111111-1111-4111-8111-111111111111/xlsx"),
       expect.objectContaining({ credentials: "include" }),
     );
     expect(createObjectURL).toHaveBeenCalled();

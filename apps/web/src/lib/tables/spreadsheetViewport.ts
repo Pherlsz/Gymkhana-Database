@@ -21,5 +21,5 @@ export function spreadsheetPageSizeOptions(
   const prefs = resolveSheetPreferences(overrides);
   const sizes = new Set<number>(prefs.pageSizes);
   sizes.add(clampSpreadsheetPageSize(current, overrides));
-  return [...sizes].sort((left, right) => left - right);
+  return [...sizes].toSorted((left, right) => left - right);
 }

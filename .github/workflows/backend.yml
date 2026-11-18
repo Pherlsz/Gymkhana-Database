@@ -139,4 +139,3 @@ jobs:
       - name: Run race tests
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.full }}
         run: go test -race ./...
-

@@ -4,7 +4,15 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../../i18n";
 import { CadastroSingleScreen } from "./CadastroSingleScreen";
-import { createBill, createDocument, createProfile } from "../api/client";
+import {
+  createBill,
+  createDocument,
+  createProfile,
+  listProfilesLookup,
+  updateBill,
+  updateDocument,
+  updateProfile,
+} from "../api/client";
 
 let activeClient: QueryClient | null = null;
 
@@ -123,6 +131,21 @@ function fillPersonMinimum(name: string) {
   fireEvent.change(screen.getByLabelText(/Nome do titular/i), { target: { value: name } });
 }
 
+async function stageDocument(number: string) {
+  fireEvent.click(screen.getByRole("button", { name: /Adicionar documento/i }));
+  fireEvent.mouseDown(await screen.findByLabelText(/Tipo de documento/i));
+  const rgOption = (await screen.findAllByText(/^RG$/)).find((node) =>
+    node.classList.contains("ant-select-item-option-content"),
+  );
+  if (!rgOption) throw new Error("RG option missing");
+  fireEvent.click(rgOption);
+  fireEvent.change(screen.getByLabelText(/Número do documento/i), {
+    target: { value: number },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /^Adicionar$/i }));
+  expect(await screen.findByText(new RegExp(`nº ${number}`))).not.toBeNull();
+}
+
 describe("CadastroSingleScreen", () => {
   describe("Person mode (targetTable='people')", () => {
     it("renders titular holder field, contact fields, and staged sections", async () => {
@@ -219,7 +242,6 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("updates an existing person without clearing notes", async () => {
-      const { listProfilesLookup, updateProfile } = await import("../api/client");
       vi.mocked(listProfilesLookup).mockResolvedValue({
         profiles: [
           {
@@ -253,7 +275,6 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("retries a failed document save against the person already created", async () => {
-      const { createDocument, createProfile, updateProfile } = await import("../api/client");
       vi.mocked(createProfile).mockClear();
       vi.mocked(createDocument).mockClear();
       vi.mocked(updateProfile).mockClear();
@@ -292,7 +313,6 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("does not create a saved document again when a later one fails", async () => {
-      const { createDocument, createProfile, updateProfile } = await import("../api/client");
       vi.mocked(createProfile).mockClear();
       vi.mocked(createDocument).mockClear();
       let failSecond = true;
@@ -316,30 +336,15 @@ describe("CadastroSingleScreen", () => {
       try {
         renderSingleScreen("people");
         fillPersonMinimum("Ana Néri");
-        const stage = async (number: string) => {
-          fireEvent.click(screen.getByRole("button", { name: /Adicionar documento/i }));
-          fireEvent.mouseDown(await screen.findByLabelText(/Tipo de documento/i));
-          const rgOption = (await screen.findAllByText(/^RG$/)).find((node) =>
-            node.classList.contains("ant-select-item-option-content"),
-          );
-          if (!rgOption) throw new Error("RG option missing");
-          fireEvent.click(rgOption);
-          fireEvent.change(screen.getByLabelText(/Número do documento/i), {
-            target: { value: number },
-          });
-          fireEvent.click(screen.getByRole("button", { name: /^Adicionar$/i }));
-          expect(await screen.findByText(new RegExp(`nº ${number}`))).not.toBeNull();
-        };
-        await stage("111");
-        await stage("222");
+        await stageDocument("111");
+        await stageDocument("222");
 
         await confirmSave();
         expect(await screen.findByText(/second document failed/i)).not.toBeNull();
         expect(createProfile).toHaveBeenCalledTimes(1);
-        expect(vi.mocked(createDocument).mock.calls.map((call) => call[0].identifier_value)).toEqual([
-          "111",
-          "222",
-        ]);
+        expect(
+          vi.mocked(createDocument).mock.calls.map((call) => call[0].identifier_value),
+        ).toEqual(["111", "222"]);
         expect(screen.getByText(/Salvo/)).not.toBeNull();
 
         await confirmSave();
@@ -365,9 +370,6 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("keeps the created document id when a later save step fails", async () => {
-      const { createDocument, createProfile, updateDocument, updateProfile } = await import(
-        "../api/client"
-      );
       const custom = await import("../../RecordCustomFields");
       vi.mocked(createProfile).mockClear();
       vi.mocked(createDocument).mockClear();
@@ -432,9 +434,8 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("creates only one profile when save is clicked twice", async () => {
-      const { createProfile } = await import("../api/client");
       vi.mocked(createProfile).mockClear();
-      let resolveProfile: (profile: unknown) => void = () => undefined;
+      let resolveProfile!: (profile: unknown) => void;
       vi.mocked(createProfile).mockImplementation(
         () =>
           new Promise((resolve) => {
@@ -472,7 +473,6 @@ describe("CadastroSingleScreen", () => {
 
   describe("Document mode (targetTable='documents')", () => {
     it("clears auto-filled fields when unlinking titular", async () => {
-      const { listProfilesLookup } = await import("../api/client");
       vi.mocked(listProfilesLookup).mockResolvedValue({
         profiles: [
           {
@@ -548,9 +548,6 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("updates the document already created when a later save step fails", async () => {
-      const { createDocument, createProfile, updateDocument, updateProfile } = await import(
-        "../api/client"
-      );
       const custom = await import("../../RecordCustomFields");
       vi.mocked(createProfile).mockClear();
       vi.mocked(createDocument).mockClear();
@@ -663,7 +660,6 @@ describe("CadastroSingleScreen", () => {
     });
 
     it("updates the bill already created when a later save step fails", async () => {
-      const { createBill, createProfile, updateBill, updateProfile } = await import("../api/client");
       const custom = await import("../../RecordCustomFields");
       vi.mocked(createProfile).mockClear();
       vi.mocked(createBill).mockClear();

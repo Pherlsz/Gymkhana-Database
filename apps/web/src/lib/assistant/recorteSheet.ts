@@ -43,7 +43,7 @@ export function sortRecorteRows(
 ): TableRow[] {
   if (!field) return rows;
   const sign = order === "desc" ? -1 : 1;
-  return [...rows].sort(
+  return [...rows].toSorted(
     (left, right) => sign * compareRecorteCells(left.cells[field], right.cells[field]),
   );
 }

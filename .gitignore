@@ -37,6 +37,7 @@ gha-creds-*.json
 
 # Agent tooling (local symlinks, plans, prototypes — not product source)
 .agents/
+.bots/
 .hermes/
 sketches/
 .codegraph/

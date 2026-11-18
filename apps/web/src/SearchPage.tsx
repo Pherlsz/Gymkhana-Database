@@ -172,7 +172,9 @@ export function SearchPage() {
   }
   useEffect(() => {
     if (!keyboardFocus) return;
-    listRef.current?.querySelector<HTMLElement>("[data-active='true'] .search-card__header")?.focus();
+    listRef.current
+      ?.querySelector<HTMLElement>("[data-active='true'] .search-card__header")
+      ?.focus();
   }, [activeIndex, keyboardFocus]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -183,7 +185,8 @@ export function SearchPage() {
           target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
           target.tagName === "SELECT");
-      if (event.key === "Enter" && target instanceof Element && target.closest(".search-list")) return;
+      if (event.key === "Enter" && target instanceof Element && target.closest(".search-list"))
+        return;
       const action = searchResultKey(event.key, activeIndex, hasQuery ? cards.length : 0, typing);
       if (action == null || event.altKey || event.ctrlKey || event.metaKey) return;
       if (action === "focus") {
@@ -344,7 +347,10 @@ export function SearchPage() {
             ) : null}
           </div>
         ) : null}
-        <div className={listPending ? "search-list search-list--pending" : "search-list"} ref={listRef}>
+        <div
+          className={listPending ? "search-list search-list--pending" : "search-list"}
+          ref={listRef}
+        >
           {(hasQuery ? cards : []).map((card, index) => (
             <ProfileSearchCard
               active={index === activeIndex}
@@ -373,4 +379,3 @@ export function SearchPage() {
     </PageShell>
   );
 }
-

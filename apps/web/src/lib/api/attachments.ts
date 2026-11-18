@@ -136,15 +136,16 @@ function uploadSignedObject(
     request.open(signed.method, signed.url, true);
     for (const [name, value] of Object.entries(signed.headers))
       request.setRequestHeader(name, value);
-    request.upload.onprogress = (event) => {
+    request.upload.addEventListener("progress", (event) => {
       if (event.lengthComputable && event.total > 0) {
         onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
       }
-    };
-    request.onerror = () =>
-      reject(new Error("Não foi possível enviar o arquivo ao armazenamento privado."));
-    request.onabort = () => reject(new Error("Envio cancelado."));
-    request.onload = () => {
+    });
+    request.addEventListener("error", () =>
+      reject(new Error("Não foi possível enviar o arquivo ao armazenamento privado.")),
+    );
+    request.addEventListener("abort", () => reject(new Error("Envio cancelado.")));
+    request.addEventListener("load", () => {
       if (request.status >= 200 && request.status < 300) {
         onProgress(100);
         resolve();
@@ -155,7 +156,7 @@ function uploadSignedObject(
           "O armazenamento privado recusou o envio. Gere um novo upload e tente novamente.",
         ),
       );
-    };
+    });
     request.send(file);
   });
 }

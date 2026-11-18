@@ -52,46 +52,46 @@ export function ProfileSearchCard({
       data-active={active ? "true" : "false"}
     >
       <div className="search-card__bar">
-      <Button
-        aria-controls={expandId}
-        aria-expanded={open}
-        className="search-card__header"
-        tabIndex={active ? 0 : -1}
-        type="text"
-        onClick={() => onToggle(card.profileId)}
-      >
-        <span className="search-card__title-block">
-          <span className="search-card__name">
-            <HighlightedText query={query} text={card.profileLabel} />
+        <Button
+          aria-controls={expandId}
+          aria-expanded={open}
+          className="search-card__header"
+          tabIndex={active ? 0 : -1}
+          type="text"
+          onClick={() => onToggle(card.profileId)}
+        >
+          <span className="search-card__title-block">
+            <span className="search-card__name">
+              <HighlightedText query={query} text={card.profileLabel} />
+            </span>
+            {showUpdatedAt ? (
+              <time className="search-card__updated" dateTime={card.updatedAt}>
+                {new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(
+                  new Date(card.updatedAt),
+                )}
+              </time>
+            ) : null}
           </span>
-          {showUpdatedAt ? (
-            <time className="search-card__updated" dateTime={card.updatedAt}>
-              {new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(
-                new Date(card.updatedAt),
-              )}
-            </time>
-          ) : null}
-        </span>
-        <span className="search-card__header-action">
-          <span className="search-card__ficha-label">
-            {open ? searchMessages.collapseFicha : searchMessages.openFicha}
+          <span className="search-card__header-action">
+            <span className="search-card__ficha-label">
+              {open ? searchMessages.collapseFicha : searchMessages.openFicha}
+            </span>
+            <ChevronDown
+              aria-hidden
+              className="search-card__caret"
+              size={ICON.sm}
+              strokeWidth={ICON_STROKE}
+            />
           </span>
-          <ChevronDown
-            aria-hidden
-            className="search-card__caret"
-            size={ICON.sm}
-            strokeWidth={ICON_STROKE}
-          />
-        </span>
-      </Button>
-      <Link
-        className="search-card__open-table"
-        {...tableLinkProps(
-          normalizeProfileSearch({ q: query, selected: card.profileId, mode: "view" }),
-        )}
-      >
-        {searchMessages.openInTable}
-      </Link>
+        </Button>
+        <Link
+          className="search-card__open-table"
+          {...tableLinkProps(
+            normalizeProfileSearch({ q: query, selected: card.profileId, mode: "view" }),
+          )}
+        >
+          {searchMessages.openInTable}
+        </Link>
       </div>
 
       {evidence.length > 0 ? (
@@ -119,7 +119,10 @@ export function ProfileSearchCard({
                 {moduleLabels.get(group.module) ?? group.module}
               </span>
               <span className="search-card__chip-value">
-                <HighlightedText query={query} text={group.matches[0]?.preview || group.entityLabel} />
+                <HighlightedText
+                  query={query}
+                  text={group.matches[0]?.preview || group.entityLabel}
+                />
               </span>
             </span>
           ))}

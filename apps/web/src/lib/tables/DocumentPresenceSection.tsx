@@ -22,6 +22,9 @@ type PresenceCopy = {
 
 const UNSPECIFIED = "";
 
+const isRepeatedIdentity = (technicalKey: string) =>
+  technicalKey === "cpf" || technicalKey === "rg";
+
 export function DocumentPresenceSection({
   profile,
   hideTitle,
@@ -40,8 +43,6 @@ export function DocumentPresenceSection({
     queryKey: queryKeys.types.documents,
     queryFn: ({ signal }) => listDocumentTypes(signal),
   });
-  const isRepeatedIdentity = (technicalKey: string) =>
-    technicalKey === "cpf" || technicalKey === "rg";
   const activeTypes = (types.data?.types ?? []).filter(
     (type) =>
       (type.active || presenceFor(profile, type.id)) && !isRepeatedIdentity(type.technical_key),

@@ -267,7 +267,7 @@ export function parseColumnCols(value: unknown): ColumnVisibilityOverrides {
 
 export function formatColumnCols(overrides: ColumnVisibilityOverrides): string {
   return Object.keys(overrides)
-    .sort()
+    .toSorted()
     .filter((key) => typeof overrides[key] === "boolean" && COLUMN_KEY.test(key))
     .map((key) => (overrides[key] ? key : `-${key}`))
     .join(",");

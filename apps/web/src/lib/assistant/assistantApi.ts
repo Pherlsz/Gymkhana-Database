@@ -149,8 +149,8 @@ export function streamChatEvents(
   }
   // ponytail: EventSource retries by itself with Last-Event-ID; the server
   // rejects nothing on replay, so we only cap total lifetime via the run timeout.
-  source.onerror = () => {
+  source.addEventListener("error", () => {
     if (source.readyState === EventSource.CLOSED) finish(new Error("stream closed"));
-  };
+  });
   return () => finish();
 }

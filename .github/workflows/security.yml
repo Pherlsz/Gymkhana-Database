@@ -63,4 +63,3 @@ jobs:
 
       - name: Audit JavaScript dependencies
         run: pnpm audit --audit-level high
-

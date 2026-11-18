@@ -8,7 +8,7 @@ import (
 
 // DevelopmentLoginEmail is the fixed local identity used by Dev Login. It is
 // not configurable: staging/production never expose this path.
-const DevelopmentLoginEmail = "developer@gymkhana.local"
+const DevelopmentLoginEmail = "tocadogamba.database@gmail.com"
 
 // DevelopmentLogin creates a normal application session for the local
 // development user without contacting Google. HTTP exposure is restricted by

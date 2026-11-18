@@ -247,7 +247,8 @@ export function useAssistantChat(open: boolean) {
           if (!error) return;
           void (async () => {
             const current = pendingRef.current;
-            if (!current || current.runId !== runId || current.errorCode || current.cancelled) return;
+            if (!current || current.runId !== runId || current.errorCode || current.cancelled)
+              return;
             let run: Awaited<ReturnType<typeof getChatRun>> | null = null;
             try {
               run = await getChatRun(runId);

@@ -44,7 +44,7 @@ const FIELD_CONTEXT_RANK: Record<string, number> = {
 };
 
 export function sortCustomFieldsByContext(fields: CustomField[]): CustomField[] {
-  return [...fields].sort((left, right) => {
+  return [...fields].toSorted((left, right) => {
     const rank = customFieldContextRank(left) - customFieldContextRank(right);
     return rank !== 0 ? rank : left.label.localeCompare(right.label, "pt-BR");
   });

@@ -90,7 +90,7 @@ export function buildFieldFilterGroups(
     });
   }
 
-  return [...grouped.values()].sort((left, right) => {
+  return [...grouped.values()].toSorted((left, right) => {
     const leftOwner = OWNER_ORDER.indexOf(left.owner);
     const rightOwner = OWNER_ORDER.indexOf(right.owner);
     if (leftOwner !== rightOwner) return leftOwner - rightOwner;

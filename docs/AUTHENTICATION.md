@@ -107,7 +107,7 @@ make dev-api
 make dev-web
 ```
 
-6. Use **Dev Login** (local only) to create/sign in as `developer@gymkhana.local` (`SUPERADMIN`), or seed a real `SUPERADMIN` in Neon and sign in with Google.
+6. Use **Dev Login** (local only) to create/sign in as `tocadogamba.database@gmail.com` (`SUPERADMIN`), or seed a real `SUPERADMIN` in Neon and sign in with Google.
 
 ## Staging and production setup
 

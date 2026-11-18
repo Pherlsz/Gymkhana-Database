@@ -1,7 +1,10 @@
 /** Matches the page window already enforced by the search API (offset cap). */
 export const SEARCH_RESULT_CAP = 10_000;
 
-export function searchResultWindow(total: number, limit: number): {
+export function searchResultWindow(
+  total: number,
+  limit: number,
+): {
   shown: number;
   truncated: boolean;
 } {

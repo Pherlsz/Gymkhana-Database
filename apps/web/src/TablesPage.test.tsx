@@ -525,9 +525,7 @@ describe("TablesPage", () => {
     expect(headerTexts()).not.toContain("Cidade");
     expect(headerTexts()).toContain("Nome");
     await waitFor(() => expect(window.location.search).not.toContain("cols="));
-    expect(window.localStorage.getItem("gymkhana.sheet.cols.v1.people")).toBe(
-      "-city,father_name",
-    );
+    expect(window.localStorage.getItem("gymkhana.sheet.cols.v1.people")).toBe("-city,father_name");
   });
 
   it("restores people columns from localStorage without a cols param", async () => {
